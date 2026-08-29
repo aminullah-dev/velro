@@ -32,6 +32,7 @@ from infrastructure.db.repositories.geography import (
     DistrictRepository,
     GeographyRepository,
     StationRepository,
+    VillageAliasRepository,
     VillageRepository,
 )
 from infrastructure.db.repositories.identity import (
@@ -48,6 +49,7 @@ from infrastructure.db.repositories.money import (
 from infrastructure.db.repositories.ops import (
     CancellationRepository,
     IdempotencyRepository,
+    ImportJobRepository,
     NotificationRepository,
     RatingRepository,
     SupportTicketRepository,
@@ -203,6 +205,26 @@ def notifications(session: SessionDep) -> NotificationRepository:
 
 def idempotency(session: SessionDep) -> IdempotencyRepository:
     return IdempotencyRepository(session)
+
+
+def import_jobs(session: SessionDep) -> ImportJobRepository:
+    return ImportJobRepository(session)
+
+
+def villages_repo(session: SessionDep) -> VillageRepository:
+    return VillageRepository(session)
+
+
+def village_aliases(session: SessionDep) -> VillageAliasRepository:
+    return VillageAliasRepository(session)
+
+
+def stations_repo(session: SessionDep) -> StationRepository:
+    return StationRepository(session)
+
+
+def districts_repo(session: SessionDep) -> DistrictRepository:
+    return DistrictRepository(session)
 
 
 # -- services ------------------------------------------------------------

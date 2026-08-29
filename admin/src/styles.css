@@ -98,6 +98,11 @@ html[dir="ltr"] body { line-height: var(--line-latin); }
   gap: var(--s-1);
   position: sticky;
   top: 0;
+  /* align-self is what makes the sticky work. A grid item stretches to the
+     full height of its row by default, so on a long page the sidebar was as
+     tall as the whole document and had nothing to stick within -- it scrolled
+     away on exactly the screens that are long enough to need it. */
+  align-self: start;
   height: 100vh;
   overflow-y: auto;
 }

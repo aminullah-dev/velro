@@ -14,7 +14,7 @@ from __future__ import annotations
 import csv
 import io
 import json
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -50,10 +50,21 @@ class ParsedVillage:
 
 @dataclass(slots=True)
 class RowProblem:
+    """Something wrong with a row.
+
+    ``blocking`` separates the two kinds, because they need different reactions:
+    a missing name or an unknown district means the row cannot be imported at
+    all, while a malformed coordinate only means the village is created without
+    one -- coordinates are optional everywhere in this product. Presenting both
+    as simply "errors" would make an operator think they had lost rows they had
+    not.
+    """
+
     row_number: int
     column: str
     reason: str
     value: str | None = None
+    blocking: bool = True
 
 
 @dataclass(slots=True)
@@ -81,9 +92,76 @@ class ImportPreview:
         return not self.problems
 
 
+def _rows_from_excel(content: bytes) -> list[tuple[int, dict[str, Any]]]:
+    """Read the first worksheet, taking the first non-empty row as the header.
+
+    Real spreadsheets have merged title rows, trailing blank rows and stray
+    whitespace in headers. Handling that here is the difference between a tool
+    an operator uses and one they give up on.
+    """
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(BytesIO(content), read_only=True, data_only=True)
+    sheet = workbook.active
+    if sheet is None:
+        raise ValidationError(error_codes.IMPORT_FILE_UNREADABLE, reason="no_worksheet")
+
+    header: list[str] | None = None
+    records: list[tuple[int, dict[str, Any]]] = []
+    seen_rows: list[list[str]] = []
+
+    for index, row in enumerate(sheet.iter_rows(values_only=True), start=1):
+        values = ["" if cell is None else str(cell).strip() for cell in row]
+        if not any(values):
+            continue
+
+        if header is None:
+            candidate = [value.strip().lower().replace(" ", "_") for value in values]
+            # The header is the first row that actually carries the required
+            # columns -- not merely the first non-empty one. Spreadsheets from
+            # a district office routinely open with a merged title row, and
+            # treating that as the header rejects the whole file.
+            if all(column in candidate for column in REQUIRED_COLUMNS):
+                header = candidate
+            else:
+                seen_rows.append(values)
+                if len(seen_rows) > 10:
+                    break   # a header this far down is a different file shape
+            continue
+
+        records.append((index, dict(zip(header, values, strict=False))))
+
+    if header is None:
+        raise ValidationError(
+            error_codes.IMPORT_COLUMN_MISSING,
+            column=REQUIRED_COLUMNS[0],
+            required=list(REQUIRED_COLUMNS),
+            # What was actually found, so an operator can see why: usually a
+            # title row, or column names in Dari rather than the expected keys.
+            found=[value for value in (seen_rows[0] if seen_rows else []) if value],
+        )
+    return records
+
+
 def parse(content: bytes, filename: str) -> tuple[list[ParsedVillage], list[RowProblem]]:
-    """CSV or JSON in, structured rows out. Nothing touches the database here."""
-    text = content.decode("utf-8-sig", errors="strict")
+    """CSV, Excel or JSON in, structured rows out. Nothing touches the database."""
+    lowered = filename.lower()
+
+    if lowered.endswith((".xlsx", ".xlsm")):
+        records = _rows_from_excel(content)
+        return _to_villages(records)
+
+    try:
+        text = content.decode("utf-8-sig", errors="strict")
+    except UnicodeDecodeError as exc:
+        # A file saved as Windows-1256 or similar. Naming the cause beats a
+        # generic "could not read".
+        raise ValidationError(
+            error_codes.IMPORT_FILE_UNREADABLE, reason="not_utf8"
+        ) from exc
+
     if filename.lower().endswith(".json"):
         raw_rows = json.loads(text)
         if not isinstance(raw_rows, list):
@@ -102,6 +180,12 @@ def parse(content: bytes, filename: str) -> tuple[list[ParsedVillage], list[RowP
             )
         records = [(i + 2, row) for i, row in enumerate(reader)]  # +2: header is line 1
 
+    return _to_villages(records)
+
+
+def _to_villages(
+    records: list[tuple[int, dict[str, Any]]],
+) -> tuple[list[ParsedVillage], list[RowProblem]]:
     parsed: list[ParsedVillage] = []
     problems: list[RowProblem] = []
 
@@ -162,10 +246,10 @@ def _decimal(value: Any, row_number: int, column: str) -> tuple[Decimal | None, 
     try:
         parsed = Decimal(raw)
     except (InvalidOperation, ValueError):
-        return None, RowProblem(row_number, column, "not_a_number", raw)
+        return None, RowProblem(row_number, column, "not_a_number", raw, blocking=False)
     limit = Decimal(90) if column == "latitude" else Decimal(180)
     if not -limit <= parsed <= limit:
-        return None, RowProblem(row_number, column, "out_of_range", raw)
+        return None, RowProblem(row_number, column, "out_of_range", raw, blocking=False)
     return parsed, None
 
 
@@ -208,19 +292,26 @@ class PreviewVillageImport:
         flagged = {d.row_number for d in duplicates}
         will_create = [v for v in parsed if v.row_number not in flagged]
 
+        blocking = [problem for problem in problems if problem.blocking]
+
         job = self._jobs.create(
             id=self._new_id(),
             entity="villages",
             filename=cmd.filename,
             status=ImportStatus.PREVIEWED.value,
-            total_rows=len(parsed) + len(problems),
+            total_rows=len(parsed) + len(blocking),
             valid_rows=len(parsed),
-            error_rows=len(problems),
+            error_rows=len(blocking),
             duplicate_rows=len(duplicates),
             report={
-                "problems": [p.__dict__ for p in problems],
-                "duplicates": [d.__dict__ for d in duplicates],
+                "problems": [asdict(p) for p in problems],
+                "duplicates": [asdict(d) for d in duplicates],
                 "will_create": [_serialise(v) for v in will_create],
+                # The parsed payload for every flagged row, so a duplicate the
+                # operator confirms as genuinely new can actually be created.
+                "flagged_payload": [
+                    _serialise(v) for v in parsed if v.row_number in flagged
+                ],
             },
         )
         self._jobs.flush()
@@ -234,13 +325,13 @@ class PreviewVillageImport:
             after={
                 "filename": cmd.filename,
                 "valid": len(parsed),
-                "problems": len(problems),
+                "problems": len(blocking),
                 "duplicates": len(duplicates),
             },
         )
         return ImportPreview(
             job_id=job.id,
-            total_rows=len(parsed) + len(problems),
+            total_rows=len(parsed) + len(blocking),
             valid_rows=len(parsed),
             problems=problems,
             duplicates=duplicates,
@@ -355,11 +446,20 @@ class CommitVillageImport:
                     error_codes.IMPORT_ROW_INVALID, rows=sorted(unknown), job_id=job.id
                 )
             # A flagged row the operator confirmed is genuinely new.
-            rows.extend(
-                _deserialise(r)
-                for r in report.get("accepted_payload", [])
-                if r["row_number"] in accepted
-            )
+            payload = report.get("flagged_payload", [])
+            confirmed = [
+                _deserialise(r) for r in payload if r["row_number"] in accepted
+            ]
+            if len(confirmed) != len(accepted):
+                # Refuse rather than create a subset: an operator who accepted
+                # five rows and got three would have no way to tell.
+                raise ConflictError(
+                    error_codes.IMPORT_ROW_INVALID,
+                    job_id=job.id,
+                    accepted=sorted(accepted),
+                    resolved=len(confirmed),
+                )
+            rows.extend(confirmed)
 
         districts = {d.code.upper(): d for d in self._districts.list(limit=200)}
         counters = self._next_codes(districts)

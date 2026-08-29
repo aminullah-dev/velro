@@ -283,3 +283,14 @@ class DestinationRepository(SqlRepository[DestinationRow]):
 class DistrictRepository(SqlRepository[DistrictRow]):
     model = DistrictRow
     not_found_code = error_codes.DISTRICT_NOT_FOUND
+
+
+class VillageAliasRepository(SqlRepository[VillageAliasRow]):
+    """Alternative names, kept as their own records.
+
+    Section 7: an alias is never folded into the village's name, because the
+    name people actually use for a place is not ours to overwrite.
+    """
+
+    model = VillageAliasRow
+    not_found_code = error_codes.VILLAGE_NOT_FOUND

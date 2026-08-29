@@ -9,6 +9,7 @@ from sqlalchemy import select
 from infrastructure.db.models.ops import (
     CancellationRow,
     IdempotencyRow,
+    ImportJobRow,
     NotificationRow,
     RatingRow,
     SupportTicketRow,
@@ -86,6 +87,28 @@ class IdempotencyRepository(SqlRepository[IdempotencyRow]):
             IdempotencyRow.__table__.delete().where(IdempotencyRow.expires_at < at)
         )
         return int(result.rowcount or 0)
+
+
+class ImportJobRepository(SqlRepository[ImportJobRow]):
+    """One master-data import run, with its report kept.
+
+    The report is why this table exists: months later, the question is not
+    "did the import work" but "where did this village come from".
+    """
+
+    model = ImportJobRow
+    not_found_code = error_codes.IMPORT_ROW_INVALID
+
+    def create(self, **fields) -> ImportJobRow:
+        row = ImportJobRow(**fields)
+        self.session.add(row)
+        return row
+
+    def recent(self, *, entity: str | None = None, limit: int = 20):
+        stmt = self._base().order_by(ImportJobRow.created_at.desc()).limit(min(limit, 100))
+        if entity:
+            stmt = stmt.where(ImportJobRow.entity == entity)
+        return list(self.session.scalars(stmt).all())
 
 
 class SupportTicketRepository(SqlRepository[SupportTicketRow]):

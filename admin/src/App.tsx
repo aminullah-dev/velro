@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/Dashboard";
 import { DispatchPage } from "./pages/Dispatch";
 import { DriversPage } from "./pages/Drivers";
 import { FinancePage } from "./pages/Finance";
+import { ImportVillagesPage } from "./pages/ImportVillages";
 import { LocationsPage } from "./pages/Locations";
 import { RoutesPage } from "./pages/Routes";
 import { SettingsPage } from "./pages/Settings";
@@ -25,6 +26,7 @@ const NAV = [
   { to: "/drivers", labelKey: "admin.nav.drivers", element: <DriversPage /> },
   { to: "/vehicles", labelKey: "admin.nav.vehicles", element: <VehiclesPage /> },
   { to: "/locations", labelKey: "admin.nav.locations", element: <LocationsPage /> },
+  { to: "/import", labelKey: "admin.nav.import", element: <ImportVillagesPage /> },
   { to: "/routes", labelKey: "admin.nav.routes", element: <RoutesPage /> },
   { to: "/finance", labelKey: "admin.nav.finance", element: <FinancePage /> },
   { to: "/settings", labelKey: "admin.nav.settings", element: <SettingsPage /> },
