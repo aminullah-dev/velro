@@ -11,6 +11,8 @@ import af.velro.core.ui.component.StatusChip
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.messageKey
 import af.velro.core.ui.component.tone
+import af.velro.feature.safety.HelpSheet
+import af.velro.feature.safety.RideFacts
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -92,6 +95,33 @@ fun BookingDetailScreen(
         ) {
             Text(booking.number, style = MaterialTheme.typography.titleMedium)
             StatusChip(booking.status.messageKey(), booking.status.tone())
+        }
+
+        // Get help, at the top and on the journey the passenger is actually
+        // taking. Not at the foot of a scroll: the moment it is needed is the
+        // moment nobody scrolls. Shown only while the ride is still live --
+        // an emergency control on a receipt from last month is noise, and
+        // noise is what makes a real one get ignored.
+        if (booking.isActive) {
+            Spacer(Modifier.height(Spacing.sm))
+            var helpOpen by remember { mutableStateOf(false) }
+            SecondaryAction(
+                label = strings["safety.title"],
+                onClick = { helpOpen = true },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (helpOpen) {
+                HelpSheet(
+                    ride = RideFacts(
+                        bookingNumber = booking.number,
+                        driverName = booking.driverName,
+                        plate = booking.vehiclePlate,
+                        origin = booking.pickupStationName,
+                        destination = booking.dropoffDestinationName,
+                    ),
+                    onDismiss = { helpOpen = false },
+                )
+            }
         }
 
         if (state.isStale) {

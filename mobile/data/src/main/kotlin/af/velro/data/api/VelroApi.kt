@@ -321,4 +321,21 @@ interface VelroApi {
     suspend fun markNotificationsRead(
         @Body body: MarkReadRequest,
     ): Response<Envelope<Map<String, Int>>>
+
+    // -- safety ---------------------------------------------------------
+
+    /**
+     * The numbers to dial. The one endpoint that needs no token.
+     *
+     * Called to refresh a cached copy when there happens to be a connection,
+     * never at the moment somebody needs a number -- by then it is too late
+     * to ask.
+     */
+    @GET("support/contacts")
+    suspend fun safetyContacts(): Response<Envelope<SafetyContactsDto>>
+
+    @POST("support/tickets")
+    suspend fun raiseTicket(
+        @Body body: RaiseTicketRequest,
+    ): Response<Envelope<RaisedTicketDto>>
 }

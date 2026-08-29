@@ -192,3 +192,40 @@ def test_every_notification_message_key_has_a_message() -> None:
     assert emitted, "no notification keys found -- have the use cases moved?"
     missing = sorted(k for k in emitted if k not in english)
     assert not missing, f"notifications with no message: {missing}"
+
+
+def test_the_apps_built_in_safety_categories_match_the_domain() -> None:
+    """The emergency sheet ships a compiled-in copy of the ticket categories.
+
+    It has to: the numbers and the form must work on a handset that has never
+    reached the server. The cost of that is a second copy of the list, and this
+    is what stops it drifting -- a category the app offers and the domain
+    rejects is a report form that fails on submit, for somebody who has just
+    described being in danger.
+    """
+    from domain.support import CATEGORIES, URGENT_CATEGORIES
+
+    source = (
+        _REPO / "mobile" / "domain" / "src" / "main" / "kotlin" / "af" / "velro"
+        / "domain" / "Entities.kt"
+    ).read_text(encoding="utf-8")
+
+    block = re.search(r"val BUILT_IN = SafetyContacts\((.*?)\n        \)", source, re.S)
+    assert block, "SafetyContacts.BUILT_IN not found in the Kotlin domain"
+
+    def listed(field: str) -> set[str]:
+        section = re.search(rf"{field} = listOf\((.*?)\)", block.group(1), re.S)
+        assert section, f"{field} not found in SafetyContacts.BUILT_IN"
+        return set(re.findall(r'"([A-Z_]+)"', section.group(1)))
+
+    assert listed("categories") == CATEGORIES
+    assert listed("urgentCategories") == URGENT_CATEGORIES
+
+
+def test_every_safety_string_the_sheet_asks_for_exists() -> None:
+    """A missing key renders as `safety.not_rescue` on the emergency screen."""
+    english = load("en")
+    source_root = _REPO / "mobile" / "feature" / "safety"
+    used = _literal_keys(source_root, (r'strings\["([a-z][a-zA-Z0-9._]*)"',))
+    missing = {k for k in used if k not in english}
+    assert not missing, f"the help sheet asks for keys with no message: {sorted(missing)}"

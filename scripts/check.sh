@@ -67,6 +67,8 @@ mobile() {
   # Calendar and numerals. Without this line the Nowruz fixtures never run.
   step "mobile core:i18n" gradle :core:i18n:testDebugUnitTest --console=plain -q
   step "mobile driver"  gradle :feature:driver:testDebugUnitTest --console=plain -q
+  # The emergency numbers and the categories the sheet ships compiled in.
+  step "mobile safety"  gradle :feature:safety:testDebugUnitTest --console=plain -q
   step "mobile build"   gradle :app-driver:assembleDebug :app-passenger:assembleDebug --console=plain -q
 }
 

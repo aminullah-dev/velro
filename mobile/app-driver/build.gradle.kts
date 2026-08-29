@@ -39,7 +39,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
+    kotlinOptions {
+        jvmTarget = "17"
+        // ModalBottomSheet is still marked experimental in Material3. Declared
+        // once per module rather than annotated at every call site, which
+        // otherwise walks all the way up to MainActivity and makes the opt-in
+        // look like a property of the screen rather than of the library.
+        freeCompilerArgs += "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
+    }
 }
 
 dependencies {

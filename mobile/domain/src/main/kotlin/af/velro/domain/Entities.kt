@@ -447,3 +447,38 @@ data class NotificationInbox(
     val notifications: List<Notification> = emptyList(),
     val unread: Int = 0,
 )
+
+
+/**
+ * What to dial when something is wrong.
+ *
+ * `BUILT_IN` is compiled into the app on purpose. The server copy is better --
+ * an operator can change it without a release -- but the moment these are
+ * needed is the moment the network is least likely to be there, and an app
+ * that has to ask before it can show 119 is an app that shows nothing.
+ *
+ * Deliberately not @Serializable. `:domain` is a kotlin("jvm") module with no
+ * dependencies on its main classpath at all -- that is the property which makes
+ * the layering rule compiler-checked rather than review-checked. Serialising
+ * this is the data layer's job, through its own DTO.
+ */
+data class SafetyContacts(
+    val emergencyNumbers: List<String> = emptyList(),
+    /** Null when VELRO has no real number configured. A dead button is worse. */
+    val velroNumber: String? = null,
+    val categories: List<String> = emptyList(),
+    val urgentCategories: List<String> = emptyList(),
+) {
+    companion object {
+        /** Afghan police and ambulance. Also the default in the backend settings. */
+        val BUILT_IN = SafetyContacts(
+            emergencyNumbers = listOf("119", "100"),
+            velroNumber = null,
+            categories = listOf(
+                "SAFETY", "LOST_ITEM", "FARE_DISPUTE", "DRIVER_CONDUCT",
+                "PASSENGER_CONDUCT", "VEHICLE_CONDITION", "APP_PROBLEM", "OTHER",
+            ),
+            urgentCategories = listOf("SAFETY", "DRIVER_CONDUCT", "PASSENGER_CONDUCT"),
+        )
+    }
+}

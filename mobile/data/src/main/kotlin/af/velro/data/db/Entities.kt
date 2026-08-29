@@ -186,4 +186,13 @@ object OperationKind {
 object CacheKeys {
     const val GEO_VERSION = "geo_version"
     const val GEO_SYNCED_AT = "geo_synced_at"
+
+    /**
+     * The emergency numbers, cached so the sheet needs no network.
+     *
+     * A key/value row rather than a table: this is one small object, read on
+     * the worst day of somebody's year, and a Room migration to hold it would
+     * be a schema change for four strings.
+     */
+    const val SAFETY_CONTACTS = "safety_contacts"
 }

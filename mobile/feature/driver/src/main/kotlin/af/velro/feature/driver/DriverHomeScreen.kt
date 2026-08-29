@@ -13,6 +13,8 @@ import af.velro.core.ui.component.StatusChip
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.messageKey
 import af.velro.core.ui.component.tone
+import af.velro.feature.safety.HelpSheet
+import af.velro.feature.safety.RideFacts
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.TripStatus
@@ -143,6 +145,37 @@ fun DriverHomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+        }
+
+        // Get help. A driver alone on a mountain road at night is the case
+        // that started this, and until now the driver app had no path to any
+        // kind of help at all. The car's own details are the read-out block --
+        // it is what somebody is asked for on a call.
+        Spacer(Modifier.height(Spacing.lg))
+        var helpOpen by remember { mutableStateOf(false) }
+        SecondaryAction(
+            label = strings["safety.title"],
+            onClick = { helpOpen = true },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (helpOpen) {
+            val assignment = state.assignment
+            HelpSheet(
+                ride = assignment?.let {
+                    RideFacts(
+                        bookingNumber = it.trip.number,
+                        driverName = state.profile?.fullName,
+                        plate = state.profile?.vehicle?.plateNumber,
+                        // TripSummary carries ids, not names -- the same
+                        // gap that leaves the current-trip card unable to say
+                        // where to drive. A driver knows where they are; the
+                        // plate and the trip number are what somebody asks for.
+                        origin = null,
+                        destination = null,
+                    )
+                },
+                onDismiss = { helpOpen = false },
+            )
         }
 
         Spacer(Modifier.height(Spacing.xl))

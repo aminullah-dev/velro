@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "af.velro.feature.trip"
+    namespace = "af.velro.feature.safety"
     compileSdk = 35
     defaultConfig { minSdk = 24 }
     buildFeatures { compose = true }
@@ -30,7 +30,6 @@ dependencies {
     implementation(project(":data"))
     implementation(project(":core:ui"))
     implementation(project(":core:i18n"))
-    implementation(project(":feature:safety"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -45,4 +44,5 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.compose.ui)
 }

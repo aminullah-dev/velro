@@ -598,3 +598,38 @@ data class AcceptedOfferDto(
     val driver_id: String,
     val agreed_fare: MoneyDto,
 )
+
+
+// -- safety -------------------------------------------------------------
+
+@Serializable
+data class SafetyContactsDto(
+    val emergency_numbers: List<String> = emptyList(),
+    val velro_number: String? = null,
+    val categories: List<String> = emptyList(),
+    val urgent_categories: List<String> = emptyList(),
+) {
+    fun toDomain() = af.velro.domain.SafetyContacts(
+        emergencyNumbers = emergency_numbers,
+        velroNumber = velro_number,
+        categories = categories,
+        urgentCategories = urgent_categories,
+    )
+}
+
+@Serializable
+data class RaiseTicketRequest(
+    val category_code: String,
+    val subject: String = "",
+    val body: String,
+    val trip_id: String? = null,
+    val booking_id: String? = null,
+)
+
+@Serializable
+data class RaisedTicketDto(
+    val id: String,
+    val reference: String,
+    val status: String,
+    val is_urgent: Boolean = false,
+)
