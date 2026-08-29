@@ -4,7 +4,9 @@ import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
 import af.velro.data.api.IdempotencyKeys
 import af.velro.data.repository.BookingRepository
+import af.velro.core.i18n.Numerals
 import af.velro.data.repository.GeographyRepository
+import af.velro.data.repository.NegotiationRepository
 import af.velro.domain.Booking
 import af.velro.domain.Destination
 import af.velro.domain.DestinationGroup
@@ -61,13 +63,24 @@ data class BookingFlowUiState(
      * the same idempotency key and cannot produce a second booking.
      */
     val attemptId: String = IdempotencyKeys.newAttemptId(),
+    /** What the passenger is willing to pay, as they typed it. */
+    val offeredFare: String = "",
+    val note: String = "",
+    val askedRequestId: String? = null,
 ) {
     enum class Step {
         ORIGIN_DISTRICT, ORIGIN_VILLAGE, ORIGIN_STATION,
-        DESTINATION, RESULTS, CONFIRMED,
+        // Section 89: after choosing where, the passenger names a price. There
+        // is no results step to reach first -- VELRO has no price to show.
+        DESTINATION, ASK, RESULTS, CONFIRMED,
     }
 
     val canSearch: Boolean get() = selectedStation != null && selectedDestination != null
+
+    /** Whole afghani as typed; converted to minor units only when sent. */
+    val fareMinor: Long? get() = offeredFare.toLongOrNull()?.takeIf { it > 0 }?.times(100)
+
+    val canAsk: Boolean get() = canSearch && fareMinor != null && !isSubmitting
 }
 
 sealed interface BookingEvent {
@@ -77,6 +90,9 @@ sealed interface BookingEvent {
     data class GroupToggled(val groupId: String) : BookingEvent
     data class DestinationChosen(val destination: Destination) : BookingEvent
     data class SeatCountChanged(val count: Int) : BookingEvent
+    data class FareChanged(val text: String) : BookingEvent
+    data class NoteChanged(val text: String) : BookingEvent
+    data object AskForRide : BookingEvent
     data class TripChosen(val option: TripOption) : BookingEvent
     data object Search : BookingEvent
     data object Back : BookingEvent
@@ -92,6 +108,7 @@ sealed interface BookingEffect {
 class BookingFlowViewModel @Inject constructor(
     private val geography: GeographyRepository,
     private val bookings: BookingRepository,
+    private val negotiation: NegotiationRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BookingFlowUiState())
@@ -113,12 +130,21 @@ class BookingFlowViewModel @Inject constructor(
                 it.copy(expandedGroupId = if (it.expandedGroupId == event.groupId) null else event.groupId)
             }
             is BookingEvent.DestinationChosen -> _state.update {
-                it.copy(selectedDestination = event.destination, errorCode = null)
+                it.copy(
+                    selectedDestination = event.destination,
+                    step = BookingFlowUiState.Step.ASK,
+                    errorCode = null,
+                )
             }
             is BookingEvent.SeatCountChanged -> _state.update {
                 it.copy(seatCount = event.count.coerceIn(1, 4))
             }
             is BookingEvent.TripChosen -> book(event.option)
+            is BookingEvent.FareChanged -> _state.update {
+                it.copy(offeredFare = Numerals.latin(event.text).filter(Char::isDigit))
+            }
+            is BookingEvent.NoteChanged -> _state.update { it.copy(note = event.text) }
+            BookingEvent.AskForRide -> ask()
             BookingEvent.Search -> search()
             BookingEvent.Back -> goBack()
             BookingEvent.Retry -> retry()
@@ -206,6 +232,33 @@ class BookingFlowViewModel @Inject constructor(
         }
     }
 
+    private fun ask() {
+        val current = _state.value
+        val station = current.selectedStation ?: return
+        val destination = current.selectedDestination ?: return
+        val minor = current.fareMinor ?: return
+        if (current.isSubmitting) return
+
+        _state.update { it.copy(isSubmitting = true, errorCode = null) }
+        viewModelScope.launch {
+            val result = negotiation.ask(
+                originStationId = station.id,
+                destinationId = destination.id,
+                passengerCount = current.seatCount,
+                offeredFareMinor = minor,
+                note = current.note,
+            )
+            when (result) {
+                is ApiResult.Success -> _state.update {
+                    it.copy(isSubmitting = false, askedRequestId = result.value.id)
+                }
+                is ApiResult.Failure -> _state.update {
+                    it.copy(isSubmitting = false).failed(result.error)
+                }
+            }
+        }
+    }
+
     private fun search() {
         val current = _state.value
         val station = current.selectedStation ?: return
@@ -284,8 +337,16 @@ class BookingFlowViewModel @Inject constructor(
                     current.copy(step = BookingFlowUiState.Step.ORIGIN_VILLAGE)
                 BookingFlowUiState.Step.DESTINATION ->
                     current.copy(step = BookingFlowUiState.Step.ORIGIN_STATION)
+                BookingFlowUiState.Step.ASK ->
+                    // Back clears the price: a number typed for one destination
+                    // must not silently become the offer for another.
+                    current.copy(
+                        step = BookingFlowUiState.Step.DESTINATION,
+                        offeredFare = "",
+                        note = "",
+                    )
                 BookingFlowUiState.Step.RESULTS ->
-                    current.copy(step = BookingFlowUiState.Step.DESTINATION)
+                    current.copy(step = BookingFlowUiState.Step.ASK)
                 BookingFlowUiState.Step.CONFIRMED -> current
             }.copy(errorCode = null)
         }

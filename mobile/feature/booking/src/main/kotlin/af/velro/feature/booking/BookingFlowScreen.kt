@@ -29,6 +29,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -42,6 +47,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun BookingFlowRoute(
     onFinished: (bookingId: String) -> Unit,
+    onAsked: () -> Unit,
     onExit: () -> Unit,
     viewModel: BookingFlowViewModel = hiltViewModel(),
 ) {
@@ -61,6 +68,7 @@ fun BookingFlowRoute(
         onEvent = viewModel::onEvent,
         onExit = onExit,
         onFinished = onFinished,
+        onAsked = onAsked,
     )
 }
 
@@ -71,9 +79,14 @@ fun BookingFlowScreen(
     onEvent: (BookingEvent) -> Unit,
     onExit: () -> Unit,
     onFinished: (String) -> Unit,
+    onAsked: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
+
+    LaunchedEffect(state.askedRequestId) {
+        if (state.askedRequestId != null) onAsked()
+    }
 
     Scaffold(
         modifier = modifier,
@@ -120,6 +133,7 @@ fun BookingFlowScreen(
                         BookingFlowUiState.Step.ORIGIN_VILLAGE -> VillageList(state, onEvent)
                         BookingFlowUiState.Step.ORIGIN_STATION -> StationList(state, onEvent)
                         BookingFlowUiState.Step.DESTINATION -> DestinationList(state, onEvent)
+                        BookingFlowUiState.Step.ASK -> AskFare(state, onEvent)
                         BookingFlowUiState.Step.RESULTS -> ResultList(state, onEvent)
                         BookingFlowUiState.Step.CONFIRMED ->
                             Confirmation(state, onFinished)
@@ -135,6 +149,7 @@ private fun BookingFlowUiState.Step.titleKey(): String = when (this) {
     BookingFlowUiState.Step.ORIGIN_VILLAGE -> "location.label.village"
     BookingFlowUiState.Step.ORIGIN_STATION -> "location.label.station"
     BookingFlowUiState.Step.DESTINATION -> "home.question.to"
+    BookingFlowUiState.Step.ASK -> "ride.ask.title"
     BookingFlowUiState.Step.RESULTS -> "home.action.search"
     BookingFlowUiState.Step.CONFIRMED -> "booking.title"
 }
@@ -144,6 +159,7 @@ private fun BookingFlowUiState.isEmptyForStep(): Boolean = when (step) {
     BookingFlowUiState.Step.ORIGIN_VILLAGE -> villages.isEmpty()
     BookingFlowUiState.Step.ORIGIN_STATION -> stations.isEmpty()
     BookingFlowUiState.Step.DESTINATION -> destinationGroups.isEmpty()
+    BookingFlowUiState.Step.ASK -> false
     BookingFlowUiState.Step.RESULTS -> options.isEmpty()
     BookingFlowUiState.Step.CONFIRMED -> false
 }
@@ -428,6 +444,90 @@ private fun Confirmation(state: BookingFlowUiState, onFinished: (String) -> Unit
         PrimaryAction(
             label = strings["common.action.confirm"],
             onClick = { onFinished(booking.id) },
+        )
+    }
+}
+
+
+/**
+ * Naming a price, section 89.
+ *
+ * There is no suggested fare and no "typical price" hint, because VELRO does
+ * not know one. Offering a number the platform invented would anchor every
+ * negotiation in Ghorband to a guess made in a database.
+ */
+@Composable
+private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {
+    val strings = LocalVelroStrings.current
+
+    Column(
+        Modifier.fillMaxWidth().imePadding(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        VelroCard {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(
+                    listOfNotNull(
+                        state.selectedStation?.name,
+                        state.selectedDestination?.name,
+                    ).joinToString(" ← "),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    strings["ride.ask.hint"],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        OutlinedTextField(
+            value = state.offeredFare,
+            onValueChange = { onEvent(BookingEvent.FareChanged(it)) },
+            label = { Text(strings["ride.ask.title"]) },
+            suffix = { Text(strings["common.label.currency_afn"]) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            // The one number on the screen, so it is the one large control.
+            textStyle = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        // Passenger count sits with the price because it is what the price is
+        // for: four people is a different journey from one.
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                strings["ride.ask.passengers"],
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            (1..4).forEach { count ->
+                FilterChip(
+                    selected = state.seatCount == count,
+                    onClick = { onEvent(BookingEvent.SeatCountChanged(count)) },
+                    label = { Text(Numerals.localise(count.toString(), strings.locale)) },
+                )
+            }
+        }
+
+        OutlinedTextField(
+            value = state.note,
+            onValueChange = { onEvent(BookingEvent.NoteChanged(it)) },
+            label = { Text(strings["ride.ask.note"]) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        PrimaryAction(
+            label = strings["ride.ask.action"],
+            onClick = { onEvent(BookingEvent.AskForRide) },
+            enabled = state.canAsk,
+            loading = state.isSubmitting,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
         )
     }
 }

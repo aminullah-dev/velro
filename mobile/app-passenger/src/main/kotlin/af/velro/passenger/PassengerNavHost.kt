@@ -94,6 +94,11 @@ fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rem
                         popUpTo(Routes.HOME)
                     }
                 },
+                onAsked = {
+                    navController.navigate(Routes.OFFERS) {
+                        popUpTo(Routes.HOME)
+                    }
+                },
                 onExit = { navController.popBackStack() },
             )
         }
