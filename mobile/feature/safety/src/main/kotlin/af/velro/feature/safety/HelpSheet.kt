@@ -70,6 +70,10 @@ data class RideFacts(
 fun HelpSheet(
     ride: RideFacts?,
     onDismiss: () -> Unit,
+    /** Attached to the report so an operator knows which journey it is about. */
+    tripId: String? = null,
+    bookingId: String? = null,
+    /** Overrides the built-in form, for a caller that has its own screen. */
     onReport: (() -> Unit)? = null,
     viewModel: HelpViewModel = hiltViewModel(),
 ) {
@@ -77,11 +81,35 @@ fun HelpSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        HelpSheetContent(
-            contacts = state.contacts,
-            ride = ride,
-            onReport = onReport,
-        )
+        val report = state.report
+        if (report == null) {
+            HelpSheetContent(
+                contacts = state.contacts,
+                ride = ride,
+                // The report door only appears when there is somewhere for it
+                // to go. A button wired to nothing is the thing this whole
+                // feature exists to avoid.
+                onReport = if (onReport != null) onReport else viewModel::openReport,
+            )
+        } else {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(horizontal = Spacing.lg)
+                    .padding(bottom = Spacing.xl),
+            ) {
+                ReportForm(
+                    state = report,
+                    contacts = state.contacts,
+                    onCategoryChosen = viewModel::chooseCategory,
+                    onBodyChanged = viewModel::changeBody,
+                    onSubmit = { viewModel.submitReport(tripId, bookingId) },
+                    onBack = viewModel::closeReport,
+                )
+            }
+        }
     }
 }
 

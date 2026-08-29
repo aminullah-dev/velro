@@ -174,6 +174,7 @@ fun DriverHomeScreen(
                         destination = null,
                     )
                 },
+                tripId = assignment?.trip?.id,
                 onDismiss = { helpOpen = false },
             )
         }

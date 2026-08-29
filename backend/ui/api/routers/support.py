@@ -65,6 +65,14 @@ class RaiseTicketIn(Schema):
 class MessageOut(Schema):
     id: str
     author_role: str
+    #: Whether this came from the person who raised the request.
+    #:
+    #: author_role is not enough on its own. Actor.role is a property of the
+    #: person, not of the action -- someone who also drives is DRIVER even when
+    #: they are travelling as a passenger, and in Ghorband most drivers are
+    #: sometimes passengers. An operator reading "Driver" above a complaint
+    #: about a driver has been told the wrong thing.
+    is_from_reporter: bool
     body: str
     is_internal: bool
     sent_at: datetime
@@ -112,6 +120,7 @@ def _ticket_out(row, message_rows, *, to_staff: bool) -> TicketOut:
             MessageOut(
                 id=m.id,
                 author_role=m.author_role.value,
+                is_from_reporter=m.author_user_id == row.user_id,
                 body=m.body,
                 is_internal=m.is_internal,
                 sent_at=m.sent_at or row.created_at,
@@ -144,10 +153,34 @@ def contacts(
             # the moment somebody is frightened. The default in settings.py is
             # +93700000000, so this check is not hypothetical.
             velro_number=velro if _is_dialable(velro) else None,
-            categories=sorted(CATEGORIES),
-            urgent_categories=sorted(URGENT_CATEGORIES),
+            # Urgent first, then the rest. Alphabetical by code is
+            # alphabetical in a language nobody reads, and it put SAFETY
+            # seventh of eight -- below "Something else" -- on a form somebody
+            # opens because they are frightened. Same principle as the queue:
+            # the order is the triage.
+            categories=_ordered(CATEGORIES),
+            urgent_categories=_ordered(URGENT_CATEGORIES),
         ).model_dump()
     )
+
+
+def _ordered(codes: frozenset[str]) -> list[str]:
+    """Safety first, then the other urgent ones, OTHER last.
+
+    Stable, so the list does not move under somebody who has used it before.
+    """
+    def rank(code: str) -> tuple[int, str]:
+        # SAFETY alone at the top. It is the one that means "I am in danger",
+        # and inside the urgent group alphabetical order still put it third.
+        if code == "SAFETY":
+            return (0, code)
+        if code in URGENT_CATEGORIES:
+            return (1, code)
+        if code == "OTHER":
+            return (3, code)
+        return (2, code)
+
+    return sorted(codes, key=rank)
 
 
 def _is_dialable(number: str) -> bool:

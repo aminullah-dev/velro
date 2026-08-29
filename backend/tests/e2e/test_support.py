@@ -283,3 +283,56 @@ def test_the_reporter_is_told_when_it_is_answered(
     inbox = client.get("/api/v1/notifications", headers=rider).json()["data"]
     keys = [n["message_key"] for n in inbox["notifications"]]
     assert "notify.support.answered" in keys, keys
+
+
+def test_a_driver_reporting_as_a_passenger_is_shown_as_the_reporter(
+    client: TestClient, admin_session: dict
+) -> None:
+    """Actor.role is a property of the person, not of the action.
+
+    Somebody who also drives is DRIVER even when they are travelling as a
+    passenger -- and in Ghorband most drivers are sometimes passengers. An
+    operator reading "Driver" above a complaint about a driver has been told the
+    wrong thing, so the thread carries who raised it instead.
+    """
+    # A user of this test's own who is both. Sharing the seeded احمد with
+    # test_vertical_slice means two sign-ins for one phone inside a minute,
+    # which trips the OTP rate limiter -- the server working correctly.
+    both = auth(sign_in(client, "+93700000185"))
+    registered = client.post("/api/v1/driver/register", json={}, headers=both)
+    assert registered.status_code in (200, 201, 409), registered.text
+    mine = client.post(
+        "/api/v1/support/tickets", headers=both,
+        json={"category_code": "DRIVER_CONDUCT", "body": "راننده تند می‌راند"},
+    ).json()["data"]
+
+    client.post(
+        f"/api/v1/support/tickets/{mine['id']}/messages", headers=admin_session,
+        json={"body": "we are looking into it"},
+    )
+
+    thread = client.get(
+        f"/api/v1/support/tickets/{mine['id']}", headers=admin_session
+    ).json()["data"]["messages"]
+
+    theirs = [m for m in thread if m["is_from_reporter"]]
+    ours = [m for m in thread if not m["is_from_reporter"]]
+    assert len(theirs) == 1, "the reporter's own message was not marked as theirs"
+    assert len(ours) == 1, "VELRO's reply was marked as coming from the reporter"
+    assert theirs[0]["body"] == "راننده تند می‌راند"
+
+
+def test_safety_is_the_first_category_offered(client: TestClient) -> None:
+    """The order on the form is the triage, exactly as it is in the queue.
+
+    sorted() puts SAFETY seventh of eight -- below "Something else" -- which is
+    alphabetical in a language nobody reads, on a form somebody opens because
+    they are frightened.
+    """
+    data = client.get("/api/v1/support/contacts").json()["data"]
+    assert data["categories"][0] == "SAFETY", data["categories"]
+    assert data["categories"][-1] == "OTHER", data["categories"]
+    # And the urgent ones come before the ordinary ones.
+    urgent = set(data["urgent_categories"])
+    positions = [i for i, c in enumerate(data["categories"]) if c in urgent]
+    assert positions == list(range(len(urgent))), data["categories"]

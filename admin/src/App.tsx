@@ -4,6 +4,7 @@ import { onSignedOut, session } from "./api/client";
 import { LOCALES, useStrings, type LocaleTag } from "./i18n/strings";
 import { ApprovalsPage } from "./pages/Approvals";
 import { AuditPage } from "./pages/Audit";
+import { SupportPage } from "./pages/Support";
 import { BookingsPage } from "./pages/Bookings";
 import { DashboardPage } from "./pages/Dashboard";
 import { DispatchPage } from "./pages/Dispatch";
@@ -46,6 +47,7 @@ const NAV = [
   { to: "/routes", labelKey: "admin.nav.routes", element: <RoutesPage /> },
   { to: "/finance", labelKey: "admin.nav.finance", element: <FinancePage /> },
   { to: "/settings", labelKey: "admin.nav.settings", element: <SettingsPage /> },
+  { to: "/support", labelKey: "admin.nav.support", element: <SupportPage /> },
   { to: "/audit", labelKey: "admin.nav.audit", element: <AuditPage /> },
 ];
 

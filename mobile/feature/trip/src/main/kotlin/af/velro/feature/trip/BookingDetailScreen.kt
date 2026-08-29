@@ -119,6 +119,8 @@ fun BookingDetailScreen(
                         origin = booking.pickupStationName,
                         destination = booking.dropoffDestinationName,
                     ),
+                    tripId = booking.tripId,
+                    bookingId = booking.id,
                     onDismiss = { helpOpen = false },
                 )
             }

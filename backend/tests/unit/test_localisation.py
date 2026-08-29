@@ -213,13 +213,23 @@ def test_the_apps_built_in_safety_categories_match_the_domain() -> None:
     block = re.search(r"val BUILT_IN = SafetyContacts\((.*?)\n        \)", source, re.S)
     assert block, "SafetyContacts.BUILT_IN not found in the Kotlin domain"
 
-    def listed(field: str) -> set[str]:
+    def ordered(field: str) -> list[str]:
         section = re.search(rf"{field} = listOf\((.*?)\)", block.group(1), re.S)
         assert section, f"{field} not found in SafetyContacts.BUILT_IN"
-        return set(re.findall(r'"([A-Z_]+)"', section.group(1)))
+        return re.findall(r'"([A-Z_]+)"', section.group(1))
+
+    def listed(field: str) -> set[str]:
+        return set(ordered(field))
 
     assert listed("categories") == CATEGORIES
     assert listed("urgentCategories") == URGENT_CATEGORIES
+
+    # And in the same order, because the order is the triage. A handset with no
+    # connection renders this list, so SAFETY being seventh here is the same
+    # defect as SAFETY being seventh on the server -- just harder to notice.
+    from ui.api.routers.support import _ordered
+
+    assert ordered("categories") == _ordered(CATEGORIES)
 
 
 def test_every_safety_string_the_sheet_asks_for_exists() -> None:

@@ -474,9 +474,15 @@ data class SafetyContacts(
         val BUILT_IN = SafetyContacts(
             emergencyNumbers = listOf("119", "100"),
             velroNumber = null,
+            // The order is the triage, exactly as it is in the operator's
+            // queue: SAFETY first because it means "I am in danger", then the
+            // other urgent ones, and "Something else" last. An offline handset
+            // shows this list, so getting it right here matters as much as on
+            // the server.
             categories = listOf(
-                "SAFETY", "LOST_ITEM", "FARE_DISPUTE", "DRIVER_CONDUCT",
-                "PASSENGER_CONDUCT", "VEHICLE_CONDITION", "APP_PROBLEM", "OTHER",
+                "SAFETY", "DRIVER_CONDUCT", "PASSENGER_CONDUCT",
+                "APP_PROBLEM", "FARE_DISPUTE", "LOST_ITEM", "VEHICLE_CONDITION",
+                "OTHER",
             ),
             urgentCategories = listOf("SAFETY", "DRIVER_CONDUCT", "PASSENGER_CONDUCT"),
         )
