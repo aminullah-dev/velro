@@ -23,7 +23,7 @@ from application.ports.services import (
     SmsSender,
     TokenService,
 )
-from domain.enums import ActorRole, Locale, UserStatus
+from domain.enums import Locale, UserStatus
 from domain.identity import PASSENGER, OtpChallenge, PhoneNumber, User
 from shared import error_codes
 from shared.clock import Clock
@@ -219,13 +219,24 @@ class VerifyOtp:
         user_row.last_seen_at = now
         self._users.save(user_row)
 
+        user.roles = set(roles)
         self._audit.write(
             "auth.signed_in",
             actor_id=user_row.id,
-            actor_role=ActorRole.PASSENGER,
+            # Derived from the roles actually granted. Hard-coding PASSENGER
+            # here recorded every administrator's sign-in as a passenger's,
+            # which is exactly the sort of quiet inaccuracy an audit trail
+            # cannot afford -- it is trusted precisely because nobody re-checks
+            # it.
+            actor_role=user.primary_actor_role(),
             entity_type="user",
             entity_id=user_row.id,
-            after={"device_id": cmd.device_id, "is_new_user": is_new},
+            after={
+                "is_new_user": is_new,
+                # Omitted when absent rather than written as a null: an audit
+                # diff should not carry fields that were never supplied.
+                **({"device_id": cmd.device_id} if cmd.device_id else {}),
+            },
         )
 
         return Session(

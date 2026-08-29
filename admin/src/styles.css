@@ -1,0 +1,265 @@
+/* VELRO admin.
+ *
+ * The same tokens as the mobile design system, so the two surfaces read as one
+ * product. Logical properties throughout -- inline-start/inline-end, never
+ * left/right -- so the whole panel mirrors for Dari and Pashto without a second
+ * stylesheet.
+ */
+
+:root {
+  --green-900: #06301f;
+  --green-800: #0a4a30;
+  --green-700: #0e6042;
+  --green-600: #127954;
+  --green-500: #189669;
+  --green-200: #8fd9bc;
+  --green-100: #c7ecdc;
+  --green-50:  #eaf7f1;
+
+  --amber-600: #b45309;
+  --amber-500: #d97706;
+  --amber-100: #fef3c7;
+
+  --red-700: #b42318;
+  --red-500: #d92d20;
+  --red-100: #fee4e2;
+
+  --n-900: #101828;
+  --n-700: #344054;
+  --n-500: #667085;
+  --n-300: #d0d5dd;
+  --n-200: #e4e7ec;
+  --n-100: #f2f4f7;
+  --n-50:  #f9fafb;
+  --white: #ffffff;
+
+  --bg: var(--n-50);
+  --surface: var(--white);
+  --text: var(--n-900);
+  --text-muted: var(--n-500);
+  --border: var(--n-200);
+  --accent: var(--green-700);
+
+  /* A 4px grid, matching the mobile Spacing scale. */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-12: 48px;
+
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
+
+  --sidebar: 248px;
+
+  /* Perso-Arabic needs noticeably more leading than Latin at the same size. */
+  --line-latin: 1.35;
+  --line-arabic: 1.6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --surface: #13181f;
+    --text: #e7ebf0;
+    --text-muted: #9aa5b1;
+    --border: #232a34;
+    --accent: var(--green-200);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: var(--line-arabic);
+  -webkit-font-smoothing: antialiased;
+}
+
+html[dir="ltr"] body { line-height: var(--line-latin); }
+
+/* Latin runs inside RTL prose -- plate numbers, booking numbers, codes -- must
+   not be reordered by the bidi algorithm. */
+.ltr { direction: ltr; unicode-bidi: isolate; }
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* -- shell ------------------------------------------------------------- */
+
+.shell { display: grid; grid-template-columns: var(--sidebar) 1fr; min-height: 100%; }
+
+.sidebar {
+  background: var(--surface);
+  border-inline-end: 1px solid var(--border);
+  padding: var(--s-5) var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.brand {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  padding: var(--s-2) var(--s-3) var(--s-5);
+  letter-spacing: 0.5px;
+}
+
+.nav-link {
+  display: block;
+  padding: var(--s-3);
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 120ms, color 120ms;
+}
+.nav-link:hover { background: var(--n-100); color: var(--text); }
+@media (prefers-color-scheme: dark) { .nav-link:hover { background: #1b222c; } }
+.nav-link.active { background: var(--green-50); color: var(--green-700); font-weight: 600; }
+@media (prefers-color-scheme: dark) {
+  .nav-link.active { background: var(--green-800); color: var(--green-100); }
+}
+
+.main { padding: var(--s-6) var(--s-8); min-width: 0; }
+
+.page-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--s-4); margin-bottom: var(--s-5); flex-wrap: wrap;
+}
+.page-title { font-size: 24px; font-weight: 650; margin: 0; }
+.page-sub { color: var(--text-muted); font-size: 13px; margin: var(--s-1) 0 0; }
+
+/* -- cards and stats --------------------------------------------------- */
+
+.grid { display: grid; gap: var(--s-4); }
+.grid.stats { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.grid.two { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--s-5);
+}
+
+.stat-label { color: var(--text-muted); font-size: 13px; }
+.stat-value { font-size: 28px; font-weight: 650; margin-top: var(--s-1); }
+.stat-value.money { font-size: 22px; }
+.stat-note { color: var(--text-muted); font-size: 12px; margin-top: var(--s-1); }
+.stat-value.attention { color: var(--amber-600); }
+
+/* -- tables ------------------------------------------------------------ */
+
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow-x: auto;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+th, td {
+  padding: var(--s-3) var(--s-4);
+  text-align: start;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+th {
+  font-weight: 600; font-size: 12px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.4px;
+  background: var(--n-100); position: sticky; top: 0;
+}
+@media (prefers-color-scheme: dark) { th { background: #1b222c; } }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--n-50); }
+@media (prefers-color-scheme: dark) { tbody tr:hover td { background: #171d25; } }
+
+/* Numbers align on their decimal, even in an RTL table. */
+td.num, th.num { text-align: end; font-variant-numeric: tabular-nums; }
+
+/* -- chips ------------------------------------------------------------- */
+
+.chip {
+  display: inline-block; padding: 3px var(--s-3); border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 500; white-space: nowrap;
+  background: var(--n-100); color: var(--n-700);
+}
+.chip.active   { background: var(--green-50);  color: var(--green-700); }
+.chip.attention{ background: var(--amber-100); color: var(--amber-600); }
+.chip.failed   { background: var(--red-100);   color: var(--red-700); }
+.chip.ended    { background: var(--n-100);     color: var(--n-500); }
+
+/* -- controls ---------------------------------------------------------- */
+
+.row { display: flex; gap: var(--s-3); align-items: center; flex-wrap: wrap; }
+.spacer { flex: 1; }
+
+input, select, button {
+  font: inherit; color: inherit;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: var(--s-2) var(--s-3);
+  min-height: 40px;
+}
+input:focus-visible, select:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+
+button { cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+button.primary {
+  background: var(--green-700); color: var(--white);
+  border-color: var(--green-700); font-weight: 600;
+}
+button.primary:hover:not(:disabled) { background: var(--green-800); }
+button.danger { color: var(--red-700); border-color: var(--red-100); }
+button.small { min-height: 32px; padding: var(--s-1) var(--s-3); font-size: 13px; }
+
+/* -- states ------------------------------------------------------------ */
+
+.state {
+  padding: var(--s-12) var(--s-6);
+  text-align: center;
+  color: var(--text-muted);
+}
+.state .headline { color: var(--text); font-size: 16px; margin-bottom: var(--s-3); }
+
+.banner {
+  border-radius: var(--r-md); padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-4); font-size: 14px;
+}
+.banner.error { background: var(--red-100); color: var(--red-700); }
+.banner.info  { background: var(--green-50); color: var(--green-700); }
+
+/* -- sign in ----------------------------------------------------------- */
+
+.signin {
+  min-height: 100vh; display: grid; place-items: center; padding: var(--s-6);
+}
+.signin .card { width: min(420px, 100%); }
+.signin .brand { text-align: center; padding-top: 0; }
+.field { display: block; margin-bottom: var(--s-4); }
+.field span { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: var(--s-2); }
+.field input { width: 100%; }
+
+.lang-row { display: flex; gap: var(--s-2); justify-content: center; margin-bottom: var(--s-5); }
+.lang-row button.on { background: var(--green-50); border-color: var(--green-200); color: var(--green-700); }
+
+@media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar {
+    position: static; height: auto; flex-direction: row; overflow-x: auto;
+    border-inline-end: none; border-bottom: 1px solid var(--border);
+  }
+  .brand { padding: var(--s-2) var(--s-3); }
+  .main { padding: var(--s-4); }
+}

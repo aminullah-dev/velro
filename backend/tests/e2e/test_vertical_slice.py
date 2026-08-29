@@ -379,3 +379,28 @@ def test_cancelling_a_booking_returns_the_seat_to_inventory(client: TestClient) 
 
     # The seats are genuinely back on sale.
     assert availability(option["trip_id"]) == before
+
+
+def test_a_staff_sign_in_is_audited_as_staff(client: TestClient) -> None:
+    """The audit trail is trusted because nobody re-checks it.
+
+    Recording every administrator's sign-in as a passenger's would be invisible
+    until the one time someone needed to know who did something.
+    """
+    from sqlalchemy import select
+
+    from infrastructure.db.models.ops import AuditLogRow
+    from ui.api import deps
+
+    sign_in(client, "+93700000001")   # the seeded super administrator
+
+    with deps._session_factory()() as session:
+        entry = session.scalars(
+            select(AuditLogRow)
+            .where(AuditLogRow.action == "auth.signed_in")
+            .order_by(AuditLogRow.occurred_at.desc())
+            .limit(1)
+        ).one()
+        assert entry.actor_role == "ADMIN", entry.actor_role
+        # A device id that was never sent is absent, not stored as null.
+        assert "device_id" not in (entry.after or {}) or entry.after["device_id"]
