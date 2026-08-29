@@ -16,8 +16,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from tests.e2e.test_vertical_slice import auth, sign_in
-
 pytestmark = pytest.mark.integration
 
 
@@ -28,10 +26,8 @@ def _session():
 
 
 @pytest.fixture(scope="module")
-def admin_headers(client: TestClient) -> dict:
-    # Signed in once: per-test sign-in trips the OTP rate limiter, which is the
-    # limiter working correctly.
-    return auth(sign_in(client, "+93700000001"))
+def admin_headers(admin_session: dict) -> dict:
+    return admin_session
 
 
 def test_a_valid_token_works_normally(client: TestClient, admin_headers: dict) -> None:

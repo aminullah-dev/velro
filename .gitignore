@@ -48,3 +48,6 @@ mobile/local.properties
 admin/dist/
 admin/public/locales/
 mobile/.kotlin/
+
+# Uploaded files: driver identity documents. Never in the repository.
+backend/var/

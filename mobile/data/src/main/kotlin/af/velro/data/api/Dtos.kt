@@ -331,3 +331,38 @@ data class OfferDto(
     val expires_at: String,
     val trip: TripSummaryDto,
 )
+
+
+// -- driver documents ---------------------------------------------------
+
+@Serializable
+data class DocumentDto(
+    val id: String,
+    val document_type_code: String,
+    val status: String,
+    val expires_on: String? = null,
+    val rejection_reason: String? = null,
+    val uploaded_at: String,
+    val reviewed_at: String? = null,
+    val is_current: Boolean,
+)
+
+@Serializable
+data class DocumentChecklistDto(
+    val required: List<String>,
+    val missing: List<String>,
+    val documents: List<DocumentDto> = emptyList(),
+    val approval_status: String,
+    val can_work: Boolean,
+)
+
+@Serializable
+data class UploadedDocumentDto(
+    val id: String,
+    val document_type_code: String,
+    val status: String,
+    val supersedes_id: String? = null,
+)
+
+@Serializable
+data class RegisterDriverRequest(val home_district_id: String? = null)

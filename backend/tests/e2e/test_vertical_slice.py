@@ -15,28 +15,9 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.e2e.conftest import auth, sign_in
+
 pytestmark = pytest.mark.integration
-
-
-def sign_in(client: TestClient, phone: str) -> dict:
-    """Phone + OTP, exactly as a handset does it."""
-    requested = client.post(
-        "/api/v1/auth/otp/request", json={"phone": phone, "locale": "fa-AF"}
-    )
-    assert requested.status_code == 200, requested.text
-    code = requested.json()["data"]["debug_code"]
-    assert code, "development build must echo the code"
-
-    verified = client.post(
-        "/api/v1/auth/otp/verify",
-        json={"phone": phone, "code": code, "device_id": "test-device", "locale": "fa-AF"},
-    )
-    assert verified.status_code == 200, verified.text
-    return verified.json()["data"]
-
-
-def auth(session: dict) -> dict[str, str]:
-    return {"Authorization": f"Bearer {session['access_token']}"}
 
 
 def test_passenger_books_and_travels_with_a_real_driver(client: TestClient) -> None:

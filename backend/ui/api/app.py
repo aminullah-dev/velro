@@ -24,6 +24,7 @@ from ui.api.routers import (
     auth,
     bookings,
     dispatch,
+    documents,
     driver,
     geography,
     imports,
@@ -87,6 +88,7 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
     for router in (
         auth.router, geography.router, bookings.router,
         driver.router, dispatch.router, admin.router, imports.router,
+        documents.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
 

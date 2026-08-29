@@ -14,8 +14,6 @@ import pytest
 from fastapi.testclient import TestClient
 from openpyxl import Workbook
 
-from tests.e2e.test_vertical_slice import auth, sign_in
-
 pytestmark = pytest.mark.integration
 
 ADMIN = "+93700000001"
@@ -36,13 +34,8 @@ def csv_bytes(*rows: str) -> bytes:
 
 
 @pytest.fixture(scope="session")
-def staff(client: TestClient) -> dict:
-    """Signed in once for the whole module.
-
-    Per-test sign-in trips the OTP rate limiter, which is the limiter behaving
-    correctly -- an operator signs in once and then does many imports.
-    """
-    return auth(sign_in(client, ADMIN))
+def staff(admin_session: dict) -> dict:
+    return admin_session
 
 
 class TestPreview:
@@ -314,10 +307,11 @@ class TestCommit:
 
 
 class TestPermissions:
-    def test_a_passenger_cannot_import(self, client: TestClient) -> None:
-        passenger = auth(sign_in(client, "+93700000010"))
+    def test_a_passenger_cannot_import(
+        self, client: TestClient, passenger_session: dict
+    ) -> None:
         response = preview(
-            client, passenger, csv_bytes("GRB-SYG,تلاش,,35.1,68.7"), "v.csv"
+            client, passenger_session, csv_bytes("GRB-SYG,تلاش,,35.1,68.7"), "v.csv"
         )
         assert response.status_code == 403
         assert response.json()["error"]["code"] == "PERMISSION_DENIED"

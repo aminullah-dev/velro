@@ -7,7 +7,12 @@ from decimal import Decimal
 
 from sqlalchemy import select
 
-from domain.enums import DriverApprovalStatus, DriverAvailability, VehicleStatus
+from domain.enums import (
+    DocumentStatus,
+    DriverApprovalStatus,
+    DriverAvailability,
+    VehicleStatus,
+)
 from infrastructure.db.models.supply import (
     DriverDocumentRow,
     DriverLocationRow,
@@ -50,6 +55,56 @@ class DriverRepository(SqlRepository[DriverRow]):
         row.rating_count += 1
         row.version += 1
         self.session.add(row)
+
+
+class DriverDocumentRepository(SqlRepository[DriverDocumentRow]):
+    """Documents, newest first.
+
+    Every upload is kept. A driver needs to see why an earlier attempt was
+    rejected, and an administrator needs to see what was originally sent.
+    """
+
+    model = DriverDocumentRow
+    not_found_code = error_codes.DOCUMENT_NOT_FOUND
+
+    def create(self, **fields) -> DriverDocumentRow:
+        row = DriverDocumentRow(**fields)
+        self.session.add(row)
+        return row
+
+    def for_driver(self, driver_id: str) -> list[DriverDocumentRow]:
+        stmt = (
+            self._base()
+            .where(DriverDocumentRow.driver_id == driver_id)
+            .order_by(DriverDocumentRow.created_at.desc())
+        )
+        return list(self.session.scalars(stmt).all())
+
+    def current_for(self, driver_id: str, document_type_code: str) -> DriverDocumentRow | None:
+        """The newest upload of one type -- what an administrator reviews."""
+        stmt = (
+            self._base()
+            .where(
+                DriverDocumentRow.driver_id == driver_id,
+                DriverDocumentRow.document_type_code == document_type_code,
+            )
+            .order_by(DriverDocumentRow.created_at.desc())
+            .limit(1)
+        )
+        return self.session.scalars(stmt).one_or_none()
+
+    def pending_count(self) -> int:
+        from sqlalchemy import func, select
+
+        stmt = (
+            select(func.count())
+            .select_from(DriverDocumentRow)
+            .where(
+                DriverDocumentRow.deleted_at.is_(None),
+                DriverDocumentRow.status == DocumentStatus.PENDING.value,
+            )
+        )
+        return int(self.session.scalar(stmt) or 0)
 
 
 class VehicleRepository(SqlRepository[VehicleRow]):

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { onSignedOut, session } from "./api/client";
 import { LOCALES, useStrings, type LocaleTag } from "./i18n/strings";
+import { ApprovalsPage } from "./pages/Approvals";
 import { AuditPage } from "./pages/Audit";
 import { BookingsPage } from "./pages/Bookings";
 import { DashboardPage } from "./pages/Dashboard";
@@ -24,6 +25,7 @@ const NAV = [
   { to: "/trips", labelKey: "admin.nav.trips", element: <TripsPage /> },
   { to: "/bookings", labelKey: "admin.nav.bookings", element: <BookingsPage /> },
   { to: "/drivers", labelKey: "admin.nav.drivers", element: <DriversPage /> },
+  { to: "/approvals", labelKey: "admin.nav.approvals", element: <ApprovalsPage /> },
   { to: "/vehicles", labelKey: "admin.nav.vehicles", element: <VehiclesPage /> },
   { to: "/locations", labelKey: "admin.nav.locations", element: <LocationsPage /> },
   { to: "/import", labelKey: "admin.nav.import", element: <ImportVillagesPage /> },

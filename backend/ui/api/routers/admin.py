@@ -571,7 +571,7 @@ def approve_driver(
             DriverDocument(
                 id=d.id, driver_id=d.driver_id, document_type_code=d.document_type_code,
                 file_key=d.file_key, status=DocumentStatus(d.status),
-                expires_on=d.expires_on,
+                expires_on=d.expires_on, uploaded_at=d.created_at,
             )
             for d in drivers_repo.documents_of(driver_id)
         ],

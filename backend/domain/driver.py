@@ -30,6 +30,7 @@ class DriverDocument:
     verified_by: str | None = None
     verified_at: datetime | None = None
     rejection_reason: str | None = None
+    uploaded_at: datetime | None = None
 
     def is_valid_on(self, on: date) -> bool:
         if self.status is not DocumentStatus.VERIFIED:
@@ -71,6 +72,18 @@ class Vehicle:
     def passenger_capacity(self) -> int:
         """Seats a passenger may occupy -- the driver's seat is not for sale."""
         return self.seat_capacity
+
+
+def _uploaded_after(candidate: DriverDocument, existing: DriverDocument) -> bool:
+    """Compare by upload time, falling back to nothing rather than guessing.
+
+    A document with no recorded upload time never displaces one that has one.
+    """
+    if candidate.uploaded_at is None:
+        return False
+    if existing.uploaded_at is None:
+        return True
+    return candidate.uploaded_at > existing.uploaded_at
 
 
 @dataclass(slots=True)
@@ -134,8 +147,26 @@ class Driver:
         if self.availability is DriverAvailability.ON_TRIP:
             raise ConflictError(error_codes.DRIVER_ALREADY_ON_TRIP, driver_id=self.id)
 
+    def current_documents(self) -> dict[str, DriverDocument]:
+        """The newest upload of each type.
+
+        Only the newest counts. A driver who replaces a licence is presenting
+        the new photograph, so the superseded one -- verified though it was --
+        must not satisfy the requirement. Otherwise an administrator could
+        approve someone whose current licence nobody has looked at.
+        """
+        newest: dict[str, DriverDocument] = {}
+        for document in self.documents:
+            existing = newest.get(document.document_type_code)
+            if existing is None or _uploaded_after(document, existing):
+                newest[document.document_type_code] = document
+        return newest
+
     def missing_documents(self, required: frozenset[str], *, on: date) -> frozenset[str]:
-        held = {d.document_type_code for d in self.documents if d.is_valid_on(on)}
+        current = self.current_documents()
+        held = {
+            code for code, document in current.items() if document.is_valid_on(on)
+        }
         return frozenset(required - held)
 
     def approve(self, *, by: str, at: datetime, required_documents: frozenset[str]) -> None:

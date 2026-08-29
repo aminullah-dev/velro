@@ -467,3 +467,72 @@ class TestOtp:
         with pytest.raises(AuthenticationError) as exc:
             challenge.verify("wrong", at=NOW)
         assert exc.value.context["attempts_remaining"] == 2
+
+
+class TestDriverDocumentCurrency:
+    """Only the newest upload of each type counts.
+
+    A driver who replaces a licence is presenting the new photograph. Letting
+    the superseded one still satisfy the requirement would let an administrator
+    approve someone whose current licence nobody has looked at -- which is the
+    one thing the approval gate exists to prevent.
+    """
+
+    def _driver(self, *documents: DriverDocument) -> Driver:
+        return Driver(id="d", user_id="u", documents=list(documents))
+
+    def _document(self, status: DocumentStatus, days_ago: int, kind: str = "LICENSE"):
+        return DriverDocument(
+            id=f"{kind}-{days_ago}",
+            driver_id="d",
+            document_type_code=kind,
+            file_key="k",
+            status=status,
+            uploaded_at=NOW - timedelta(days=days_ago),
+        )
+
+    def test_a_pending_replacement_supersedes_a_verified_original(self) -> None:
+        driver = self._driver(
+            self._document(DocumentStatus.VERIFIED, days_ago=5),
+            self._document(DocumentStatus.PENDING, days_ago=0),
+        )
+        assert driver.current_documents()["LICENSE"].status is DocumentStatus.PENDING
+        assert driver.missing_documents(frozenset({"LICENSE"}), on=NOW.date()) == {"LICENSE"}
+
+    def test_a_verified_replacement_satisfies_the_requirement(self) -> None:
+        driver = self._driver(
+            self._document(DocumentStatus.REJECTED, days_ago=5),
+            self._document(DocumentStatus.VERIFIED, days_ago=0),
+        )
+        assert driver.missing_documents(frozenset({"LICENSE"}), on=NOW.date()) == frozenset()
+
+    def test_a_driver_with_a_replaced_licence_cannot_be_approved(self) -> None:
+        driver = self._driver(
+            self._document(DocumentStatus.VERIFIED, days_ago=5),
+            self._document(DocumentStatus.PENDING, days_ago=0),
+        )
+        with pytest.raises(ConflictError) as exc:
+            driver.approve(
+                by="admin", at=NOW, required_documents=frozenset({"LICENSE"})
+            )
+        assert exc.value.code == "DRIVER_DOCUMENTS_INCOMPLETE"
+
+    def test_documents_of_different_types_do_not_supersede_each_other(self) -> None:
+        driver = self._driver(
+            self._document(DocumentStatus.VERIFIED, days_ago=1, kind="LICENSE"),
+            self._document(DocumentStatus.VERIFIED, days_ago=0, kind="NATIONAL_ID"),
+        )
+        assert driver.missing_documents(
+            frozenset({"LICENSE", "NATIONAL_ID"}), on=NOW.date()
+        ) == frozenset()
+
+    def test_an_expired_current_document_does_not_count(self) -> None:
+        driver = self._driver(
+            DriverDocument(
+                id="1", driver_id="d", document_type_code="LICENSE", file_key="k",
+                status=DocumentStatus.VERIFIED,
+                expires_on=NOW.date() - timedelta(days=1),
+                uploaded_at=NOW,
+            )
+        )
+        assert driver.missing_documents(frozenset({"LICENSE"}), on=NOW.date()) == {"LICENSE"}

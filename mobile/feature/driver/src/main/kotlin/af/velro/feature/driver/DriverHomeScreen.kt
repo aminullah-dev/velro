@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -43,15 +44,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun DriverHomeRoute(viewModel: DriverHomeViewModel = hiltViewModel()) {
+fun DriverHomeRoute(
+    onOpenDocuments: () -> Unit,
+    viewModel: DriverHomeViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    DriverHomeScreen(state, viewModel::onEvent)
+    DriverHomeScreen(state, viewModel::onEvent, onOpenDocuments = onOpenDocuments)
 }
 
 @Composable
 fun DriverHomeScreen(
     state: DriverHomeUiState,
     onEvent: (DriverHomeEvent) -> Unit,
+    onOpenDocuments: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -72,6 +77,7 @@ fun DriverHomeScreen(
     Column(
         modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .imePadding()
             .padding(horizontal = Spacing.gutter, vertical = Spacing.lg)
@@ -81,9 +87,9 @@ fun DriverHomeScreen(
         Spacer(Modifier.height(Spacing.lg))
 
         if (!state.canWork) {
-            // Approval is a gate, not a label: explain it rather than showing an
-            // empty screen with a dead switch.
-            PendingApproval(state)
+            // Approval is a gate, not a label: explain it, and give the driver
+            // the one action that moves them past it.
+            PendingApproval(state, onOpenDocuments)
         } else {
             OnlineToggle(state, onEvent)
         }
@@ -118,7 +124,7 @@ fun DriverHomeScreen(
 }
 
 @Composable
-private fun PendingApproval(state: DriverHomeUiState) {
+private fun PendingApproval(state: DriverHomeUiState, onOpenDocuments: () -> Unit) {
     val strings = LocalVelroStrings.current
     VelroCard {
         Column {
@@ -138,11 +144,18 @@ private fun PendingApproval(state: DriverHomeUiState) {
                 // Names the documents, so the driver knows what to bring rather
                 // than being told only that something is wrong.
                 Text(
-                    missing.joinToString(" • "),
+                    missing.joinToString(" • ") {
+                        strings["document.type.${it.lowercase()}"]
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
             }
+            Spacer(Modifier.height(Spacing.md))
+            SecondaryAction(
+                label = strings["driver.documents.title"],
+                onClick = onOpenDocuments,
+            )
         }
     }
 }

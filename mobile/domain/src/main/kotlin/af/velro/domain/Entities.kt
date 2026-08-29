@@ -174,3 +174,41 @@ data class Session(
     val isDriver: Boolean get() = "DRIVER" in roles
     val isPassenger: Boolean get() = "PASSENGER" in roles
 }
+
+
+// -- driver documents ---------------------------------------------------
+
+enum class DocumentStatus { PENDING, VERIFIED, REJECTED, EXPIRED }
+
+data class DriverDocument(
+    val id: String,
+    val documentTypeCode: String,
+    val status: DocumentStatus,
+    val expiresOn: String? = null,
+    val rejectionReason: String? = null,
+    val uploadedAt: java.time.Instant,
+    val isCurrent: Boolean,
+)
+
+/**
+ * What a driver still has to send, and where each item stands.
+ *
+ * Only the current upload of each type counts: a driver who replaces a licence
+ * is presenting the new photograph, so the superseded one -- verified though it
+ * may have been -- no longer satisfies the requirement.
+ */
+data class DocumentChecklist(
+    val required: List<String>,
+    val missing: List<String>,
+    val documents: List<DriverDocument>,
+    val approvalStatus: String,
+    val canWork: Boolean,
+) {
+    fun currentFor(typeCode: String): DriverDocument? =
+        documents.firstOrNull { it.documentTypeCode == typeCode && it.isCurrent }
+
+    val isComplete: Boolean get() = missing.isEmpty()
+
+    val awaitingReview: Boolean
+        get() = isComplete && !canWork
+}

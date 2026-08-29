@@ -63,6 +63,7 @@ from infrastructure.db.repositories.routing import (
 )
 from infrastructure.db.repositories.seats import TripSeatRepository
 from infrastructure.db.repositories.supply import (
+    DriverDocumentRepository,
     DriverLocationRepository,
     DriverRepository,
     VehicleRepository,
@@ -79,6 +80,7 @@ from infrastructure.services.codes import SecretsOtpGenerator, SecretsVerificati
 from infrastructure.services.messaging import ConsolePushChannel, ConsoleSmsSender
 from infrastructure.services.numbers import SqlNumberAllocator
 from infrastructure.services.settings import SqlSettingsProvider
+from infrastructure.services.storage import LocalFileStorage
 from infrastructure.services.tokens import JwtTokenService
 from shared import config, error_codes
 from shared.clock import SystemClock
@@ -173,6 +175,20 @@ def vehicles(session: SessionDep) -> VehicleRepository:
 
 def driver_locations(session: SessionDep) -> DriverLocationRepository:
     return DriverLocationRepository(session)
+
+
+def driver_documents(session: SessionDep) -> DriverDocumentRepository:
+    return DriverDocumentRepository(session)
+
+
+@lru_cache(maxsize=1)
+def file_storage() -> LocalFileStorage:
+    """Files live outside anything the web server serves.
+
+    There is no URL that reaches them; the only way out is an endpoint that
+    checks who is asking.
+    """
+    return LocalFileStorage(settings().storage_root)
 
 
 def offers(session: SessionDep) -> DispatchOfferRepository:
