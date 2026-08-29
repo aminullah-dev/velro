@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, query } from "../api/client";
-import {
-  Empty, ErrorState, Loading, Ltr, PageHeader, Pager, Table,
-} from "../components/ui";
+import { Empty, Ltr, PageHeader, Pager, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface AuditEntry {
@@ -27,13 +25,14 @@ export function AuditPage() {
   const { t, dateTime } = useStrings();
   const [offset, setOffset] = useState(0);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["audit", offset],
     queryFn: () => api.list<AuditEntry[]>(`/admin/audit${query({ limit: LIMIT, offset })}`),
   });
+  const { data } = listQuery;
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
 
   const entries = data?.data ?? [];
   const total = Number(data?.meta?.total ?? entries.length);

@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, session } from "../api/client";
-import {
-  Empty, ErrorBanner, ErrorState, Loading, Ltr, PageHeader, Table,
-} from "../components/ui";
+import { Empty, ErrorBanner, Loading, Ltr, PageHeader, Table, gate } from "../components/ui";
 import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 
@@ -83,10 +81,8 @@ export function ApprovalsPage() {
     },
   });
 
-  if (drivers.isLoading) return <Loading />;
-  if (drivers.error) {
-    return <ErrorState error={drivers.error} onRetry={() => drivers.refetch()} />;
-  }
+  const blocked = gate(drivers);
+  if (blocked) return blocked;
 
   const pending = drivers.data ?? [];
   const data = checklist.data;
@@ -169,6 +165,18 @@ export function ApprovalsPage() {
           {checklist.isLoading && <Loading />}
           {data && (
             <>
+              {/* The face and the tazkira first, and together. Everything below
+                  is paperwork; this is the question of whether the person is
+                  who they say. */}
+              <IdentityCheck
+                selfie={data.documents.find(
+                  (d) => d.document_type_code === "SELFIE" && d.is_current,
+                )}
+                tazkira={data.documents.find(
+                  (d) => d.document_type_code === "NATIONAL_ID" && d.is_current,
+                )}
+              />
+
               {/* Every required type is listed, including the ones never sent --
                   a checklist with silent gaps is not a checklist. */}
               <Table
@@ -308,12 +316,113 @@ function DocumentStatusChip({ status }: { status: string }) {
 }
 
 /**
- * The photograph itself.
+ * Fetches one document as a blob URL.
  *
- * Fetched with the operator's token and rendered from a blob. An <img src> to
- * the endpoint would not carry the Authorization header, and making the route
- * public so the tag worked would put identity cards behind a guessable URL.
+ * Authenticated, so the image cannot be a plain <img src> to the endpoint: the
+ * tag would not carry the Authorization header, and making the route public so
+ * that it worked would put identity cards behind a guessable URL. The blob is
+ * revoked on unmount -- one left alive keeps someone's tazkira in memory and
+ * reachable from the console for as long as the tab is open.
+ *
+ * The id the picture was fetched for is part of the state rather than being
+ * cleared by an effect. Clearing happens after paint, so on a switch from one
+ * driver to the next the previous driver's face renders for a frame under the
+ * new driver's name -- on an identity-check screen, the one wrong thing to
+ * show. Comparing the ids instead means a stale result can never be displayed.
  */
+function useDocumentImage(id: string | undefined) {
+  const [state, setState] = useState<{
+    forId?: string;
+    url: string | null;
+    failed: boolean;
+  }>({ url: null, failed: false });
+
+  useEffect(() => {
+    if (!id) return;
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch(`/api/v1/admin/documents/${id}/file`, {
+          headers: { authorization: `Bearer ${session.access ?? ""}` },
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        const blob = await response.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setState({ forId: id, url: objectUrl, failed: false });
+      } catch {
+        if (!cancelled) setState({ forId: id, url: null, failed: true });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [id]);
+
+  return state.forId === id ? state : { url: null, failed: false };
+}
+
+/**
+ * The face beside the tazkira.
+ *
+ * The whole point of asking for a photo is comparing it with the document, and
+ * a reviewer who has to open one, remember it, close it and open the other is
+ * being asked to do that from memory. Side by side is the feature.
+ */
+function IdentityCheck({
+  selfie,
+  tazkira,
+}: {
+  selfie: Document | undefined;
+  tazkira: Document | undefined;
+}) {
+  const { t } = useStrings();
+  const face = useDocumentImage(selfie?.id);
+  const card = useDocumentImage(tazkira?.id);
+
+  return (
+    <div className="card" style={{ marginBottom: "var(--s-4)" }}>
+      <div className="row" style={{ marginBottom: "var(--s-3)" }}>
+        <strong>{t("admin.approvals.identity")}</strong>
+        <div className="spacer" />
+        <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
+          {t("admin.approvals.compare")}
+        </span>
+      </div>
+      <div className="identity-pair">
+        <figure>
+          <figcaption>{t("document.type.selfie")}</figcaption>
+          {selfie == null ? (
+            <p className="hint">{t("admin.approvals.no_selfie")}</p>
+          ) : face.failed ? (
+            <p className="hint error">{t("admin.approvals.file_unavailable")}</p>
+          ) : face.url ? (
+            <img src={face.url} alt="" />
+          ) : (
+            <p className="hint">…</p>
+          )}
+        </figure>
+        <figure>
+          <figcaption>{t("document.type.national_id")}</figcaption>
+          {tazkira == null ? (
+            <p className="hint">{t("admin.approvals.no_tazkira")}</p>
+          ) : card.failed ? (
+            <p className="hint error">{t("admin.approvals.file_unavailable")}</p>
+          ) : card.url ? (
+            <img src={card.url} alt="" />
+          ) : (
+            <p className="hint">…</p>
+          )}
+        </figure>
+      </div>
+    </div>
+  );
+}
+
 function DocumentViewer({ document: doc, onClose }: { document: Document; onClose: () => void }) {
   const { t } = useStrings();
   const [url, setUrl] = useState<string | null>(null);

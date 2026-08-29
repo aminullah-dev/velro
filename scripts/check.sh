@@ -46,6 +46,11 @@ admin() {
   [ -d node_modules ] || npm ci --silent
   step "admin locales" node scripts/sync-locales.mjs
   step "admin tokens"  node scripts/check-tokens.mjs
+  # The panel and the driver's app must agree on what day it is.
+  step "admin calendar" node --experimental-strip-types --no-warnings \
+    scripts/check-calendar.mjs
+  # A paused query must not read as an empty list.
+  step "admin gates"    node scripts/check-query-gates.mjs
   step "admin lint"    npm run --silent lint
   step "admin types"   npm run --silent typecheck
   step "admin build"   npm run --silent build
@@ -59,6 +64,8 @@ mobile() {
   step "mobile domain"  gradle :domain:test --console=plain -q
   step "mobile data"    gradle :data:test --console=plain -q
   step "mobile core:ui" gradle :core:ui:testDebugUnitTest --console=plain -q
+  # Calendar and numerals. Without this line the Nowruz fixtures never run.
+  step "mobile core:i18n" gradle :core:i18n:testDebugUnitTest --console=plain -q
   step "mobile build"   gradle :app-driver:assembleDebug :app-passenger:assembleDebug --console=plain -q
 }
 

@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, query } from "../api/client";
-import {
-  Empty, ErrorState, Loading, Ltr, PageHeader, Pager, Table,
-} from "../components/ui";
+import { Empty, Loading, Ltr, PageHeader, Pager, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface District {
@@ -51,10 +49,8 @@ export function LocationsPage() {
     queryFn: () => api.get<Destination[]>("/admin/destinations"),
   });
 
-  if (districts.isLoading) return <Loading />;
-  if (districts.error) {
-    return <ErrorState error={districts.error} onRetry={() => districts.refetch()} />;
-  }
+  const blocked = gate(districts);
+  if (blocked) return blocked;
 
   const villageRows = villages.data?.data ?? [];
   const villageTotal = Number(villages.data?.meta?.total ?? villageRows.length);

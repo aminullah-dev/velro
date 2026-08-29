@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api, session } from "../api/client";
 import {
-  Empty, ErrorBanner, Loading, Ltr, PageHeader, Stat, Table,
+  Empty, ErrorBanner, Loading, Ltr, PageHeader, Stat, Table, gate,
 } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
@@ -360,9 +360,9 @@ export function ImportVillagesPage() {
       <h2 className="page-title" style={{ fontSize: 17, margin: "var(--s-8) 0 var(--s-3)" }}>
         {t("admin.import.history")}
       </h2>
-      {history.isLoading ? (
-        <Loading />
-      ) : (history.data ?? []).length === 0 ? (
+      {/* gate() also covers the paused state, which a plain isLoading
+          check falls straight through -- see check-query-gates.mjs. */}
+      {gate(history) ?? ((history.data ?? []).length === 0 ? (
         <Empty messageKey="admin.empty.audit" />
       ) : (
         <Table
@@ -392,7 +392,7 @@ export function ImportVillagesPage() {
             </tr>
           ))}
         </Table>
-      )}
+      ))}
     </>
   );
 }

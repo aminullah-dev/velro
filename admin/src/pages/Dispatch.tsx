@@ -1,8 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import {
-  Empty, ErrorBanner, ErrorState, Loading, Ltr, PageHeader, StatusChip, Table,
-} from "../components/ui";
+import { Empty, ErrorBanner, Ltr, PageHeader, StatusChip, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface UnassignedTrip {
@@ -27,11 +25,12 @@ export function DispatchPage() {
   const { t, num, dateTime } = useStrings();
   const client = useQueryClient();
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["unassigned"],
     queryFn: () => api.get<UnassignedTrip[]>("/dispatch/unassigned"),
     refetchInterval: 30_000,
   });
+  const { data } = listQuery;
 
   const offer = useMutation({
     mutationFn: (tripId: string) =>
@@ -42,8 +41,8 @@ export function DispatchPage() {
     },
   });
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
 
   const trips = data ?? [];
 
@@ -53,7 +52,7 @@ export function DispatchPage() {
         title={t("admin.nav.operations")}
         subtitle={t("admin.section.unassigned")}
         actions={
-          <button className="small" onClick={() => refetch()}>
+          <button className="small" onClick={() => listQuery.refetch()}>
             {t("admin.action.refresh")}
           </button>
         }

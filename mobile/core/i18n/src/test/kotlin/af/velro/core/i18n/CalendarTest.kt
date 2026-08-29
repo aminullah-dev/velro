@@ -1,9 +1,17 @@
 package af.velro.core.i18n
 
 import af.velro.domain.Locale
+import java.io.File
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -51,32 +59,58 @@ class CalendarTest {
     }
 
     @Test
-    fun `leap years match the observed calendar`() {
-        // Checked against the Nowruz dates themselves: 1403 ran 20 Mar 2024 to
-        // 20 Mar 2025, which is 365 days, so it is not leap. 1404 ran to
-        // 21 Mar 2026, which is 366.
-        assertFalse(Calendars.isShamsiLeap(1403))
-        assertTrue(Calendars.isShamsiLeap(1404))
-        assertTrue(Calendars.isShamsiLeap(1399))
-    }
-
-    @Test
     fun `nowruz falls on the observed gregorian dates`() {
-        // The dates people in Kabul actually kept.
-        val observed = mapOf(
-            1399 to LocalDate.of(2020, 3, 20),
-            1400 to LocalDate.of(2021, 3, 21),
-            1401 to LocalDate.of(2022, 3, 21),
-            1402 to LocalDate.of(2023, 3, 21),
-            1403 to LocalDate.of(2024, 3, 20),
-            1404 to LocalDate.of(2025, 3, 20),
-            1405 to LocalDate.of(2026, 3, 21),
-        )
-        for ((year, gregorian) in observed) {
+        // Read from the shared file rather than retyped here. The previous
+        // version of this test listed Nowruz 1404 as 20 March 2025 because that
+        // is what the implementation produced -- the test was written from the
+        // code instead of from the calendar, so it agreed with the bug and hid
+        // it. The dates now live in one place, next to the note saying where
+        // they came from.
+        for ((year, gregorian) in spec.nowruz) {
             val shamsi = Calendars.shamsi(gregorian)
             assertEquals("Nowruz $year year", year, shamsi.year)
             assertEquals("Nowruz $year month", 1, shamsi.month)
             assertEquals("Nowruz $year day", 1, shamsi.day)
+        }
+    }
+
+    @Test
+    fun `leap years match the observed calendar`() {
+        for ((year, leap) in spec.leapYears) {
+            assertEquals("leap for $year", leap, Calendars.isShamsiLeap(year))
+        }
+    }
+
+    @Test
+    fun `a leap year is exactly the year whose nowruz is 366 days after the last`() {
+        // The definition, not a second opinion: if the observed Nowruz dates
+        // are 366 days apart the year between them had a leap day, whatever any
+        // cycle rule says.
+        var measured = 0
+        for (year in spec.nowruz.keys.sorted()) {
+            // The table has gaps -- only years whose successor is also listed
+            // can be measured this way.
+            val next = spec.nowruz[year + 1] ?: continue
+            measured++
+            val span = ChronoUnit.DAYS.between(spec.nowruz[year], next)
+            assertEquals(
+                "span after Nowruz $year",
+                if (Calendars.isShamsiLeap(year)) 366L else 365L,
+                span,
+            )
+        }
+        assertTrue("no year spans were measured at all", measured > 5)
+    }
+
+    @Test
+    fun `the shared conversion table holds`() {
+        for (case in spec.conversions) {
+            val shamsi = Calendars.shamsi(case.gregorian)
+            assertEquals(
+                "${case.gregorian} (${case.note})",
+                Calendars.ShamsiDate(case.year, case.month, case.day),
+                shamsi,
+            )
         }
     }
 
@@ -111,5 +145,103 @@ class CalendarTest {
     @Test
     fun `eastern digits round-trip back to latin`() {
         assertEquals("+93700123456", Numerals.latin("+۹۳۷۰۰۱۲۳۴۵۶"))
+    }
+
+
+    @Test
+    fun `the shamsi month names match the locale files`() {
+        // Calendars keeps its own arrays so that formatting needs no dictionary
+        // lookup, which is the right trade for a screen that renders a list.
+        // The cost is a second copy of twelve strings, and this is what stops it
+        // drifting from the copy the admin panel reads.
+        val expected = mapOf(
+            "fa-AF" to Locale.DARI,
+            "ps" to Locale.PASHTO,
+        )
+        for ((tag, locale) in expected) {
+            val dictionary = Json.parseToJsonElement(localeFile(tag).readText()).jsonObject
+            for (month in 1..12) {
+                val key = "common.shamsi_month.$month"
+                val fromFile = dictionary[key]?.jsonPrimitive?.content
+                assertNotNull("$tag is missing $key", fromFile)
+                // Rendered through a known date so the array is read the same
+                // way the app reads it.
+                val nowruz = Calendars.shamsi(spec.nowruz[1405]!!)
+                val rendered = Calendars.ShamsiDate(nowruz.year, month, 1)
+                assertTrue(
+                    "$tag $key: the app renders '${format(rendered, locale)}', " +
+                        "the locale file says '$fromFile'",
+                    format(rendered, locale).contains(fromFile!!),
+                )
+            }
+        }
+    }
+
+    private fun format(date: Calendars.ShamsiDate, locale: Locale): String =
+        Calendars.date(
+            Calendars.toGregorian(date).atStartOfDay(Calendars.KABUL).toInstant(),
+            locale,
+        )
+
+    private fun localeFile(tag: String): File {
+        var dir: File? = File(System.getProperty("user.dir"))
+        while (dir != null) {
+            val candidate = File(dir, "backend/resources/locales/$tag.json")
+            if (candidate.isFile) return candidate
+            dir = dir.parentFile
+        }
+        error("backend/resources/locales/$tag.json not found")
+    }
+
+    // ---- the shared specification -------------------------------------------
+
+    private data class Conversion(
+        val gregorian: LocalDate,
+        val year: Int,
+        val month: Int,
+        val day: Int,
+        val note: String,
+    )
+
+    private class Spec(
+        val nowruz: Map<Int, LocalDate>,
+        val leapYears: Map<Int, Boolean>,
+        val conversions: List<Conversion>,
+    )
+
+    private val spec: Spec by lazy { readSpec() }
+
+    private fun readSpec(): Spec {
+        // Walks up to the repository root and reads the real file -- never a
+        // copy, which could go stale without anyone noticing.
+        var dir: File? = File(System.getProperty("user.dir"))
+        var found: File? = null
+        while (dir != null && found == null) {
+            val candidate = File(dir, "docs/domain/calendar.json")
+            if (candidate.isFile) found = candidate
+            dir = dir.parentFile
+        }
+        val file = found
+            ?: error("docs/domain/calendar.json not found from ${System.getProperty("user.dir")}")
+        val root = Json.parseToJsonElement(file.readText()).jsonObject
+
+        val nowruz = root["nowruz"]!!.jsonObject.entries.associate { (year, value) ->
+            year.toInt() to LocalDate.parse(value.jsonPrimitive.content)
+        }
+        val leapYears = root["leap_years"]!!.jsonObject.entries
+            .filterNot { it.key.startsWith("$") }
+            .associate { (year, value) -> year.toInt() to value.jsonPrimitive.boolean }
+        val conversions = root["conversions"]!!.jsonArray.map { element ->
+            val case = element.jsonObject
+            val parts = case["shamsi"]!!.jsonArray.map { it.jsonPrimitive.int }
+            Conversion(
+                gregorian = LocalDate.parse(case["gregorian"]!!.jsonPrimitive.content),
+                year = parts[0],
+                month = parts[1],
+                day = parts[2],
+                note = case["note"]!!.jsonPrimitive.content,
+            )
+        }
+        return Spec(nowruz, leapYears, conversions)
     }
 }

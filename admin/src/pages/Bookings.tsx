@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, query } from "../api/client";
-import {
-  Empty, ErrorState, Loading, Ltr, PageHeader, Pager, StatusChip, Table,
-} from "../components/ui";
+import { Empty, Ltr, PageHeader, Pager, StatusChip, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Booking {
@@ -27,13 +25,14 @@ export function BookingsPage() {
   const { t, num, money, dateTime } = useStrings();
   const [offset, setOffset] = useState(0);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["bookings", offset],
     queryFn: () => api.list<Booking[]>(`/admin/bookings${query({ limit: LIMIT, offset })}`),
   });
+  const { data } = listQuery;
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
 
   const bookings = data?.data ?? [];
   const total = Number(data?.meta?.total ?? bookings.length);

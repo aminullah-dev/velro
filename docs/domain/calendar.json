@@ -1,0 +1,63 @@
+{
+  "$comment": [
+    "Hijri Shamsi conversion, checked by the Kotlin implementation in",
+    "mobile/core/i18n and the TypeScript one in admin/src/i18n, so the driver's",
+    "app and the operator's panel cannot start disagreeing about what day it is.",
+    "A driver who phones support quoting a date must be quoting the date the",
+    "operator is looking at.",
+    "",
+    "nowruz is the load-bearing table: 1 Hamal as actually observed, and the",
+    "only authority in this file. A leap rule is accepted or rejected by these",
+    "dates, never the other way round. The 2820-year (Birashk) rule is rejected",
+    "by them: it misplaces Nowruz 1404 by a day, which silently shifted every",
+    "date between 20 March 2025 and 20 March 2026.",
+    "",
+    "1374-1378 are here on purpose. They are the years that tell a correct",
+    "residue set from one off by a single number; the 1398-1405 rows all fall in",
+    "one stretch of the cycle and pass either way.",
+    "",
+    "Outside these years the 33-year cycle is an arithmetic approximation of an",
+    "astronomical calendar. Check an almanac before trusting a far-off date on a",
+    "printed document."
+  ],
+  "anchor": { "shamsi_year": 1399, "gregorian": "2020-03-20" },
+
+  "nowruz": {
+    "1374": "1995-03-21",
+    "1375": "1996-03-20",
+    "1376": "1997-03-21",
+    "1377": "1998-03-21",
+    "1378": "1999-03-21",
+    "1398": "2019-03-21",
+    "1399": "2020-03-20",
+    "1400": "2021-03-21",
+    "1401": "2022-03-21",
+    "1402": "2023-03-21",
+    "1403": "2024-03-20",
+    "1404": "2025-03-21",
+    "1405": "2026-03-21"
+  },
+
+  "conversions": [
+    { "gregorian": "2020-03-20", "shamsi": [1399, 1, 1],   "note": "the anchor itself" },
+    { "gregorian": "2019-03-21", "shamsi": [1398, 1, 1],   "note": "before the anchor -- the backwards branch" },
+    { "gregorian": "2024-03-20", "shamsi": [1403, 1, 1],   "note": "Nowruz 1403" },
+    { "gregorian": "2025-03-20", "shamsi": [1403, 12, 30], "note": "last day of Hoot 1403; 1403 is a leap year" },
+    { "gregorian": "2025-03-21", "shamsi": [1404, 1, 1],   "note": "Nowruz 1404 -- the day the 2820-year rule gets wrong" },
+    { "gregorian": "2026-01-01", "shamsi": [1404, 10, 11], "note": "Gregorian new year, inside the year the old rule shifted" },
+    { "gregorian": "2026-03-20", "shamsi": [1404, 12, 29], "note": "last day of Hoot 1404; 1404 is a common year" },
+    { "gregorian": "2026-03-21", "shamsi": [1405, 1, 1],   "note": "Nowruz 1405" },
+    { "gregorian": "2026-08-29", "shamsi": [1405, 6, 7],   "note": "mid-year" }
+  ],
+
+  "leap_years": {
+    "1374": false,
+    "1375": true,
+    "1376": false,
+    "1377": false,
+    "1378": false,
+    "$comment": "Whether 1 Hoot..30 Hoot exists, derived from the nowruz table above.",
+    "1398": false, "1399": true,  "1400": false, "1401": false,
+    "1402": false, "1403": true,  "1404": false, "1405": false
+  }
+}

@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,6 +72,33 @@ fun DocumentsScreen(
         if (read != null) {
             onEvent(DocumentsEvent.Upload(kind, read.first, read.second))
         }
+    }
+
+    // The face is taken now, not chosen.
+    //
+    // A photo picked from the gallery could be anyone's -- which is precisely
+    // what the check exists to catch. The camera is the whole point of asking
+    // for it, so the selfie has its own launcher and the gallery is not offered.
+    //
+    // TakePicture, not TakePicturePreview: the preview contract returns a
+    // thumbnail of a couple of hundred pixels, which nobody can compare against
+    // a tazkira. This writes the full image to a file the app owns.
+    var captureTarget by remember { mutableStateOf<Capture?>(null) }
+    val camera = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { taken: Boolean ->
+        val kind = pendingType
+        val target = captureTarget
+        pendingType = null
+        captureTarget = null
+        if (!taken || kind == null || target == null) return@rememberLauncherForActivityResult
+        val read = readImage(context, target.uri)
+        if (read != null) {
+            onEvent(DocumentsEvent.Upload(kind, read.first, read.second))
+        }
+        // Deleted as soon as it is read. A face photograph sitting in the cache
+        // outlives its purpose the moment the upload has the bytes.
+        runCatching { target.file.delete() }
     }
 
     if (state.isLoading) {
@@ -135,14 +163,42 @@ fun DocumentsScreen(
                 enabled = !state.isUploading,
                 onPick = {
                     pendingType = kind
-                    picker.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
+                    if (kind == SELFIE) {
+                        val target = newCapture(context)
+                        captureTarget = target
+                        camera.launch(target.uri)
+                    } else {
+                        picker.launch(
+                            PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
+                    }
                 },
             )
             Spacer(Modifier.height(Spacing.sm))
         }
     }
+}
+
+/** The one document that must be taken rather than chosen. */
+private const val SELFIE = "SELFIE"
+
+/**
+ * A file the camera app may write to, inside this app's cache.
+ *
+ * Not the shared gallery: an identity photograph should not end up somewhere
+ * every other app on the phone can read, or where it turns up while the owner
+ * is showing someone their pictures.
+ */
+private data class Capture(val file: java.io.File, val uri: Uri)
+
+private fun newCapture(context: Context): Capture {
+    val dir = java.io.File(context.cacheDir, "captures").apply { mkdirs() }
+    val file = java.io.File.createTempFile("selfie", ".jpg", dir)
+    // The real File is kept alongside the content URI: the URI's path belongs
+    // to the provider, not the filesystem, so it cannot be used to delete.
+    return Capture(file, FileProvider.getUriForFile(context, "${context.packageName}.captures", file))
 }
 
 private fun statusHeadlineKey(checklist: DocumentChecklist): String = when {

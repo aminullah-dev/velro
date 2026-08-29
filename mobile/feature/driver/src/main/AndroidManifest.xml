@@ -1,2 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!--
+          Hands the camera app a URI it may write to, without granting this app
+          access to storage or the camera permission. The authority is derived
+          from the package so the two apps can ship side by side.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.captures"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/velro_capture_paths" />
+        </provider>
+    </application>
+</manifest>

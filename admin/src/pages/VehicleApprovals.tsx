@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import {
-  Empty, ErrorBanner, ErrorState, Loading, Ltr, PageHeader, Table,
-} from "../components/ui";
+import { Empty, ErrorBanner, Ltr, PageHeader, Table, gate } from "../components/ui";
 import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 
@@ -36,10 +34,11 @@ export function VehicleApprovalsPage() {
   const client = useQueryClient();
   const [suspending, setSuspending] = useState<string | null>(null);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["vehicles", "pending"],
     queryFn: () => api.get<PendingVehicle[]>("/admin/vehicles/pending"),
   });
+  const { data } = listQuery;
 
   const decide = useMutation({
     mutationFn: (input: { id: string; approve: boolean; reason?: string }) =>
@@ -53,8 +52,8 @@ export function VehicleApprovalsPage() {
     },
   });
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
 
   const pending = data ?? [];
 
@@ -64,7 +63,7 @@ export function VehicleApprovalsPage() {
         title={t("admin.nav.vehicle_approvals")}
         subtitle={t("admin.vehicles.pending")}
         actions={
-          <button className="small" onClick={() => refetch()}>
+          <button className="small" onClick={() => listQuery.refetch()}>
             {t("admin.action.refresh")}
           </button>
         }

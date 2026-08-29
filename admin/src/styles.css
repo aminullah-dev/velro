@@ -369,3 +369,36 @@ button.small { min-height: 32px; padding: var(--s-1) var(--s-3); font-size: 13px
   color: var(--text);
   font: inherit;
 }
+
+/* Identity check ------------------------------------------------------- */
+
+.identity-pair {
+  display: grid;
+  /* Two columns where there is room, stacked where there is not. A reviewer on
+     a laptop in a station office is the common case; a phone is not. */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s-4);
+}
+
+.identity-pair figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.identity-pair figcaption {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.identity-pair img {
+  width: 100%;
+  /* Same box for both, so a wide tazkira and a tall portrait can still be
+     compared without one dwarfing the other. */
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}

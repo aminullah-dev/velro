@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm import Session
 
 from application.use_cases.generate_routes import (
     GenerateRoutes,
@@ -26,6 +27,7 @@ from application.use_cases.generate_routes import (
 from domain.enums import (
     DriverApprovalStatus,
     TripStatus,
+    VehicleStatus,
 )
 from infrastructure.db.models.geography import (
     DestinationRow,
@@ -570,19 +572,23 @@ def drivers(
     approval_status: str | None = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> dict:
+    # Vehicles are fetched separately rather than joined. A driver may own more
+    # than one, and an outer join then returns that driver once per vehicle: the
+    # operator sees the same person twice in the approvals queue and cannot tell
+    # the copies apart, and `limit` counts the duplicates, so a real driver falls
+    # off the end of the list to make room for a repeat.
     stmt = (
-        select(DriverRow, UserRow, VehicleRow)
+        select(DriverRow, UserRow)
         .join(UserRow, UserRow.id == DriverRow.user_id)
-        .outerjoin(
-            VehicleRow,
-            (VehicleRow.driver_id == DriverRow.id) & (VehicleRow.deleted_at.is_(None)),
-        )
         .where(DriverRow.deleted_at.is_(None))
         .order_by(DriverRow.created_at.desc())
         .limit(limit)
     )
     if approval_status:
         stmt = stmt.where(DriverRow.approval_status == approval_status)
+
+    rows = session.execute(stmt).all()
+    vehicles = _one_vehicle_each(session, [d.id for d, _ in rows])
 
     return ok(
         [
@@ -592,12 +598,44 @@ def drivers(
                 rating_average=round(d.rating_sum / d.rating_count, 2)
                 if d.rating_count else None,
                 rating_count=d.rating_count, completed_trips=d.completed_trips,
-                plate_number=v.plate_number if v else None,
+                plate_number=(v := vehicles.get(d.id)) and v.plate_number,
                 vehicle_status=v.status if v else None,
             ).model_dump()
-            for d, u, v in session.execute(stmt).all()
+            for d, u in rows
         ]
     )
+
+
+def _one_vehicle_each(
+    session: Session, driver_ids: list[str]
+) -> dict[str, VehicleRow]:
+    """The vehicle to show beside each driver in a list.
+
+    The list has one plate column, so it shows one vehicle: the active one if
+    there is one, otherwise the most recently registered. Deterministic on
+    purpose -- a column that shows a different plate on each refresh is worse
+    than one that shows an incomplete truth.
+    """
+    if not driver_ids:
+        return {}
+    rows = session.execute(
+        select(VehicleRow)
+        .where(
+            VehicleRow.driver_id.in_(driver_ids),
+            VehicleRow.deleted_at.is_(None),
+        )
+        .order_by(VehicleRow.created_at.desc())
+    ).scalars().all()
+
+    chosen: dict[str, VehicleRow] = {}
+    for vehicle in rows:
+        current = chosen.get(vehicle.driver_id)
+        if current is None or (
+            current.status != VehicleStatus.ACTIVE.value
+            and vehicle.status == VehicleStatus.ACTIVE.value
+        ):
+            chosen[vehicle.driver_id] = vehicle
+    return chosen
 
 
 class DriverDecisionIn(Schema):

@@ -130,18 +130,23 @@ object Calendars {
     }
 
     /**
-     * The 2820-year cycle rule.
+     * The 33-year cycle rule.
      *
-     * Verified against the Nowruz dates actually observed in Kabul from 1399 to
-     * 1405; it agrees with all of them. It is an arithmetic approximation of an
-     * astronomical calendar, so a date far outside this range should be checked
-     * before it is trusted on a printed document.
+     * Checked against the Nowruz dates actually observed, in
+     * `docs/domain/calendar.json`. The 2820-year (Birashk) rule was here first
+     * and is wrong: it makes 1404 a leap year and 1403 a common one, when the
+     * observed Nowruz dates say the opposite, which moved every date between
+     * 20 March 2025 and 20 March 2026 by one day. It was not caught by reading
+     * the code -- the arithmetic is correct, the calendar it describes is not
+     * the one Afghanistan keeps.
+     *
+     * This is an arithmetic approximation of an astronomical calendar and holds
+     * for roughly 1178-1633. A date outside that range should be checked
+     * against an almanac before it is trusted on a printed document.
      */
-    fun isShamsiLeap(year: Int): Boolean {
-        val a = year - 474
-        val b = Math.floorMod(a, 2820) + 474
-        return Math.floorMod((b + 38) * 31, 128) < 31
-    }
+    fun isShamsiLeap(year: Int): Boolean = Math.floorMod(year, 33) in LEAP_RESIDUES
+
+    private val LEAP_RESIDUES = setOf(1, 5, 9, 13, 17, 22, 26, 30)
 
     /** "in 12 minutes" for an ETA -- returns the parameter, never a sentence. */
     fun minutesUntil(instant: Instant, now: Instant): Long =

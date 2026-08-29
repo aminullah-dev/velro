@@ -297,3 +297,47 @@ class TestApproval:
         actions = {e["action"] for e in entries}
         assert "vehicle.registered" in actions
         assert "vehicle.approved" in actions
+
+
+def test_a_driver_with_two_vehicles_is_listed_once(
+    client: TestClient, driver: dict, admin_session: dict
+) -> None:
+    """The approvals queue is a list of people, not of vehicle registrations.
+
+    The list used to be built with an outer join to vehicles, so a driver who
+    had registered a second car appeared twice. An operator cannot tell the two
+    rows apart, and the row limit counts them both -- so a genuinely pending
+    driver drops off the end of the page to make room for a duplicate.
+    """
+    register(client, driver, plate_number="PRW-7001")
+    second = register(client, driver, plate_number="PRW-7002")
+    assert second.status_code == 200, second.text
+
+    listed = client.get("/api/v1/admin/drivers", headers=admin_session).json()["data"]
+    mine = [d for d in listed if d["phone"] == VEHICLE_TEST_PHONE]
+    assert len(mine) == 1, (
+        f"{VEHICLE_TEST_PHONE} appears {len(mine)} times: "
+        + ", ".join(str(d["plate_number"]) for d in mine)
+    )
+
+
+def test_the_plate_shown_for_a_two_vehicle_driver_does_not_move(
+    client: TestClient, driver: dict, admin_session: dict
+) -> None:
+    """Whichever vehicle is shown, it is the same one on every request.
+
+    A column that shows a different plate each time the operator refreshes is
+    worse than one that shows an incomplete truth: it reads as data changing
+    underneath them.
+    """
+    seen = {
+        next(
+            d["plate_number"]
+            for d in client.get(
+                "/api/v1/admin/drivers", headers=admin_session
+            ).json()["data"]
+            if d["phone"] == VEHICLE_TEST_PHONE
+        )
+        for _ in range(5)
+    }
+    assert len(seen) == 1, f"the plate column moved between requests: {seen}"

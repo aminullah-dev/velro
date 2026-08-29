@@ -82,5 +82,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - name: the shared lifecycle spec is valid JSON
-        run: python -c "import json; json.load(open('docs/domain/lifecycles.json'))"
+      - name: the shared specs are valid JSON
+        run: |
+          python - <<'PY'
+          import json
+          for path in ("docs/domain/lifecycles.json", "docs/domain/calendar.json"):
+              json.load(open(path))
+              print(f"{path} parses")
+          PY

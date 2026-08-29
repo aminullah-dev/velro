@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Empty, ErrorState, Loading, Ltr, PageHeader, Table } from "../components/ui";
+import { Empty, Ltr, PageHeader, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Vehicle {
@@ -11,13 +11,14 @@ interface Vehicle {
 
 export function VehiclesPage() {
   const { t, num } = useStrings();
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["vehicles"],
     queryFn: () => api.get<Vehicle[]>("/admin/vehicles"),
   });
+  const { data } = listQuery;
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
 
   const vehicles = data ?? [];
 

@@ -36,9 +36,24 @@ android.sourceSets.named("main") {
 
 tasks.named("preBuild") { dependsOn(syncLocales) }
 
+// CalendarTest reads docs/domain/calendar.json and the locale files at run time.
+// Gradle cannot see a file a test opens itself, so without this it reports the
+// last result forever: change the shared specification, watch the suite pass,
+// and never learn that it was never re-run. Same trap the font test fell into.
+tasks.withType<Test>().configureEach {
+    inputs.file(rootProject.layout.projectDirectory.file("../docs/domain/calendar.json"))
+        .withPropertyName("calendarSpecification")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(rootProject.layout.projectDirectory.dir("../backend/resources/locales"))
+        .withPropertyName("localeFiles")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
 dependencies {
     implementation(project(":domain"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
+    // The calendar test reads docs/domain/calendar.json directly.
+    testImplementation(libs.kotlinx.serialization.json)
 }

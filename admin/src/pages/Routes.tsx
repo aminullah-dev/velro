@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, query } from "../api/client";
-import {
-  Empty, ErrorBanner, ErrorState, Loading, Ltr, PageHeader, Pager, Table,
-} from "../components/ui";
+import { Empty, ErrorBanner, Ltr, PageHeader, Pager, Table, gate } from "../components/ui";
 import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 
@@ -24,11 +22,12 @@ export function RoutesPage() {
   // The route being repriced, with the price it has now.
   const [pricing, setPricing] = useState<{ id: string; current: string } | null>(null);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["routes", search, offset],
     queryFn: () =>
       api.list<Route[]>(`/admin/routes${query({ q: search, limit: LIMIT, offset })}`),
   });
+  const { data } = listQuery;
 
   const setPrice = useMutation({
     mutationFn: ({ id, amountMinor }: { id: string; amountMinor: number }) =>
@@ -36,8 +35,8 @@ export function RoutesPage() {
     onSuccess: () => client.invalidateQueries({ queryKey: ["routes"] }),
   });
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
 
   const routes = data?.data ?? [];
   const total = Number(data?.meta?.total ?? routes.length);

@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import {
-  ErrorBanner, ErrorState, Loading, Ltr, PageHeader, Table,
-} from "../components/ui";
+import { ErrorBanner, Ltr, PageHeader, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Setting {
@@ -25,10 +23,11 @@ export function SettingsPage() {
   const client = useQueryClient();
   const [editing, setEditing] = useState<Record<string, string>>({});
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["settings"],
     queryFn: () => api.get<Setting[]>("/admin/settings"),
   });
+  const { data } = listQuery;
 
   const save = useMutation({
     mutationFn: ({ key, value }: { key: string; value: unknown }) =>
@@ -43,8 +42,8 @@ export function SettingsPage() {
     },
   });
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
 
   const settings = data ?? [];
 

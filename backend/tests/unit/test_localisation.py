@@ -138,7 +138,13 @@ def test_every_key_the_admin_panel_asks_for_exists() -> None:
     """A missing key does not crash -- it renders as ``ADMIN.COL.AMOUNT`` on
     screen, which is how this was found. The test is cheaper than the review."""
     english = load("en")
-    used = _literal_keys(_REPO / "admin" / "src", (r't\("([a-z][a-zA-Z0-9._]*)"\)',))
+    # The lookbehind matters: without it the pattern also matches the tail of
+    # any identifier ending in t -- part("year"), format("x") -- and reports
+    # their arguments as missing message keys.
+    used = _literal_keys(
+        _REPO / "admin" / "src",
+        (r'(?<![A-Za-z0-9_$.])t\("([a-z][a-zA-Z0-9._]*)"\)',),
+    )
     missing = {k: v for k, v in used.items() if k not in english}
     assert not missing, "admin keys with no message: " + ", ".join(sorted(missing))
 

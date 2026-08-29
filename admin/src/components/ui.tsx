@@ -63,6 +63,89 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
   );
 }
 
+/**
+ * What to render instead of a list, if anything.
+ *
+ * Every page used to write this itself:
+ *
+ *     if (query.isLoading) return <Loading />;
+ *     if (query.error) return <ErrorState ... />;
+ *
+ * which is wrong in a way that only shows up in the field. When a request
+ * fails and the connection looks down, TanStack Query *pauses* the query
+ * rather than failing it: `status` stays "pending", `error` stays null, and
+ * `isLoading` goes false because nothing is in flight. Both guards are false,
+ * the page falls through to `data ?? []`, and the operator is told there are
+ * no drivers waiting -- when in fact the panel cannot reach the server at all.
+ *
+ * On a good connection that state is a blink. In Ghorband it is the normal
+ * case, and "no drivers waiting" is the one answer that must never be a lie:
+ * an operator who believes the queue is empty stops working.
+ *
+ * Returns a node to render in place of the page, or null to carry on.
+ */
+export function gate(
+  query: {
+    isPending: boolean;
+    fetchStatus: "fetching" | "paused" | "idle";
+    error: unknown;
+    failureReason?: unknown;
+    refetch: () => unknown;
+  },
+): ReactNode {
+  if (query.fetchStatus === "paused") {
+    // failureReason carries the error that caused the pause; without it the
+    // operator gets "offline" even when the server answered with a 500.
+    return (
+      <OfflineState
+        error={query.failureReason}
+        onRetry={() => {
+          void query.refetch();
+        }}
+      />
+    );
+  }
+  if (query.error) {
+    return (
+      <ErrorState
+        error={query.error}
+        onRetry={() => {
+          void query.refetch();
+        }}
+      />
+    );
+  }
+  if (query.isPending) return <Loading />;
+  return null;
+}
+
+/**
+ * The panel cannot reach the server, and has not given up.
+ *
+ * Distinct from ErrorState on purpose: nothing is broken, the request is
+ * waiting for a connection, and saying so is what stops an operator from
+ * reading an empty screen as an empty queue.
+ */
+export function OfflineState({ error, onRetry }: { error?: unknown; onRetry?: () => void }) {
+  const { t, forErrorCode } = useStrings();
+  const apiError = error instanceof ApiError ? error : null;
+  return (
+    <div className="state">
+      {/* Not common.state.offline: that one says saved information is being
+          shown, which is true in the apps and false here -- nothing is shown
+          at all. Telling an operator they are looking at cached data when the
+          screen is blank is how "empty queue" gets believed. */}
+      <div className="headline">{t("common.state.unreachable")}</div>
+      <div style={{ fontSize: 13, marginBottom: 12 }}>
+        {apiError && apiError.code !== "NETWORK_OFFLINE"
+          ? forErrorCode(apiError.code, apiError.context)
+          : t("common.state.unreachable_hint")}
+      </div>
+      {onRetry && <button onClick={onRetry}>{t("common.action.retry")}</button>}
+    </div>
+  );
+}
+
 export function ErrorBanner({ error }: { error: unknown }) {
   const { t, forErrorCode } = useStrings();
   const apiError = error instanceof ApiError ? error : null;

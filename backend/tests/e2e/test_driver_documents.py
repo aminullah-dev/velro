@@ -9,6 +9,9 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from infrastructure.services.settings import DEFAULTS
+from tests.e2e.conftest import auth, sign_in
+
 pytestmark = pytest.mark.integration
 
 # A real JPEG header, so the content sniffing accepts it.
@@ -18,7 +21,11 @@ JPEG = (
     + b"\xff\xd9"
 )
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 128
-REQUIRED = ("LICENSE", "NATIONAL_ID", "VEHICLE_REGISTRATION")
+# Read from the settings rather than restated here. A copy of the list in a
+# test is a copy that goes stale, and what these tests are checking is that the
+# API reports whatever an operator configured -- not that the list is any
+# particular length. What the list must *contain* is asserted separately.
+REQUIRED = tuple(DEFAULTS["driver.required_documents"])
 
 
 def upload(client: TestClient, headers: dict, kind: str, content: bytes = JPEG,
@@ -291,3 +298,61 @@ class TestRegistration:
 
     def test_a_signed_out_visitor_cannot_register(self, client: TestClient) -> None:
         assert client.post("/api/v1/driver/register", json={}).status_code == 401
+
+
+# -- who the driver actually is ------------------------------------------
+
+def test_a_driver_is_not_approved_on_a_tazkira_alone(client: TestClient) -> None:
+    """A tazkira proves a document exists, not that its holder is here.
+
+    A passenger getting into a stranger's car is trusting that VELRO checked the
+    face against the document, so the photo is required rather than nice to
+    have -- a borrowed or stolen tazkira defeats the whole check without it.
+    """
+    session = auth(sign_in(client, "+93700000140"))
+    client.post("/api/v1/driver/register", json={}, headers=session)
+
+    checklist = client.get("/api/v1/driver/documents", headers=session).json()["data"]
+    assert "SELFIE" in checklist["required"], "a face is part of proving who this is"
+    assert "SELFIE" in checklist["missing"]
+
+
+def test_verifying_everything_but_the_photo_still_will_not_approve(
+    client: TestClient, admin_session: dict
+) -> None:
+    """The papers can all be in order and the person still unproven."""
+    session = auth(sign_in(client, "+93700000141"))
+    client.post("/api/v1/driver/register", json={}, headers=session)
+    driver_id = client.get("/api/v1/driver/me", headers=session).json()["data"]["id"]
+
+    for code in ("LICENSE", "NATIONAL_ID", "VEHICLE_REGISTRATION"):
+        uploaded = upload(client, session, code)
+        assert uploaded.status_code in (200, 201), uploaded.text
+        client.post(
+            f"/api/v1/admin/documents/{uploaded.json()['data']['id']}/review",
+            json={"verified": True}, headers=admin_session,
+        )
+
+    checklist = client.get("/api/v1/driver/documents", headers=session).json()["data"]
+    assert checklist["missing"] == ["SELFIE"], "a face is still owed"
+    assert checklist["can_work"] is False
+
+    refused = client.post(
+        f"/api/v1/admin/drivers/{driver_id}/approve", json={}, headers=admin_session
+    )
+    assert refused.status_code == 409, "approval without a verified face"
+
+
+def test_the_verified_photo_completes_the_checklist(
+    client: TestClient, admin_session: dict
+) -> None:
+    session = auth(sign_in(client, "+93700000142"))
+    client.post("/api/v1/driver/register", json={}, headers=session)
+    for code in ("LICENSE", "NATIONAL_ID", "VEHICLE_REGISTRATION", "SELFIE"):
+        uploaded = upload(client, session, code)
+        client.post(
+            f"/api/v1/admin/documents/{uploaded.json()['data']['id']}/review",
+            json={"verified": True}, headers=admin_session,
+        )
+    checklist = client.get("/api/v1/driver/documents", headers=session).json()["data"]
+    assert checklist["missing"] == []

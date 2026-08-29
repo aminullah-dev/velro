@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Where a captured photograph is written before it is uploaded.
+
+  The app's own cache directory, so the image never lands in the shared gallery
+  where other apps and anyone scrolling the phone could see it. An identity
+  document is not a holiday snap.
+-->
+<paths>
+    <cache-path name="captures" path="captures/" />
+</paths>

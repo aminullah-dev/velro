@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import {
-  Empty, ErrorBanner, ErrorState, Loading, Ltr, PageHeader, Table,
-} from "../components/ui";
+import { Empty, ErrorBanner, Ltr, PageHeader, Table, gate } from "../components/ui";
 import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 
@@ -49,10 +47,11 @@ export function SettlementsPage() {
   // row so the dialog is not remounted as the queue refreshes underneath it.
   const [refusing, setRefusing] = useState<string | null>(null);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["settlements", "queue"],
     queryFn: () => api.get<Settlement[]>("/admin/settlements"),
   });
+  const { data } = listQuery;
 
   const { data: debtors } = useQuery({
     queryKey: ["settlements", "debtors"],
@@ -77,8 +76,8 @@ export function SettlementsPage() {
     },
   });
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
 
   const queue = data ?? [];
 
@@ -88,7 +87,7 @@ export function SettlementsPage() {
         title={t("admin.nav.settlements")}
         subtitle={t("admin.settlements.queue")}
         actions={
-          <button className="small" onClick={() => refetch()}>
+          <button className="small" onClick={() => listQuery.refetch()}>
             {t("admin.action.refresh")}
           </button>
         }

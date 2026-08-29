@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Empty, ErrorState, Loading, Ltr, PageHeader, Table } from "../components/ui";
+import { Empty, Ltr, PageHeader, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Money {
@@ -42,16 +42,17 @@ interface RideRequest {
 export function NegotiationsPage() {
   const { t, money, num, dateTime } = useStrings();
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["negotiations"],
     queryFn: () => api.get<RideRequest[]>("/admin/ride-requests"),
     // These change by the minute; an operator on the phone needs what is true
     // now, not what was true when they opened the page.
     refetchInterval: 15_000,
   });
+  const { data } = listQuery;
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
 
   const rows = data ?? [];
 
@@ -61,7 +62,7 @@ export function NegotiationsPage() {
         title={t("admin.nav.negotiations")}
         subtitle={t("admin.negotiations.readonly")}
         actions={
-          <button className="small" onClick={() => refetch()}>
+          <button className="small" onClick={() => listQuery.refetch()}>
             {t("admin.action.refresh")}
           </button>
         }

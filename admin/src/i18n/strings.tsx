@@ -5,6 +5,7 @@
  * from the server resolves to a sentence here through exactly the mapping the
  * mobile apps apply, so the three surfaces cannot drift apart in wording.
  */
+import { KABUL, shamsiFromParts } from "./calendar";
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useState,
   type ReactNode,
@@ -152,22 +153,54 @@ export function StringsProvider({ children }: { children: ReactNode }) {
     [num, t],
   );
 
+  // Month names come from the dictionary, never from Intl. A browser asked for
+  // a Persian month name answers with the Iranian forms (ژانویه, فوریه ...);
+  // Afghanistan uses the English-derived ones (جنوری, فبروری ...), and older
+  // browsers may carry no non-English month data at all.
+  //
+  // Which calendar, though, is the point. The driver's app shows Hijri Shamsi
+  // to a Dari or Pashto speaker, because that is the calendar people keep. If
+  // this panel showed Gregorian, a driver phoning support to ask about "۷ سنبله"
+  // would be quoting a date the operator could not find. Same moment, same
+  // calendar, both screens.
+  const formatDate = useCallback(
+    (parts: { year: number; month: number; day: number }) => {
+      if (locale === "en") {
+        const name = t(`common.month.${parts.month}`);
+        return `${parts.day} ${name} ${parts.year}`;
+      }
+      const shamsi = shamsiFromParts(parts.year, parts.month, parts.day);
+      const name = t(`common.shamsi_month.${shamsi.month}`);
+      return `${num(shamsi.day)} ${name} ${num(shamsi.year)}`;
+    },
+    [locale, num, t],
+  );
+
   const dateTime = useCallback(
     (iso: string) => {
       const at = new Date(iso);
       if (Number.isNaN(at.getTime())) return iso;
-      // Kabul time, because that is where the trips are.
-      const rendered = at.toLocaleString(locale === "en" ? "en-GB" : "en-GB", {
-        timeZone: "Asia/Kabul",
+      // Kabul time, because that is where the trips are. The timezone shift
+      // stays with the platform; only the calendar and the digits are ours.
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: KABUL,
+        year: "numeric",
+        month: "2-digit",
         day: "2-digit",
-        month: "short",
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
+      }).formatToParts(at);
+      const part = (type: string) =>
+        Number(parts.find((candidate) => candidate.type === type)?.value ?? 0);
+      const time = `${num(String(part("hour")).padStart(2, "0"))}:`
+        + `${num(String(part("minute")).padStart(2, "0"))}`;
+      const day = formatDate({
+        year: part("year"), month: part("month"), day: part("day"),
       });
-      return num(rendered);
+      return `${day}, ${time}`;
     },
-    [locale, num],
+    [formatDate, num],
   );
 
   const date = useCallback(
@@ -178,13 +211,14 @@ export function StringsProvider({ children }: { children: ReactNode }) {
       // the day to slip, so the parts are read directly.
       const parts = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
       if (!parts) return dateTime(iso);
-      const [, year, month, day] = parts;
-      const rendered = new Date(
-        Number(year), Number(month) - 1, Number(day),
-      ).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-      return num(rendered);
+      // Defaults only satisfy the compiler: the regex above matched, so all
+      // three groups are present.
+      const [, year = "0", month = "1", day = "1"] = parts;
+      return formatDate({
+        year: Number(year), month: Number(month), day: Number(day),
+      });
     },
-    [dateTime, num],
+    [dateTime, formatDate],
   );
 
   const setLocale = useCallback((tag: LocaleTag) => {

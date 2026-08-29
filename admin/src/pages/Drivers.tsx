@@ -1,8 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import {
-  Empty, ErrorBanner, ErrorState, Loading, Ltr, PageHeader, StatusChip, Table,
-} from "../components/ui";
+import { Empty, ErrorBanner, Ltr, PageHeader, StatusChip, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Driver {
@@ -23,10 +21,11 @@ export function DriversPage() {
   const { t, num } = useStrings();
   const client = useQueryClient();
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["drivers"],
     queryFn: () => api.get<Driver[]>("/admin/drivers"),
   });
+  const { data } = listQuery;
 
   const decide = useMutation({
     mutationFn: ({ id, action, reason }: { id: string; action: "approve" | "suspend"; reason?: string }) =>
@@ -37,8 +36,8 @@ export function DriversPage() {
     },
   });
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
 
   const drivers = data ?? [];
 

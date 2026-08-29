@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, query } from "../api/client";
-import { ErrorState, Loading, MoneyStat, PageHeader, Stat } from "../components/ui";
+import { MoneyStat, PageHeader, Stat, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Finance {
@@ -16,13 +16,14 @@ export function FinancePage() {
   const { t, num } = useStrings();
   const [days, setDays] = useState(30);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["finance", days],
     queryFn: () => api.get<Finance>(`/admin/finance${query({ days })}`),
   });
+  const { data } = listQuery;
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
   if (!data) return null;
 
   return (

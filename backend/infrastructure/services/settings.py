@@ -37,7 +37,14 @@ DEFAULTS: dict[str, Any] = {
     # driver ever sees them.
     "dispatch.offer_ttl_seconds": 180,
     "dispatch.max_offers_per_trip": 10,
-    "driver.required_documents": ["LICENSE", "NATIONAL_ID", "VEHICLE_REGISTRATION"],
+    # SELFIE sits beside NATIONAL_ID deliberately. A tazkira proves a document
+    # exists; it does not prove the person holding the account is the person on
+    # it. A passenger getting into a stranger's car in a valley at night is
+    # trusting that VELRO checked exactly that, and a borrowed or stolen tazkira
+    # defeats it entirely.
+    "driver.required_documents": [
+        "LICENSE", "NATIONAL_ID", "SELFIE", "VEHICLE_REGISTRATION",
+    ],
     "driver.location_ping_seconds": 20,
     "support.emergency_numbers": ["119", "100"],
     "support.contact_phone": "+93700000000",

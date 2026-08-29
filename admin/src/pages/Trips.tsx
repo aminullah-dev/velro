@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, query } from "../api/client";
-import {
-  Empty, ErrorState, Loading, Ltr, PageHeader, Pager, StatusChip, Table,
-} from "../components/ui";
+import { Empty, Ltr, PageHeader, Pager, StatusChip, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Trip {
@@ -28,7 +26,7 @@ export function TripsPage() {
   const [activeOnly, setActiveOnly] = useState(false);
   const [offset, setOffset] = useState(0);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["trips", activeOnly, offset],
     queryFn: () =>
       api.list<Trip[]>(
@@ -36,9 +34,10 @@ export function TripsPage() {
       ),
     refetchInterval: activeOnly ? 20_000 : false,
   });
+  const { data } = listQuery;
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
 
   const trips = data?.data ?? [];
   const total = Number(data?.meta?.total ?? trips.length);

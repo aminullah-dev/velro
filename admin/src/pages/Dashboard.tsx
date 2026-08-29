@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { ErrorState, Loading, MoneyStat, PageHeader, Stat } from "../components/ui";
+import { MoneyStat, PageHeader, Stat, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Dashboard {
@@ -22,16 +22,17 @@ interface Dashboard {
 
 export function DashboardPage() {
   const { t, num } = useStrings();
-  const { data, isLoading, error, refetch } = useQuery({
+  const listQuery = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => api.get<Dashboard>("/admin/dashboard"),
     // The operator leaves this open on a screen; a minute is often enough to
     // notice a trip with nobody driving it.
     refetchInterval: 60_000,
   });
+  const { data } = listQuery;
 
-  if (isLoading) return <Loading />;
-  if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
+  const blocked = gate(listQuery);
+  if (blocked) return blocked;
   if (!data) return null;
 
   return (
@@ -39,7 +40,7 @@ export function DashboardPage() {
       <PageHeader
         title={t("admin.nav.dashboard")}
         actions={
-          <button className="small" onClick={() => refetch()}>
+          <button className="small" onClick={() => listQuery.refetch()}>
             {t("admin.action.refresh")}
           </button>
         }
