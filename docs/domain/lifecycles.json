@@ -1,0 +1,81 @@
+{
+  "$comment": "The canonical lifecycle definitions for VELRO. Both the Python domain and the Kotlin :domain module are tested against this file, so a change made in one language and not the other fails a build rather than reaching a passenger. Edit here first, then both implementations.",
+  "version": 1,
+  "trip": {
+    "initial": ["SCHEDULED", "REQUESTED"],
+    "transitions": {
+      "SCHEDULED": ["DRIVER_ASSIGNED", "CANCELLED", "EXPIRED"],
+      "REQUESTED": ["DRIVER_ASSIGNED", "NO_DRIVER_AVAILABLE", "CANCELLED", "EXPIRED"],
+      "DRIVER_ASSIGNED": ["DRIVER_ARRIVING", "REQUESTED", "SCHEDULED", "CANCELLED"],
+      "DRIVER_ARRIVING": ["ARRIVED_AT_PICKUP", "REQUESTED", "CANCELLED"],
+      "ARRIVED_AT_PICKUP": ["BOARDING", "CANCELLED"],
+      "BOARDING": ["IN_TRANSIT", "CANCELLED"],
+      "IN_TRANSIT": ["ARRIVED"],
+      "ARRIVED": ["COMPLETED"],
+      "COMPLETED": [],
+      "CANCELLED": [],
+      "EXPIRED": [],
+      "NO_DRIVER_AVAILABLE": []
+    },
+    "notes": {
+      "IN_TRANSIT": "No cancellation once the vehicle is moving: an interrupted journey is an incident with its own record, not a status change.",
+      "DRIVER_ASSIGNED": "May return to REQUESTED or SCHEDULED so a driver cancellation or an admin driver-change re-dispatches the trip instead of killing it."
+    },
+    "bookable_in": ["SCHEDULED", "DRIVER_ASSIGNED", "DRIVER_ARRIVING", "ARRIVED_AT_PICKUP"],
+    "error_code": "TRIP_INVALID_TRANSITION"
+  },
+  "booking": {
+    "initial": ["PENDING"],
+    "transitions": {
+      "PENDING": ["CONFIRMED", "CANCELLED"],
+      "CONFIRMED": ["DRIVER_ASSIGNED", "CANCELLED"],
+      "DRIVER_ASSIGNED": ["READY", "CONFIRMED", "CANCELLED"],
+      "READY": ["ONBOARD", "CANCELLED", "NO_SHOW"],
+      "ONBOARD": ["COMPLETED"],
+      "COMPLETED": [],
+      "CANCELLED": [],
+      "NO_SHOW": []
+    },
+    "cancellable_in": ["PENDING", "CONFIRMED", "DRIVER_ASSIGNED", "READY"],
+    "error_code": "BOOKING_INVALID_TRANSITION"
+  },
+  "settlement": {
+    "initial": ["PENDING"],
+    "transitions": {
+      "PENDING": ["PROCESSING", "REJECTED"],
+      "PROCESSING": ["PAID", "REJECTED"],
+      "PAID": [],
+      "REJECTED": []
+    },
+    "error_code": "SETTLEMENT_INVALID_TRANSITION"
+  },
+  "trip_to_booking": {
+    "$comment": "When a trip advances, the bookings riding on it advance to these statuses. A booking already terminal is left alone.",
+    "DRIVER_ASSIGNED": "DRIVER_ASSIGNED",
+    "ARRIVED_AT_PICKUP": "READY",
+    "IN_TRANSIT": "ONBOARD",
+    "COMPLETED": "COMPLETED"
+  },
+  "seat": {
+    "statuses": ["AVAILABLE", "RESERVED", "OCCUPIED", "BLOCKED"],
+    "rules": [
+      "A seat is a row, not a counter, so capacity cannot be exceeded by construction.",
+      "Only an AVAILABLE seat with no booking may be reserved.",
+      "Only a RESERVED seat may be occupied.",
+      "A BLOCKED seat is never released by a cancellation.",
+      "A seat holding a booking may not be blocked."
+    ]
+  },
+  "commission": {
+    "$comment": "Basis points; ROUND_HALF_UP; the split must always close exactly.",
+    "cases": [
+      {"gross_minor": 50000, "rate_basis_points": 1000, "platform_minor": 5000, "driver_minor": 45000},
+      {"gross_minor": 3333, "rate_basis_points": 1000, "platform_minor": 333, "driver_minor": 3000},
+      {"gross_minor": 1, "rate_basis_points": 1000, "platform_minor": 0, "driver_minor": 1},
+      {"gross_minor": 5, "rate_basis_points": 5000, "platform_minor": 3, "driver_minor": 2},
+      {"gross_minor": 123457, "rate_basis_points": 1500, "platform_minor": 18519, "driver_minor": 104938},
+      {"gross_minor": 100000, "rate_basis_points": 0, "platform_minor": 0, "driver_minor": 100000},
+      {"gross_minor": 100000, "rate_basis_points": 10000, "platform_minor": 100000, "driver_minor": 0}
+    ]
+  }
+}

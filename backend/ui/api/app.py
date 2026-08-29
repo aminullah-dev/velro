@@ -19,7 +19,7 @@ from shared import logging as app_logging
 from shared.ids import new_id
 from ui.api import errors
 from ui.api.errors import ok
-from ui.api.routers import auth, bookings, driver, geography
+from ui.api.routers import auth, bookings, dispatch, driver, geography
 from ui.api.session_scope import DatabaseSessionMiddleware
 
 API_PREFIX = "/api/v1"
@@ -76,7 +76,10 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
 
     errors.install(app)
 
-    for router in (auth.router, geography.router, bookings.router, driver.router):
+    for router in (
+        auth.router, geography.router, bookings.router,
+        driver.router, dispatch.router,
+    ):
         app.include_router(router, prefix=API_PREFIX)
 
     @app.get("/healthz", tags=["ops"])

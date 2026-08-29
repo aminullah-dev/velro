@@ -1,10 +1,8 @@
 {
   "app.name": "ولرو",
-
   "error.validation_failed": "لطفاً معلومات وارد شده را بررسی کنید.",
   "error.phone_invalid": "این شماره تیلفون درست معلوم نمی‌شود.",
   "error.locale_unsupported": "این زبان فعلاً موجود نیست.",
-
   "error.otp_invalid": "کود درست نیست. {attempts_remaining} کوشش باقی مانده است.",
   "error.otp_expired": "وقت این کود تمام شده است. کود نو بخواهید.",
   "error.otp_attempts_exceeded": "کودهای نادرست زیاد شد. کود نو بخواهید.",
@@ -16,7 +14,6 @@
   "error.user_not_found": "برای این شماره حسابی یافت نشد.",
   "error.user_suspended": "این حساب بند است. با پشتیبانی تماس بگیرید.",
   "error.permission_denied": "شما اجازه این کار را ندارید.",
-
   "error.province_not_found": "این ولایت یافت نشد.",
   "error.district_not_found": "این ولسوالی یافت نشد.",
   "error.village_not_found": "این قریه یافت نشد.",
@@ -26,14 +23,12 @@
   "error.destination_not_found": "این مقصد یافت نشد.",
   "error.destination_disabled": "این مقصد فعلاً موجود نیست.",
   "error.destination_cycle": "یک مقصد نمی‌تواند شامل خودش باشد.",
-
   "error.import_file_unreadable": "فایل خوانده نشد. فارمت را بررسی و دوباره کوشش کنید.",
   "error.import_column_missing": "ستون {column} در فایل موجود نیست.",
   "error.import_row_invalid": "سطر {row} خوانده نشد.",
   "error.import_duplicate_detected": "{count} مورد احتمالی تکراری نیاز به بررسی دارد.",
   "error.import_already_committed": "این وارد کردن قبلاً تطبیق شده است.",
   "error.import_not_previewed": "قبل از تطبیق، پیش‌نمایش را بررسی کنید.",
-
   "error.route_not_found": "این مسیر یافت نشد.",
   "error.route_disabled": "این مسیر فعلاً فعال نیست.",
   "error.route_not_resolvable": "بین این دو محل موتری رفت‌وآمد نمی‌کند.",
@@ -41,7 +36,6 @@
   "error.route_template_scope_empty": "برای این نمونه هنوز ایستگاهی موجود نیست.",
   "error.fare_not_configured": "برای این سفر هنوز کرایه تعیین نشده است.",
   "error.fare_negative": "کرایه نمی‌تواند کمتر از صفر باشد.",
-
   "error.driver_not_found": "این راننده یافت نشد.",
   "error.driver_not_approved": "این حساب هنوز تأیید نشده است.",
   "error.driver_suspended": "حساب این راننده بند است.",
@@ -52,7 +46,6 @@
   "error.vehicle_suspended": "این موتر برای کار تأیید نیست.",
   "error.vehicle_plate_taken": "این نمبر پلیت قبلاً ثبت شده است.",
   "error.vehicle_capacity_invalid": "تعداد چوکی‌ها درست نیست.",
-
   "error.trip_not_found": "این سفر یافت نشد.",
   "error.trip_invalid_transition": "این تغییر فعلاً ممکن نیست.",
   "error.trip_seats_unavailable": "تنها {available} چوکی در این سفر باقی است.",
@@ -61,7 +54,6 @@
   "error.trip_cancelled": "این سفر لغو شده است.",
   "error.trip_no_driver_available": "فعلاً راننده موجود نیست. کمی بعد دوباره کوشش کنید.",
   "error.trip_driver_already_assigned": "راننده دیگری این سفر را گرفته است.",
-
   "error.booking_not_found": "این رزرو یافت نشد.",
   "error.booking_invalid_transition": "این تغییر فعلاً ممکن نیست.",
   "error.booking_already_cancelled": "این رزرو قبلاً لغو شده است.",
@@ -70,20 +62,17 @@
   "error.booking_limit_reached": "شما {maximum} رزرو فعال دارید.",
   "error.booking_seat_count_invalid": "از ۱ تا {maximum} چوکی رزرو کرده می‌توانید.",
   "error.booking_stops_out_of_order": "محل سوارشدن باید پیش از محل پیاده‌شدن باشد.",
-
   "error.payment_not_found": "این پرداخت یافت نشد.",
   "error.payment_already_collected": "این کرایه قبلاً پرداخت شده است.",
   "error.commission_rate_invalid": "فیصدی کمیشن درست نیست.",
   "error.wallet_not_found": "برای این راننده بټوه‌ای یافت نشد.",
   "error.wallet_insufficient_balance": "بیلانس کافی نیست.",
   "error.settlement_invalid_transition": "این تغییر در تصفیه ممکن نیست.",
-
   "error.rating_out_of_range": "از ۱ تا ۵ ستاره انتخاب کنید.",
   "error.rating_already_submitted": "شما این سفر را قبلاً امتیاز داده‌اید.",
   "error.rating_trip_not_completed": "پس از ختم سفر امتیاز داده می‌توانید.",
   "error.ticket_not_found": "این درخواست یافت نشد.",
   "error.ticket_closed": "این درخواست بسته شده است.",
-
   "error.setting_not_found": "یک تنظیم ضروری موجود نیست.",
   "error.setting_type_invalid": "نوع یک تنظیم درست نیست.",
   "error.idempotency_key_reused": "این درخواست قبلاً با معلومات دیگری فرستاده شده بود.",
@@ -95,7 +84,6 @@
   "error.push_delivery_failed": "خبرنامه نرسید.",
   "error.internal_error": "کار درست نشد. لطفاً دوباره کوشش کنید.",
   "error.network_offline": "اتصال انترنت ضعیف است. دوباره کوشش کنید.",
-
   "auth.sms.otp": "کود ولرو شما {code} است. تا {ttl_minutes} دقیقه اعتبار دارد.",
   "auth.title.sign_in": "ورود",
   "auth.field.phone": "شماره تیلفون",
@@ -105,7 +93,6 @@
   "auth.action.sign_in": "داخل شوید",
   "auth.action.sign_out": "برآمدن",
   "auth.action.sign_out_all": "برآمدن از همه دستگاه‌ها",
-
   "home.question.from": "از کجا می‌روید؟",
   "home.question.to": "به کجا می‌روید؟",
   "home.question.when": "چه وقت؟",
@@ -115,7 +102,6 @@
   "home.section.recent_trips": "سفرهای اخیر",
   "home.section.upcoming": "رزرو پیش‌رو",
   "home.section.saved_stations": "ایستگاه‌های ذخیره‌شده",
-
   "location.action.search": "جستجو",
   "location.action.browse": "مرور",
   "location.action.nearby": "نزدیک من",
@@ -126,7 +112,6 @@
   "location.hint.search": "نام قریه یا ایستگاه را بنویسید",
   "location.distance.metres": "{distance} متر فاصله",
   "location.distance.kilometres": "{distance} کیلومتر فاصله",
-
   "ride.kind.private": "موتر اختصاصی",
   "ride.kind.shared": "چوکی مشترک",
   "ride.kind.scheduled": "رزرو برای بعد",
@@ -137,7 +122,6 @@
   "ride.action.request": "درخواست موتر",
   "ride.action.book_seat": "رزرو چوکی",
   "ride.action.confirm": "تأیید رزرو",
-
   "booking.title": "رزرو",
   "booking.label.number": "نمبر رزرو",
   "booking.label.seat": "چوکی",
@@ -153,7 +137,6 @@
   "booking.status.completed": "تکمیل‌شده",
   "booking.status.cancelled": "لغوشده",
   "booking.status.no_show": "سفر نکرد",
-
   "trip.status.scheduled": "پلان‌شده",
   "trip.status.requested": "در جستجوی راننده",
   "trip.status.driver_assigned": "راننده تعیین شد",
@@ -176,7 +159,6 @@
   "trip.emergency.call": "تماس اضطراری",
   "trip.emergency.support": "تماس با پشتیبانی",
   "trip.emergency.report": "راپور مشکل امنیتی",
-
   "driver.greeting": "سلام، {name}",
   "driver.status.online": "آنلاین",
   "driver.status.offline": "آفلاین",
@@ -185,6 +167,9 @@
   "driver.section.today_earnings": "درآمد امروز",
   "driver.action.accept": "قبول",
   "driver.action.decline": "رد",
+  "driver.action.on_my_way": "در راه هستم",
+  "driver.action.start_boarding": "شروع سوارشدن",
+  "driver.action.arrived_destination": "به مقصد رسیدم",
   "driver.action.arrived": "رسیدم",
   "driver.action.start_trip": "شروع سفر",
   "driver.action.complete_trip": "ختم سفر",
@@ -194,20 +179,17 @@
   "driver.label.passengers": "مسافران",
   "driver.pending.title": "در انتظار تأیید",
   "driver.pending.body": "پس از تأیید اسناد، کار را شروع کرده می‌توانید.",
-
   "earnings.title": "درآمد",
   "earnings.label.available": "قابل برداشت",
   "earnings.label.pending": "در جریان",
   "earnings.label.lifetime": "مجموع درآمد",
   "earnings.label.commission": "کمیشن ولرو",
   "earnings.label.trips": "سفرهای تکمیل‌شده",
-
   "rating.title": "به سفر خود امتیاز بدهید",
   "rating.hint": "سفر چطور بود؟",
   "rating.action.submit": "ثبت",
   "rating.action.skip": "بعداً",
   "rating.field.comment": "نظر خود را بنویسید (اختیاری)",
-
   "cancel.reason.passenger_cancelled": "پلان خود را تغییر دادم",
   "cancel.reason.driver_cancelled": "راننده لغو کرد",
   "cancel.reason.no_driver_available": "راننده موجود نبود",
@@ -215,14 +197,12 @@
   "cancel.reason.weather": "هوا",
   "cancel.reason.admin_cancelled": "لغو توسط ولرو",
   "cancel.reason.other": "دیگر",
-
   "vehicle_type.sedan": "سیدان",
   "vehicle_type.suv": "جیپ",
   "vehicle_type.van": "ون",
   "vehicle_type.hiace": "هایس",
   "vehicle_type.bus": "بس",
   "vehicle_type.other": "دیگر",
-
   "role.super_admin": "مدیر ارشد",
   "role.admin": "مدیر",
   "role.operations_manager": "مدیر عملیات",
@@ -231,14 +211,12 @@
   "role.support_agent": "کارمند پشتیبانی",
   "role.driver": "راننده",
   "role.passenger": "مسافر",
-
   "empty.trips": "هنوز سفری ثبت نشده است.",
   "empty.bookings": "هنوز رزروی ثبت نشده است.",
   "empty.search_results": "برای این مسیر و وقت موتری یافت نشد.",
   "empty.notifications": "خبرنامه‌ای نیست.",
   "empty.earnings": "هنوز درآمدی نیست.",
   "empty.action.search_again": "جستجوی دوباره",
-
   "common.action.retry": "دوباره کوشش",
   "common.action.cancel": "لغو",
   "common.action.confirm": "تأیید",

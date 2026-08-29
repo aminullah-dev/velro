@@ -38,3 +38,8 @@ captures/
 .idea/
 .vscode/
 *.swp
+
+# Gradle build outputs and machine-local paths
+mobile/.gradle/
+mobile/**/build/
+mobile/local.properties

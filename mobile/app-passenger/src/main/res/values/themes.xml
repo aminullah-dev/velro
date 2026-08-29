@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- A bare splash theme. The real theme is Compose; this only avoids a
+         white flash before the first frame. -->
+    <style name="Theme.Velro" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>

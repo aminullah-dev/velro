@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The only Android string resource in the product. Everything a person reads
+     inside the app comes from the shared locale files in core:i18n, so the
+     server, the apps and the admin panel use one key set. An application label
+     is the exception: the launcher reads it before any code runs. -->
+<resources>
+    <string name="app_name">VELRO</string>
+</resources>

@@ -1,10 +1,8 @@
 {
   "app.name": "ولرو",
-
   "error.validation_failed": "مهرباني وکړئ، ورکړل شوي معلومات وګورئ.",
   "error.phone_invalid": "دا د تلیفون شمېره سمه نه ښکاري.",
   "error.locale_unsupported": "دا ژبه لا نه ده چمتو.",
-
   "error.otp_invalid": "کوډ سم نه دی. {attempts_remaining} هڅې پاتې دي.",
   "error.otp_expired": "د دې کوډ وخت تېر دی. نوی کوډ وغواړئ.",
   "error.otp_attempts_exceeded": "ناسم کوډونه ډېر شول. نوی کوډ وغواړئ.",
@@ -16,7 +14,6 @@
   "error.user_not_found": "د دې شمېرې لپاره حساب ونه موندل شو.",
   "error.user_suspended": "دا حساب بند دی. له ملاتړ سره اړیکه ونیسئ.",
   "error.permission_denied": "تاسو د دې کار اجازه نه لرئ.",
-
   "error.province_not_found": "دا ولایت ونه موندل شو.",
   "error.district_not_found": "دا ولسوالي ونه موندل شوه.",
   "error.village_not_found": "دا کلی ونه موندل شو.",
@@ -26,14 +23,12 @@
   "error.destination_not_found": "دا منزل ونه موندل شو.",
   "error.destination_disabled": "دا منزل اوس نشته.",
   "error.destination_cycle": "یو منزل خپل ځان نشي رانغاړلی.",
-
   "error.import_file_unreadable": "فایل ونه لوستل شو. بڼه وګورئ او بیا هڅه وکړئ.",
   "error.import_column_missing": "کالم {column} په فایل کې نشته.",
   "error.import_row_invalid": "کرښه {row} ونه لوستل شوه.",
   "error.import_duplicate_detected": "{count} احتمالي تکراري موارد کتنې ته اړتیا لري.",
   "error.import_already_committed": "دا واردول مخکې تطبیق شوي دي.",
   "error.import_not_previewed": "له تطبیق مخکې مخکتنه وګورئ.",
-
   "error.route_not_found": "دا لار ونه موندل شوه.",
   "error.route_disabled": "دا لار اوس فعاله نه ده.",
   "error.route_not_resolvable": "د دې دوو ځایونو ترمنځ موټر نه ځي.",
@@ -41,7 +36,6 @@
   "error.route_template_scope_empty": "د دې نمونې لپاره لا دریځ نشته.",
   "error.fare_not_configured": "د دې سفر لپاره لا کرایه نه ده ټاکل شوې.",
   "error.fare_negative": "کرایه له صفر څخه کمه نشي کېدای.",
-
   "error.driver_not_found": "دا ډرایور ونه موندل شو.",
   "error.driver_not_approved": "دا حساب لا نه دی تصویب شوی.",
   "error.driver_suspended": "د دې ډرایور حساب بند دی.",
@@ -52,7 +46,6 @@
   "error.vehicle_suspended": "دا موټر د کار لپاره تصویب شوی نه دی.",
   "error.vehicle_plate_taken": "دا د پلېټ شمېره مخکې ثبت شوې ده.",
   "error.vehicle_capacity_invalid": "د چوکیو شمېر سم نه دی.",
-
   "error.trip_not_found": "دا سفر ونه موندل شو.",
   "error.trip_invalid_transition": "دا بدلون اوس ممکن نه دی.",
   "error.trip_seats_unavailable": "په دې سفر کې یوازې {available} چوکۍ پاتې دي.",
@@ -61,7 +54,6 @@
   "error.trip_cancelled": "دا سفر لغوه شوی دی.",
   "error.trip_no_driver_available": "اوس ډرایور نشته. لږ وروسته بیا هڅه وکړئ.",
   "error.trip_driver_already_assigned": "بل ډرایور دا سفر نیولی دی.",
-
   "error.booking_not_found": "دا بکنګ ونه موندل شو.",
   "error.booking_invalid_transition": "دا بدلون اوس ممکن نه دی.",
   "error.booking_already_cancelled": "دا بکنګ مخکې لغوه شوی دی.",
@@ -70,20 +62,17 @@
   "error.booking_limit_reached": "تاسو {maximum} فعال بکنګونه لرئ.",
   "error.booking_seat_count_invalid": "له ۱ څخه تر {maximum} چوکیو پورې بکنګ کولی شئ.",
   "error.booking_stops_out_of_order": "د سپرېدو ځای باید د کښېوتلو له ځای مخکې وي.",
-
   "error.payment_not_found": "دا تادیه ونه موندل شوه.",
   "error.payment_already_collected": "دا کرایه مخکې ورکړل شوې ده.",
   "error.commission_rate_invalid": "د کمیشن سلنه سمه نه ده.",
   "error.wallet_not_found": "د دې ډرایور لپاره بټوه ونه موندل شوه.",
   "error.wallet_insufficient_balance": "بیلانس بس نه دی.",
   "error.settlement_invalid_transition": "په تصفیه کې دا بدلون ممکن نه دی.",
-
   "error.rating_out_of_range": "له ۱ څخه تر ۵ ستورو پورې وټاکئ.",
   "error.rating_already_submitted": "دې سفر ته مو مخکې درجه ورکړې ده.",
   "error.rating_trip_not_completed": "د سفر له پای ته رسېدو وروسته درجه ورکولی شئ.",
   "error.ticket_not_found": "دا غوښتنه ونه موندل شوه.",
   "error.ticket_closed": "دا غوښتنه تړل شوې ده.",
-
   "error.setting_not_found": "یوه اړینه تنظیم نشته.",
   "error.setting_type_invalid": "د یوې تنظیم ډول سم نه دی.",
   "error.idempotency_key_reused": "دا غوښتنه مخکې په بېلو معلوماتو سره لېږل شوې وه.",
@@ -95,7 +84,6 @@
   "error.push_delivery_failed": "خبرتیا ونه رسېده.",
   "error.internal_error": "کار سم نه شو. مهرباني وکړئ بیا هڅه وکړئ.",
   "error.network_offline": "ستاسو د انټرنیټ اړیکه کمزورې ده. بیا هڅه وکړئ.",
-
   "auth.sms.otp": "ستاسو د ولرو کوډ {code} دی. تر {ttl_minutes} دقیقو پورې اعتبار لري.",
   "auth.title.sign_in": "ننوتل",
   "auth.field.phone": "د تلیفون شمېره",
@@ -105,7 +93,6 @@
   "auth.action.sign_in": "ننوځئ",
   "auth.action.sign_out": "وتل",
   "auth.action.sign_out_all": "له ټولو وسایلو وتل",
-
   "home.question.from": "له کوم ځایه ځئ؟",
   "home.question.to": "کوم ځای ته ځئ؟",
   "home.question.when": "کله؟",
@@ -115,7 +102,6 @@
   "home.section.recent_trips": "وروستي سفرونه",
   "home.section.upcoming": "راتلونکی بکنګ",
   "home.section.saved_stations": "زېرمه شوي دریځونه",
-
   "location.action.search": "لټون",
   "location.action.browse": "کتل",
   "location.action.nearby": "زما نږدې",
@@ -126,7 +112,6 @@
   "location.hint.search": "د کلي یا دریځ نوم ولیکئ",
   "location.distance.metres": "{distance} متره واټن",
   "location.distance.kilometres": "{distance} کیلومتره واټن",
-
   "ride.kind.private": "ځانګړی موټر",
   "ride.kind.shared": "ګډه چوکۍ",
   "ride.kind.scheduled": "د وروسته لپاره بکنګ",
@@ -137,7 +122,6 @@
   "ride.action.request": "د موټر غوښتنه",
   "ride.action.book_seat": "د چوکۍ بکنګ",
   "ride.action.confirm": "د بکنګ تایید",
-
   "booking.title": "بکنګ",
   "booking.label.number": "د بکنګ شمېره",
   "booking.label.seat": "چوکۍ",
@@ -153,7 +137,6 @@
   "booking.status.completed": "بشپړ شوی",
   "booking.status.cancelled": "لغوه شوی",
   "booking.status.no_show": "سفر یې ونه کړ",
-
   "trip.status.scheduled": "پلان شوی",
   "trip.status.requested": "د ډرایور په لټه کې",
   "trip.status.driver_assigned": "ډرایور وټاکل شو",
@@ -176,7 +159,6 @@
   "trip.emergency.call": "بيړنی زنګ",
   "trip.emergency.support": "ملاتړ ته زنګ",
   "trip.emergency.report": "د امنیتي ستونزې راپور",
-
   "driver.greeting": "سلام، {name}",
   "driver.status.online": "آنلاین",
   "driver.status.offline": "آفلاین",
@@ -185,6 +167,9 @@
   "driver.section.today_earnings": "د نن ورځې عاید",
   "driver.action.accept": "منل",
   "driver.action.decline": "ردول",
+  "driver.action.on_my_way": "پر لار یم",
+  "driver.action.start_boarding": "سپرېدل پیل کړئ",
+  "driver.action.arrived_destination": "منزل ته ورسېدم",
   "driver.action.arrived": "ورسېدم",
   "driver.action.start_trip": "سفر پیل کړئ",
   "driver.action.complete_trip": "سفر بشپړ کړئ",
@@ -194,20 +179,17 @@
   "driver.label.passengers": "مسافر",
   "driver.pending.title": "د تصویب په انتظار",
   "driver.pending.body": "د اسنادو له تصویب وروسته کار پیلولی شئ.",
-
   "earnings.title": "عاید",
   "earnings.label.available": "د اخیستلو وړ",
   "earnings.label.pending": "په جریان کې",
   "earnings.label.lifetime": "ټول عاید",
   "earnings.label.commission": "د ولرو کمیشن",
   "earnings.label.trips": "بشپړ شوي سفرونه",
-
   "rating.title": "خپل سفر ته درجه ورکړئ",
   "rating.hint": "سفر څنګه و؟",
   "rating.action.submit": "ثبت",
   "rating.action.skip": "وروسته",
   "rating.field.comment": "خپل نظر ولیکئ (اختیاري)",
-
   "cancel.reason.passenger_cancelled": "خپل پلان مې بدل کړ",
   "cancel.reason.driver_cancelled": "د ډرایور لغوه کول",
   "cancel.reason.no_driver_available": "ډرایور نه و",
@@ -215,14 +197,12 @@
   "cancel.reason.weather": "هوا",
   "cancel.reason.admin_cancelled": "د ولرو لخوا لغوه",
   "cancel.reason.other": "بل",
-
   "vehicle_type.sedan": "سیدان",
   "vehicle_type.suv": "جیپ",
   "vehicle_type.van": "ون",
   "vehicle_type.hiace": "هایس",
   "vehicle_type.bus": "بس",
   "vehicle_type.other": "بل",
-
   "role.super_admin": "لوی مدیر",
   "role.admin": "مدیر",
   "role.operations_manager": "د عملیاتو مدیر",
@@ -231,14 +211,12 @@
   "role.support_agent": "د ملاتړ کارکوونکی",
   "role.driver": "ډرایور",
   "role.passenger": "مسافر",
-
   "empty.trips": "لا هیڅ سفر نشته.",
   "empty.bookings": "لا هیڅ بکنګ نشته.",
   "empty.search_results": "د دې لارې او وخت لپاره موټر ونه موندل شو.",
   "empty.notifications": "هیڅ خبرتیا نشته.",
   "empty.earnings": "لا هیڅ عاید نشته.",
   "empty.action.search_again": "بیا لټون",
-
   "common.action.retry": "بیا هڅه",
   "common.action.cancel": "لغوه",
   "common.action.confirm": "تایید",

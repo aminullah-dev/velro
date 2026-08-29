@@ -31,7 +31,11 @@ DEFAULTS: dict[str, Any] = {
     "otp.max_attempts": 5,
     "otp.resend_window_seconds": 60,
     "otp.max_per_window": 3,
-    "dispatch.offer_ttl_seconds": 30,
+    # 30 seconds is the figure a hailing product would use, where the driver
+    # gets a push and the phone is in a cradle. Here the app polls over an
+    # intermittent connection, so a short window means offers expire before a
+    # driver ever sees them.
+    "dispatch.offer_ttl_seconds": 180,
     "dispatch.max_offers_per_trip": 10,
     "driver.required_documents": ["LICENSE", "NATIONAL_ID", "VEHICLE_REGISTRATION"],
     "driver.location_ping_seconds": 20,
