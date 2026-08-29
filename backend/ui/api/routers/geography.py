@@ -45,7 +45,17 @@ def list_villages(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
     rows = geo.list_villages(district_id, limit=limit, offset=offset)
-    return ok([VillageOut.model_validate(r).model_dump() for r in rows])
+    aliases = geo.aliases_for([r.id for r in rows])
+    return ok(
+        [
+            VillageOut(
+                id=r.id, code=r.code, name=r.name, district_id=r.district_id,
+                alternative_names=aliases.get(r.id, []),
+                latitude=r.latitude, longitude=r.longitude,
+            ).model_dump()
+            for r in rows
+        ]
+    )
 
 
 @router.get("/villages/{village_id}/stations")
@@ -69,10 +79,14 @@ def search_places(
     yeh find a village stored with a Persian one.
     """
     villages = geo.search_villages(q, limit=limit)
+    # Which alias brought each village back, so a result under a name the
+    # passenger did not type can explain itself.
+    matched = geo.aliases_matching(q, [v.id for v in villages])
     stations = geo.search_stations(q, limit=limit)
     results = [
         SearchResultOut(
-            kind="village", id=v.id, code=v.code, name=v.name, district_id=v.district_id
+            kind="village", id=v.id, code=v.code, name=v.name,
+            district_id=v.district_id, matched_alias=matched.get(v.id),
         ).model_dump()
         for v in villages
     ] + [

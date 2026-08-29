@@ -81,6 +81,7 @@ data class VillageDto(
     val code: String,
     val name: String,
     val district_id: String,
+    val alternative_names: List<String> = emptyList(),
     val latitude: Double? = null,
     val longitude: Double? = null,
 )

@@ -526,5 +526,6 @@
   "admin.action.reason": "Reason",
   "admin.approvals.expiry_hint": "Leave blank if this document does not expire.",
   "admin.col.expires": "Expires on",
-  "admin.error.not_a_number": "Enter a number, using Latin digits."
+  "admin.error.not_a_number": "Enter a number, using Latin digits.",
+  "geo.action.filter_villages": "Find your village"
 }

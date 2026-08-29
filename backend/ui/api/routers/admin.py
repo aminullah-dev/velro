@@ -11,6 +11,7 @@ and never profiled, and the tables they read grow fastest.
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import date, datetime, timedelta
 from typing import Annotated
 from zoneinfo import ZoneInfo
@@ -18,6 +19,10 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, or_, select
 
+from application.use_cases.generate_routes import (
+    GenerateRoutes,
+    GenerateRoutesCommand,
+)
 from domain.enums import (
     DriverApprovalStatus,
     TripStatus,
@@ -39,6 +44,13 @@ from shared.errors import ConflictError, NotFoundError
 from ui.api import deps
 from ui.api.errors import ok
 from ui.api.schemas.common import Schema
+
+
+class GenerateRoutesIn(Schema):
+    # Absent regenerates every active template, which is what a fresh import
+    # needs; naming one is for re-running a single corrected template.
+    template_id: str | None = None
+
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -147,6 +159,37 @@ class DistrictAdminOut(Schema):
     status: str
     village_count: int
     station_count: int
+
+
+@router.post("/routes/generate")
+def generate_routes(
+    body: GenerateRoutesIn,
+    actor: Annotated[deps.Actor, Depends(deps.require_operations)],
+    templates: Annotated[object, Depends(deps.route_templates)],
+    routes: Annotated[object, Depends(deps.routes)],
+    route_stops: Annotated[object, Depends(deps.route_stops)],
+    geo: Annotated[object, Depends(deps.geography)],
+    audit: Annotated[object, Depends(deps.audit)],
+) -> dict:
+    """Materialise routes for every station a template covers, section 12.
+
+    Needed after a village import: the importer creates villages and stations,
+    and without this they have no routes -- a station nobody can travel from is
+    not on the network, whatever the map says. Regenerating is safe: an existing
+    route for a (template, station) pair is updated, not duplicated.
+    """
+    use_case = GenerateRoutes(
+        templates=templates, routes=routes, route_stops=route_stops,
+        geography=geo, audit=audit, clock=deps.clock(), new_id=deps.new_id,
+    )
+    result = use_case.execute(
+        GenerateRoutesCommand(
+            template_id=body.template_id,
+            actor_id=actor.user_id,
+            actor_role=actor.role,
+        )
+    )
+    return ok(asdict(result))
 
 
 @router.get("/districts")

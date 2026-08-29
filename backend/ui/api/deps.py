@@ -150,6 +150,14 @@ def routes(session: SessionDep) -> RouteRepository:
     return RouteRepository(session)
 
 
+def route_templates(session: SessionDep) -> RouteTemplateRepository:
+    return RouteTemplateRepository(session)
+
+
+def route_stops(session: SessionDep) -> RouteStopRepository:
+    return RouteStopRepository(session)
+
+
 def fares(session: SessionDep) -> FareRepository:
     return FareRepository(session)
 

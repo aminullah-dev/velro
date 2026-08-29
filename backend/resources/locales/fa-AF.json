@@ -526,5 +526,6 @@
   "admin.action.reason": "دلیل",
   "admin.approvals.expiry_hint": "اگر این سند تاریخ ختم ندارد، خالی بگذارید.",
   "admin.col.expires": "تاریخ ختم",
-  "admin.error.not_a_number": "یک عدد وارد کنید، با ارقام لاتین."
+  "admin.error.not_a_number": "یک عدد وارد کنید، با ارقام لاتین.",
+  "geo.action.filter_villages": "قریه خود را پیدا کنید"
 }

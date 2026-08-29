@@ -65,6 +65,40 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrating_from_2_to_3_keeps_the_village_and_adds_no_aliases() {
+        val db = helper.createDatabase(TEST_DB, 2)
+        db.execSQL(
+            """
+            INSERT INTO villages (id, code, name, districtId, latitude, longitude)
+            VALUES ('v1', 'GRB-SYG-001', 'خیشکی', 'd1', NULL, NULL)
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 3, true, MIGRATION_2_3)
+
+        migrated.query("SELECT * FROM villages WHERE id = 'v1'").use { cursor ->
+            assertEquals(1, cursor.count)
+            cursor.moveToFirst()
+            assertEquals("خیشکی", cursor.getString(cursor.getColumnIndexOrThrow("name")))
+            // A village cached before the upgrade simply has no other names,
+            // which the filter reads as "match on the name only".
+            assertEquals(
+                "",
+                cursor.getString(cursor.getColumnIndexOrThrow("alternativeNames")),
+            )
+        }
+    }
+
+    @Test
+    fun every_migration_runs_in_sequence_from_the_first_schema() {
+        // The path a real phone takes: installed at version 1, upgraded twice.
+        // Testing each step alone would miss an ordering mistake between them.
+        helper.createDatabase(TEST_DB, 1).close()
+        helper.runMigrationsAndValidate(TEST_DB, 3, true, *ALL_MIGRATIONS)
+    }
+
     private companion object {
         const val TEST_DB = "migration-test.db"
     }

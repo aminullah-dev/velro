@@ -14,6 +14,7 @@ from sqlalchemy import (
     Text,
     Time,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -130,7 +131,15 @@ class RouteStopRow(Auditable, Base):
     is_dropoff: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("route_id", "sequence", name="uq_route_stops_route_id_sequence"),
+        # Partial: a soft-deleted stop must not keep occupying its sequence.
+        # Regenerating a route rebuilds its stops at the same sequences, and a
+        # plain constraint counts the dead rows and blocks the insert.
+        Index(
+            "uq_route_stops_route_id_sequence",
+            "route_id", "sequence",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
         CheckConstraint(
             "(station_id IS NULL) <> (destination_id IS NULL)",
             name="ck_route_stops_exactly_one_place",

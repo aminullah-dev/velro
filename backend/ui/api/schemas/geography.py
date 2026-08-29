@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from pydantic import Field
+
 from ui.api.schemas.common import Schema
 
 
@@ -20,6 +22,10 @@ class VillageOut(Schema):
     code: str
     name: str
     district_id: str
+    # The other names this place is known by. Sent with the list so browsing a
+    # district finds a village by the name the passenger actually uses, the same
+    # way search does -- an alias only findable through search is half a feature.
+    alternative_names: list[str] = Field(default_factory=list)
     latitude: Decimal | None = None
     longitude: Decimal | None = None
 

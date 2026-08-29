@@ -139,6 +139,50 @@ class GeographyRepository:
         )
         return list(self.session.scalars(stmt).all())
 
+    def aliases_for(self, village_ids) -> dict[str, list[str]]:
+        """Every alias for a page of villages, in one query."""
+        wanted = [i for i in set(village_ids) if i]
+        if not wanted:
+            return {}
+        rows = self.session.execute(
+            select(VillageAliasRow.village_id, VillageAliasRow.name)
+            .where(
+                VillageAliasRow.village_id.in_(wanted),
+                VillageAliasRow.deleted_at.is_(None),
+            )
+            .order_by(VillageAliasRow.name)
+        ).all()
+        out: dict[str, list[str]] = {}
+        for village_id, name in rows:
+            out.setdefault(village_id, []).append(name)
+        return out
+
+    def aliases_matching(self, term: str, village_ids) -> dict[str, str]:
+        """For each village, the alias that the search term actually matched.
+
+        A passenger who types the name they use locally should be told which
+        name that was, or a result under a different heading looks like the
+        wrong village. One query for the page, not one per row.
+        """
+        key = comparison_key(term)
+        wanted = [i for i in set(village_ids) if i]
+        if not key or not wanted:
+            return {}
+        rows = self.session.execute(
+            select(VillageAliasRow.village_id, VillageAliasRow.name)
+            .where(
+                VillageAliasRow.village_id.in_(wanted),
+                VillageAliasRow.name_key.like(f"%{key}%"),
+                VillageAliasRow.deleted_at.is_(None),
+            )
+        ).all()
+        # First match wins: a village with two aliases both matching is rare,
+        # and either answers "why is this here".
+        out: dict[str, str] = {}
+        for village_id, name in rows:
+            out.setdefault(village_id, name)
+        return out
+
     def search_stations(self, term: str, *, limit: int = 20) -> list[StationRow]:
         key = comparison_key(term)
         if not key:

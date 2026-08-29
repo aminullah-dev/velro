@@ -24,6 +24,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -165,18 +170,49 @@ private fun DistrictList(state: BookingFlowUiState, onEvent: (BookingEvent) -> U
 
 @Composable
 private fun VillageList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {
+    val strings = LocalVelroStrings.current
     if (state.villages.isEmpty()) {
         EmptyState(messageKey = "empty.search_results")
         return
     }
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        items(state.villages, key = { it.id }) { village ->
-            VelroCard(onClick = { onEvent(BookingEvent.VillageChosen(village)) }) {
-                Text(village.name, style = MaterialTheme.typography.bodyLarge)
+
+    var filter by rememberSaveable(state.villages.size) { mutableStateOf("") }
+    val shown = remember(state.villages, filter) {
+        state.villages.filter { it.matches(filter) }
+    }
+
+    Column {
+        // Siahgird alone has 189 villages. Scrolling to find your own is not a
+        // way to start a journey, and the filter matches however the name was
+        // typed -- an Arabic yeh, a missing ZWNJ -- because the passenger did
+        // not choose the spelling in the list.
+        if (state.villages.size > FILTER_THRESHOLD) {
+            OutlinedTextField(
+                value = filter,
+                onValueChange = { filter = it },
+                label = { Text(strings["geo.action.filter_villages"]) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm),
+            )
+        }
+
+        if (shown.isEmpty()) {
+            EmptyState(messageKey = "empty.search_results")
+            return@Column
+        }
+
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            items(shown, key = { it.id }) { village ->
+                VelroCard(onClick = { onEvent(BookingEvent.VillageChosen(village)) }) {
+                    Text(village.name, style = MaterialTheme.typography.bodyLarge)
+                }
             }
         }
     }
 }
+
+/** Below this a list is quicker to read than to filter. */
+private const val FILTER_THRESHOLD = 12
 
 @Composable
 private fun StationList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {

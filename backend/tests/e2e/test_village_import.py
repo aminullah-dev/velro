@@ -315,3 +315,47 @@ class TestPermissions:
         )
         assert response.status_code == 403
         assert response.json()["error"]["code"] == "PERMISSION_DENIED"
+
+
+def test_a_village_found_by_its_other_name_says_which_name(
+    client: TestClient, admin_session: dict, passenger_session: dict
+) -> None:
+    """Section 7: an alias is a real name, not a hidden search key.
+
+    A passenger who types the name used locally and gets a result under a
+    different heading has no way to know it is the right place unless the
+    response says which name matched.
+    """
+    csv = (
+        "district_code,name,alternative_names\n"
+        "GRB-SYG,قریه آزمایشی نام‌دوم,نام محلی آزمایشی\n"
+    ).encode()
+    preview = client.post(
+        "/api/v1/admin/imports/villages/preview",
+        files={"file": ("aliases.csv", csv, "text/csv")},
+        headers=admin_session,
+    )
+    assert preview.status_code == 200, preview.text
+    job = preview.json()["data"]["job_id"]
+    committed = client.post(
+        f"/api/v1/admin/imports/villages/{job}/commit",
+        json={"accept_rows": [], "create_stations": False},
+        headers=admin_session,
+    )
+    assert committed.status_code == 200, committed.text
+    assert committed.json()["data"]["aliases_created"] == 1
+
+    by_alias = client.get(
+        "/api/v1/geo/search", params={"q": "نام محلی آزمایشی"}, headers=passenger_session
+    ).json()["data"]
+    village = next(r for r in by_alias if r["kind"] == "village")
+    assert village["name"] == "قریه آزمایشی نام‌دوم"
+    assert village["matched_alias"] == "نام محلی آزمایشی"
+
+    # And null when the name itself matched -- the field means "you found this
+    # under another name", so it must not be set when that is untrue.
+    by_name = client.get(
+        "/api/v1/geo/search", params={"q": "قریه آزمایشی نام‌دوم"},
+        headers=passenger_session,
+    ).json()["data"]
+    assert next(r for r in by_name if r["kind"] == "village")["matched_alias"] is None

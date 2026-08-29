@@ -35,4 +35,14 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2)
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Village aliases, so browsing offline finds a place by the name the
+        // passenger uses. Defaulted rather than nullable: an empty string means
+        // "no other names", which is the truth for most villages, and saves
+        // every read site a null check.
+        db.execSQL("ALTER TABLE villages ADD COLUMN alternativeNames TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)

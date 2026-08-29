@@ -24,9 +24,21 @@ data class Village(
     val code: String,
     val name: String,
     val districtId: String,
+    /** The other names this place is known by, section 7. */
+    val alternativeNames: List<String> = emptyList(),
     val latitude: Double? = null,
     val longitude: Double? = null,
-)
+) {
+    /**
+     * Whether this village answers to what the passenger typed.
+     *
+     * Checks the aliases too: someone looking for رحمانیه must find آب بالا,
+     * or the alias is only a search key rather than a name the village has.
+     */
+    fun matches(query: String): Boolean =
+        PlaceNames.matches(name, query) ||
+            alternativeNames.any { PlaceNames.matches(it, query) }
+}
 
 data class Station(
     val id: String,

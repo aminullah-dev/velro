@@ -37,6 +37,14 @@ data class VillageEntity(
     val code: String,
     val name: String,
     val districtId: String,
+    /**
+     * Other names, newline-separated.
+     *
+     * Cached with the village because browsing is an offline operation: a
+     * passenger in a valley with no signal must still find their village by
+     * the name they use for it.
+     */
+    val alternativeNames: String = "",
     val latitude: Double?,
     val longitude: Double?,
 )

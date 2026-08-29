@@ -75,11 +75,21 @@ fun DistrictEntity.toDomain() = District(
 
 fun VillageDto.toEntity() = VillageEntity(
     id = id, code = code, name = name, districtId = district_id,
+    // Newline-separated: no Afghan place name contains one, and Room has no
+    // list type.
+    alternativeNames = alternative_names.joinToString("\n"),
     latitude = latitude, longitude = longitude,
 )
 
 fun VillageEntity.toDomain() = Village(
     id = id, code = code, name = name, districtId = districtId,
+    alternativeNames = alternativeNames.split("\n").filter { it.isNotBlank() },
+    latitude = latitude, longitude = longitude,
+)
+
+fun VillageDto.toDomain() = Village(
+    id = id, code = code, name = name, districtId = district_id,
+    alternativeNames = alternative_names,
     latitude = latitude, longitude = longitude,
 )
 

@@ -22,7 +22,7 @@ import androidx.room.RoomDatabase
         PendingOperationEntity::class,
         CacheMetadataEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class VelroDatabase : RoomDatabase() {
