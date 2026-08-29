@@ -9,7 +9,7 @@ missing is worse than none at all.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 
 from domain.enums import ActorRole, SettlementDirection, SettlementStatus
 from domain.wallet import (

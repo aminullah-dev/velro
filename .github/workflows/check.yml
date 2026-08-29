@@ -1,0 +1,86 @@
+name: check
+
+# Three jobs rather than one, so a Kotlin failure does not hide a Python one and
+# the slowest (mobile) never gates feedback on the fastest (admin).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  # A new push supersedes the run in progress: reviewing a stale red tick is
+  # worse than waiting.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # The integration and e2e tests run against real PostgreSQL. SQLite
+        # would not have caught FOR UPDATE SKIP LOCKED behaving differently, and
+        # seat booking is the mechanic the product rests on.
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: velro
+          POSTGRES_DB: velro_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      VELRO_TEST_DATABASE_URL: postgresql+psycopg://postgres:velro@localhost:5432/velro_e2e
+      # A CI-only value. The real secret is supplied by the environment at
+      # deploy time and is never in this file.
+      VELRO_JWT_SECRET: ci-secret-key-at-least-32-characters-long
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: install
+        working-directory: backend
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -q -e ".[dev]"
+      - name: check
+        run: scripts/check.sh backend
+
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci
+        working-directory: admin
+      - run: scripts/check.sh admin
+
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          # Kotlin does not run on the newest JDKs; 21 is what the project pins.
+          java-version: "21"
+          distribution: temurin
+      - uses: gradle/actions/setup-gradle@v4
+      - run: scripts/check.sh mobile
+
+  # The two domains are generated from one specification. If they drift, a rule
+  # the server enforces is one the app does not, and the failure reaches a
+  # passenger rather than a build.
+  lifecycles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: the shared lifecycle spec is valid JSON
+        run: python -c "import json; json.load(open('docs/domain/lifecycles.json'))"

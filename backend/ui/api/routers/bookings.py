@@ -21,10 +21,10 @@ from ui.api.errors import ok
 from ui.api.idempotency import idempotent
 from ui.api.schemas.booking import (
     BookingOut,
-    FareComponentOut,
     BookSeatsIn,
     CancelBookingIn,
     CancelBookingOut,
+    FareComponentOut,
     RateTripIn,
     RateTripOut,
     SearchTripsIn,

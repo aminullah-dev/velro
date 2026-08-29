@@ -25,10 +25,10 @@ from ui.api.routers import (
     bookings,
     dispatch,
     documents,
-    settlements,
     driver,
     geography,
     imports,
+    settlements,
     vehicles,
 )
 from ui.api.session_scope import DatabaseSessionMiddleware

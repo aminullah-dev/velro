@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from sqlalchemy import select
 
+from domain.enums import SettlementStatus, WalletEntryKind
 from infrastructure.db.models.money import (
     CommissionRow,
     PaymentRow,
@@ -16,7 +17,6 @@ from infrastructure.db.models.money import (
     WalletRow,
     WalletTransactionRow,
 )
-from domain.enums import SettlementStatus, WalletEntryKind
 from infrastructure.db.repositories.base import SqlRepository
 from shared import error_codes
 from shared.ids import new_id

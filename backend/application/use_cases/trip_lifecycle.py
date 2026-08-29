@@ -20,7 +20,6 @@ from domain.enums import (
     PaymentStatus,
     RideKind,
     TripStatus,
-    WalletEntryKind,
 )
 from domain.fare import CommissionSplit
 from domain.lifecycles import TRIP_TO_BOOKING_STATUS

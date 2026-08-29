@@ -31,13 +31,14 @@ def journey(client: TestClient, rider: dict) -> dict:
     """
     from datetime import timedelta
 
+    from sqlalchemy import select
+
     from domain.enums import RideKind, TripStatus
     from infrastructure.db.models.routing import RouteRow, RouteStopRow
     from infrastructure.db.models.trips import TripRow, TripSeatRow, TripStopRow
     from infrastructure.services.numbers import SqlNumberAllocator
     from shared.clock import SystemClock
     from shared.ids import new_id
-    from sqlalchemy import select
     from ui.api import deps
 
     with deps._session_factory()() as session:

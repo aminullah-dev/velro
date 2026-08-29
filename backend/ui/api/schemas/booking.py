@@ -68,7 +68,7 @@ class BookingOut(Schema):
     fare_total: MoneyOut
     # The breakdown as it stood when the booking was made. A later price change
     # must never alter a receipt a passenger already holds.
-    fare_breakdown: list[FareComponentOut] = []
+    fare_breakdown: list[FareComponentOut] = Field(default_factory=list)
     payment_method: str
     scheduled_departure_at: datetime | None = None
     # Present only once a driver is assigned, which is most of what a passenger

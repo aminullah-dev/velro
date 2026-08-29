@@ -117,7 +117,7 @@ async function refreshSession(): Promise<boolean> {
 }
 
 async function toError(response: Response): Promise<ApiError> {
-  let body: { error?: ApiErrorBody } | null = null;
+  let body: { error?: ApiErrorBody };
   try {
     body = await response.json();
   } catch {

@@ -41,6 +41,9 @@ interface StringsContext {
 
 const Context = createContext<StringsContext | null>(null);
 
+/** One shared empty dictionary, so a load in flight does not remount consumers. */
+const EMPTY: Dictionary = {};
+
 async function load(tag: LocaleTag): Promise<Dictionary> {
   try {
     const response = await fetch(`/locales/${tag}.json`);
@@ -57,8 +60,16 @@ export function StringsProvider({ children }: { children: ReactNode }) {
   );
   // English is the fallback because it is the only file guaranteed complete.
   const [fallback, setFallback] = useState<Dictionary>({});
-  const [dictionary, setDictionary] = useState<Dictionary>({});
-  const [ready, setReady] = useState(false);
+  // The dictionary is stored with the locale it was loaded for, and readiness
+  // is derived from the two matching. Tracking `ready` as its own state left a
+  // window where the locale had changed but the dictionary had not, so anything
+  // that rendered during the load showed the previous language.
+  const [loaded, setLoaded] = useState<{
+    tag: LocaleTag;
+    dictionary: Dictionary;
+  } | null>(null);
+  const ready = loaded?.tag === locale;
+  const dictionary = ready ? loaded.dictionary : EMPTY;
 
   useEffect(() => {
     load("en").then(setFallback);
@@ -66,11 +77,10 @@ export function StringsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    setReady(false);
-    load(locale).then((loaded) => {
-      if (cancelled) return;
-      setDictionary(loaded);
-      setReady(true);
+    load(locale).then((dictionary) => {
+      // A slow load for a locale the operator has already switched away from
+      // must not overwrite the one they are now looking at.
+      if (!cancelled) setLoaded({ tag: locale, dictionary });
     });
     return () => {
       cancelled = true;
