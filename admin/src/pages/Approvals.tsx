@@ -4,6 +4,7 @@ import { api, session } from "../api/client";
 import {
   Empty, ErrorBanner, ErrorState, Loading, Ltr, PageHeader, Table,
 } from "../components/ui";
+import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 
 interface Driver {
@@ -43,6 +44,10 @@ export function ApprovalsPage() {
   const client = useQueryClient();
   const [selected, setSelected] = useState<string | null>(null);
   const [viewing, setViewing] = useState<Document | null>(null);
+  // Which document is being verified or refused. Ids rather than the row, so a
+  // background refresh cannot swap what the open dialog is about.
+  const [verifying, setVerifying] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<string | null>(null);
 
   const drivers = useQuery({
     queryKey: ["drivers", "pending"],
@@ -94,6 +99,34 @@ export function ApprovalsPage() {
       />
 
       {review.error && <ErrorBanner error={review.error} />}
+
+      <InputDialog
+        open={verifying !== null}
+        titleKey="admin.approvals.expiry_prompt"
+        labelKey="admin.col.expires"
+        confirmKey="admin.approvals.verify"
+        hintKey="admin.approvals.expiry_hint"
+        field="date"
+        required={false}
+        destructive={false}
+        onCancel={() => setVerifying(null)}
+        onConfirm={(expires) => {
+          if (verifying) review.mutate({ id: verifying, verified: true, expires });
+          setVerifying(null);
+        }}
+      />
+
+      <InputDialog
+        open={rejecting !== null}
+        titleKey="admin.approvals.reject_reason"
+        confirmKey="admin.approvals.reject"
+        hintKey="admin.approvals.reject_hint"
+        onCancel={() => setRejecting(null)}
+        onConfirm={(reason) => {
+          if (rejecting) review.mutate({ id: rejecting, verified: false, reason });
+          setRejecting(null);
+        }}
+      />
       {approve.error && <ErrorBanner error={approve.error} />}
 
       {pending.length === 0 ? (
@@ -182,11 +215,7 @@ export function ApprovalsPage() {
                               className="small primary"
                               disabled={review.isPending}
                               onClick={() => {
-                                const expires = prompt(t("admin.approvals.expiry_prompt"), "");
-                                if (expires === null) return;
-                                review.mutate({
-                                  id: current.id, verified: true, expires: expires.trim(),
-                                });
+                                setVerifying(current.id);
                               }}
                             >
                               {t("admin.approvals.verify")}
@@ -195,14 +224,7 @@ export function ApprovalsPage() {
                               className="small danger"
                               disabled={review.isPending}
                               onClick={() => {
-                                const reason = prompt(
-                                  `${t("admin.approvals.reject_reason")}\n${t("admin.approvals.reject_hint")}`,
-                                  "",
-                                );
-                                if (!reason || !reason.trim()) return;
-                                review.mutate({
-                                  id: current.id, verified: false, reason: reason.trim(),
-                                });
+                                setRejecting(current.id);
                               }}
                             >
                               {t("admin.approvals.reject")}

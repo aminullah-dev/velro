@@ -4,6 +4,7 @@ import { api, query } from "../api/client";
 import {
   Empty, ErrorBanner, ErrorState, Loading, Ltr, PageHeader, Pager, Table,
 } from "../components/ui";
+import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 
 interface Route {
@@ -20,6 +21,8 @@ export function RoutesPage() {
   const client = useQueryClient();
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
+  // The route being repriced, with the price it has now.
+  const [pricing, setPricing] = useState<{ id: string; current: string } | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["routes", search, offset],
@@ -56,6 +59,28 @@ export function RoutesPage() {
       />
 
       {setPrice.error && <ErrorBanner error={setPrice.error} />}
+
+      <InputDialog
+        open={pricing !== null}
+        titleKey="admin.prompt.new_price"
+        labelKey="admin.col.price"
+        confirmKey="admin.action.set_price"
+        field="number"
+        initialValue={pricing?.current ?? ""}
+        destructive={false}
+        onCancel={() => setPricing(null)}
+        onConfirm={(entered) => {
+          if (pricing) {
+            // Sent as integer minor units; nothing here does decimal
+            // arithmetic on a price.
+            setPrice.mutate({
+              id: pricing.id,
+              amountMinor: Math.round(Number(entered) * 100),
+            });
+          }
+          setPricing(null);
+        }}
+      />
 
       {routes.length === 0 ? (
         <Empty messageKey="empty.search_results" />
@@ -96,18 +121,12 @@ export function RoutesPage() {
                   <button
                     className="small"
                     disabled={setPrice.isPending || route.fare_minor === null}
-                    onClick={() => {
-                      const entered = prompt(
-                        t("admin.prompt.new_price"),
-                        String((route.fare_minor ?? 0) / 100),
-                      );
-                      if (entered === null) return;
-                      const major = Number(entered);
-                      if (!Number.isFinite(major) || major < 0) return;
-                      // Sent as integer minor units; nothing here does decimal
-                      // arithmetic on a price.
-                      setPrice.mutate({ id: route.id, amountMinor: Math.round(major * 100) });
-                    }}
+                    onClick={() =>
+                      setPricing({
+                        id: route.id,
+                        current: String((route.fare_minor ?? 0) / 100),
+                      })
+                    }
                   >
                     {t("admin.action.set_price")}
                   </button>

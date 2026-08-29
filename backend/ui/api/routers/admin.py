@@ -16,7 +16,7 @@ from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from domain.enums import (
     DriverApprovalStatus,
@@ -355,18 +355,36 @@ def routes(
     destinations.
     """
     today = deps.clock().now().date()
+    # The rule in force today, per route.
+    #
+    # Superseding a price closes the old row and opens a new one, so both exist
+    # and only the open one counts -- without the valid_to test a raised price
+    # never appears here, and an operator changes it again and again.
+    #
+    # DISTINCT ON rather than an aggregate: MIN(amount) would return the
+    # cheapest matching rule rather than the current one, and aggregating the
+    # amount and the currency separately can pair a figure from one row with a
+    # currency from another.
     fares = (
         select(
             FareRuleRow.route_id,
-            func.min(FareRuleRow.amount_minor).label("amount_minor"),
-            func.min(FareRuleRow.amount_currency).label("currency"),
+            FareRuleRow.amount_minor.label("amount_minor"),
+            FareRuleRow.amount_currency.label("currency"),
         )
         .where(
             FareRuleRow.deleted_at.is_(None),
             FareRuleRow.ride_kind == "SHARED",
             FareRuleRow.valid_from <= today,
+            or_(FareRuleRow.valid_to.is_(None), FareRuleRow.valid_to >= today),
         )
-        .group_by(FareRuleRow.route_id)
+        .distinct(FareRuleRow.route_id)
+        # Newest first, so two rules open on the same day resolve to the one
+        # entered last rather than to whichever the planner happened to read.
+        .order_by(
+            FareRuleRow.route_id,
+            FareRuleRow.valid_from.desc(),
+            FareRuleRow.created_at.desc(),
+        )
         .subquery()
     )
     stmt = (

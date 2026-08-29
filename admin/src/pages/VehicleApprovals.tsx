@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import {
   Empty, ErrorBanner, ErrorState, Loading, Ltr, PageHeader, Table,
 } from "../components/ui";
+import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 
 interface PendingVehicle {
@@ -32,6 +34,7 @@ interface PendingVehicle {
 export function VehicleApprovalsPage() {
   const { t, num } = useStrings();
   const client = useQueryClient();
+  const [suspending, setSuspending] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["vehicles", "pending"],
@@ -68,6 +71,17 @@ export function VehicleApprovalsPage() {
       />
 
       {decide.error && <ErrorBanner error={decide.error} />}
+
+      <InputDialog
+        open={suspending !== null}
+        titleKey="admin.vehicles.suspend_reason"
+        confirmKey="admin.vehicles.suspend"
+        onCancel={() => setSuspending(null)}
+        onConfirm={(reason) => {
+          if (suspending) decide.mutate({ id: suspending, approve: false, reason });
+          setSuspending(null);
+        }}
+      />
 
       {pending.length === 0 ? (
         <Empty messageKey="admin.vehicles.none" />
@@ -127,13 +141,7 @@ export function VehicleApprovalsPage() {
                   <button
                     className="small danger"
                     disabled={decide.isPending}
-                    onClick={() => {
-                      const reason = prompt(t("admin.vehicles.suspend_reason"), "");
-                      if (!reason || !reason.trim()) return;
-                      decide.mutate({
-                        id: vehicle.id, approve: false, reason: reason.trim(),
-                      });
-                    }}
+                    onClick={() => setSuspending(vehicle.id)}
                   >
                     {t("admin.vehicles.suspend")}
                   </button>

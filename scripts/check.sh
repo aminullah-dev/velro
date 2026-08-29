@@ -45,6 +45,7 @@ admin() {
   cd "$ROOT/admin"
   [ -d node_modules ] || npm ci --silent
   step "admin locales" node scripts/sync-locales.mjs
+  step "admin tokens"  node scripts/check-tokens.mjs
   step "admin lint"    npm run --silent lint
   step "admin types"   npm run --silent typecheck
   step "admin build"   npm run --silent build

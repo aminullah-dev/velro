@@ -35,6 +35,8 @@ export default tseslint.config(
   {
     // Node scripts, not browser code.
     files: ["scripts/**/*.mjs", "eslint.config.js", "vite.config.ts"],
-    languageOptions: { globals: { process: "readonly", console: "readonly" } },
+    languageOptions: {
+      globals: { process: "readonly", console: "readonly", URL: "readonly" },
+    },
   },
 );

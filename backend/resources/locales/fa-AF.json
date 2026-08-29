@@ -522,5 +522,9 @@
   "admin.settlements.owed": "بدهی",
   "admin.col.direction": "جهت",
   "admin.settlements.debtors": "رانندگان بدهکار",
-  "admin.settlements.no_debtors": "هیچ راننده‌ای بدهی ندارد."
+  "admin.settlements.no_debtors": "هیچ راننده‌ای بدهی ندارد.",
+  "admin.action.reason": "دلیل",
+  "admin.approvals.expiry_hint": "اگر این سند تاریخ ختم ندارد، خالی بگذارید.",
+  "admin.col.expires": "تاریخ ختم",
+  "admin.error.not_a_number": "یک عدد وارد کنید، با ارقام لاتین."
 }

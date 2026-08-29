@@ -522,5 +522,9 @@
   "admin.settlements.owed": "پور",
   "admin.col.direction": "لوری",
   "admin.settlements.debtors": "پوروړي ډرایوران",
-  "admin.settlements.no_debtors": "هیڅ ډرایور پور نه لري."
+  "admin.settlements.no_debtors": "هیڅ ډرایور پور نه لري.",
+  "admin.action.reason": "دلیل",
+  "admin.approvals.expiry_hint": "که دا سند د پای نېټه نه لري، خالي یې پرېږدئ.",
+  "admin.col.expires": "د پای نېټه",
+  "admin.error.not_a_number": "یو شمېر ولیکئ، په لاتیني ارقامو."
 }

@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import {
   Empty, ErrorBanner, ErrorState, Loading, Ltr, PageHeader, Table,
 } from "../components/ui";
+import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 
 interface Money {
@@ -43,6 +45,9 @@ interface Settlement {
 export function SettlementsPage() {
   const { t, money, date, num } = useStrings();
   const client = useQueryClient();
+  // Which settlement is being refused, or null. Held here rather than in the
+  // row so the dialog is not remounted as the queue refreshes underneath it.
+  const [refusing, setRefusing] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["settlements", "queue"],
@@ -90,6 +95,17 @@ export function SettlementsPage() {
       />
 
       {decide.error && <ErrorBanner error={decide.error} />}
+
+      <InputDialog
+        open={refusing !== null}
+        titleKey="admin.settlements.reject_reason"
+        confirmKey="admin.settlements.reject"
+        onCancel={() => setRefusing(null)}
+        onConfirm={(reason) => {
+          if (refusing) decide.mutate({ id: refusing, to: "REJECTED", reason });
+          setRefusing(null);
+        }}
+      />
       {collect.error && <ErrorBanner error={collect.error} />}
 
       {/* Cash fares mean drivers hold VELRO's share, so this is the ordinary
@@ -213,11 +229,7 @@ export function SettlementsPage() {
                   <button
                     className="small danger"
                     disabled={decide.isPending}
-                    onClick={() => {
-                      const reason = prompt(t("admin.settlements.reject_reason"), "");
-                      if (!reason || !reason.trim()) return;
-                      decide.mutate({ id: s.id, to: "REJECTED", reason: reason.trim() });
-                    }}
+                    onClick={() => setRefusing(s.id)}
                   >
                     {t("admin.settlements.reject")}
                   </button>
