@@ -234,8 +234,36 @@ data class VehicleDto(
     val seat_capacity: Int,
     val brand: String? = null,
     val model: String? = null,
+    val year: Int? = null,
     val colour: String? = null,
     val status: String,
+)
+
+@Serializable
+data class VehicleTypeDto(
+    val code: String,
+    val name_key: String,
+    val default_seat_capacity: Int,
+)
+
+@Serializable
+data class RegisterVehicleRequest(
+    val vehicle_type_code: String,
+    val plate_number: String,
+    val seat_capacity: Int? = null,
+    val brand: String? = null,
+    val model: String? = null,
+    val year: Int? = null,
+    val colour: String? = null,
+)
+
+@Serializable
+data class RegisteredVehicleDto(
+    val id: String,
+    val plate_number: String,
+    val status: String,
+    val seat_capacity: Int,
+    val replaced_id: String? = null,
 )
 
 @Serializable

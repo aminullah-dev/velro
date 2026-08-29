@@ -16,6 +16,7 @@ import af.velro.core.ui.component.tone
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.TripStatus
+import af.velro.domain.VehicleStatus
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,10 +47,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun DriverHomeRoute(
     onOpenDocuments: () -> Unit,
+    onOpenVehicle: () -> Unit,
     viewModel: DriverHomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    DriverHomeScreen(state, viewModel::onEvent, onOpenDocuments = onOpenDocuments)
+    DriverHomeScreen(
+        state, viewModel::onEvent,
+        onOpenDocuments = onOpenDocuments,
+        onOpenVehicle = onOpenVehicle,
+    )
 }
 
 @Composable
@@ -57,6 +63,7 @@ fun DriverHomeScreen(
     state: DriverHomeUiState,
     onEvent: (DriverHomeEvent) -> Unit,
     onOpenDocuments: () -> Unit = {},
+    onOpenVehicle: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -89,7 +96,7 @@ fun DriverHomeScreen(
         if (!state.canWork) {
             // Approval is a gate, not a label: explain it, and give the driver
             // the one action that moves them past it.
-            PendingApproval(state, onOpenDocuments)
+            PendingApproval(state, onOpenDocuments, onOpenVehicle)
         } else {
             OnlineToggle(state, onEvent)
         }
@@ -124,7 +131,11 @@ fun DriverHomeScreen(
 }
 
 @Composable
-private fun PendingApproval(state: DriverHomeUiState, onOpenDocuments: () -> Unit) {
+private fun PendingApproval(
+    state: DriverHomeUiState,
+    onOpenDocuments: () -> Unit,
+    onOpenVehicle: () -> Unit,
+) {
     val strings = LocalVelroStrings.current
     VelroCard {
         Column {
@@ -151,11 +162,36 @@ private fun PendingApproval(state: DriverHomeUiState, onOpenDocuments: () -> Uni
                     color = MaterialTheme.colorScheme.secondary,
                 )
             }
+            val needsVehicle = state.profile?.blockedByVehicle == true
+            if (needsVehicle) {
+                Spacer(Modifier.height(Spacing.sm))
+                Text(
+                    strings[
+                        when (state.profile?.vehicle?.status) {
+                            null -> "driver.vehicle.none"
+                            VehicleStatus.SUSPENDED -> "driver.vehicle.suspended"
+                            else -> "driver.vehicle.awaiting"
+                        }
+                    ],
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
             Spacer(Modifier.height(Spacing.md))
+            // Two gates, two screens. Offer whichever one the driver can act on
+            // -- sending them to the documents screen over a missing car is the
+            // fastest way to make a working app feel broken.
             SecondaryAction(
                 label = strings["driver.documents.title"],
                 onClick = onOpenDocuments,
             )
+            if (needsVehicle) {
+                Spacer(Modifier.height(Spacing.sm))
+                SecondaryAction(
+                    label = strings["driver.vehicle.title"],
+                    onClick = onOpenVehicle,
+                )
+            }
         }
     }
 }

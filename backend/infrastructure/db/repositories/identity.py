@@ -6,6 +6,7 @@ from datetime import datetime
 
 from sqlalchemy import select, update
 
+from domain.enums import UserStatus
 from infrastructure.db.models.identity import (
     OtpChallengeRow,
     RefreshTokenRow,
@@ -28,8 +29,24 @@ class UserRepository(SqlRepository[UserRow]):
     def create(
         self, *, id: str, phone: str, locale: str, full_name: str | None = None
     ) -> UserRow:
-        row = UserRow(id=id, phone=phone, locale=locale, full_name=full_name)
+        """Create a user with every column populated.
+
+        The status is set here rather than left to the column default. A
+        SQLAlchemy default is applied at flush, so anything reading the attribute
+        between construction and flush sees None -- and the sign-in path reads
+        it immediately to check the account is active. That made the very first
+        request a brand-new user ever makes return a 500, which is the one
+        request that must not.
+        """
+        row = UserRow(
+            id=id,
+            phone=phone,
+            locale=locale,
+            full_name=full_name,
+            status=UserStatus.ACTIVE.value,
+        )
         self.session.add(row)
+        self.session.flush()
         return row
 
     def roles_of(self, user_id: str) -> list[str]:

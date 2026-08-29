@@ -28,6 +28,7 @@ from ui.api.routers import (
     driver,
     geography,
     imports,
+    vehicles,
 )
 from ui.api.session_scope import DatabaseSessionMiddleware
 
@@ -88,7 +89,7 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
     for router in (
         auth.router, geography.router, bookings.router,
         driver.router, dispatch.router, admin.router, imports.router,
-        documents.router,
+        documents.router, vehicles.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
 

@@ -15,6 +15,7 @@ import { RoutesPage } from "./pages/Routes";
 import { SettingsPage } from "./pages/Settings";
 import { SignInPage } from "./pages/SignIn";
 import { TripsPage } from "./pages/Trips";
+import { VehicleApprovalsPage } from "./pages/VehicleApprovals";
 import { VehiclesPage } from "./pages/Vehicles";
 
 // Section 76, in the order an operator actually works: what is happening now,
@@ -27,6 +28,11 @@ const NAV = [
   { to: "/drivers", labelKey: "admin.nav.drivers", element: <DriversPage /> },
   { to: "/approvals", labelKey: "admin.nav.approvals", element: <ApprovalsPage /> },
   { to: "/vehicles", labelKey: "admin.nav.vehicles", element: <VehiclesPage /> },
+  {
+    to: "/vehicle-approvals",
+    labelKey: "admin.nav.vehicle_approvals",
+    element: <VehicleApprovalsPage />,
+  },
   { to: "/locations", labelKey: "admin.nav.locations", element: <LocationsPage /> },
   { to: "/import", labelKey: "admin.nav.import", element: <ImportVillagesPage /> },
   { to: "/routes", labelKey: "admin.nav.routes", element: <RoutesPage /> },

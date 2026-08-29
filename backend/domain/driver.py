@@ -38,6 +38,25 @@ class DriverDocument:
         return self.expires_on is None or self.expires_on >= on
 
 
+# Eastern Arabic-Indic digits appear on plates typed on an Afghan keyboard.
+_EASTERN_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+
+
+def normalise_plate(plate: str) -> str:
+    """The comparison form of a number plate.
+
+    Two people entering the same vehicle as "PRW-1234", "prw 1234" and
+    "PRW ۱۲۳۴" have entered one vehicle. Uniqueness on the raw string would
+    accept all three, and the platform would then have three vehicles that are
+    really one -- with three drivers able to be dispatched in it.
+
+    The plate is stored as typed; only the comparison is normalised, exactly as
+    village names are.
+    """
+    folded = plate.strip().upper().translate(_EASTERN_DIGITS)
+    return "".join(ch for ch in folded if ch.isalnum())
+
+
 @dataclass(slots=True)
 class Vehicle:
     id: str
@@ -57,7 +76,22 @@ class Vehicle:
                 error_codes.VEHICLE_CAPACITY_INVALID, capacity=self.seat_capacity
             )
         if not self.plate_number.strip():
-            raise ValidationError(error_codes.VALIDATION_FAILED, field="plate_number")
+            raise ValidationError(error_codes.VEHICLE_PLATE_INVALID, reason="empty")
+        if len(self.plate_key) < 4:
+            # Short enough to be a typo rather than a plate. Afghan plates carry
+            # a province code and a number.
+            raise ValidationError(
+                error_codes.VEHICLE_PLATE_INVALID,
+                reason="too_short",
+                plate_number=self.plate_number,
+            )
+        if self.year is not None and not 1950 <= self.year <= 2100:
+            raise ValidationError(error_codes.VALIDATION_FAILED, field="year", value=self.year)
+
+    @property
+    def plate_key(self) -> str:
+        """What uniqueness is decided on."""
+        return normalise_plate(self.plate_number)
 
     @property
     def is_usable(self) -> bool:

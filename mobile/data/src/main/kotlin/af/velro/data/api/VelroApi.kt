@@ -168,6 +168,26 @@ interface VelroApi {
     @GET("driver/earnings")
     suspend fun earnings(): Response<Envelope<EarningsDto>>
 
+    // -- vehicle --------------------------------------------------------
+
+    @GET("vehicle-types")
+    suspend fun vehicleTypes(): Response<Envelope<List<VehicleTypeDto>>>
+
+    @GET("driver/vehicle")
+    suspend fun currentVehicle(): Response<Envelope<VehicleDto?>>
+
+    /**
+     * Register or replace the vehicle.
+     *
+     * One endpoint for both because the driver is answering one question --
+     * "which car am I driving?" -- and the server decides from the plate
+     * whether that is an edit or a different car.
+     */
+    @POST("driver/vehicle")
+    suspend fun registerVehicle(
+        @Body body: RegisterVehicleRequest,
+    ): Response<Envelope<RegisteredVehicleDto>>
+
     // -- documents ------------------------------------------------------
 
     @POST("driver/register")

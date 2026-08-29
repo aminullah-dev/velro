@@ -115,6 +115,13 @@ data class TripSummary(
     val vehicleId: String? = null,
 )
 
+/**
+ * The car, section 26.
+ *
+ * A driver and a vehicle are approved separately: the papers say the person may
+ * drive, this says the car may carry passengers. Both must pass before work can
+ * start, which is why `canWork` on the profile consults this status too.
+ */
 data class Vehicle(
     val id: String,
     val vehicleTypeCode: String,
@@ -122,8 +129,25 @@ data class Vehicle(
     val seatCapacity: Int,
     val brand: String? = null,
     val model: String? = null,
+    val year: Int? = null,
     val colour: String? = null,
-    val status: String,
+    val status: VehicleStatus,
+) {
+    val isReadyForWork: Boolean get() = status == VehicleStatus.ACTIVE
+
+    /** "Toyota Corolla 2012", skipping whatever the driver did not fill in. */
+    val describedAs: String
+        get() = listOfNotNull(brand, model, year?.toString()).joinToString(" ")
+}
+
+enum class VehicleStatus { PENDING, ACTIVE, SUSPENDED, RETIRED }
+
+/** A type an operator configured, section 105 -- not an enum in the app, so
+ *  adding one does not require every driver to update before they can pick it. */
+data class VehicleType(
+    val code: String,
+    val nameKey: String,
+    val defaultSeatCapacity: Int,
 )
 
 data class DriverProfile(
@@ -148,7 +172,17 @@ data class DriverProfile(
         get() = approvalStatus == DriverApprovalStatus.APPROVED &&
             missingDocuments.isEmpty() &&
             vehicle != null &&
-            vehicle.status == "ACTIVE"
+            vehicle.isReadyForWork
+
+    /**
+     * Which half of the gate is still shut.
+     *
+     * The two halves fail for different reasons and are fixed on different
+     * screens, so telling a driver only "not approved" sends them to the wrong
+     * one -- or to a phone call.
+     */
+    val blockedByVehicle: Boolean
+        get() = !canWork && (vehicle == null || !vehicle.isReadyForWork)
 
     val isOnline: Boolean
         get() = availability == DriverAvailability.ONLINE ||

@@ -23,6 +23,7 @@ from decimal import Decimal
 from sqlalchemy import select
 
 from application.use_cases.generate_routes import GenerateRoutes, GenerateRoutesCommand
+from domain.driver import normalise_plate
 from domain.enums import (
     DestinationKind,
     DocumentStatus,
@@ -542,6 +543,9 @@ def seed(session) -> None:
             match={"plate_number": plate},
             defaults={
                 "driver_id": driver.id,
+                # Through the domain rule, so the seed and the application agree
+                # on what makes two plates the same vehicle.
+                "plate_key": normalise_plate(plate),
                 "vehicle_type_code": "SEDAN" if capacity == 4 else "SUV",
                 "seat_capacity": capacity,
                 "brand": "Toyota",

@@ -13,6 +13,7 @@ from infrastructure.db.models.routing import (
     RouteScheduleRow,
     RouteStopRow,
     RouteTemplateRow,
+    VehicleTypeRow,
 )
 from infrastructure.db.repositories.base import SqlRepository
 from shared import error_codes
@@ -114,6 +115,25 @@ class RouteStopRepository(SqlRepository[RouteStopRow]):
 class RouteScheduleRepository(SqlRepository[RouteScheduleRow]):
     model = RouteScheduleRow
     not_found_code = error_codes.ROUTE_NOT_FOUND
+
+
+class VehicleTypeRepository(SqlRepository[VehicleTypeRow]):
+    """Sedan, SUV, Van, Hiace, Bus, Other -- rows, so an operator can add one
+    without a deploy (section 105)."""
+
+    model = VehicleTypeRow
+    not_found_code = error_codes.VEHICLE_TYPE_UNKNOWN
+
+    def find_by_code(self, code: str) -> VehicleTypeRow | None:
+        return self.find_by(code=code.strip().upper())
+
+    def active(self) -> list[VehicleTypeRow]:
+        stmt = (
+            self._base()
+            .where(VehicleTypeRow.is_active.is_(True))
+            .order_by(VehicleTypeRow.sort_order)
+        )
+        return list(self.session.scalars(stmt).all())
 
 
 class FareRepository(SqlRepository[FareRuleRow]):

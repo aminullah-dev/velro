@@ -25,9 +25,10 @@ from domain.enums import (
     DriverApprovalStatus,
     DriverAvailability,
     TripStatus,
+    VehicleStatus,
 )
 from shared import error_codes
-from shared.errors import NotFoundError
+from shared.errors import ConflictError, NotFoundError
 from shared.money import Money
 from ui.api import deps
 from ui.api.errors import ok
@@ -57,20 +58,20 @@ def driver_profile(
     users: Annotated[object, Depends(deps.users)],
     settings: Annotated[object, Depends(deps.app_settings)],
 ) -> dict:
+    from application.use_cases.driver_documents import _to_driver
+
     row = _driver_of(drivers, actor.user_id)
     user = users.get(row.user_id)
-    vehicle = vehicles.primary_for_driver(row.id)
+    vehicle = vehicles.current_for_driver(row.id)
 
-    entity = Driver(
-        id=row.id, user_id=row.user_id,
-        approval_status=DriverApprovalStatus(row.approval_status),
-        availability=DriverAvailability(row.availability),
-        rating_sum=row.rating_sum, rating_count=row.rating_count,
-    )
+    # Built through the shared mapper so this uses the one implementation of
+    # "which documents are still missing". A second copy of that rule here is
+    # how the endpoint went on reporting nothing missing after the rule was
+    # corrected everywhere else -- only the newest upload of each type counts.
+    entity = _to_driver(row, drivers.documents_of(row.id))
     required = frozenset(settings.get_list("driver.required_documents", []))
-    held = {
-        d.document_type_code for d in drivers.documents_of(row.id) if d.status == "VERIFIED"
-    }
+    missing = entity.missing_documents(required, on=deps.clock().now().date())
+
     return ok(
         DriverProfileOut(
             id=row.id, user_id=row.user_id, full_name=user.full_name,
@@ -78,7 +79,7 @@ def driver_profile(
             rating_average=entity.rating_average, rating_count=row.rating_count,
             completed_trips=row.completed_trips,
             vehicle=VehicleOut.model_validate(vehicle) if vehicle else None,
-            missing_documents=sorted(required - held),
+            missing_documents=sorted(missing),
         ).model_dump()
     )
 
@@ -88,6 +89,7 @@ def set_status(
     body: DriverStatusIn,
     actor: Annotated[deps.Actor, Depends(deps.require_driver)],
     drivers: Annotated[object, Depends(deps.drivers)],
+    vehicles: Annotated[object, Depends(deps.vehicles)],
     audit: Annotated[object, Depends(deps.audit)],
 ) -> dict:
     """Going online is where approval is enforced.
@@ -103,6 +105,20 @@ def set_status(
     )
     if body.availability == DriverAvailability.ONLINE.value:
         entity.go_online()
+        # Approval covers the documents; it does not conjure a car. Without an
+        # active vehicle a driver could enter the dispatch pool, be offered a
+        # trip, and fail at the moment they accepted it -- in front of a
+        # passenger who is already waiting. Refuse here, where it can be
+        # explained.
+        vehicle = vehicles.current_for_driver(row.id)
+        if vehicle is None:
+            raise ConflictError(error_codes.VEHICLE_NOT_REGISTERED, driver_id=row.id)
+        if vehicle.status != VehicleStatus.ACTIVE.value:
+            raise ConflictError(
+                error_codes.VEHICLE_SUSPENDED,
+                vehicle_id=vehicle.id,
+                status=vehicle.status,
+            )
     else:
         entity.go_offline()
 

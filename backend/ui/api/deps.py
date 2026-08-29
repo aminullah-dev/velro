@@ -60,6 +60,7 @@ from infrastructure.db.repositories.routing import (
     RouteScheduleRepository,
     RouteStopRepository,
     RouteTemplateRepository,
+    VehicleTypeRepository,
 )
 from infrastructure.db.repositories.seats import TripSeatRepository
 from infrastructure.db.repositories.supply import (
@@ -171,6 +172,10 @@ def drivers(session: SessionDep) -> DriverRepository:
 
 def vehicles(session: SessionDep) -> VehicleRepository:
     return VehicleRepository(session)
+
+
+def vehicle_types(session: SessionDep) -> VehicleTypeRepository:
+    return VehicleTypeRepository(session)
 
 
 def driver_locations(session: SessionDep) -> DriverLocationRepository:

@@ -102,6 +102,10 @@ class VehicleRow(Auditable, Base):
         String(24), nullable=False, index=True
     )
     plate_number: Mapped[str] = mapped_column(String(32), nullable=False)
+    # The comparison form: upper case, alphanumeric only, Latin digits. Stored
+    # separately so the plate keeps whatever the driver actually typed while
+    # uniqueness is decided on what it means.
+    plate_key: Mapped[str] = mapped_column(String(32), nullable=False)
     seat_capacity: Mapped[int] = mapped_column(Integer, nullable=False)
     brand: Mapped[str | None] = mapped_column(String(60))
     model: Mapped[str | None] = mapped_column(String(60))
@@ -112,7 +116,10 @@ class VehicleRow(Auditable, Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("plate_number", name="uq_vehicles_plate_number"),
+        # Uniqueness is on the normalised key, not the raw text: "PRW-1234" and
+        # "prw 1234" are one vehicle, and two records for one vehicle means two
+        # drivers can be dispatched in it.
+        UniqueConstraint("plate_key", name="uq_vehicles_plate_key"),
         CheckConstraint("seat_capacity > 0", name="ck_vehicles_capacity_positive"),
         CheckConstraint(
             "year IS NULL OR (year >= 1950 AND year <= 2100)", name="ck_vehicles_year_plausible"

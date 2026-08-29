@@ -144,3 +144,25 @@ def test_a_token_signed_with_another_secret_is_refused(client: TestClient) -> No
     )
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "TOKEN_INVALID"
+
+
+def test_a_brand_new_user_can_sign_in(client: TestClient) -> None:
+    """The first request a new person ever makes.
+
+    Creating the user left `status` to the column default, which SQLAlchemy
+    applies at flush -- so the sign-in path, which reads it immediately to check
+    the account is active, saw None and returned a 500. Every earlier test used
+    a seeded user, so nothing caught it.
+    """
+    from tests.e2e.conftest import sign_in
+
+    session = sign_in(client, "+93700000099")
+    assert session["is_new_user"] is True
+    assert "PASSENGER" in session["roles"]
+
+    profile = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {session['access_token']}"},
+    )
+    assert profile.status_code == 200
+    assert profile.json()["data"]["status"] == "ACTIVE"

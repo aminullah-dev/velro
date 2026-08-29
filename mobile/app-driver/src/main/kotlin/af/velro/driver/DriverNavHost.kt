@@ -3,6 +3,7 @@ package af.velro.driver
 import af.velro.feature.auth.SignInRoute
 import af.velro.feature.driver.DocumentsRoute
 import af.velro.feature.driver.DriverHomeRoute
+import af.velro.feature.driver.VehicleRoute
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
@@ -14,6 +15,7 @@ private object Routes {
     const val SIGN_IN = "sign-in"
     const val HOME = "home"
     const val DOCUMENTS = "documents"
+    const val VEHICLE = "vehicle"
 }
 
 /**
@@ -48,8 +50,12 @@ fun DriverNavHost(
             )
         }
         composable(Routes.HOME) {
-            DriverHomeRoute(onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) })
+            DriverHomeRoute(
+                onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
+                onOpenVehicle = { navController.navigate(Routes.VEHICLE) },
+            )
         }
         composable(Routes.DOCUMENTS) { DocumentsRoute() }
+        composable(Routes.VEHICLE) { VehicleRoute() }
     }
 }

@@ -123,8 +123,40 @@ class VehicleRepository(SqlRepository[VehicleRow]):
         )
         return self.session.scalars(stmt).one_or_none()
 
-    def find_by_plate(self, plate_number: str) -> VehicleRow | None:
-        return self.find_by(plate_number=plate_number)
+    def find_by_plate_key(self, plate_key: str) -> VehicleRow | None:
+        """Uniqueness is decided on the normalised key, never the raw text."""
+        return self.find_by(plate_key=plate_key)
+
+    def current_for_driver(self, driver_id: str) -> VehicleRow | None:
+        """The vehicle a driver is presenting now -- anything but retired.
+
+        A retired record is kept because completed trips point at it, but it is
+        no longer the driver's vehicle.
+        """
+        stmt = (
+            self._base()
+            .where(
+                VehicleRow.driver_id == driver_id,
+                VehicleRow.status != VehicleStatus.RETIRED.value,
+            )
+            .order_by(VehicleRow.created_at.desc())
+            .limit(1)
+        )
+        return self.session.scalars(stmt).one_or_none()
+
+    def create(self, **fields) -> VehicleRow:
+        row = VehicleRow(**fields)
+        self.session.add(row)
+        return row
+
+    def list_by_status(self, status: str, *, limit: int = 100) -> list[VehicleRow]:
+        stmt = (
+            self._base()
+            .where(VehicleRow.status == status)
+            .order_by(VehicleRow.created_at.desc())
+            .limit(min(limit, 200))
+        )
+        return list(self.session.scalars(stmt).all())
 
 
 class DriverLocationRepository:

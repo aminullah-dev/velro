@@ -38,6 +38,7 @@ import af.velro.domain.TripOption
 import af.velro.domain.TripStatus
 import af.velro.domain.TripSummary
 import af.velro.domain.Vehicle
+import af.velro.domain.VehicleStatus
 import af.velro.domain.Village
 import af.velro.domain.enumOrNull
 import java.time.Instant
@@ -223,8 +224,8 @@ fun TripEntity.toDomain() = TripSummary(
 
 fun VehicleDto.toDomain() = Vehicle(
     id = id, vehicleTypeCode = vehicle_type_code, plateNumber = plate_number,
-    seatCapacity = seat_capacity, brand = brand, model = model,
-    colour = colour, status = status,
+    seatCapacity = seat_capacity, brand = brand, model = model, year = year,
+    colour = colour, status = enumOrNull<VehicleStatus>(status) ?: VehicleStatus.PENDING,
 )
 
 fun DriverProfileDto.toDomain() = DriverProfile(
