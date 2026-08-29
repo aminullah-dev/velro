@@ -47,3 +47,4 @@ mobile/local.properties
 # Admin build outputs and synced copies
 admin/dist/
 admin/public/locales/
+mobile/.kotlin/
