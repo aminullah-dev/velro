@@ -17,6 +17,7 @@ from infrastructure.db.models.supply import (
     DriverDocumentRow,
     DriverLocationRow,
     DriverRow,
+    VehicleDocumentRow,
     VehicleRow,
 )
 from infrastructure.db.repositories.base import SqlRepository
@@ -102,6 +103,58 @@ class DriverDocumentRepository(SqlRepository[DriverDocumentRow]):
             .where(
                 DriverDocumentRow.deleted_at.is_(None),
                 DriverDocumentRow.status == DocumentStatus.PENDING.value,
+            )
+        )
+        return int(self.session.scalar(stmt) or 0)
+
+
+class VehicleDocumentRepository(SqlRepository[VehicleDocumentRow]):
+    """The car's own papers, newest first.
+
+    Every upload is kept, for the same reason the driver's are: a driver needs
+    to see why an earlier attempt was rejected, and an administrator needs to
+    see what was originally sent.
+    """
+
+    model = VehicleDocumentRow
+    not_found_code = error_codes.DOCUMENT_NOT_FOUND
+
+    def create(self, **fields) -> VehicleDocumentRow:
+        row = VehicleDocumentRow(**fields)
+        self.session.add(row)
+        return row
+
+    def for_vehicle(self, vehicle_id: str) -> list[VehicleDocumentRow]:
+        stmt = (
+            self._base()
+            .where(VehicleDocumentRow.vehicle_id == vehicle_id)
+            .order_by(VehicleDocumentRow.created_at.desc())
+        )
+        return list(self.session.scalars(stmt).all())
+
+    def current_for(
+        self, vehicle_id: str, document_type_code: str
+    ) -> VehicleDocumentRow | None:
+        stmt = (
+            self._base()
+            .where(
+                VehicleDocumentRow.vehicle_id == vehicle_id,
+                VehicleDocumentRow.document_type_code == document_type_code,
+            )
+            .order_by(VehicleDocumentRow.created_at.desc())
+            .limit(1)
+        )
+        return self.session.scalars(stmt).one_or_none()
+
+    def pending_count(self) -> int:
+        from sqlalchemy import func, select
+
+        stmt = (
+            select(func.count())
+            .select_from(VehicleDocumentRow)
+            .where(
+                VehicleDocumentRow.deleted_at.is_(None),
+                VehicleDocumentRow.status == DocumentStatus.PENDING.value,
             )
         )
         return int(self.session.scalar(stmt) or 0)

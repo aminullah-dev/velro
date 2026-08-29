@@ -9,9 +9,17 @@ import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
+import af.velro.core.i18n.Calendars
+import af.velro.domain.DocumentStatus
 import af.velro.domain.Vehicle
 import af.velro.domain.VehicleStatus
+import af.velro.domain.VehicleChecklist
+import af.velro.domain.VehicleDocument
 import af.velro.domain.VehicleType
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,8 +40,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -100,6 +112,15 @@ fun VehicleScreen(
                 onClick = { onEvent(VehicleEvent.StartEditing) },
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+
+        // The car's own papers, under the car they belong to. Deliberately not
+        // on the driver's documents screen: a driver with two cars owes two
+        // جواز سیر, and putting them in one list is what let the first
+        // certify the second.
+        state.papers?.let { papers ->
+            Spacer(Modifier.height(Spacing.md))
+            VehiclePapers(papers, state.uploadingPaper, onEvent)
         }
 
         Spacer(Modifier.height(Spacing.xl))
@@ -254,4 +275,146 @@ private fun TypeChip(type: VehicleType, selected: String, onEvent: (VehicleEvent
         label = { Text(strings[type.nameKey]) },
         shape = FilterChipDefaults.shape,
     )
+}
+
+@Composable
+private fun VehiclePapers(
+    papers: VehicleChecklist,
+    uploading: String?,
+    onEvent: (VehicleEvent) -> Unit,
+) {
+    val strings = LocalVelroStrings.current
+    val context = LocalContext.current
+    var pendingType by remember { mutableStateOf<String?>(null) }
+
+    val picker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        val kind = pendingType
+        pendingType = null
+        if (uri == null || kind == null) return@rememberLauncherForActivityResult
+        // Read here rather than in the repository: the data layer is given
+        // bytes and never a content URI, so it stays free of Android.
+        val bytes = runCatching {
+            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        }.getOrNull() ?: return@rememberLauncherForActivityResult
+        val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
+        onEvent(VehicleEvent.PaperPicked(kind, bytes, mime))
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        Text(
+            strings["vehicle.documents.title"],
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            strings["vehicle.documents.subtitle"],
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        for (kind in papers.required) {
+            VehiclePaperRow(
+                typeCode = kind,
+                document = papers.currentFor(kind),
+                uploading = uploading == kind,
+                onPick = {
+                    pendingType = kind
+                    picker.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun VehiclePaperRow(
+    typeCode: String,
+    document: VehicleDocument?,
+    uploading: Boolean,
+    onPick: () -> Unit,
+) {
+    val strings = LocalVelroStrings.current
+
+    VelroCard {
+        Column {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    strings["document.type.${typeCode.lowercase()}"],
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+                val (statusKey, colour) = when (document?.status) {
+                    null -> "driver.documents.not_sent" to
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    DocumentStatus.VERIFIED -> "document.status.verified" to
+                        MaterialTheme.colorScheme.primary
+                    DocumentStatus.PENDING -> "document.status.pending" to
+                        MaterialTheme.colorScheme.secondary
+                    DocumentStatus.REJECTED -> "document.status.rejected" to
+                        MaterialTheme.colorScheme.error
+                    DocumentStatus.EXPIRED -> "document.status.expired" to
+                        MaterialTheme.colorScheme.error
+                }
+                Text(
+                    strings[statusKey],
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colour,
+                )
+            }
+
+            if (document?.rejectionReason != null) {
+                Spacer(Modifier.height(Spacing.sm))
+                // The reason is the whole point of showing this: a driver told
+                // only "rejected" sends the same photograph again.
+                Text(
+                    document.rejectionReason!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+
+            // The same expiry warning the driver's own documents carry, and for
+            // the same reason: a permit that ran out stops the car, and being
+            // told on the morning it happens is too late.
+            document?.expiresOn?.let { expiry ->
+                val notice = expiryNotice(expiry, java.time.LocalDate.now(Calendars.KABUL))
+                if (notice != null) {
+                    val shown = Calendars.date(
+                        java.time.LocalDate.parse(expiry)
+                            .atStartOfDay(Calendars.KABUL).toInstant(),
+                        strings.locale,
+                    )
+                    Spacer(Modifier.height(Spacing.xs))
+                    Text(
+                        strings[notice.messageKey, "date" to shown],
+                        style = MaterialTheme.typography.labelSmall,
+                        color = when (notice.severity) {
+                            ExpirySeverity.PAST -> MaterialTheme.colorScheme.error
+                            ExpirySeverity.SOON -> MaterialTheme.colorScheme.secondary
+                            ExpirySeverity.FINE -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(Spacing.md))
+            SecondaryAction(
+                label = strings[
+                    if (document == null) "driver.documents.send"
+                    else "driver.documents.replace"
+                ],
+                onClick = onPick,
+                enabled = !uploading,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
 }

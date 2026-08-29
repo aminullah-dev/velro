@@ -612,5 +612,9 @@
   "error.driver_documents_expired": "یکی از اسناد شما تاریخش گذشته است. عکس نو آن را بفرستید تا دوباره کار کرده بتوانید.",
   "driver.documents.valid_until": "تا {date} اعتبار دارد",
   "driver.documents.expiring_soon": "در {date} تمام می‌شود. پیش از آن عکس نو بفرستید.",
-  "driver.documents.expired": "در {date} تمام شده است. عکس نو بفرستید تا دوباره کار کرده بتوانید."
+  "driver.documents.expired": "در {date} تمام شده است. عکس نو بفرستید تا دوباره کار کرده بتوانید.",
+  "error.vehicle_documents_incomplete": "اسناد موتر هنوز تکمیل نیست.",
+  "error.vehicle_documents_expired": "جواز سیر موتر تاریخش گذشته است. عکس نو آن را بفرستید تا دوباره کار کرده بتوانید.",
+  "vehicle.documents.title": "اسناد این موتر",
+  "vehicle.documents.subtitle": "هر موتر جواز سیر خود را ضرورت دارد."
 }

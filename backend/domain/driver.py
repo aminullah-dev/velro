@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
+from domain import documents
 from domain.enums import (
     DocumentStatus,
     DriverApprovalStatus,
@@ -33,9 +34,7 @@ class DriverDocument:
     uploaded_at: datetime | None = None
 
     def is_valid_on(self, on: date) -> bool:
-        if self.status is not DocumentStatus.VERIFIED:
-            return False
-        return self.expires_on is None or self.expires_on >= on
+        return documents.is_valid_on(self, on)
 
 
 # Eastern Arabic-Indic digits appear on plates typed on an Afghan keyboard.
@@ -58,6 +57,32 @@ def normalise_plate(plate: str) -> str:
 
 
 @dataclass(slots=True)
+class VehicleDocument:
+    """A permit belonging to the car itself -- جواز سیر and its kin.
+
+    Structurally the same as a DriverDocument and deliberately a separate type:
+    the two hang off different aggregates, and one table with a nullable owner
+    is how a vehicle's permit ends up counting for a driver who does not own
+    that vehicle any more. The *rules* are shared (see domain.documents); only
+    the ownership differs.
+    """
+
+    id: str
+    vehicle_id: str
+    document_type_code: str        # VEHICLE_REGISTRATION, ...
+    file_key: str
+    status: DocumentStatus = DocumentStatus.PENDING
+    expires_on: date | None = None
+    verified_by: str | None = None
+    verified_at: datetime | None = None
+    rejection_reason: str | None = None
+    uploaded_at: datetime | None = None
+
+    def is_valid_on(self, on: date) -> bool:
+        return documents.is_valid_on(self, on)
+
+
+@dataclass(slots=True)
 class Vehicle:
     id: str
     driver_id: str
@@ -69,6 +94,10 @@ class Vehicle:
     year: int | None = None
     colour: str | None = None
     status: VehicleStatus = VehicleStatus.PENDING
+    # جواز سیر and anything else the vehicle itself must carry. The permit
+    # belongs to the car, not to whoever is driving it: a driver with two
+    # vehicles holds two of them, and one cannot stand in for the other.
+    documents: list[VehicleDocument] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.seat_capacity <= 0:
@@ -107,17 +136,46 @@ class Vehicle:
         """Seats a passenger may occupy -- the driver's seat is not for sale."""
         return self.seat_capacity
 
+    # -- paperwork --------------------------------------------------------
 
-def _uploaded_after(candidate: DriverDocument, existing: DriverDocument) -> bool:
-    """Compare by upload time, falling back to nothing rather than guessing.
+    def current_documents(self) -> dict[str, VehicleDocument]:
+        return documents.newest_of_each_type(self.documents)
 
-    A document with no recorded upload time never displaces one that has one.
-    """
-    if candidate.uploaded_at is None:
-        return False
-    if existing.uploaded_at is None:
-        return True
-    return candidate.uploaded_at > existing.uploaded_at
+    def missing_documents(self, required: frozenset[str], *, on: date) -> frozenset[str]:
+        return documents.outstanding(self.documents, required, on=on)
+
+    def assert_documents_current(self, required: frozenset[str], *, on: date) -> None:
+        """Every permit this vehicle needs, verified and not run out, today.
+
+        Same shape as the driver's gate and for the same reason: activation is a
+        moment, a جواز سیر is a period. A car approved in Hamal is still ACTIVE
+        in Jadi with a permit that ran out in Saratan.
+
+        Fails closed. A caller that did not load the documents stops the car.
+        """
+        stale = self.missing_documents(required, on=on)
+        if stale:
+            raise ConflictError(
+                error_codes.VEHICLE_DOCUMENTS_EXPIRED,
+                vehicle_id=self.id,
+                documents=sorted(stale),
+            )
+
+    def activate(self, *, required_documents: frozenset[str], on: date) -> None:
+        """Put the car into service.
+
+        The permit is checked here rather than trusted to whoever clicks the
+        button: an administrator approving a vehicle is approving the car they
+        were shown the paperwork for.
+        """
+        missing = self.missing_documents(required_documents, on=on)
+        if missing:
+            raise ConflictError(
+                error_codes.VEHICLE_DOCUMENTS_INCOMPLETE,
+                vehicle_id=self.id,
+                missing=sorted(missing),
+            )
+        self.status = VehicleStatus.ACTIVE
 
 
 @dataclass(slots=True)
@@ -182,26 +240,11 @@ class Driver:
             raise ConflictError(error_codes.DRIVER_ALREADY_ON_TRIP, driver_id=self.id)
 
     def current_documents(self) -> dict[str, DriverDocument]:
-        """The newest upload of each type.
-
-        Only the newest counts. A driver who replaces a licence is presenting
-        the new photograph, so the superseded one -- verified though it was --
-        must not satisfy the requirement. Otherwise an administrator could
-        approve someone whose current licence nobody has looked at.
-        """
-        newest: dict[str, DriverDocument] = {}
-        for document in self.documents:
-            existing = newest.get(document.document_type_code)
-            if existing is None or _uploaded_after(document, existing):
-                newest[document.document_type_code] = document
-        return newest
+        """The newest upload of each type."""
+        return documents.newest_of_each_type(self.documents)
 
     def missing_documents(self, required: frozenset[str], *, on: date) -> frozenset[str]:
-        current = self.current_documents()
-        held = {
-            code for code, document in current.items() if document.is_valid_on(on)
-        }
-        return frozenset(required - held)
+        return documents.outstanding(self.documents, required, on=on)
 
     def assert_documents_current(self, required: frozenset[str], *, on: date) -> None:
         """Every required document verified and not expired, today.

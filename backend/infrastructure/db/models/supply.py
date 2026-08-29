@@ -92,6 +92,40 @@ class DriverDocumentRow(Auditable, Base):
     )
 
 
+class VehicleDocumentRow(Auditable, Base):
+    """جواز سیر and anything else the car itself must carry.
+
+    A separate table from driver_documents rather than a nullable owner column
+    on it. The two hang off different aggregates with different lifecycles, and
+    a shared table with a discriminator is how a permit for a car the driver no
+    longer owns ends up still counting. The validity *rules* are shared in
+    domain.documents; only the ownership is separate.
+    """
+
+    __tablename__ = "vehicle_documents"
+
+    vehicle_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("vehicles.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    document_type_code: Mapped[str] = mapped_column(String(40), nullable=False)
+    file_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(12), default=DocumentStatus.PENDING.value, nullable=False
+    )
+    expires_on: Mapped[date | None] = mapped_column(Date)
+    verified_by: Mapped[str | None] = mapped_column(String(36))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejection_reason: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        Index(
+            "ix_vehicle_documents_vehicle_id_document_type_code",
+            "vehicle_id", "document_type_code",
+        ),
+        enum_check("status", DocumentStatus, name="vehicle_documents_status"),
+    )
+
+
 class VehicleRow(Auditable, Base):
     __tablename__ = "vehicles"
 

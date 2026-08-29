@@ -612,5 +612,9 @@
   "error.driver_documents_expired": "ستاسو د یوه سند نېټه تېره ده. نوی عکس یې واستوئ چې بیا کار وکړئ.",
   "driver.documents.valid_until": "تر {date} پورې اعتبار لري",
   "driver.documents.expiring_soon": "په {date} کې پای ته رسېږي. تر هغې مخکې نوی عکس واستوئ.",
-  "driver.documents.expired": "په {date} کې پای ته رسېدلی. نوی عکس واستوئ چې بیا کار وکړئ."
+  "driver.documents.expired": "په {date} کې پای ته رسېدلی. نوی عکس واستوئ چې بیا کار وکړئ.",
+  "error.vehicle_documents_incomplete": "د موټر اسناد لا نه دي بشپړ.",
+  "error.vehicle_documents_expired": "د موټر د جواز سیر نېټه تېره ده. نوی عکس یې واستوئ چې بیا کار وکړئ.",
+  "vehicle.documents.title": "د دې موټر اسناد",
+  "vehicle.documents.subtitle": "هر موټر خپل جواز سیر ته اړتیا لري."
 }

@@ -99,12 +99,12 @@ class TestUpload:
         self, client: TestClient, applicant: dict
     ) -> None:
         """A driver has to be able to see why the first photograph was refused."""
-        first = upload(client, applicant, "VEHICLE_REGISTRATION").json()["data"]
-        second = upload(client, applicant, "VEHICLE_REGISTRATION").json()["data"]
+        first = upload(client, applicant, "LICENSE").json()["data"]
+        second = upload(client, applicant, "LICENSE").json()["data"]
 
         assert second["supersedes_id"] == first["id"]
         body = client.get("/api/v1/driver/documents", headers=applicant).json()["data"]
-        for kind in ("VEHICLE_REGISTRATION",):
+        for kind in ("LICENSE",):
             of_kind = [d for d in body["documents"] if d["document_type_code"] == kind]
             assert len(of_kind) >= 2, "the earlier upload must survive"
             assert sum(1 for d in of_kind if d["is_current"]) == 1
@@ -325,7 +325,7 @@ def test_verifying_everything_but_the_photo_still_will_not_approve(
     client.post("/api/v1/driver/register", json={}, headers=session)
     driver_id = client.get("/api/v1/driver/me", headers=session).json()["data"]["id"]
 
-    for code in ("LICENSE", "NATIONAL_ID", "VEHICLE_REGISTRATION"):
+    for code in ("LICENSE", "NATIONAL_ID"):
         uploaded = upload(client, session, code)
         assert uploaded.status_code in (200, 201), uploaded.text
         client.post(
@@ -348,7 +348,7 @@ def test_the_verified_photo_completes_the_checklist(
 ) -> None:
     session = auth(sign_in(client, "+93700000142"))
     client.post("/api/v1/driver/register", json={}, headers=session)
-    for code in ("LICENSE", "NATIONAL_ID", "VEHICLE_REGISTRATION", "SELFIE"):
+    for code in ("LICENSE", "NATIONAL_ID", "SELFIE"):
         uploaded = upload(client, session, code)
         client.post(
             f"/api/v1/admin/documents/{uploaded.json()['data']['id']}/review",
@@ -359,32 +359,10 @@ def test_the_verified_photo_completes_the_checklist(
 
 
 def _approved_driver(client: TestClient, admin_session: dict, phone: str) -> dict:
-    """A driver with everything sent, verified, approved, and a live vehicle."""
-    session = auth(sign_in(client, phone))
-    client.post("/api/v1/driver/register", json={}, headers=session)
-    for code in REQUIRED:
-        uploaded = upload(client, session, code)
-        client.post(
-            f"/api/v1/admin/documents/{uploaded.json()['data']['id']}/review",
-            json={"verified": True, "expires_on": "2099-12-31"},
-            headers=admin_session,
-        )
-    drivers = client.get("/api/v1/admin/drivers", headers=admin_session).json()["data"]
-    driver_id = next(d["id"] for d in drivers if d["phone"] == phone)
-    approved = client.post(
-        f"/api/v1/admin/drivers/{driver_id}/approve", headers=admin_session
-    )
-    assert approved.status_code == 200, approved.text
+    """A driver who can actually go online: papers, approval, car, جواز سیر."""
+    from tests.e2e.conftest import road_ready_driver
 
-    created = client.post(
-        "/api/v1/driver/vehicle", headers=session,
-        json={"vehicle_type_code": "SEDAN", "plate_number": f"PRW-{phone[-4:]}"},
-    )
-    assert created.status_code == 200, created.text
-    client.post(
-        f"/api/v1/admin/vehicles/{created.json()['data']['id']}/decide",
-        json={"approve": True}, headers=admin_session,
-    )
+    session, _ = road_ready_driver(client, admin_session, phone, f"PRW-{phone[-4:]}")
     return session
 
 
@@ -439,13 +417,32 @@ def test_a_driver_whose_licence_expired_cannot_go_online(
 def test_an_expired_jawaz_e_sair_also_stops_the_driver(
     client: TestClient, admin_session: dict
 ) -> None:
-    """جواز سیر is a permit like any other, and it runs out like any other."""
-    session = _approved_driver(client, admin_session, "+93700000151")
-    _expire(client, admin_session, session, "VEHICLE_REGISTRATION", "2021-06-30")
+    """جواز سیر is a permit like any other, and it runs out like any other.
+
+    It belongs to the car now, so it is the vehicle's paperwork that goes
+    stale -- and the driver is stopped by the vehicle gate rather than the
+    driver one.
+    """
+    from tests.e2e.conftest import road_ready_driver
+
+    session, vehicle_id = road_ready_driver(
+        client, admin_session, "+93700000151", "PRW-0151"
+    )
+    papers = client.get(
+        f"/api/v1/driver/vehicles/{vehicle_id}/documents", headers=session
+    ).json()["data"]["documents"]
+    permit = next(d for d in papers if d["document_type_code"] == "VEHICLE_REGISTRATION")
+    expired = client.post(
+        f"/api/v1/admin/vehicle-documents/{permit['id']}/review",
+        json={"verified": True, "expires_on": "2021-06-30"}, headers=admin_session,
+    )
+    assert expired.status_code == 200, expired.text
 
     response = _go_online(client, session)
     assert response.status_code == 409, response.text
-    assert response.json()["error"]["context"]["documents"] == ["VEHICLE_REGISTRATION"]
+    body = response.json()["error"]
+    assert body["code"] == "VEHICLE_DOCUMENTS_EXPIRED"
+    assert body["context"]["documents"] == ["VEHICLE_REGISTRATION"]
 
 
 def test_a_driver_whose_documents_are_current_still_goes_online(

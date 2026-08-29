@@ -7,6 +7,8 @@ import af.velro.data.api.VelroApi
 import af.velro.domain.DocumentChecklist
 import af.velro.domain.DriverDocument
 import af.velro.domain.DocumentStatus
+import af.velro.domain.VehicleChecklist
+import af.velro.domain.VehicleDocument
 import af.velro.domain.enumOrNull
 import java.time.Instant
 import javax.inject.Inject
@@ -66,5 +68,46 @@ class DocumentRepository @Inject constructor(
         )
         val kind = documentTypeCode.toRequestBody("text/plain".toMediaTypeOrNull())
         return mapper.call { api.uploadDocument(part, kind) }.map { }
+    }
+
+    // -- the car's own papers -------------------------------------------
+
+    suspend fun vehicleChecklist(vehicleId: String): ApiResult<VehicleChecklist> =
+        mapper.call { api.vehicleDocuments(vehicleId) }.map { dto ->
+            VehicleChecklist(
+                vehicleId = dto.vehicle_id,
+                plateNumber = dto.plate_number,
+                required = dto.required,
+                missing = dto.missing,
+                vehicleStatus = dto.vehicle_status,
+                canCarry = dto.can_carry,
+                documents = dto.documents.map { d ->
+                    VehicleDocument(
+                        id = d.id,
+                        vehicleId = d.vehicle_id,
+                        documentTypeCode = d.document_type_code,
+                        status = enumOrNull<DocumentStatus>(d.status) ?: DocumentStatus.PENDING,
+                        expiresOn = d.expires_on,
+                        rejectionReason = d.rejection_reason,
+                        uploadedAt = runCatching { Instant.parse(d.uploaded_at) }
+                            .getOrDefault(Instant.EPOCH),
+                        isCurrent = d.is_current,
+                    )
+                },
+            )
+        }
+
+    suspend fun uploadForVehicle(
+        vehicleId: String,
+        documentTypeCode: String,
+        bytes: ByteArray,
+        mimeType: String,
+    ): ApiResult<Unit> {
+        val body = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+        val part = MultipartBody.Part.createFormData(
+            "file", "${documentTypeCode.lowercase()}.jpg", body
+        )
+        val kind = documentTypeCode.toRequestBody("text/plain".toMediaTypeOrNull())
+        return mapper.call { api.uploadVehicleDocument(vehicleId, part, kind) }.map { }
     }
 }

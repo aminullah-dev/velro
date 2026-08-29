@@ -10,6 +10,8 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.e2e.conftest import verify_vehicle_documents
+
 pytestmark = pytest.mark.integration
 
 
@@ -231,11 +233,23 @@ class TestApproval:
         assert listed["driver_phone"] == VEHICLE_TEST_PHONE
         assert "driver_name" in listed
 
+        # A car with no جواز سیر cannot be activated, whoever clicks the button.
+        # An administrator approving a vehicle is saying its permit was seen;
+        # afterwards the car is in the dispatch pool and a passenger is involved.
+        refused = client.post(
+            f"/api/v1/admin/vehicles/{vehicle['id']}/decide",
+            headers=admin_session, json={"approve": True},
+        )
+        assert refused.status_code == 409, refused.text
+        assert refused.json()["error"]["code"] == "VEHICLE_DOCUMENTS_INCOMPLETE"
+        assert refused.json()["error"]["context"]["missing"] == ["VEHICLE_REGISTRATION"]
+
+        verify_vehicle_documents(client, driver, admin_session, vehicle["id"])
         response = client.post(
             f"/api/v1/admin/vehicles/{vehicle['id']}/decide",
             headers=admin_session, json={"approve": True},
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, response.text
         assert response.json()["data"]["status"] == "ACTIVE"
 
     def test_a_driver_cannot_go_online_without_a_vehicle(
@@ -259,6 +273,7 @@ class TestApproval:
         self, client: TestClient, driver: dict, admin_session: dict
     ) -> None:
         vehicle = register(client, driver, plate_number="PRW-1122").json()["data"]
+        verify_vehicle_documents(client, driver, admin_session, vehicle["id"])
         client.post(
             f"/api/v1/admin/vehicles/{vehicle['id']}/decide",
             headers=admin_session, json={"approve": True},

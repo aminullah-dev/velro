@@ -33,6 +33,7 @@ export function VehicleApprovalsPage() {
   const { t, num } = useStrings();
   const client = useQueryClient();
   const [suspending, setSuspending] = useState<string | null>(null);
+  const [inspecting, setInspecting] = useState<string | null>(null);
 
   const listQuery = useQuery({
     queryKey: ["vehicles", "pending"],
@@ -138,6 +139,14 @@ export function VehicleApprovalsPage() {
                     {t("admin.vehicles.activate")}
                   </button>
                   <button
+                    className="small"
+                    onClick={() =>
+                      setInspecting(inspecting === vehicle.id ? null : vehicle.id)
+                    }
+                  >
+                    {t("vehicle.documents.title")}
+                  </button>
+                  <button
                     className="small danger"
                     disabled={decide.isPending}
                     onClick={() => setSuspending(vehicle.id)}
@@ -150,6 +159,160 @@ export function VehicleApprovalsPage() {
           ))}
         </Table>
       )}
+
+      {/* The car's own papers. Activation is refused without them, so an
+          operator who cannot see them here would be clicking a button that
+          fails for a reason the screen never showed. */}
+      {inspecting && <VehiclePapers vehicleId={inspecting} />}
     </>
+  );
+}
+
+interface VehicleDocument {
+  id: string;
+  vehicle_id: string;
+  document_type_code: string;
+  status: string;
+  expires_on: string | null;
+  rejection_reason: string | null;
+  uploaded_at: string;
+  is_current: boolean;
+}
+
+interface VehicleChecklist {
+  vehicle_id: string;
+  plate_number: string;
+  required: string[];
+  missing: string[];
+  documents: VehicleDocument[];
+  vehicle_status: string;
+  can_carry: boolean;
+}
+
+function VehiclePapers({ vehicleId }: { vehicleId: string }) {
+  const { t, date, dateTime } = useStrings();
+  const client = useQueryClient();
+  const [rejecting, setRejecting] = useState<string | null>(null);
+
+  const papersQuery = useQuery({
+    queryKey: ["vehicle-documents", vehicleId],
+    queryFn: () => api.get<VehicleChecklist>(`/admin/vehicles/${vehicleId}/documents`),
+  });
+
+  const review = useMutation({
+    mutationFn: (input: { id: string; verified: boolean; reason?: string }) =>
+      api.post(`/admin/vehicle-documents/${input.id}/review`, {
+        verified: input.verified,
+        rejection_reason: input.reason ?? null,
+      }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["vehicle-documents", vehicleId] });
+      client.invalidateQueries({ queryKey: ["vehicles"] });
+    },
+  });
+
+  const blocked = gate(papersQuery);
+  if (blocked) return blocked;
+
+  const papers = papersQuery.data;
+  if (!papers) return null;
+
+  return (
+    <div className="card" style={{ marginBlockStart: "var(--s-4)" }}>
+      <div className="row" style={{ marginBlockEnd: "var(--s-3)" }}>
+        <strong>{t("vehicle.documents.title")}</strong>
+        <Ltr>{papers.plate_number}</Ltr>
+      </div>
+
+      {review.error && <ErrorBanner error={review.error} />}
+
+      <InputDialog
+        open={rejecting !== null}
+        titleKey="admin.approvals.reject_reason"
+        confirmKey="admin.approvals.reject"
+        hintKey="admin.approvals.reject_hint"
+        onCancel={() => setRejecting(null)}
+        onConfirm={(reason) => {
+          if (rejecting) review.mutate({ id: rejecting, verified: false, reason });
+          setRejecting(null);
+        }}
+      />
+
+      <Table
+        head={
+          <tr>
+            <th>{t("admin.col.type")}</th>
+            <th>{t("admin.col.status")}</th>
+            <th>{t("admin.approvals.uploaded")}</th>
+            <th>{t("admin.col.expires")}</th>
+            <th>{t("admin.col.actions")}</th>
+          </tr>
+        }
+      >
+        {papers.required.map((code) => {
+          const document = papers.documents.find(
+            (d) => d.document_type_code === code && d.is_current,
+          );
+          return (
+            <tr key={code}>
+              <td>{t(`document.type.${code.toLowerCase()}`)}</td>
+              <td>
+                <span
+                  className={`chip ${
+                    document?.status === "VERIFIED" ? "active"
+                    : document?.status === "PENDING" ? "attention"
+                    : "failed"
+                  }`}
+                >
+                  {document
+                    ? t(`document.status.${document.status.toLowerCase()}`)
+                    : t("driver.documents.not_sent")}
+                </span>
+              </td>
+              <td>{document ? dateTime(document.uploaded_at) : "—"}</td>
+              <td>{document?.expires_on ? date(document.expires_on) : "—"}</td>
+              <td>
+                {document && (
+                  <div className="row" style={{ gap: "var(--s-2)" }}>
+                    <a
+                      className="small"
+                      href={`/api/v1/admin/vehicle-documents/${document.id}/file`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t("admin.approvals.view")}
+                    </a>
+                    <button
+                      className="small primary"
+                      disabled={review.isPending}
+                      onClick={() => review.mutate({ id: document.id, verified: true })}
+                    >
+                      {t("admin.approvals.verify")}
+                    </button>
+                    <button
+                      className="small danger"
+                      disabled={review.isPending}
+                      onClick={() => setRejecting(document.id)}
+                    >
+                      {t("admin.approvals.reject")}
+                    </button>
+                  </div>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </Table>
+
+      {papers.missing.length > 0 && (
+        <p style={{ color: "var(--text-muted)", marginBlockStart: "var(--s-3)" }}>
+          {t("admin.approvals.still_missing", {
+            list: papers.missing
+              .map((code) => t(`document.type.${code.toLowerCase()}`))
+              .join("، "),
+          })}
+        </p>
+      )}
+    </div>
   );
 }

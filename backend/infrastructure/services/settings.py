@@ -43,8 +43,13 @@ DEFAULTS: dict[str, Any] = {
     # trusting that VELRO checked exactly that, and a borrowed or stolen tazkira
     # defeats it entirely.
     "driver.required_documents": [
-        "LICENSE", "NATIONAL_ID", "SELFIE", "VEHICLE_REGISTRATION",
+        "LICENSE", "NATIONAL_ID", "SELFIE",
     ],
+    # جواز سیر is the car's permit, not the driver's. A driver who owns two
+    # vehicles holds two of them, and the first cannot certify the second --
+    # which is exactly what happened while this sat in the list above.
+    "vehicle.required_documents": ["VEHICLE_REGISTRATION"],
+    "vehicle.optional_documents": [],
     "driver.location_ping_seconds": 20,
     "support.emergency_numbers": ["119", "100"],
     "support.contact_phone": "+93700000000",

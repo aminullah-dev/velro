@@ -476,6 +476,33 @@ data class UploadedDocumentDto(
 data class RegisterDriverRequest(val home_district_id: String? = null)
 
 
+// -- vehicle documents: جواز سیر, per car -------------------------------
+
+@Serializable
+data class VehicleDocumentDto(
+    val id: String,
+    val vehicle_id: String,
+    val document_type_code: String,
+    val status: String,
+    val expires_on: String? = null,
+    val rejection_reason: String? = null,
+    val uploaded_at: String,
+    val reviewed_at: String? = null,
+    val is_current: Boolean,
+)
+
+@Serializable
+data class VehicleChecklistDto(
+    val vehicle_id: String,
+    val plate_number: String,
+    val required: List<String>,
+    val missing: List<String>,
+    val documents: List<VehicleDocumentDto> = emptyList(),
+    val vehicle_status: String,
+    val can_carry: Boolean,
+)
+
+
 // -- negotiated fares, section 89 ---------------------------------------
 
 @Serializable

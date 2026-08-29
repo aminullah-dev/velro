@@ -68,6 +68,7 @@ from infrastructure.db.repositories.supply import (
     DriverDocumentRepository,
     DriverLocationRepository,
     DriverRepository,
+    VehicleDocumentRepository,
     VehicleRepository,
 )
 from infrastructure.db.repositories.trips import (
@@ -194,6 +195,10 @@ def driver_locations(session: SessionDep) -> DriverLocationRepository:
 
 def driver_documents(session: SessionDep) -> DriverDocumentRepository:
     return DriverDocumentRepository(session)
+
+
+def vehicle_documents(session: SessionDep) -> VehicleDocumentRepository:
+    return VehicleDocumentRepository(session)
 
 
 @lru_cache(maxsize=1)

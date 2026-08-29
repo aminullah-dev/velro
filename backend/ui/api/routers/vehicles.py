@@ -150,11 +150,14 @@ def decide_vehicle(
     actor: Annotated[deps.Actor, Depends(deps.require_operations)],
     vehicles: Annotated[object, Depends(deps.vehicles)],
     trips: Annotated[object, Depends(deps.trips)],
+    documents: Annotated[object, Depends(deps.vehicle_documents)],
+    settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
 ) -> dict:
     """Activate a vehicle, or take one out of service."""
     use_case = DecideVehicle(
-        vehicles=vehicles, trips=trips, audit=audit, clock=deps.clock()
+        vehicles=vehicles, trips=trips, audit=audit, clock=deps.clock(),
+        documents=documents, settings=settings,
     )
     status = use_case.execute(
         DecideVehicleCommand(

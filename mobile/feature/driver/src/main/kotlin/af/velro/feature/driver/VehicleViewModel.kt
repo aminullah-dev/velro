@@ -2,8 +2,10 @@ package af.velro.feature.driver
 
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
+import af.velro.data.repository.DocumentRepository
 import af.velro.data.repository.VehicleRepository
 import af.velro.domain.Vehicle
+import af.velro.domain.VehicleChecklist
 import af.velro.domain.VehicleType
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,6 +27,9 @@ import kotlinx.coroutines.launch
  */
 data class VehicleUiState(
     val vehicle: Vehicle? = null,
+    /** The car's own papers -- جواز سیر. Null until a car exists to hold them. */
+    val papers: VehicleChecklist? = null,
+    val uploadingPaper: String? = null,
     val types: List<VehicleType> = emptyList(),
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
@@ -56,6 +61,18 @@ data class VehicleUiState(
 
 sealed interface VehicleEvent {
     data object Refresh : VehicleEvent
+    data class PaperPicked(
+        val documentTypeCode: String,
+        val bytes: ByteArray,
+        val mimeType: String,
+    ) : VehicleEvent {
+        // ByteArray in a data class: equals/hashCode compare references, which
+        // would make two different photographs of the same size look equal.
+        // The event is consumed immediately and never compared, and spelling
+        // this out is cheaper than a silent surprise later.
+        override fun equals(other: Any?) = this === other
+        override fun hashCode() = System.identityHashCode(this)
+    }
     data object StartEditing : VehicleEvent
     data object CancelEditing : VehicleEvent
     data object Submit : VehicleEvent
@@ -71,6 +88,7 @@ sealed interface VehicleEvent {
 @HiltViewModel
 class VehicleViewModel @Inject constructor(
     private val vehicles: VehicleRepository,
+    private val documents: DocumentRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(VehicleUiState())
@@ -81,6 +99,7 @@ class VehicleViewModel @Inject constructor(
     fun onEvent(event: VehicleEvent) {
         when (event) {
             VehicleEvent.Refresh -> load()
+            is VehicleEvent.PaperPicked -> uploadPaper(event)
             VehicleEvent.StartEditing -> _state.update { it.copy(isEditing = true, saved = false) }
             VehicleEvent.CancelEditing -> _state.update { it.formFrom(it.vehicle, editing = false) }
             VehicleEvent.Submit -> submit()
@@ -114,8 +133,13 @@ class VehicleViewModel @Inject constructor(
             when (val types = vehicles.types()) {
                 is ApiResult.Success -> {
                     val vehicle = (vehicles.current() as? ApiResult.Success)?.value
+                    // The papers hang off the car, so there is nothing to ask
+                    // for until one exists.
+                    val papers = vehicle?.id?.let {
+                        (documents.vehicleChecklist(it) as? ApiResult.Success)?.value
+                    }
                     _state.update {
-                        it.copy(types = types.value, isLoading = false)
+                        it.copy(types = types.value, isLoading = false, papers = papers)
                             .formFrom(vehicle, editing = vehicle == null)
                     }
                 }
@@ -144,12 +168,45 @@ class VehicleViewModel @Inject constructor(
                     // the plate and decides the status, and the driver should see
                     // what was actually stored.
                     val vehicle = (vehicles.current() as? ApiResult.Success)?.value
+                    val papers = vehicle?.id?.let {
+                        (documents.vehicleChecklist(it) as? ApiResult.Success)?.value
+                    }
                     _state.update {
-                        it.copy(isSaving = false, saved = true).formFrom(vehicle, editing = false)
+                        it.copy(isSaving = false, saved = true, papers = papers)
+                            .formFrom(vehicle, editing = false)
                     }
                 }
                 is ApiResult.Failure ->
                     _state.update { it.copy(isSaving = false).withError(result.error) }
+            }
+        }
+    }
+
+    private fun uploadPaper(event: VehicleEvent.PaperPicked) {
+        val vehicleId = _state.value.vehicle?.id ?: return
+        _state.update {
+            it.copy(uploadingPaper = event.documentTypeCode, errorCode = null)
+        }
+        viewModelScope.launch {
+            when (
+                val result = documents.uploadForVehicle(
+                    vehicleId, event.documentTypeCode, event.bytes, event.mimeType,
+                )
+            ) {
+                is ApiResult.Success -> {
+                    // Re-read: sending a new permit takes the car out of
+                    // service until someone reviews it, and the driver has to
+                    // see that rather than assume they are still on the road.
+                    val papers =
+                        (documents.vehicleChecklist(vehicleId) as? ApiResult.Success)?.value
+                    val vehicle = (vehicles.current() as? ApiResult.Success)?.value
+                    _state.update {
+                        it.copy(uploadingPaper = null, papers = papers, vehicle = vehicle)
+                    }
+                }
+                is ApiResult.Failure -> _state.update {
+                    it.copy(uploadingPaper = null).withError(result.error)
+                }
             }
         }
     }

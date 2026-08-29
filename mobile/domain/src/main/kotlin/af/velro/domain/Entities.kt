@@ -384,3 +384,41 @@ data class DocumentChecklist(
     val awaitingReview: Boolean
         get() = isComplete && !canWork
 }
+
+
+/**
+ * The car's own papers -- جواز سیر and its kin.
+ *
+ * Keyed by vehicle rather than by driver. A driver with two cars owes two
+ * permits; while this was a driver document there was one slot for it and the
+ * first car's permit certified the second.
+ */
+data class VehicleDocument(
+    val id: String,
+    val vehicleId: String,
+    val documentTypeCode: String,
+    val status: DocumentStatus,
+    val expiresOn: String? = null,
+    val rejectionReason: String? = null,
+    val uploadedAt: java.time.Instant,
+    val isCurrent: Boolean,
+)
+
+data class VehicleChecklist(
+    val vehicleId: String,
+    val plateNumber: String,
+    val required: List<String>,
+    val missing: List<String>,
+    val documents: List<VehicleDocument>,
+    val vehicleStatus: String,
+    val canCarry: Boolean,
+) {
+    fun currentFor(typeCode: String): VehicleDocument? =
+        documents.firstOrNull { it.documentTypeCode == typeCode && it.isCurrent }
+
+    val isComplete: Boolean get() = missing.isEmpty()
+
+    /** Everything sent, nothing approved yet -- the state that needs explaining. */
+    val awaitingReview: Boolean
+        get() = isComplete && !canCarry
+}

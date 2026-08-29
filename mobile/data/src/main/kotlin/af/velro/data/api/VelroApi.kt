@@ -287,4 +287,22 @@ interface VelroApi {
         @Part file: MultipartBody.Part,
         @Part("document_type_code") documentTypeCode: RequestBody,
     ): Response<Envelope<UploadedDocumentDto>>
+
+    // -- the car's own papers -------------------------------------------
+    //
+    // Keyed by vehicle, not by driver. A driver with two cars owes two جواز
+    // سیر, and the first cannot certify the second.
+
+    @GET("driver/vehicles/{vehicleId}/documents")
+    suspend fun vehicleDocuments(
+        @Path("vehicleId") vehicleId: String,
+    ): Response<Envelope<VehicleChecklistDto>>
+
+    @Multipart
+    @POST("driver/vehicles/{vehicleId}/documents")
+    suspend fun uploadVehicleDocument(
+        @Path("vehicleId") vehicleId: String,
+        @Part file: MultipartBody.Part,
+        @Part("document_type_code") documentTypeCode: RequestBody,
+    ): Response<Envelope<UploadedDocumentDto>>
 }

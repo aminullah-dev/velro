@@ -66,7 +66,12 @@ from infrastructure.db.models.routing import (
     RouteTemplateRow,
     VehicleTypeRow,
 )
-from infrastructure.db.models.supply import DriverDocumentRow, DriverRow, VehicleRow
+from infrastructure.db.models.supply import (
+    DriverDocumentRow,
+    DriverRow,
+    VehicleDocumentRow,
+    VehicleRow,
+)
 from infrastructure.db.models.trips import TripRow, TripSeatRow, TripStopRow
 from infrastructure.db.repositories.geography import GeographyRepository
 from infrastructure.db.repositories.identity import UserRepository
@@ -538,7 +543,7 @@ def seed(session) -> None:
                     "verified_at": now,
                 },
             )
-        _get_or_create(
+        vehicle, _ = _get_or_create(
             session, VehicleRow,
             match={"plate_number": plate},
             defaults={
@@ -555,6 +560,23 @@ def seed(session) -> None:
                 "status": VehicleStatus.ACTIVE.value,
             },
         )
+        session.flush()
+
+        # The car's own papers. An ACTIVE vehicle with no جواز سیر is a state
+        # the application will not produce and will not let work, so a seed
+        # that created one would hand every developer a fleet that cannot go
+        # online.
+        for document_type in DEFAULTS["vehicle.required_documents"]:
+            _get_or_create(
+                session, VehicleDocumentRow,
+                match={"vehicle_id": vehicle.id, "document_type_code": document_type},
+                defaults={
+                    "file_key": f"seed/{vehicle.id}/{document_type.lower()}.jpg",
+                    "status": DocumentStatus.VERIFIED.value,
+                    "verified_by": admin_user.id,
+                    "verified_at": now,
+                },
+            )
     session.flush()
 
     # -- today's trips ---------------------------------------------------

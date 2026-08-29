@@ -216,11 +216,15 @@ class DecideVehicleCommand:
 class DecideVehicle:
     """An administrator activates or suspends a vehicle."""
 
-    def __init__(self, *, vehicles, trips, audit, clock: Clock) -> None:
+    def __init__(
+        self, *, vehicles, trips, audit, clock: Clock, documents=None, settings=None
+    ) -> None:
         self._vehicles = vehicles
         self._trips = trips
         self._audit = audit
         self._clock = clock
+        self._documents = documents
+        self._settings = settings
 
     def execute(self, cmd: DecideVehicleCommand) -> VehicleStatus:
         row = self._vehicles.get(cmd.vehicle_id)
@@ -230,6 +234,14 @@ class DecideVehicle:
             raise ConflictError(
                 error_codes.VEHICLE_SUSPENDED, vehicle_id=row.id, status=row.status
             )
+
+        if cmd.approve:
+            # The permit is checked here, not trusted to whoever clicks the
+            # button. An administrator activating a car is saying its جواز سیر
+            # was seen and is valid; if the paperwork is not actually verified,
+            # this is where that has to stop -- afterwards the car is in the
+            # dispatch pool and a passenger is involved.
+            self._assert_papers_in_order(row)
 
         if not cmd.approve:
             # Suspending a vehicle mid-trip would strand its passengers.
@@ -258,6 +270,34 @@ class DecideVehicle:
             request_id=cmd.request_id,
         )
         return VehicleStatus(row.status)
+
+    def _assert_papers_in_order(self, row) -> None:
+        """Raises unless every required paper is verified and unexpired.
+
+        The dependencies are optional so that callers which cannot activate a
+        vehicle need not wire them -- but an *approval* without them would be
+        an approval that checked nothing, so that combination raises rather
+        than passing quietly.
+        """
+        if self._settings is None or self._documents is None:
+            raise ConflictError(
+                error_codes.VEHICLE_DOCUMENTS_INCOMPLETE,
+                vehicle_id=row.id,
+                reason="documents_not_loaded",
+            )
+        from application.use_cases.vehicle_documents import to_vehicle
+
+        required = frozenset(self._settings.get_list("vehicle.required_documents", []))
+        if not required:
+            return
+        vehicle = to_vehicle(row, self._documents.for_vehicle(row.id))
+        missing = vehicle.missing_documents(required, on=self._clock.now().date())
+        if missing:
+            raise ConflictError(
+                error_codes.VEHICLE_DOCUMENTS_INCOMPLETE,
+                vehicle_id=row.id,
+                missing=sorted(missing),
+            )
 
 
 def plate_key_of(plate: str) -> str:

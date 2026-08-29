@@ -88,6 +88,7 @@ def set_status(
     actor: Annotated[deps.Actor, Depends(deps.require_driver)],
     drivers: Annotated[object, Depends(deps.drivers)],
     vehicles: Annotated[object, Depends(deps.vehicles)],
+    vehicle_documents: Annotated[object, Depends(deps.vehicle_documents)],
     settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
 ) -> dict:
@@ -98,6 +99,7 @@ def set_status(
     one whose licence or جواز سیر has expired since they were approved.
     """
     from application.use_cases.driver_documents import _to_driver
+    from application.use_cases.vehicle_documents import assert_vehicle_papers_current
 
     row = _driver_of(drivers, actor.user_id)
     # Built with its documents, because approval is not enough on its own: a
@@ -125,6 +127,15 @@ def set_status(
                 vehicle_id=vehicle.id,
                 status=vehicle.status,
             )
+        # And the car's own papers, for the same reason as the driver's: the
+        # جواز سیر was valid when the vehicle was activated, and that was a
+        # moment. This is the one that catches the day it runs out.
+        assert_vehicle_papers_current(
+            vehicle,
+            vehicle_documents.for_vehicle(vehicle.id),
+            settings,
+            on=deps.clock().now().date(),
+        )
     else:
         entity.go_offline()
 
