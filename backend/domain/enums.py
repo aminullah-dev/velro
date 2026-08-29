@@ -149,6 +149,19 @@ class SettlementStatus(StrEnum):
     REJECTED = "REJECTED"
 
 
+class SettlementDirection(StrEnum):
+    """Money moving out to a driver, or in from one.
+
+    One record type for both, because they are the same event seen from two
+    sides -- an agreed amount, settled once, with an audit trail. Cash fares
+    mean collections are the common case: the driver holds the fare and owes
+    the platform its share.
+    """
+
+    PAYOUT = "PAYOUT"
+    COLLECTION = "COLLECTION"
+
+
 class WalletEntryKind(StrEnum):
     TRIP_EARNING = "TRIP_EARNING"
     COMMISSION = "COMMISSION"

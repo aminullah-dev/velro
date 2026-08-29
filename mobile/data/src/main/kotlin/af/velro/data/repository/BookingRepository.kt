@@ -103,8 +103,20 @@ class BookingRepository @Inject constructor(
         val nextOffset: Int,
     )
 
-    suspend fun refreshBookings(): ApiResult<List<Booking>> =
-        history(limit = 50).map { it.bookings }
+    /**
+     * A full refresh: what the server holds becomes what the cache holds.
+     *
+     * Reconciling rather than merging, because this reads every booking the
+     * passenger has. A page of history cannot do this -- absence from page two
+     * says nothing about page one.
+     */
+    suspend fun refreshBookings(): ApiResult<List<Booking>> {
+        val result = history(limit = 50)
+        if (result is ApiResult.Success && !result.value.hasMore) {
+            db.bookings().deleteMissing(result.value.bookings.map { it.id })
+        }
+        return result.map { it.bookings }
+    }
 
     /**
      * A page of history, cached as it arrives.

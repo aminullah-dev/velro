@@ -465,7 +465,7 @@
   "driver.earnings.pending": "پرداخت در جریان",
   "driver.earnings.lifetime_earned": "مجموع درآمد",
   "driver.earnings.lifetime_commission": "سهم ولرو",
-  "driver.earnings.lifetime_paid": "پرداخت‌شده به شما",
+  "driver.earnings.lifetime_paid": "تصفیه‌شده با ولرو",
   "driver.earnings.trips": "سفرهای تکمیل‌شده",
   "driver.earnings.ledger": "تمام موارد",
   "driver.earnings.ledger_empty": "هنوز چیزی نیست. اولین سفر تکمیل‌شده شما اینجا نمایان می‌شود.",
@@ -509,5 +509,18 @@
   "fare.component.seat": "کرایه چوکی",
   "fare.component.private_vehicle": "کرایه تمام موتر",
   "fare.component.base": "کرایه اساسی",
-  "fare.component.other": "سایر"
+  "fare.component.other": "سایر",
+  "error.settlement_direction_invalid": "شما {owed_minor} به ولرو بدهکار هستید؛ چیزی برای برداشت نیست.",
+  "driver.earnings.owed": "بدهی شما به ولرو",
+  "driver.earnings.owed_explained": "کرایه‌ها را نقدی گرفته‌اید، پس سهم ولرو هنوز نزد شماست.",
+  "driver.earnings.settle_at_station": "آن را در دفتر ایستگاه بپردازید. اینجا ثبت می‌شود.",
+  "driver.earnings.pending_collection": "در حال تصفیه",
+  "settlement.direction.payout": "پرداخت به شما",
+  "settlement.direction.collection": "پرداخت از شما",
+  "admin.settlements.collect": "ثبت پرداخت",
+  "admin.settlements.collect_from": "پول نقد گرفته‌شده از راننده",
+  "admin.settlements.owed": "بدهی",
+  "admin.col.direction": "جهت",
+  "admin.settlements.debtors": "رانندگان بدهکار",
+  "admin.settlements.no_debtors": "هیچ راننده‌ای بدهی ندارد."
 }

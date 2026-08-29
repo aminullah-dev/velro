@@ -197,8 +197,20 @@ def test_passenger_books_and_travels_with_a_real_driver(client: TestClient) -> N
     assert platform_share == gross // 10, "10% commission, per the seeded setting"
 
     earnings = client.get("/api/v1/driver/earnings", headers=d_auth).json()["data"]
-    assert earnings["available"]["amount_minor"] == driver_share
+    # Cash: the passenger handed the whole fare to the driver at the vehicle, so
+    # VELRO owes them nothing -- they are holding the platform's share and owe
+    # it back. A positive balance here would mean the platform had collected the
+    # fare, which for a cash ride it never did.
+    assert earnings["available"]["amount_minor"] == -platform_share
+    # What they earned is unchanged by who held the notes.
+    assert earnings["lifetime_earned"]["amount_minor"] == driver_share
+    assert earnings["lifetime_commission"]["amount_minor"] == platform_share
     assert earnings["completed_trips"] == 1
+
+    payout = client.get("/api/v1/driver/settlements", headers=d_auth).json()["data"]
+    assert payout["direction"] == "COLLECTION", "the driver owes, so money comes in"
+    assert payout["amount_owed"]["amount_minor"] == platform_share
+    assert payout["can_request"] is False, "a debt is not a balance to withdraw"
 
     # ----------------------------------------------------------------- ratings
     final = client.get(f"/api/v1/bookings/{booking['id']}", headers=p_auth).json()["data"]

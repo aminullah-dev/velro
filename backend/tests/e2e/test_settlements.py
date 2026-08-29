@@ -372,3 +372,204 @@ def test_the_queue_shows_who_is_waiting(
     assert all(row["status"] in ("PENDING", "PROCESSING") for row in rows)
     # An operator needs to know who to pay, not just an id.
     assert any(row["driver_phone"] for row in rows)
+
+
+# -- cash, section 89 ----------------------------------------------------
+#
+# The passenger pays at the vehicle, so the driver walks away holding the whole
+# fare and owing VELRO its share. Every test below is about that direction.
+
+def _owe(client: TestClient, headers: dict, platform_minor: int) -> None:
+    """Put a driver in debt the way a completed cash booking does."""
+    from infrastructure.db.repositories.money import WalletRepository
+    from ui.api import deps
+
+    with deps._session_factory()() as session:
+        me = client.get("/api/v1/driver/me", headers=headers).json()["data"]
+        wallets = WalletRepository(session)
+        wallet = wallets.get_or_create(me["id"], "AFN")
+        wallets.record_trip_settlement(
+            wallet=wallet,
+            platform_minor=platform_minor,
+            driver_minor=platform_minor * 9,
+            cash=True,
+        )
+        session.commit()
+
+
+def test_a_cash_fare_leaves_the_driver_owing_not_owed(client: TestClient) -> None:
+    session = auth(sign_in(client, "+93700000070"))
+    _become_driver(client, session)
+    _owe(client, session, 10_000)
+
+    data = _earnings(client, session)
+    assert data["available"]["amount_minor"] == -10_000, "the driver owes the share"
+    # What they earned is unaffected by who was holding the notes.
+    assert data["lifetime_earned"]["amount_minor"] == 90_000
+    assert data["lifetime_commission"]["amount_minor"] == 10_000
+
+
+def test_the_ledger_records_the_commission_as_a_debit(client: TestClient) -> None:
+    session = auth(sign_in(client, "+93700000071"))
+    _become_driver(client, session)
+    _owe(client, session, 10_000)
+
+    entries = client.get(
+        "/api/v1/driver/earnings/ledger", headers=session
+    ).json()["data"]["entries"]
+    assert entries[0]["kind"] == "COMMISSION"
+    assert entries[0]["amount"]["amount_minor"] == -10_000
+    assert entries[0]["balance_after"]["amount_minor"] == -10_000
+
+
+def test_a_driver_in_debt_cannot_request_a_payout(client: TestClient) -> None:
+    session = auth(sign_in(client, "+93700000072"))
+    _become_driver(client, session)
+    _owe(client, session, 60_000)
+
+    r = client.post("/api/v1/driver/settlements", json={}, headers=session)
+    assert r.status_code == 409
+    body = r.json()["error"]
+    # Not "insufficient balance": that would send a driver looking for money
+    # that was never theirs to withdraw.
+    assert body["code"] == "SETTLEMENT_DIRECTION_INVALID"
+    assert body["context"]["owed_minor"] == 60_000
+
+
+def test_the_app_is_told_which_way_the_money_goes(client: TestClient) -> None:
+    session = auth(sign_in(client, "+93700000073"))
+    _become_driver(client, session)
+    _owe(client, session, 25_000)
+
+    data = client.get("/api/v1/driver/settlements", headers=session).json()["data"]
+    assert data["direction"] == "COLLECTION"
+    assert data["amount_owed"]["amount_minor"] == 25_000
+    assert data["amount_withdrawable"]["amount_minor"] == 0
+    assert data["can_request"] is False
+
+
+def test_recording_a_collection_clears_the_debt_when_paid(
+    client: TestClient, admin_session: dict
+) -> None:
+    session = auth(sign_in(client, "+93700000074"))
+    _become_driver(client, session)
+    _owe(client, session, 40_000)
+    driver_id = client.get("/api/v1/driver/me", headers=session).json()["data"]["id"]
+
+    created = client.post(
+        "/api/v1/admin/settlements/collect",
+        json={"driver_id": driver_id},
+        headers=admin_session,
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()["data"]
+    assert body["direction"] == "COLLECTION"
+    assert body["amount"]["amount_minor"] == 40_000
+
+    # Held, not cleared: the debt is off the available balance but not yet
+    # recognised, so a mistake can still be rejected.
+    held = _earnings(client, session)
+    assert held["available"]["amount_minor"] == 0
+    assert held["pending"]["amount_minor"] == -40_000
+
+    for to in ("PROCESSING", "PAID"):
+        r = client.post(
+            f"/api/v1/admin/settlements/{body['id']}/decide",
+            json={"to": to},
+            headers=admin_session,
+        )
+        assert r.status_code == 200, r.text
+
+    after = _earnings(client, session)
+    assert after["available"]["amount_minor"] == 0, "the debt is settled"
+    assert after["pending"]["amount_minor"] == 0
+    assert after["lifetime_paid"]["amount_minor"] == 40_000
+
+
+def test_rejecting_a_collection_puts_the_debt_back(
+    client: TestClient, admin_session: dict
+) -> None:
+    session = auth(sign_in(client, "+93700000075"))
+    _become_driver(client, session)
+    _owe(client, session, 30_000)
+    driver_id = client.get("/api/v1/driver/me", headers=session).json()["data"]["id"]
+
+    created = client.post(
+        "/api/v1/admin/settlements/collect",
+        json={"driver_id": driver_id},
+        headers=admin_session,
+    ).json()["data"]
+
+    rejected = client.post(
+        f"/api/v1/admin/settlements/{created['id']}/decide",
+        json={"to": "REJECTED", "reason": "پول کم بود"},
+        headers=admin_session,
+    )
+    assert rejected.status_code == 200, rejected.text
+
+    after = _earnings(client, session)
+    # A refused collection restores the debt exactly: VELRO is not owed less
+    # because a clerk mistyped.
+    assert after["available"]["amount_minor"] == -30_000
+    assert after["pending"]["amount_minor"] == 0
+    assert after["lifetime_paid"]["amount_minor"] == 0
+
+
+def test_collecting_more_than_is_owed_is_refused(
+    client: TestClient, admin_session: dict
+) -> None:
+    session = auth(sign_in(client, "+93700000076"))
+    _become_driver(client, session)
+    _owe(client, session, 20_000)
+    driver_id = client.get("/api/v1/driver/me", headers=session).json()["data"]["id"]
+
+    r = client.post(
+        "/api/v1/admin/settlements/collect",
+        json={"driver_id": driver_id, "amount_minor": 500_000},
+        headers=admin_session,
+    )
+    assert r.status_code == 409
+    assert r.json()["error"]["code"] == "SETTLEMENT_AMOUNT_INVALID"
+    # Refused, so nothing moved.
+    assert _earnings(client, session)["available"]["amount_minor"] == -20_000
+
+
+def test_a_driver_cannot_record_their_own_collection(client: TestClient) -> None:
+    session = auth(sign_in(client, "+93700000077"))
+    _become_driver(client, session)
+    _owe(client, session, 20_000)
+    driver_id = client.get("/api/v1/driver/me", headers=session).json()["data"]["id"]
+
+    r = client.post(
+        "/api/v1/admin/settlements/collect",
+        json={"driver_id": driver_id},
+        headers=session,
+    )
+    assert r.status_code == 403
+
+
+def test_the_office_can_see_who_owes(
+    client: TestClient, admin_session: dict
+) -> None:
+    session = auth(sign_in(client, "+93700000078"))
+    _become_driver(client, session)
+    _owe(client, session, 35_000)
+    driver_id = client.get("/api/v1/driver/me", headers=session).json()["data"]["id"]
+
+    r = client.get("/api/v1/admin/settlements/debtors", headers=admin_session)
+    assert r.status_code == 200, r.text
+    rows = r.json()["data"]
+    mine = next(row for row in rows if row["driver_id"] == driver_id)
+    # Shown as a positive figure: an operator reads "owes 350", not "-350".
+    assert mine["amount_owed"]["amount_minor"] == 35_000
+    assert mine["driver_phone"], "an operator needs to know who to ask"
+    # Largest debt first -- the working order, not insertion order.
+    owed = [row["amount_owed"]["amount_minor"] for row in rows]
+    assert owed == sorted(owed, reverse=True)
+
+
+def test_a_driver_cannot_see_the_debtor_list(
+    client: TestClient, driver_session: dict
+) -> None:
+    r = client.get("/api/v1/admin/settlements/debtors", headers=driver_session)
+    assert r.status_code == 403

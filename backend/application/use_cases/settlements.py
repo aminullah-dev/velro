@@ -11,8 +11,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime
 
-from domain.enums import ActorRole, SettlementStatus
-from domain.wallet import LedgerEntry, Settlement, WalletBalance, assert_can_request
+from domain.enums import ActorRole, SettlementDirection, SettlementStatus
+from domain.wallet import (
+    LedgerEntry,
+    Settlement,
+    WalletBalance,
+    assert_can_collect,
+    assert_can_request,
+)
 from shared import error_codes
 from shared.clock import Clock
 from shared.errors import NotFoundError
@@ -59,6 +65,7 @@ def read_settlement(row) -> Settlement:
         amount=Money(row.amount_minor, row.currency),
         period_start=row.period_start,
         period_end=row.period_end,
+        direction=row.direction,
         status=row.status,
         paid_at=row.paid_at,
         processed_by=row.processed_by,
@@ -102,7 +109,7 @@ class RequestSettlement:
         open_row = self._settlements.find_open_for_driver(driver.id)
         amount = Money(
             cmd.amount_minor if cmd.amount_minor is not None
-            else balance.available.amount_minor,
+            else balance.amount_withdrawable.amount_minor,
             wallet.currency,
         )
         minimum = Money(
@@ -133,6 +140,7 @@ class RequestSettlement:
             period_end=now.date(),
             amount_minor=amount.amount_minor,
             currency=amount.currency,
+            direction=SettlementDirection.PAYOUT.value,
             status=SettlementStatus.PENDING.value,
         )
         self._wallets.hold_for_settlement(
@@ -151,6 +159,96 @@ class RequestSettlement:
                 "reference": row.reference,
                 "amount_minor": amount.amount_minor,
                 "currency": amount.currency,
+            },
+            request_id=cmd.request_id,
+        )
+        return read_settlement(row)
+
+
+@dataclass(frozen=True, slots=True)
+class RecordCollectionCommand:
+    """The office records money a driver has handed in.
+
+    Not a request: nobody is asking for anything, someone is writing down what
+    already happened at the counter. The driver's debt drops when it is marked
+    paid, not now, so a mistyped amount can still be rejected.
+    """
+
+    driver_id: str
+    actor_id: str
+    amount_minor: int | None = None       # None means "everything owed"
+    request_id: str | None = None
+
+
+class RecordCollection:
+    def __init__(
+        self, *, drivers, wallets, settlements, numbers, audit,
+        clock: Clock, new_id: IdGenerator,
+    ) -> None:
+        self._drivers = drivers
+        self._wallets = wallets
+        self._settlements = settlements
+        self._numbers = numbers
+        self._audit = audit
+        self._clock = clock
+        self._new_id = new_id
+
+    def execute(self, cmd: RecordCollectionCommand) -> Settlement:
+        driver = self._drivers.find(cmd.driver_id)
+        if driver is None:
+            raise NotFoundError(error_codes.DRIVER_NOT_FOUND, driver_id=cmd.driver_id)
+
+        wallet = self._wallets.get_or_create(driver.id, "AFN")
+        balance = read_balance(wallet)
+        open_row = self._settlements.find_open_for_driver(driver.id)
+        amount = Money(
+            cmd.amount_minor if cmd.amount_minor is not None
+            else balance.amount_owed.amount_minor,
+            wallet.currency,
+        )
+        assert_can_collect(
+            balance,
+            amount,
+            open_settlement_reference=open_row.reference if open_row else None,
+        )
+
+        now = self._clock.now()
+        last = self._settlements.for_driver(driver.id, limit=1)
+        period_start: date = (
+            last[0].period_end if last else driver.created_at.date()
+        )
+        row = self._settlements.create(
+            id=self._new_id(),
+            driver_id=driver.id,
+            wallet_id=wallet.id,
+            reference=self._numbers.allocate("settlement", year=now.year),
+            period_start=period_start,
+            period_end=now.date(),
+            amount_minor=amount.amount_minor,
+            currency=amount.currency,
+            direction=SettlementDirection.COLLECTION.value,
+            status=SettlementStatus.PENDING.value,
+        )
+        # The debt is held, not cleared: the money is only recognised when the
+        # settlement is marked paid, so a wrong entry can still be rejected.
+        self._wallets.hold_for_settlement(
+            wallet=wallet,
+            amount_minor=-amount.amount_minor,
+            settlement_id=row.id,
+            reference=row.reference,
+        )
+        self._audit.write(
+            "settlement.collected",
+            actor_id=cmd.actor_id,
+            actor_role=ActorRole.ADMIN,
+            entity_type="settlement",
+            entity_id=row.id,
+            after={
+                "reference": row.reference,
+                "amount_minor": amount.amount_minor,
+                "currency": amount.currency,
+                "direction": SettlementDirection.COLLECTION.value,
+                "driver_id": driver.id,
             },
             request_id=cmd.request_id,
         )
@@ -199,12 +297,18 @@ class DecideSettlement:
         if wallet is None:
             raise NotFoundError(error_codes.WALLET_NOT_FOUND, wallet_id=row.wallet_id)
 
+        collection = settlement.direction is SettlementDirection.COLLECTION
+        signed = -row.amount_minor if collection else row.amount_minor
         if settlement.status is SettlementStatus.PAID:
-            self._wallets.settle_hold(wallet=wallet, amount_minor=row.amount_minor)
+            self._wallets.settle_hold(
+                wallet=wallet, amount_minor=signed, collection=collection
+            )
         elif settlement.status is SettlementStatus.REJECTED:
+            # Whatever was held goes back exactly as it was: a refused payout
+            # returns a credit, a refused collection returns the debt.
             self._wallets.release_hold(
                 wallet=wallet,
-                amount_minor=row.amount_minor,
+                amount_minor=signed,
                 settlement_id=row.id,
                 reference=row.reference,
             )

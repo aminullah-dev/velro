@@ -15,7 +15,13 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.enums import PaymentMethod, PaymentStatus, SettlementStatus, WalletEntryKind
+from domain.enums import (
+    PaymentMethod,
+    PaymentStatus,
+    SettlementDirection,
+    SettlementStatus,
+    WalletEntryKind,
+)
 from infrastructure.db.base import Auditable, Base, enum_check
 
 
@@ -137,6 +143,12 @@ class SettlementRow(Auditable, Base):
         String(36), ForeignKey("wallets.id", ondelete="RESTRICT"), nullable=False, index=True
     )
     reference: Mapped[str] = mapped_column(String(24), nullable=False)
+    # PAYOUT to a driver, or COLLECTION from one. Cash fares mean most
+    # settlements are collections: the driver holds the fare and owes the
+    # platform its share.
+    direction: Mapped[str] = mapped_column(
+        String(12), default=SettlementDirection.PAYOUT.value, nullable=False
+    )
     period_start: Mapped[date] = mapped_column(Date, nullable=False)
     period_end: Mapped[date] = mapped_column(Date, nullable=False)
     amount_minor: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -153,4 +165,5 @@ class SettlementRow(Auditable, Base):
         CheckConstraint("amount_minor >= 0", name="ck_settlements_amount_non_negative"),
         CheckConstraint("period_end >= period_start", name="ck_settlements_period_order"),
         enum_check("status", SettlementStatus, name="settlements_status"),
+        enum_check("direction", SettlementDirection, name="settlements_direction"),
     )

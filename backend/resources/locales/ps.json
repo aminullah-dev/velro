@@ -465,7 +465,7 @@
   "driver.earnings.pending": "تادیه روانه ده",
   "driver.earnings.lifetime_earned": "ټول عاید",
   "driver.earnings.lifetime_commission": "د ولرو برخه",
-  "driver.earnings.lifetime_paid": "تاسو ته تادیه شوي",
+  "driver.earnings.lifetime_paid": "له ولرو سره تصفیه شوی",
   "driver.earnings.trips": "بشپړ شوي سفرونه",
   "driver.earnings.ledger": "ټول توکي",
   "driver.earnings.ledger_empty": "لا هیڅ نشته. ستاسو لومړی بشپړ شوی سفر به دلته ښکاره شي.",
@@ -509,5 +509,18 @@
   "fare.component.seat": "د چوکۍ کرایه",
   "fare.component.private_vehicle": "د ټول موټر کرایه",
   "fare.component.base": "بنسټیزه کرایه",
-  "fare.component.other": "نور"
+  "fare.component.other": "نور",
+  "error.settlement_direction_invalid": "تاسو ولرو ته {owed_minor} پوروړي یاست؛ د اخیستلو لپاره څه نشته.",
+  "driver.earnings.owed": "ولرو ته ستاسو پور",
+  "driver.earnings.owed_explained": "تاسو کرایې په نغدو اخیستې، نو د ولرو برخه لا تر اوسه ستاسو سره ده.",
+  "driver.earnings.settle_at_station": "دا د ادې په دفتر کې ورکړئ. دلته به ثبت شي.",
+  "driver.earnings.pending_collection": "د تصفیې په حال کې",
+  "settlement.direction.payout": "تاسو ته تادیه",
+  "settlement.direction.collection": "له تاسو تادیه",
+  "admin.settlements.collect": "د تادیې ثبت",
+  "admin.settlements.collect_from": "له ډرایور څخه اخیستل شوي نغدې",
+  "admin.settlements.owed": "پور",
+  "admin.col.direction": "لوری",
+  "admin.settlements.debtors": "پوروړي ډرایوران",
+  "admin.settlements.no_debtors": "هیڅ ډرایور پور نه لري."
 }

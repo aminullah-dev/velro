@@ -407,6 +407,7 @@ data class SettlementDto(
     val id: String,
     val reference: String,
     val amount: MoneyDto,
+    val direction: String = "PAYOUT",
     val status: String,
     val period_start: String,
     val period_end: String,
@@ -421,6 +422,9 @@ data class SettlementDto(
 data class PayoutOptionsDto(
     val settlements: List<SettlementDto> = emptyList(),
     val minimum: MoneyDto,
+    val direction: String = "PAYOUT",
+    val amount_owed: MoneyDto? = null,
+    val amount_withdrawable: MoneyDto? = null,
     val can_request: Boolean = false,
     val open_reference: String? = null,
 )

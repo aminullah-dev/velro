@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime
 
-from domain.enums import SettlementStatus, WalletEntryKind
+from domain.enums import SettlementDirection, SettlementStatus, WalletEntryKind
 from domain.lifecycles import SETTLEMENT_LIFECYCLE
 from shared import error_codes
 from shared.errors import ConflictError, ValidationError
@@ -20,12 +20,16 @@ from shared.money import Money
 
 @dataclass(frozen=True, slots=True)
 class WalletBalance:
-    """Three buckets that must always sum to what the driver is owed.
+    """What stands between the driver and VELRO, in either direction.
 
-    ``available`` is theirs to ask for; ``pending`` is a payout the office is
-    already working on and must not be spendable twice; ``lifetime_paid`` is
-    what has actually changed hands. A payout request moves money from the first
-    to the second, never destroys it, so a rejection can always give it back.
+    ``available`` is signed, and the sign is the whole point. Fares are paid in
+    cash at the vehicle (section 89), so the driver walks away holding the
+    passenger's money and owing VELRO its share -- a negative balance. Only a
+    fare the platform collected itself leaves VELRO owing the driver.
+
+    ``pending`` is a settlement already in flight, in whichever direction, and
+    must not be settled twice. ``lifetime_earned`` is what the driver made
+    regardless of who held the notes.
     """
 
     available: Money
@@ -35,12 +39,32 @@ class WalletBalance:
     lifetime_paid: Money
 
     @property
-    def total_held(self) -> Money:
-        """Everything owed but not yet paid, whatever bucket it sits in."""
-        return self.available + self.pending
+    def owes_platform(self) -> bool:
+        return self.available.amount_minor < 0
 
-    def can_request(self, amount: Money) -> bool:
-        return amount.amount_minor > 0 and amount.amount_minor <= self.available.amount_minor
+    @property
+    def amount_owed(self) -> Money:
+        """What the driver owes VELRO, as a positive figure. Zero if none."""
+        return Money(max(0, -self.available.amount_minor), self.available.currency)
+
+    @property
+    def amount_withdrawable(self) -> Money:
+        """What VELRO owes the driver, as a positive figure. Zero if none."""
+        return Money(max(0, self.available.amount_minor), self.available.currency)
+
+    @property
+    def direction(self) -> SettlementDirection:
+        """Which way the next settlement would move money."""
+        return (
+            SettlementDirection.COLLECTION
+            if self.owes_platform
+            else SettlementDirection.PAYOUT
+        )
+
+    @property
+    def total_held(self) -> Money:
+        """Everything outstanding, whatever bucket it sits in."""
+        return self.available + self.pending
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +102,7 @@ class Settlement:
     amount: Money
     period_start: date
     period_end: date
+    direction: SettlementDirection = SettlementDirection.PAYOUT
     status: SettlementStatus = SettlementStatus.PENDING
     paid_at: datetime | None = None
     processed_by: str | None = None
@@ -88,6 +113,8 @@ class Settlement:
         # identity silently answers False everywhere it matters.
         if not isinstance(self.status, SettlementStatus):
             self.status = SettlementStatus(self.status)
+        if not isinstance(self.direction, SettlementDirection):
+            self.direction = SettlementDirection(self.direction)
         if self.amount.amount_minor <= 0:
             raise ValidationError(
                 error_codes.SETTLEMENT_AMOUNT_INVALID,
@@ -133,16 +160,26 @@ def assert_can_request(
     minimum: Money,
     open_settlement_reference: str | None = None,
 ) -> None:
-    """The three ways a payout request is refused.
+    """The ways a payout request is refused.
 
-    Kept as one function so the driver app, the admin panel and the API all
-    refuse for the same reasons in the same order -- the driver should never be
-    told "too small" by one surface and "already requested" by another.
+    Kept as one function so the driver app, the admin panel and the API refuse
+    for the same reasons in the same order -- the driver should never be told
+    "too small" by one surface and "already requested" by another.
     """
     if open_settlement_reference is not None:
         raise ConflictError(
             error_codes.SETTLEMENT_ALREADY_REQUESTED,
             reference=open_settlement_reference,
+        )
+    # Direction first. A driver holding cash owes VELRO rather than being owed,
+    # and asking to be paid out of a debt is the wrong direction, not a bad
+    # amount -- reporting it as an amount problem sends them looking for money
+    # that was never theirs to withdraw.
+    if balance.owes_platform:
+        raise ConflictError(
+            error_codes.SETTLEMENT_DIRECTION_INVALID,
+            owed_minor=balance.amount_owed.amount_minor,
+            currency=balance.amount_owed.currency,
         )
     if amount.amount_minor <= 0:
         raise ValidationError(
@@ -160,4 +197,33 @@ def assert_can_request(
             requested_minor=amount.amount_minor,
             minimum_minor=minimum.amount_minor,
             currency=minimum.currency,
+        )
+
+
+def assert_can_collect(
+    balance: WalletBalance,
+    amount: Money,
+    *,
+    open_settlement_reference: str | None = None,
+) -> None:
+    """Recording what a driver has paid in.
+
+    No minimum: the minimum exists so a payout is worth the journey, and the
+    driver is already standing at the office when this is recorded. Paying more
+    than is owed is refused rather than left to create a credit nobody intended.
+    """
+    if open_settlement_reference is not None:
+        raise ConflictError(
+            error_codes.SETTLEMENT_ALREADY_REQUESTED,
+            reference=open_settlement_reference,
+        )
+    if amount.amount_minor <= 0:
+        raise ValidationError(
+            error_codes.SETTLEMENT_AMOUNT_INVALID, amount_minor=amount.amount_minor
+        )
+    if amount.amount_minor > balance.amount_owed.amount_minor:
+        raise ConflictError(
+            error_codes.SETTLEMENT_AMOUNT_INVALID,
+            requested_minor=amount.amount_minor,
+            owed_minor=balance.amount_owed.amount_minor,
         )

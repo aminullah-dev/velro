@@ -284,6 +284,7 @@ data class Settlement(
     val id: String,
     val reference: String,
     val amount: MoneyValue,
+    val direction: SettlementDirection = SettlementDirection.PAYOUT,
     val status: SettlementStatus,
     val periodStart: String,
     val periodEnd: String,
@@ -305,9 +306,22 @@ data class Settlement(
 data class PayoutOptions(
     val minimum: MoneyValue,
     val canRequest: Boolean,
+    /**
+     * Which way money moves next.
+     *
+     * Cash fares mean the driver holds the passenger's money and owes VELRO its
+     * share, so COLLECTION is the ordinary case and PAYOUT the exception. The
+     * server decides it; the app must not infer it from the sign of a number it
+     * might be showing stale.
+     */
+    val direction: SettlementDirection = SettlementDirection.PAYOUT,
+    val amountOwed: MoneyValue = MoneyValue(0, minimum.currency),
+    val amountWithdrawable: MoneyValue = MoneyValue(0, minimum.currency),
     val openReference: String? = null,
     val history: List<Settlement> = emptyList(),
-)
+) {
+    val owesPlatform: Boolean get() = direction == SettlementDirection.COLLECTION
+}
 
 data class Session(
     val userId: String,

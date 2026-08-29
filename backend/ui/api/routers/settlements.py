@@ -15,6 +15,8 @@ from pydantic import Field
 from application.use_cases.settlements import (
     DecideSettlement,
     DecideSettlementCommand,
+    RecordCollection,
+    RecordCollectionCommand,
     RequestSettlement,
     RequestSettlementCommand,
     read_balance,
@@ -45,6 +47,7 @@ class SettlementOut(Schema):
     id: str
     reference: str
     amount: MoneyOut
+    direction: str
     status: str
     period_start: str
     period_end: str
@@ -67,11 +70,17 @@ class DecideSettlementIn(Schema):
     reason: str | None = Field(default=None, max_length=500)
 
 
+class RecordCollectionIn(Schema):
+    driver_id: str
+    amount_minor: int | None = Field(default=None, ge=1)
+
+
 def _settlement_out(s, *, driver_name=None, driver_phone=None) -> SettlementOut:
     return SettlementOut(
         id=s.id,
         reference=s.reference,
         amount=MoneyOut.of(s.amount),
+        direction=str(s.direction),
         status=str(s.status),
         period_start=s.period_start.isoformat(),
         period_end=s.period_end.isoformat(),
@@ -149,11 +158,16 @@ def my_settlements(
     return ok(
         {
             "settlements": [_settlement_out(s).model_dump() for s in history],
-            # The app needs all three to say why the button is disabled: too
-            # little, or one already in flight. Deriving it client-side would
-            # put the rule in two places and let them disagree.
+            # The app needs all of these to say why the button is absent: the
+            # driver owes rather than is owed, the amount is too small, or one
+            # is already in flight. Deciding it client-side would put the rule
+            # in two places and let them disagree.
             "minimum": MoneyOut.of(Money(minimum, wallet.currency)).model_dump(),
+            "direction": str(balance.direction),
+            "amount_owed": MoneyOut.of(balance.amount_owed).model_dump(),
+            "amount_withdrawable": MoneyOut.of(balance.amount_withdrawable).model_dump(),
             "can_request": open_one is None
+            and not balance.owes_platform
             and balance.available.amount_minor >= minimum,
             "open_reference": open_one.reference if open_one else None,
         }
@@ -208,6 +222,78 @@ def queue(
             ).model_dump()
         )
     return ok(out)
+
+
+class DebtorOut(Schema):
+    driver_id: str
+    driver_name: str | None
+    driver_phone: str | None
+    amount_owed: MoneyOut
+    completed_trips: int
+
+
+@admin_router.get("/debtors")
+def debtors(
+    actor: Annotated[deps.Actor, Depends(deps.require_finance)],
+    wallets: Annotated[object, Depends(deps.wallets)],
+    drivers: Annotated[object, Depends(deps.drivers)],
+    users: Annotated[object, Depends(deps.users)],
+) -> dict:
+    """Who is holding VELRO's money.
+
+    With cash fares this is the ordinary state of an active driver, so it is a
+    working list rather than an exception report.
+    """
+    rows = wallets.debtors(limit=100)
+    driver_rows = {d.id: d for d in drivers.by_ids({w.driver_id for w in rows})}
+    user_rows = {
+        u.id: u for u in users.by_ids({d.user_id for d in driver_rows.values()})
+    }
+    out = []
+    for wallet in rows:
+        driver = driver_rows.get(wallet.driver_id)
+        user = user_rows.get(driver.user_id) if driver else None
+        out.append(
+            DebtorOut(
+                driver_id=wallet.driver_id,
+                driver_name=user.full_name if user else None,
+                driver_phone=user.phone if user else None,
+                amount_owed=MoneyOut.of(
+                    Money(-wallet.available_minor, wallet.currency)
+                ),
+                completed_trips=driver.completed_trips if driver else 0,
+            ).model_dump()
+        )
+    return ok(out)
+
+
+@admin_router.post("/collect", status_code=201)
+def record_collection(
+    body: RecordCollectionIn,
+    actor: Annotated[deps.Actor, Depends(deps.require_finance)],
+    drivers: Annotated[object, Depends(deps.drivers)],
+    wallets: Annotated[object, Depends(deps.wallets)],
+    settlements: Annotated[object, Depends(deps.settlements)],
+    numbers: Annotated[object, Depends(deps.numbers)],
+    audit: Annotated[object, Depends(deps.audit)],
+) -> dict:
+    """Record cash a driver has handed in against what they owe.
+
+    Section 89: fares are collected at the vehicle, so the usual direction is
+    the driver paying the platform, not the other way round.
+    """
+    use_case = RecordCollection(
+        drivers=drivers, wallets=wallets, settlements=settlements, numbers=numbers,
+        audit=audit, clock=deps.clock(), new_id=deps.new_id,
+    )
+    result = use_case.execute(
+        RecordCollectionCommand(
+            driver_id=body.driver_id,
+            actor_id=actor.user_id,
+            amount_minor=body.amount_minor,
+        )
+    )
+    return ok(_settlement_out(result).model_dump())
 
 
 @admin_router.post("/{settlement_id}/decide")

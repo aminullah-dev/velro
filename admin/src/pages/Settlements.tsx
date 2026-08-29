@@ -10,10 +10,19 @@ interface Money {
   currency: string;
 }
 
+interface Debtor {
+  driver_id: string;
+  driver_name: string | null;
+  driver_phone: string | null;
+  amount_owed: Money;
+  completed_trips: number;
+}
+
 interface Settlement {
   id: string;
   reference: string;
   amount: Money;
+  direction: "PAYOUT" | "COLLECTION";
   status: "PENDING" | "PROCESSING" | "PAID" | "REJECTED";
   period_start: string;
   period_end: string;
@@ -32,12 +41,23 @@ interface Settlement {
  * they ask, so every row here is someone waiting to be paid.
  */
 export function SettlementsPage() {
-  const { t, money, date } = useStrings();
+  const { t, money, date, num } = useStrings();
   const client = useQueryClient();
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["settlements", "queue"],
     queryFn: () => api.get<Settlement[]>("/admin/settlements"),
+  });
+
+  const { data: debtors } = useQuery({
+    queryKey: ["settlements", "debtors"],
+    queryFn: () => api.get<Debtor[]>("/admin/settlements/debtors"),
+  });
+
+  const collect = useMutation({
+    mutationFn: (driverId: string) =>
+      api.post("/admin/settlements/collect", { driver_id: driverId }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["settlements"] }),
   });
 
   const decide = useMutation({
@@ -70,6 +90,54 @@ export function SettlementsPage() {
       />
 
       {decide.error && <ErrorBanner error={decide.error} />}
+      {collect.error && <ErrorBanner error={collect.error} />}
+
+      {/* Cash fares mean drivers hold VELRO's share, so this is the ordinary
+          working list rather than an exception report -- and it comes first
+          because it is what an operator opens this page to do. */}
+      <h2 className="section">{t("admin.settlements.debtors")}</h2>
+      {(debtors ?? []).length === 0 ? (
+        <Empty messageKey="admin.settlements.no_debtors" />
+      ) : (
+        <Table
+          head={
+            <tr>
+              <th>{t("admin.col.name")}</th>
+              <th className="num">{t("admin.col.trips")}</th>
+              <th className="num">{t("admin.settlements.owed")}</th>
+              <th>{t("admin.col.actions")}</th>
+            </tr>
+          }
+        >
+          {(debtors ?? []).map((d) => (
+            <tr key={d.driver_id}>
+              <td>
+                <div>{d.driver_name ?? "—"}</div>
+                {d.driver_phone && (
+                  <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                    <Ltr>{d.driver_phone}</Ltr>
+                  </span>
+                )}
+              </td>
+              <td className="num">{num(d.completed_trips)}</td>
+              <td className="num">
+                {money(d.amount_owed.amount_minor, d.amount_owed.currency)}
+              </td>
+              <td>
+                <button
+                  className="small primary"
+                  disabled={collect.isPending}
+                  onClick={() => collect.mutate(d.driver_id)}
+                >
+                  {t("admin.settlements.collect")}
+                </button>
+              </td>
+            </tr>
+          ))}
+        </Table>
+      )}
+
+      <h2 className="section">{t("admin.settlements.queue")}</h2>
 
       {queue.length === 0 ? (
         <Empty messageKey="admin.settlements.none" />
@@ -80,6 +148,7 @@ export function SettlementsPage() {
               <th>{t("admin.col.reference")}</th>
               <th>{t("admin.col.name")}</th>
               <th>{t("admin.col.period")}</th>
+              <th>{t("admin.col.direction")}</th>
               <th className="num">{t("admin.col.amount")}</th>
               <th>{t("admin.col.status")}</th>
               <th>{t("admin.col.actions")}</th>
@@ -100,6 +169,13 @@ export function SettlementsPage() {
               </td>
               <td style={{ fontSize: 12 }}>
                 {date(s.period_start)} — {date(s.period_end)}
+              </td>
+              <td>
+                {/* Which way the money moves is the first thing to read on a
+                    payments queue; never left to the amount's sign. */}
+                <span className="chip">
+                  {t(`settlement.direction.${s.direction.toLowerCase()}`)}
+                </span>
               </td>
               <td className="num">
                 {money(s.amount.amount_minor, s.amount.currency)}

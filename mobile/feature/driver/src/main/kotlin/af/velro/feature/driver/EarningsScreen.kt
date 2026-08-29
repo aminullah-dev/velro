@@ -29,7 +29,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -85,7 +89,7 @@ fun EarningsScreen(
             fontWeight = FontWeight.SemiBold,
         )
 
-        state.earnings?.let { Balance(it) }
+        state.earnings?.let { Balance(it, state.payout) }
 
         if (state.errorCode != null) {
             InlineError(state.errorCode!!, context = state.errorContext)
@@ -104,26 +108,71 @@ fun EarningsScreen(
 }
 
 @Composable
-private fun Balance(earnings: Earnings) {
+private fun Balance(earnings: Earnings, payout: PayoutOptions?) {
     val strings = LocalVelroStrings.current
+    // Fares are handed over in cash at the vehicle, so most of the time the
+    // driver is holding VELRO's share rather than waiting to be paid. Which of
+    // the two it is must be readable at a glance by someone who does not read
+    // easily -- so it is carried by the wording, an icon and the colour, never
+    // by the colour alone.
+    val owes = payout?.owesPlatform == true
+    val headline = if (owes) payout.amountOwed else earnings.available
+
     VelroCard {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    strings[
+                        if (owes) "driver.earnings.owed" else "driver.earnings.available"
+                    ],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Icon(
+                    // Direction of travel: money leaving the driver's hands, or
+                    // arriving in them.
+                    imageVector = if (owes) Icons.Filled.ArrowUpward
+                    else Icons.Filled.ArrowDownward,
+                    contentDescription = null,   // the label beside it already says this
+                    tint = if (owes) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
+                )
+            }
             Text(
-                strings["driver.earnings.available"],
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                MoneyFormatter.format(earnings.available, strings),
+                MoneyFormatter.format(headline, strings),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
+                color = if (owes) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurface,
             )
+            if (owes) {
+                // The number alone invites the wrong conclusion -- a driver who
+                // has just been paid in cash all day does not expect to owe
+                // anything. Say why, in one sentence.
+                Text(
+                    strings["driver.earnings.owed_explained"],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             // Shown only when there is one. A permanent "pending: 0" line
             // teaches a driver to stop reading the rows.
-            if (earnings.pending.amountMinor > 0) {
+            if (earnings.pending.amountMinor != 0L) {
                 Spacer(Modifier.height(Spacing.xs))
-                Figure("driver.earnings.pending", earnings.pending, emphasise = true)
+                Figure(
+                    if (owes) "driver.earnings.pending_collection"
+                    else "driver.earnings.pending",
+                    MoneyValue(
+                        kotlin.math.abs(earnings.pending.amountMinor),
+                        earnings.pending.currency,
+                    ),
+                    emphasise = true,
+                )
             }
 
             Spacer(Modifier.height(Spacing.sm))
@@ -209,6 +258,14 @@ private fun Payout(
                         fontWeight = FontWeight.SemiBold,
                     )
                     StatusLabel(open.status)
+                }
+                // Owing is not a smaller version of being owed: there is
+                // nothing to request, and the useful thing is where to pay.
+                payout.owesPlatform -> {
+                    Text(
+                        strings["driver.earnings.settle_at_station"],
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 }
                 payout.canRequest -> PrimaryAction(
                     label = strings[

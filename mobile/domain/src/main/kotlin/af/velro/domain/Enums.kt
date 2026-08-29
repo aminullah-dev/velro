@@ -40,6 +40,13 @@ enum class SeatStatus { AVAILABLE, RESERVED, OCCUPIED, BLOCKED }
 
 enum class SettlementStatus { PENDING, PROCESSING, PAID, REJECTED }
 
+/**
+ * Money moving out to a driver, or in from one. Mirrors the server: cash fares
+ * mean the driver holds the money and owes the platform its share, so a
+ * collection is the ordinary case.
+ */
+enum class SettlementDirection { PAYOUT, COLLECTION }
+
 enum class RideKind { PRIVATE, SHARED }
 
 enum class DriverApprovalStatus { PENDING, APPROVED, REJECTED, SUSPENDED }

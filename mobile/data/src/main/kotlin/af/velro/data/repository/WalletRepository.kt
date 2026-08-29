@@ -11,6 +11,7 @@ import af.velro.domain.LedgerKind
 import af.velro.domain.MoneyValue
 import af.velro.domain.PayoutOptions
 import af.velro.domain.Settlement
+import af.velro.domain.SettlementDirection
 import af.velro.domain.SettlementStatus
 import af.velro.domain.enumOrNull
 import java.time.Instant
@@ -50,6 +51,14 @@ class WalletRepository @Inject constructor(
             PayoutOptions(
                 minimum = MoneyValue(dto.minimum.amount_minor, dto.minimum.currency),
                 canRequest = dto.can_request,
+                direction = enumOrNull<SettlementDirection>(dto.direction)
+                    ?: SettlementDirection.PAYOUT,
+                amountOwed = dto.amount_owed
+                    ?.let { MoneyValue(it.amount_minor, it.currency) }
+                    ?: MoneyValue(0, dto.minimum.currency),
+                amountWithdrawable = dto.amount_withdrawable
+                    ?.let { MoneyValue(it.amount_minor, it.currency) }
+                    ?: MoneyValue(0, dto.minimum.currency),
                 openReference = dto.open_reference,
                 history = dto.settlements.map(::toDomain),
             )
@@ -78,6 +87,8 @@ class WalletRepository @Inject constructor(
         id = dto.id,
         reference = dto.reference,
         amount = MoneyValue(dto.amount.amount_minor, dto.amount.currency),
+        direction = enumOrNull<SettlementDirection>(dto.direction)
+            ?: SettlementDirection.PAYOUT,
         status = enumOrNull<SettlementStatus>(dto.status) ?: SettlementStatus.PENDING,
         periodStart = dto.period_start,
         periodEnd = dto.period_end,

@@ -214,15 +214,18 @@ class AdvanceTrip:
                 driver_minor=split.driver.amount_minor,
                 currency=split.gross.currency,
             )
-            self._wallets.append(
+            self._wallets.record_trip_settlement(
                 wallet=wallet,
-                kind=WalletEntryKind.TRIP_EARNING.value,
-                amount_minor=split.driver.amount_minor,
+                platform_minor=split.platform.amount_minor,
+                driver_minor=split.driver.amount_minor,
+                # Section 89: fares are collected in cash at the vehicle, so the
+                # driver holds the money and owes VELRO its share. Reading the
+                # method per booking rather than assuming it leaves room for the
+                # payment types the schema already allows.
+                cash=booking_row.payment_method == PaymentMethod.CASH.value,
                 booking_id=booking_row.id,
                 trip_id=trip.id,
-                note=None,
             )
-            wallet.lifetime_commission_minor += split.platform.amount_minor
             total_driver = total_driver + split.driver
             total_platform = total_platform + split.platform
 

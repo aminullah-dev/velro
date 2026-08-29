@@ -465,7 +465,7 @@
   "driver.earnings.pending": "Payout in progress",
   "driver.earnings.lifetime_earned": "Earned in total",
   "driver.earnings.lifetime_commission": "VELRO's share",
-  "driver.earnings.lifetime_paid": "Paid to you",
+  "driver.earnings.lifetime_paid": "Settled with VELRO",
   "driver.earnings.trips": "Trips completed",
   "driver.earnings.ledger": "Every entry",
   "driver.earnings.ledger_empty": "Nothing yet. Your first completed trip appears here.",
@@ -509,5 +509,18 @@
   "fare.component.seat": "Seat fare",
   "fare.component.private_vehicle": "Whole vehicle",
   "fare.component.base": "Base fare",
-  "fare.component.other": "Other"
+  "fare.component.other": "Other",
+  "error.settlement_direction_invalid": "You owe VELRO {owed_minor}; there is nothing to withdraw.",
+  "driver.earnings.owed": "You owe VELRO",
+  "driver.earnings.owed_explained": "You collected the fares in cash, so VELRO's share is still with you.",
+  "driver.earnings.settle_at_station": "Pay it at the station office. It will be recorded here.",
+  "driver.earnings.pending_collection": "Being settled",
+  "settlement.direction.payout": "Paid to you",
+  "settlement.direction.collection": "Paid by you",
+  "admin.settlements.collect": "Record a payment",
+  "admin.settlements.collect_from": "Cash received from a driver",
+  "admin.settlements.owed": "Owes",
+  "admin.col.direction": "Direction",
+  "admin.settlements.debtors": "Drivers who owe",
+  "admin.settlements.no_debtors": "No driver owes anything."
 }

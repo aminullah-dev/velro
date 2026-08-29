@@ -123,6 +123,20 @@ interface BookingDao {
 
     @Query("DELETE FROM bookings WHERE id = :id")
     suspend fun delete(id: String)
+
+    /**
+     * Drop cached bookings the server no longer lists.
+     *
+     * Upserting a full refresh adds and updates but never removes, so a booking
+     * the server has stopped returning lingers on the home screen for ever --
+     * and the home list and the history screen then disagree about what the
+     * passenger has. Locally-queued bookings are spared: they are not missing
+     * from the server, they have not reached it yet.
+     */
+    @Query(
+        "DELETE FROM bookings WHERE id NOT IN (:keep) AND syncState = :synced"
+    )
+    suspend fun deleteMissing(keep: List<String>, synced: String = SyncState.SYNCED)
 }
 
 @Dao

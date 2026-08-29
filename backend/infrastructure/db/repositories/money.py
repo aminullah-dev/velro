@@ -102,15 +102,63 @@ class WalletRepository(SqlRepository[WalletRow]):
         self.session.add(entry)
         return entry
 
+    def record_trip_settlement(
+        self,
+        *,
+        wallet: WalletRow,
+        platform_minor: int,
+        driver_minor: int,
+        cash: bool,
+        booking_id: str | None = None,
+        trip_id: str | None = None,
+    ) -> WalletTransactionRow:
+        """What a completed booking does to the driver's balance.
+
+        With cash the passenger hands the whole fare to the driver, so nothing
+        is owed *to* them -- they are holding the platform's share and owe it
+        back. The entry is therefore a debit, and the balance goes negative.
+
+        Any other method has the platform collecting the fare, so the driver is
+        owed their share and the entry is a credit. Both cases record the same
+        lifetime earnings: what the driver made does not depend on who happened
+        to hold the notes.
+        """
+        amount_minor = -platform_minor if cash else driver_minor
+        wallet.available_minor += amount_minor
+        wallet.lifetime_earned_minor += driver_minor
+        wallet.lifetime_commission_minor += platform_minor
+        wallet.version += 1
+        self.session.add(wallet)
+
+        entry = WalletTransactionRow(
+            id=new_id(),
+            wallet_id=wallet.id,
+            kind=(
+                WalletEntryKind.COMMISSION.value
+                if cash
+                else WalletEntryKind.TRIP_EARNING.value
+            ),
+            amount_minor=amount_minor,
+            currency=wallet.currency,
+            balance_after_minor=wallet.available_minor,
+            booking_id=booking_id,
+            trip_id=trip_id,
+        )
+        self.session.add(entry)
+        return entry
+
     def hold_for_settlement(
         self, *, wallet: WalletRow, amount_minor: int, settlement_id: str, reference: str
     ) -> WalletTransactionRow:
-        """Move money from available to pending and write the entry.
+        """Move an amount from available into pending, and write the entry.
 
         Deliberately not ``append``: that helper treats a negative amount as a
-        loss and would leave the money in neither bucket. A payout request does
-        not reduce what the driver is owed -- it only stops them asking for the
-        same money twice while the office works on it.
+        loss and would leave the money in neither bucket. A settlement does not
+        change what is owed -- it only stops the same amount being settled twice
+        while the office works on it.
+
+        ``amount_minor`` is signed: positive holds a credit the driver is owed,
+        negative holds a debt the driver owes.
         """
         wallet.available_minor -= amount_minor
         wallet.pending_minor += amount_minor
@@ -152,17 +200,41 @@ class WalletRepository(SqlRepository[WalletRow]):
         self.session.add(entry)
         return entry
 
-    def settle_hold(self, *, wallet: WalletRow, amount_minor: int) -> None:
-        """Paid. The pending bucket drains into the lifetime total.
+    def settle_hold(
+        self, *, wallet: WalletRow, amount_minor: int, collection: bool = False
+    ) -> None:
+        """Settled. The pending bucket drains into the lifetime total.
 
         No ledger entry: the entry was written when the hold was placed, and the
         driver's available balance does not move now. Writing a second entry
-        here would make the ledger sum to less than the driver is owed.
+        here would make the ledger disagree with the balance.
+
+        ``amount_minor`` is signed the same way the hold was, so a collection
+        (negative) drains the negative pending it created.
+
+        ``lifetime_paid`` counts money that changed hands in either direction,
+        which is what reconciling an account needs -- so it is presented as
+        "settled", never as "paid to you": with cash fares most of it is the
+        driver paying in.
         """
         wallet.pending_minor -= amount_minor
-        wallet.lifetime_paid_minor += amount_minor
+        wallet.lifetime_paid_minor += abs(amount_minor)
         wallet.version += 1
         self.session.add(wallet)
+
+    def debtors(self, *, limit: int = 100) -> list[WalletRow]:
+        """Drivers holding money that belongs to the platform.
+
+        Largest debt first: with cash fares this is the operator's working list,
+        and the biggest outstanding amount is the one worth chasing today.
+        """
+        stmt = (
+            self._base()
+            .where(WalletRow.available_minor < 0)
+            .order_by(WalletRow.available_minor.asc())
+            .limit(min(limit, 200))
+        )
+        return list(self.session.scalars(stmt).all())
 
     def ledger(self, wallet_id: str, *, limit: int = 50, offset: int = 0):
         stmt = (
