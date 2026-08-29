@@ -1,1 +1,55 @@
-{"success":true,"data":[{"id":"01a04ca2-db17-7956-9b29-0fe92e6ac893","number":"BKG-2026-000001","trip_id":"01a04c36-4dc2-7ccc-b247-47384d615b7d","status":"CONFIRMED","ride_kind":"SHARED","seat_count":1,"seat_numbers":[1],"pickup_station_id":"01a04c36-4cdc-75ac-bade-b35a65ee5ee2","dropoff_destination_id":"01a04c36-4ce3-7568-a893-73feecbaadc7","fare_total":{"amount_minor":50000,"currency":"AFN"},"payment_method":"CASH","verification_code":"CE27","created_at":"2026-08-29T04:28:56.474771-04:00"}],"message":null,"meta":{}}
+{
+  "success": true,
+  "data": {
+    "bookings": [
+      {
+        "id": "01a04de6-c3a1-7165-9bf7-6c24c50396eb",
+        "number": "BKG-2026-000001",
+        "trip_id": "01a04cf2-9f46-75ab-8c86-75694b53e1ea",
+        "trip_number": "VLR-2026-000003",
+        "status": "COMPLETED",
+        "ride_kind": "SHARED",
+        "seat_count": 2,
+        "seat_numbers": [
+          1,
+          2
+        ],
+        "pickup_station_id": "01a04cf2-9e62-726c-8873-c4608eab207f",
+        "dropoff_destination_id": "01a04cf2-9e6a-7b38-b82f-5ac7031a5e0c",
+        "pickup_station_name": "ایستگاه خیشکی",
+        "dropoff_destination_name": "چاریکار",
+        "fare_total": {
+          "amount_minor": 100000,
+          "currency": "AFN"
+        },
+        "fare_breakdown": [
+          {
+            "key": "fare.component.seat",
+            "amount": {
+              "amount_minor": 50000,
+              "currency": "AFN"
+            },
+            "quantity": 2
+          }
+        ],
+        "payment_method": "CASH",
+        "scheduled_departure_at": "2026-08-29T13:00:00-04:00",
+        "driver_name": "محمد",
+        "vehicle_plate": "PRW-1234",
+        "vehicle_description": "Toyota Corolla 2012",
+        "confirmed_at": "2026-08-29T10:22:44.121527-04:00",
+        "boarded_at": "2026-08-29T10:23:04.774302-04:00",
+        "completed_at": "2026-08-29T10:23:04.833773-04:00",
+        "cancelled_at": null,
+        "cancellation_reason_code": null,
+        "cancellation_fee": null,
+        "verification_code": "LPMF",
+        "created_at": "2026-08-29T10:22:44.133498-04:00"
+      }
+    ],
+    "has_more": false,
+    "next_offset": 1
+  },
+  "message": null,
+  "meta": {}
+}

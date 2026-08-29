@@ -495,5 +495,19 @@
   "admin.settlements.reject_reason": "دلیل رد این پرداخت چیست؟",
   "admin.col.reference": "شماره",
   "admin.col.period": "دوره",
-  "admin.col.amount": "مقدار"
+  "admin.col.amount": "مقدار",
+  "history.title": "سفرهای شما",
+  "history.scope.upcoming": "پیش رو",
+  "history.scope.past": "گذشته",
+  "history.empty.past": "هنوز سفر تکمیل‌شده‌ای نیست.",
+  "history.action.load_more": "نمایش قدیمی‌ترها",
+  "receipt.line.times": "{label} × {count}",
+  "receipt.label.cancellation_fee": "فیس لغو",
+  "receipt.label.no_fee": "از شما چیزی گرفته نشد.",
+  "receipt.label.driver": "راننده",
+  "receipt.label.vehicle": "موتر",
+  "fare.component.seat": "کرایه چوکی",
+  "fare.component.private_vehicle": "کرایه تمام موتر",
+  "fare.component.base": "کرایه اساسی",
+  "fare.component.other": "سایر"
 }

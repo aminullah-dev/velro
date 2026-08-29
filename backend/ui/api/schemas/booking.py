@@ -38,18 +38,50 @@ class BookSeatsIn(Schema):
     passenger_note: str | None = Field(default=None, max_length=500)
 
 
+class FareComponentOut(Schema):
+    """One line of the receipt. The key is a message key, never a sentence:
+    the passenger reads it in their own language, and a stored English phrase
+    could not be retranslated later."""
+
+    key: str
+    amount: MoneyOut
+    quantity: int
+
+
 class BookingOut(Schema):
     id: str
     number: str
     trip_id: str
+    trip_number: str | None = None
     status: str
     ride_kind: str
     seat_count: int
     seat_numbers: list[int]
     pickup_station_id: str
     dropoff_destination_id: str
+    # The names as they are now. A receipt should say where the passenger
+    # actually went even if a station is renamed or retired afterwards, and a
+    # phone that has never downloaded the geography snapshot has no other way
+    # to render them.
+    pickup_station_name: str | None = None
+    dropoff_destination_name: str | None = None
     fare_total: MoneyOut
+    # The breakdown as it stood when the booking was made. A later price change
+    # must never alter a receipt a passenger already holds.
+    fare_breakdown: list[FareComponentOut] = []
     payment_method: str
+    scheduled_departure_at: datetime | None = None
+    # Present only once a driver is assigned, which is most of what a passenger
+    # wants from a receipt: who drove, and in what.
+    driver_name: str | None = None
+    vehicle_plate: str | None = None
+    vehicle_description: str | None = None
+    confirmed_at: datetime | None = None
+    boarded_at: datetime | None = None
+    completed_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    cancellation_reason_code: str | None = None
+    cancellation_fee: MoneyOut | None = None
     # Shown only to the passenger who owns the booking, never in a list to
     # anyone else: it is what boards them.
     verification_code: str | None = None

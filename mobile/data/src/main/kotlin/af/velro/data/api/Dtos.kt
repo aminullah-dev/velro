@@ -177,20 +177,48 @@ data class BookSeatsRequest(
 )
 
 @Serializable
+data class FareComponentDto(
+    val key: String,
+    val amount: MoneyDto,
+    val quantity: Int = 1,
+)
+
+@Serializable
 data class BookingDto(
     val id: String,
     val number: String,
     val trip_id: String,
+    val trip_number: String? = null,
     val status: String,
     val ride_kind: String,
     val seat_count: Int,
     val seat_numbers: List<Int>,
     val pickup_station_id: String,
     val dropoff_destination_id: String,
+    val pickup_station_name: String? = null,
+    val dropoff_destination_name: String? = null,
     val fare_total: MoneyDto,
+    val fare_breakdown: List<FareComponentDto> = emptyList(),
     val payment_method: String,
+    val scheduled_departure_at: String? = null,
+    val driver_name: String? = null,
+    val vehicle_plate: String? = null,
+    val vehicle_description: String? = null,
+    val confirmed_at: String? = null,
+    val boarded_at: String? = null,
+    val completed_at: String? = null,
+    val cancelled_at: String? = null,
+    val cancellation_reason_code: String? = null,
+    val cancellation_fee: MoneyDto? = null,
     val verification_code: String? = null,
     val created_at: String? = null,
+)
+
+@Serializable
+data class BookingPageDto(
+    val bookings: List<BookingDto> = emptyList(),
+    val has_more: Boolean = false,
+    val next_offset: Int = 0,
 )
 
 @Serializable

@@ -244,6 +244,10 @@ def village_aliases(session: SessionDep) -> VillageAliasRepository:
     return VillageAliasRepository(session)
 
 
+def destinations_repo(session: SessionDep) -> DestinationRepository:
+    return DestinationRepository(session)
+
+
 def stations_repo(session: SessionDep) -> StationRepository:
     return StationRepository(session)
 

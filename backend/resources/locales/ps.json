@@ -495,5 +495,19 @@
   "admin.settlements.reject_reason": "د دې تادیې د ردولو دلیل څه دی؟",
   "admin.col.reference": "شمېره",
   "admin.col.period": "دوره",
-  "admin.col.amount": "اندازه"
+  "admin.col.amount": "اندازه",
+  "history.title": "ستاسو سفرونه",
+  "history.scope.upcoming": "مخې ته",
+  "history.scope.past": "تېر",
+  "history.empty.past": "لا تر اوسه بشپړ شوی سفر نشته.",
+  "history.action.load_more": "زاړه وښایاست",
+  "receipt.line.times": "{label} × {count}",
+  "receipt.label.cancellation_fee": "د لغوې فیس",
+  "receipt.label.no_fee": "له تاسو څه وا نه خیستل شول.",
+  "receipt.label.driver": "ډرایور",
+  "receipt.label.vehicle": "موټر",
+  "fare.component.seat": "د چوکۍ کرایه",
+  "fare.component.private_vehicle": "د ټول موټر کرایه",
+  "fare.component.base": "بنسټیزه کرایه",
+  "fare.component.other": "نور"
 }

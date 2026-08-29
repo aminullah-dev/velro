@@ -89,7 +89,27 @@ data class BookingEntity(
     val dropoffDestinationId: String,
     val fareTotalMinor: Long,
     val fareTotalCurrency: String,
+    /**
+     * The receipt lines, as JSON.
+     *
+     * Cached rather than fetched, because a passenger asking what they paid is
+     * often doing so precisely where there is no signal. Stored as text because
+     * Room has no list type and a second table for a handful of lines that are
+     * only ever read together would cost a join for nothing.
+     */
+    val fareBreakdown: String = "[]",
+    val pickupStationName: String? = null,
+    val dropoffDestinationName: String? = null,
     val paymentMethod: String,
+    val tripNumber: String? = null,
+    val scheduledDepartureAt: Long? = null,
+    val driverName: String? = null,
+    val vehiclePlate: String? = null,
+    val vehicleDescription: String? = null,
+    val completedAt: Long? = null,
+    val cancelledAt: Long? = null,
+    val cancellationReasonCode: String? = null,
+    val cancellationFeeMinor: Long? = null,
     val verificationCode: String?,
     val createdAt: Long?,
     /**

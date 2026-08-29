@@ -9,6 +9,7 @@ import af.velro.core.ui.theme.Spacing
 import af.velro.feature.auth.SignInRoute
 import af.velro.feature.booking.BookingFlowRoute
 import af.velro.feature.trip.BookingDetailRoute
+import af.velro.feature.trip.HistoryRoute
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,7 +22,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -40,6 +45,7 @@ private object Routes {
     const val HOME = "home"
     const val BOOK = "book"
     const val BOOKING_DETAIL = "booking/{bookingId}"
+    const val HISTORY = "history"
 
     fun bookingDetail(id: String) = "booking/$id"
 }
@@ -75,6 +81,7 @@ fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rem
             HomeScreen(
                 onBook = { navController.navigate(Routes.BOOK) },
                 onOpenBooking = { navController.navigate(Routes.bookingDetail(it)) },
+                onOpenHistory = { navController.navigate(Routes.HISTORY) },
             )
         }
 
@@ -92,6 +99,13 @@ fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rem
         composable(Routes.BOOKING_DETAIL) {
             BookingDetailRoute()
         }
+
+        composable(Routes.HISTORY) {
+            HistoryRoute(
+                onOpenBooking = { navController.navigate(Routes.bookingDetail(it)) },
+                onBook = { navController.navigate(Routes.BOOK) },
+            )
+        }
     }
 }
 
@@ -107,6 +121,7 @@ fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rem
 private fun HomeScreen(
     onBook: () -> Unit,
     onOpenBooking: (String) -> Unit,
+    onOpenHistory: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val strings = LocalVelroStrings.current
@@ -129,10 +144,19 @@ private fun HomeScreen(
             )
             Spacer(Modifier.height(Spacing.xl))
 
-            Text(
-                strings["home.section.recent_trips"],
-                style = MaterialTheme.typography.titleMedium,
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    strings["home.section.recent_trips"],
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                // Home shows the few most recent; everything else, and the
+                // receipts, live behind this.
+                TextButton(onClick = onOpenHistory) { Text(strings["history.title"]) }
+            }
             Spacer(Modifier.height(Spacing.sm))
 
             when {

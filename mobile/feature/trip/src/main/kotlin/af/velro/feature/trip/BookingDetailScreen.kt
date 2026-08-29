@@ -1,5 +1,6 @@
 package af.velro.feature.trip
 
+import af.velro.core.i18n.Calendars
 import af.velro.core.ui.component.BoardingCode
 import af.velro.core.ui.component.ErrorState
 import af.velro.core.ui.component.FareRow
@@ -20,11 +21,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,7 +39,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import af.velro.domain.Booking
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -71,6 +79,9 @@ fun BookingDetailScreen(
     Column(
         modifier
             .fillMaxSize()
+            // Pushed onto the stack with no app bar of its own, so the booking
+            // number would otherwise sit under the clock.
+            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Spacing.gutter, vertical = Spacing.lg)
     ) {
@@ -107,9 +118,24 @@ fun BookingDetailScreen(
         VelroCard {
             Column {
                 Journey(state.originName, state.destinationName)
+                booking.scheduledDepartureAt?.let {
+                    Spacer(Modifier.height(Spacing.sm))
+                    Text(
+                        Calendars.dateTime(it, strings.locale),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 Spacer(Modifier.height(Spacing.md))
-                FareRow(strings["ride.label.fare"], booking.fareTotal, bold = true)
+                Receipt(booking)
             }
+        }
+
+        // Who drove, and in what. Absent until a driver is assigned, which is
+        // a state to render rather than a gap to apologise for.
+        if (booking.driverName != null || booking.vehiclePlate != null) {
+            Spacer(Modifier.height(Spacing.lg))
+            VelroCard { Vehicle(booking) }
         }
 
         Spacer(Modifier.height(Spacing.xl))
@@ -134,6 +160,81 @@ fun BookingDetailScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
+        }
+    }
+}
+
+@Composable
+private fun Receipt(booking: Booking) {
+    val strings = LocalVelroStrings.current
+    Column {
+        // The lines are shown only when they account for the total. A receipt
+        // that does not add up is worse than one that only states the total.
+        if (booking.breakdownExplainsTotal) {
+            booking.fareBreakdown.forEach { component ->
+                FareRow(
+                    if (component.quantity > 1) {
+                        strings[
+                            "receipt.line.times",
+                            "label" to strings[component.key],
+                            "count" to component.quantity,
+                        ]
+                    } else {
+                        strings[component.key]
+                    },
+                    component.total,
+                )
+            }
+            HorizontalDivider(Modifier.padding(vertical = Spacing.sm))
+        }
+        FareRow(strings["ride.label.fare"], booking.fareTotal, bold = true)
+
+        booking.cancellationFee?.let { fee ->
+            Spacer(Modifier.height(Spacing.sm))
+            FareRow(strings["receipt.label.cancellation_fee"], fee)
+            // Zero is worth saying: the passenger should be told they were not
+            // charged rather than left to infer it from an absent line.
+            if (fee.amountMinor == 0L) {
+                Text(
+                    strings["receipt.label.no_fee"],
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(Spacing.sm))
+        Text(
+            strings["payment.method.${booking.paymentMethod.name.lowercase()}"],
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun Vehicle(booking: Booking) {
+    val strings = LocalVelroStrings.current
+    Column {
+        Text(strings["receipt.label.driver"], style = MaterialTheme.typography.labelSmall,
+             color = MaterialTheme.colorScheme.onSurfaceVariant)
+        booking.driverName?.let {
+            Text(it, style = MaterialTheme.typography.bodyLarge)
+        }
+        booking.vehiclePlate?.let { plate ->
+            Spacer(Modifier.height(Spacing.sm))
+            Text(strings["receipt.label.vehicle"], style = MaterialTheme.typography.labelSmall,
+                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // A plate is read off a physical car: never mirrored, never in
+            // Eastern digits, whatever the app language.
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Text(plate, style = MaterialTheme.typography.bodyLarge,
+                     fontWeight = FontWeight.SemiBold)
+            }
+            booking.vehicleDescription?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium,
+                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

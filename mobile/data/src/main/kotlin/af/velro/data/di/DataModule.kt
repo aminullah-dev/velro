@@ -7,6 +7,7 @@ import af.velro.data.api.ResponseMapper
 import af.velro.data.api.TokenRefreshAuthenticator
 import af.velro.data.api.TokenStore
 import af.velro.data.api.VelroApi
+import af.velro.data.db.ALL_MIGRATIONS
 import af.velro.data.db.VelroDatabase
 import android.content.Context
 import androidx.room.Room
@@ -113,6 +114,8 @@ object DataModule {
         Room.databaseBuilder(context, VelroDatabase::class.java, VelroDatabase.NAME)
             // No fallbackToDestructiveMigration: wiping a driver's offline
             // queue because a migration was not written is not an acceptable
-            // upgrade path.
+            // upgrade path. A missing migration must crash in testing rather
+            // than delete data in Ghorband.
+            .addMigrations(*ALL_MIGRATIONS)
             .build()
 }

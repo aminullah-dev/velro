@@ -95,10 +95,57 @@ data class Booking(
     /** Present only for the passenger who owns it. It is what boards them. */
     val verificationCode: String? = null,
     val createdAt: Instant? = null,
+    /**
+     * The fare as it was quoted when the booking was made.
+     *
+     * Kept with the booking rather than recomputed: a price change afterwards
+     * must never alter a receipt the passenger already holds.
+     */
+    val fareBreakdown: List<FareComponent> = emptyList(),
+    /**
+     * Where the journey ran, recorded with the booking.
+     *
+     * The geography cache can answer this too, but only once it has been
+     * downloaded -- and a station renamed or retired later would then make an
+     * old receipt describe a journey the passenger never took.
+     */
+    val pickupStationName: String? = null,
+    val dropoffDestinationName: String? = null,
+    val tripNumber: String? = null,
+    val scheduledDepartureAt: Instant? = null,
+    val driverName: String? = null,
+    val vehiclePlate: String? = null,
+    val vehicleDescription: String? = null,
+    val completedAt: Instant? = null,
+    val cancelledAt: Instant? = null,
+    val cancellationReasonCode: String? = null,
+    val cancellationFee: MoneyValue? = null,
 ) {
     val isActive: Boolean get() = !Lifecycles.booking.isTerminal(status)
     val canCancel: Boolean get() = status in Lifecycles.cancellableBookingStatuses
     val canRate: Boolean get() = status == BookingStatus.COMPLETED
+
+    /** A journey still ahead: the passenger may still need to board it. */
+    val isUpcoming: Boolean get() = isActive
+
+    /**
+     * Whether the components account for the total.
+     *
+     * A receipt whose lines do not add up is worse than one with no lines,
+     * so the screen shows the breakdown only when this holds.
+     */
+    val breakdownExplainsTotal: Boolean
+        get() = fareBreakdown.isNotEmpty() &&
+            fareBreakdown.sumOf { it.total.amountMinor } == fareTotal.amountMinor
+}
+
+/** One line of a receipt. The key is a message key, never a sentence. */
+data class FareComponent(
+    val key: String,
+    val amount: MoneyValue,
+    val quantity: Int = 1,
+) {
+    val total: MoneyValue get() = MoneyValue(amount.amountMinor * quantity, amount.currency)
 }
 
 data class TripSummary(

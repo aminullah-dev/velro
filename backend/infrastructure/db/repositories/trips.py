@@ -133,16 +133,45 @@ class BookingRepository(SqlRepository[BookingRow]):
         return row
 
     def list_for_passenger(
-        self, passenger_id: str, *, limit: int = 20, offset: int = 0
+        self,
+        passenger_id: str,
+        *,
+        limit: int = 20,
+        offset: int = 0,
+        statuses: list[str] | None = None,
     ) -> list[BookingRow]:
+        stmt = self._base().where(BookingRow.passenger_id == passenger_id)
+        if statuses:
+            stmt = stmt.where(BookingRow.status.in_(statuses))
         stmt = (
-            self._base()
-            .where(BookingRow.passenger_id == passenger_id)
-            .order_by(BookingRow.created_at.desc())
+            # Newest first, tie-broken on id: two bookings made in one commit
+            # share a timestamp, and without the tiebreak a page boundary can
+            # repeat or drop one.
+            stmt.order_by(BookingRow.created_at.desc(), BookingRow.id.desc())
             .limit(min(limit, 100))
             .offset(offset)
         )
         return list(self.session.scalars(stmt).all())
+
+    def seats_for_bookings(self, booking_ids) -> dict[str, list[int]]:
+        """Seat numbers for a page of bookings, in one query.
+
+        The list screen needs them for every row; asking per booking turns a
+        history page into twenty round trips.
+        """
+        wanted = [i for i in set(booking_ids) if i]
+        if not wanted:
+            return {}
+        rows = self.session.execute(
+            select(BookingSeatRow.booking_id, BookingSeatRow.seat_number).where(
+                BookingSeatRow.booking_id.in_(wanted),
+                BookingSeatRow.deleted_at.is_(None),
+            )
+        ).all()
+        out: dict[str, list[int]] = {}
+        for booking_id, seat_number in rows:
+            out.setdefault(booking_id, []).append(seat_number)
+        return out
 
     def list_for_trip(self, trip_id: str) -> list[BookingRow]:
         stmt = (

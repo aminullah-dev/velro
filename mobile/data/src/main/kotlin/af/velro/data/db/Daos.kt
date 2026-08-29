@@ -106,6 +106,18 @@ interface BookingDao {
     @Query("SELECT * FROM bookings WHERE status IN (:statuses) ORDER BY createdAt DESC")
     fun active(statuses: List<String>): Flow<List<BookingEntity>>
 
+    /**
+     * What the history screen shows with no signal.
+     *
+     * Ordered like the server's own list -- newest first, tie-broken on id --
+     * so the cached view and the fresh one are not in a different order.
+     */
+    @Query(
+        "SELECT * FROM bookings WHERE status IN (:statuses) " +
+            "ORDER BY createdAt DESC, id DESC LIMIT :limit"
+    )
+    suspend fun cachedByStatus(statuses: List<String>, limit: Int): List<BookingEntity>
+
     @Upsert suspend fun upsert(booking: BookingEntity)
     @Upsert suspend fun upsertAll(bookings: List<BookingEntity>)
 

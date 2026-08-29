@@ -105,11 +105,19 @@ interface VelroApi {
         @Body body: BookSeatsRequest,
     ): Response<Envelope<BookingDto>>
 
+    /**
+     * The passenger's own bookings.
+     *
+     * ``scope`` is "all", "upcoming" or "past" -- the split the history screen
+     * shows as tabs, decided by the server so both surfaces agree on which
+     * statuses count as finished.
+     */
     @GET("bookings")
     suspend fun bookings(
         @Query("limit") limit: Int = 20,
         @Query("offset") offset: Int = 0,
-    ): Response<Envelope<List<BookingDto>>>
+        @Query("scope") scope: String = "all",
+    ): Response<Envelope<BookingPageDto>>
 
     @GET("bookings/{id}")
     suspend fun booking(@Path("id") bookingId: String): Response<Envelope<BookingDto>>

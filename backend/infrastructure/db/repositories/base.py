@@ -52,6 +52,20 @@ class SqlRepository(Generic[R]):
             stmt = stmt.where(getattr(self.model, column) == value)
         return self.session.scalars(stmt).first()
 
+    def by_ids(self, ids) -> list[R]:
+        """Several rows in one query.
+
+        Screens that render a list almost always need something joined to each
+        row; without this each one becomes its own round trip, which on a rural
+        connection is the difference between a screen and a wait.
+        """
+        wanted = [i for i in set(ids) if i]
+        if not wanted:
+            return []
+        return list(
+            self.session.scalars(self._base().where(self.model.id.in_(wanted))).all()
+        )
+
     def list(self, *, limit: int = DEFAULT_LIMIT, offset: int = 0, **criteria: Any) -> list[R]:
         stmt = self._base()
         for column, value in criteria.items():

@@ -80,8 +80,14 @@ class BookingDetailViewModel @Inject constructor(
         viewModelScope.launch {
             bookings.booking(bookingId).collect { cached ->
                 if (cached == null) return@collect
-                val origin = geography.station(cached.pickupStationId)?.name
-                val destination = geography.destination(cached.dropoffDestinationId)?.name
+                // The name recorded with the booking wins: the cache may be
+                // empty on a handset that has never opened the booking flow,
+                // and a station renamed since would otherwise relabel an old
+                // receipt with a journey the passenger never took.
+                val origin = cached.pickupStationName
+                    ?: geography.station(cached.pickupStationId)?.name
+                val destination = cached.dropoffDestinationName
+                    ?: geography.destination(cached.dropoffDestinationId)?.name
                 _state.update {
                     it.copy(
                         booking = cached,

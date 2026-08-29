@@ -12,6 +12,9 @@ android {
 
     defaultConfig {
         minSdk = 24
+        // Migration tests run on a device: MigrationTestHelper needs a real
+        // SQLite, and a migration verified against a mock is not verified.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The base URL is a build setting, not a constant in code, so a staging
         // build is a flag rather than an edit.
         buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/api/v1/\"")
@@ -21,6 +24,7 @@ android {
     // Schemas are checked in so a migration can be written against the exact
     // shape that shipped, and so migration tests have something to migrate from.
     ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+    sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
     buildTypes {
         release {
             buildConfigField("String", "API_BASE_URL", "\"https://api.velro.af/api/v1/\"")
@@ -57,4 +61,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
 }

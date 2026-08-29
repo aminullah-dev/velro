@@ -45,6 +45,16 @@ class CancellationRepository(SqlRepository[CancellationRow]):
         self.session.add(row)
         return row
 
+    def by_booking_ids(self, booking_ids) -> list[CancellationRow]:
+        wanted = [i for i in set(booking_ids) if i]
+        if not wanted:
+            return []
+        return list(
+            self.session.scalars(
+                self._base().where(CancellationRow.booking_id.in_(wanted))
+            ).all()
+        )
+
 
 class NotificationRepository(SqlRepository[NotificationRow]):
     model = NotificationRow

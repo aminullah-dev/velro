@@ -6,6 +6,7 @@ import af.velro.data.api.DestinationGroupDto
 import af.velro.data.api.DistrictDto
 import af.velro.data.api.DriverProfileDto
 import af.velro.data.api.EarningsDto
+import af.velro.data.api.FareComponentDto
 import af.velro.data.api.MoneyDto
 import af.velro.data.api.SessionDto
 import af.velro.data.api.StationDto
@@ -29,6 +30,7 @@ import af.velro.domain.DriverApprovalStatus
 import af.velro.domain.DriverAvailability
 import af.velro.domain.DriverProfile
 import af.velro.domain.Earnings
+import af.velro.domain.FareComponent
 import af.velro.domain.MoneyValue
 import af.velro.domain.PaymentMethod
 import af.velro.domain.RideKind
@@ -42,6 +44,8 @@ import af.velro.domain.VehicleStatus
 import af.velro.domain.Village
 import af.velro.domain.enumOrNull
 import java.time.Instant
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 
 /**
  * Wire and storage shapes onto domain entities.
@@ -148,6 +152,24 @@ fun BookingDto.toDomain() = Booking(
     paymentMethod = enumOrNull<PaymentMethod>(payment_method) ?: PaymentMethod.CASH,
     verificationCode = verification_code,
     createdAt = created_at.toInstantOrNull(),
+    fareBreakdown = fare_breakdown.map { it.toDomain() },
+    pickupStationName = pickup_station_name,
+    dropoffDestinationName = dropoff_destination_name,
+    tripNumber = trip_number,
+    scheduledDepartureAt = scheduled_departure_at.toInstantOrNull(),
+    driverName = driver_name,
+    vehiclePlate = vehicle_plate,
+    vehicleDescription = vehicle_description,
+    completedAt = completed_at.toInstantOrNull(),
+    cancelledAt = cancelled_at.toInstantOrNull(),
+    cancellationReasonCode = cancellation_reason_code,
+    cancellationFee = cancellation_fee?.toDomain(),
+)
+
+fun FareComponentDto.toDomain() = FareComponent(
+    key = key,
+    amount = amount.toDomain(),
+    quantity = quantity,
 )
 
 fun BookingDto.toEntity(syncState: String = SyncState.SYNCED) = BookingEntity(
@@ -162,11 +184,46 @@ fun BookingDto.toEntity(syncState: String = SyncState.SYNCED) = BookingEntity(
     dropoffDestinationId = dropoff_destination_id,
     fareTotalMinor = fare_total.amount_minor,
     fareTotalCurrency = fare_total.currency,
+    fareBreakdown = encodeBreakdown(fare_breakdown),
+    pickupStationName = pickup_station_name,
+    dropoffDestinationName = dropoff_destination_name,
     paymentMethod = payment_method,
+    tripNumber = trip_number,
+    scheduledDepartureAt = scheduled_departure_at.toInstantOrNull()?.toEpochMilli(),
+    driverName = driver_name,
+    vehiclePlate = vehicle_plate,
+    vehicleDescription = vehicle_description,
+    completedAt = completed_at.toInstantOrNull()?.toEpochMilli(),
+    cancelledAt = cancelled_at.toInstantOrNull()?.toEpochMilli(),
+    cancellationReasonCode = cancellation_reason_code,
+    cancellationFeeMinor = cancellation_fee?.amount_minor,
     verificationCode = verification_code,
     createdAt = created_at.toInstantOrNull()?.toEpochMilli(),
     syncState = syncState,
 )
+
+private val breakdownJson = Json { ignoreUnknownKeys = true }
+
+private fun encodeBreakdown(components: List<FareComponentDto>): String =
+    runCatching {
+        breakdownJson.encodeToString(ListSerializer(FareComponentDto.serializer()), components)
+    }.getOrDefault("[]")
+
+/**
+ * A cached receipt that cannot be read is not an error worth surfacing: the
+ * total is still right, and the screen already hides a breakdown that does not
+ * account for it.
+ */
+private fun decodeBreakdown(raw: String, currency: String): List<FareComponent> =
+    runCatching {
+        breakdownJson.decodeFromString(ListSerializer(FareComponentDto.serializer()), raw).map {
+            FareComponent(
+                key = it.key,
+                amount = MoneyValue(it.amount.amount_minor, it.amount.currency),
+                quantity = it.quantity,
+            )
+        }
+    }.getOrDefault(emptyList())
 
 fun BookingEntity.toDomain() = Booking(
     id = id,
@@ -182,6 +239,18 @@ fun BookingEntity.toDomain() = Booking(
     paymentMethod = enumOrNull<PaymentMethod>(paymentMethod) ?: PaymentMethod.CASH,
     verificationCode = verificationCode,
     createdAt = createdAt?.let(Instant::ofEpochMilli),
+    fareBreakdown = decodeBreakdown(fareBreakdown, fareTotalCurrency),
+    pickupStationName = pickupStationName,
+    dropoffDestinationName = dropoffDestinationName,
+    tripNumber = tripNumber,
+    scheduledDepartureAt = scheduledDepartureAt?.let(Instant::ofEpochMilli),
+    driverName = driverName,
+    vehiclePlate = vehiclePlate,
+    vehicleDescription = vehicleDescription,
+    completedAt = completedAt?.let(Instant::ofEpochMilli),
+    cancelledAt = cancelledAt?.let(Instant::ofEpochMilli),
+    cancellationReasonCode = cancellationReasonCode,
+    cancellationFee = cancellationFeeMinor?.let { MoneyValue(it, fareTotalCurrency) },
 )
 
 fun TripSummaryDto.toDomain() = TripSummary(

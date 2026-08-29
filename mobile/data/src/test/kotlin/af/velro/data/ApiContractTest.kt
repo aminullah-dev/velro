@@ -1,6 +1,8 @@
 package af.velro.data
 
 import af.velro.data.api.BookingDto
+import af.velro.data.api.BookingPageDto
+import af.velro.data.repository.toEntity
 import af.velro.data.api.DestinationGroupDto
 import af.velro.data.api.DistrictDto
 import af.velro.data.api.DriverProfileDto
@@ -134,14 +136,54 @@ class ApiContractTest {
 
     @Test
     fun `a booking decodes with its seats and fare`() {
-        val bookings = decode<List<BookingDto>>("bookings.json")
-        assertTrue("the fixture must contain a booking", bookings.isNotEmpty())
+        val page = decode<BookingPageDto>("bookings.json")
+        assertTrue("the fixture must contain a booking", page.bookings.isNotEmpty())
 
-        val booking = bookings.first().toDomain()
+        val booking = page.bookings.first().toDomain()
         assertTrue(booking.number.startsWith("BKG-"))
         assertEquals(booking.seatCount, booking.seatNumbers.size)
         assertTrue(booking.fareTotal.amountMinor > 0)
         assertNotNull("the owner sees their boarding code", booking.verificationCode)
+    }
+
+    @Test
+    fun `a booking carries a receipt that adds up`() {
+        val booking = decode<BookingPageDto>("bookings.json").bookings.first().toDomain()
+
+        assertTrue("a receipt needs its lines", booking.fareBreakdown.isNotEmpty())
+        // The screen hides a breakdown that does not account for the total, so
+        // a server change that broke this would silently show less, not fail.
+        assertTrue(
+            "components must account for the total",
+            booking.breakdownExplainsTotal,
+        )
+        assertNotNull("a passenger needs to know when", booking.scheduledDepartureAt)
+        assertNotNull("and who drove", booking.driverName)
+        assertNotNull(booking.vehiclePlate)
+        // Recorded with the booking, so the receipt names the journey on a
+        // handset whose geography cache has never been filled.
+        assertNotNull("and where they boarded", booking.pickupStationName)
+        assertNotNull("and where they were going", booking.dropoffDestinationName)
+    }
+
+    @Test
+    fun `a booking survives a round trip through the cache`() {
+        val dto = decode<BookingPageDto>("bookings.json").bookings.first()
+
+        // Straight from the wire, and back out of the local database. The
+        // receipt is read offline more often than online, so the cached form
+        // has to carry everything the fresh one does.
+        val direct = dto.toDomain()
+        val cached = dto.toEntity().toDomain()
+
+        assertEquals(direct.fareTotal, cached.fareTotal)
+        assertEquals(direct.fareBreakdown, cached.fareBreakdown)
+        assertEquals(direct.scheduledDepartureAt, cached.scheduledDepartureAt)
+        assertEquals(direct.driverName, cached.driverName)
+        assertEquals(direct.vehiclePlate, cached.vehiclePlate)
+        assertEquals(direct.seatNumbers, cached.seatNumbers)
+        assertEquals(direct.pickupStationName, cached.pickupStationName)
+        assertEquals(direct.dropoffDestinationName, cached.dropoffDestinationName)
     }
 
     @Test

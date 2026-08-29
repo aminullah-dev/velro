@@ -71,14 +71,30 @@ def test_no_translation_is_blank(locale: str) -> None:
 
 @pytest.mark.parametrize("locale", RTL_LOCALES)
 def test_rtl_locales_are_written_in_perso_arabic(locale: str) -> None:
-    """Catches a key accidentally left as its English source text."""
+    """Catches a key accidentally left as its English source text.
+
+    A string with no Latin letters at all is exempt: "{label} × {count}" is
+    entirely placeholders and punctuation, so there is no English left in it to
+    catch. Requiring a Perso-Arabic character there would force a word into a
+    string that reads correctly without one.
+    """
     latin_only = sorted(
         key
         for key, value in load(locale).items()
         if key not in {"app.name"}
+        and any("a" <= ch.lower() <= "z" for ch in _outside_placeholders(value))
         and not any("؀" <= ch <= "ۿ" for ch in value)
     )
     assert not latin_only, f"{locale} strings still look untranslated: {latin_only}"
+
+
+def _outside_placeholders(value: str) -> str:
+    """The text a reader actually sees, with ``{name}`` removed.
+
+    A placeholder name is always Latin -- it is a variable, not prose -- so
+    leaving them in would make every parameterised string look untranslated.
+    """
+    return re.sub(r"\{[^}]*\}", "", value)
 
 
 def test_pashto_keeps_its_own_letters() -> None:
@@ -138,3 +154,17 @@ def test_every_key_the_apps_ask_for_exists() -> None:
     )
     missing = {k: v for k, v in used.items() if k not in english}
     assert not missing, "app keys with no message: " + ", ".join(sorted(missing))
+
+
+def test_every_fare_component_key_has_a_message() -> None:
+    """The receipt renders these by key, interpolated -- so the source scan
+    above cannot see them. They are checked against the pricing code that
+    emits them instead, which is the only place they are decided."""
+    english = load("en")
+    emitted = set()
+    for path in (_REPO / "backend" / "application" / "pricing").rglob("*.py"):
+        emitted |= set(re.findall(r'"(fare\.component\.[a-z_]+)"', path.read_text()))
+
+    assert emitted, "no fare component keys found -- has the pricing engine moved?"
+    missing = sorted(k for k in emitted if k not in english)
+    assert not missing, f"fare components with no message: {missing}"

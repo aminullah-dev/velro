@@ -97,12 +97,49 @@ class BookingRepository @Inject constructor(
         return result.map { it.toDomain() }
     }
 
-    suspend fun refreshBookings(): ApiResult<List<Booking>> {
-        val result = mapper.call { api.bookings(limit = 50) }
+    data class BookingPage(
+        val bookings: List<Booking>,
+        val hasMore: Boolean,
+        val nextOffset: Int,
+    )
+
+    suspend fun refreshBookings(): ApiResult<List<Booking>> =
+        history(limit = 50).map { it.bookings }
+
+    /**
+     * A page of history, cached as it arrives.
+     *
+     * Every page is written to the local database, so scrolling back through
+     * history once makes it readable afterwards with no signal -- which is
+     * usually when a passenger wants to check what they paid.
+     */
+    /**
+     * What was last seen for this scope, straight from the local database.
+     *
+     * The statuses are the ones the server used, kept here so the offline view
+     * cannot classify a booking differently from the online one.
+     */
+    suspend fun cachedHistory(statuses: List<BookingStatus>, limit: Int = 50): List<Booking> =
+        db.bookings()
+            .cachedByStatus(statuses.map { it.name }, limit)
+            .map { it.toDomain() }
+
+    suspend fun history(
+        limit: Int = 20,
+        offset: Int = 0,
+        scope: String = "all",
+    ): ApiResult<BookingPage> {
+        val result = mapper.call { api.bookings(limit = limit, offset = offset, scope = scope) }
         if (result is ApiResult.Success) {
-            db.bookings().upsertAll(result.value.map { it.toEntity() })
+            db.bookings().upsertAll(result.value.bookings.map { it.toEntity() })
         }
-        return result.map { list -> list.map { it.toDomain() } }
+        return result.map { page ->
+            BookingPage(
+                bookings = page.bookings.map { it.toDomain() },
+                hasMore = page.has_more,
+                nextOffset = page.next_offset,
+            )
+        }
     }
 
     suspend fun refreshBooking(id: String): ApiResult<Booking> {

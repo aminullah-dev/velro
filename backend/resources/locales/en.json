@@ -495,5 +495,19 @@
   "admin.settlements.reject_reason": "Why is this payout being refused?",
   "admin.col.reference": "Reference",
   "admin.col.period": "Period",
-  "admin.col.amount": "Amount"
+  "admin.col.amount": "Amount",
+  "history.title": "Your journeys",
+  "history.scope.upcoming": "Coming up",
+  "history.scope.past": "Past",
+  "history.empty.past": "No finished journeys yet.",
+  "history.action.load_more": "Show older",
+  "receipt.line.times": "{label} × {count}",
+  "receipt.label.cancellation_fee": "Cancellation fee",
+  "receipt.label.no_fee": "You were not charged.",
+  "receipt.label.driver": "Driver",
+  "receipt.label.vehicle": "Vehicle",
+  "fare.component.seat": "Seat fare",
+  "fare.component.private_vehicle": "Whole vehicle",
+  "fare.component.base": "Base fare",
+  "fare.component.other": "Other"
 }
