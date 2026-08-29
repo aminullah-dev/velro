@@ -91,3 +91,50 @@ def test_pashto_keeps_its_own_letters() -> None:
     pashto_letters = set("ټډړږښګڼېۍ")
     present = {ch for ch in pashto_letters if ch in text}
     assert len(present) >= 6, f"Pashto file uses too few Pashto-specific letters: {present}"
+
+
+# -- keys the surfaces actually ask for -----------------------------------
+
+_REPO = Path(__file__).resolve().parents[3]
+
+
+def _literal_keys(root: Path, patterns: tuple[str, ...]) -> dict[str, set[Path]]:
+    """Every message key written as a literal in source.
+
+    Interpolated lookups -- ``t(`document.type.${code}`)`` -- cannot be read
+    statically and are not covered here; those families are checked by the
+    tests that exercise the endpoint returning the code.
+    """
+    found: dict[str, set[Path]] = {}
+    if not root.is_dir():
+        return found
+    for path in root.rglob("*"):
+        if path.suffix not in {".ts", ".tsx", ".kt"} or not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        for pattern in patterns:
+            for match in re.finditer(pattern, text):
+                found.setdefault(match.group(1), set()).add(path)
+    return found
+
+
+def test_every_key_the_admin_panel_asks_for_exists() -> None:
+    """A missing key does not crash -- it renders as ``ADMIN.COL.AMOUNT`` on
+    screen, which is how this was found. The test is cheaper than the review."""
+    english = load("en")
+    used = _literal_keys(_REPO / "admin" / "src", (r't\("([a-z][a-zA-Z0-9._]*)"\)',))
+    missing = {k: v for k, v in used.items() if k not in english}
+    assert not missing, "admin keys with no message: " + ", ".join(sorted(missing))
+
+
+def test_every_key_the_apps_ask_for_exists() -> None:
+    english = load("en")
+    used = _literal_keys(
+        _REPO / "mobile",
+        (
+            r'strings\["([a-z][a-zA-Z0-9._]*)"',
+            r'strings\.get\("([a-z][a-zA-Z0-9._]*)"',
+        ),
+    )
+    missing = {k: v for k, v in used.items() if k not in english}
+    assert not missing, "app keys with no message: " + ", ".join(sorted(missing))

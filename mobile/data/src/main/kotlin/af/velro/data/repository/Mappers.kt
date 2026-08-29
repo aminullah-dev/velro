@@ -247,6 +247,7 @@ fun EarningsDto.toDomain() = Earnings(
     pending = pending.toDomain(),
     lifetimeEarned = lifetime_earned.toDomain(),
     lifetimeCommission = lifetime_commission.toDomain(),
+    lifetimePaid = lifetime_paid?.toDomain() ?: MoneyValue(0, available.currency),
     completedTrips = completed_trips,
 )
 

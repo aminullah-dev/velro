@@ -14,6 +14,7 @@ import { LocationsPage } from "./pages/Locations";
 import { RoutesPage } from "./pages/Routes";
 import { SettingsPage } from "./pages/Settings";
 import { SignInPage } from "./pages/SignIn";
+import { SettlementsPage } from "./pages/Settlements";
 import { TripsPage } from "./pages/Trips";
 import { VehicleApprovalsPage } from "./pages/VehicleApprovals";
 import { VehiclesPage } from "./pages/Vehicles";
@@ -33,6 +34,7 @@ const NAV = [
     labelKey: "admin.nav.vehicle_approvals",
     element: <VehicleApprovalsPage />,
   },
+  { to: "/settlements", labelKey: "admin.nav.settlements", element: <SettlementsPage /> },
   { to: "/locations", labelKey: "admin.nav.locations", element: <LocationsPage /> },
   { to: "/import", labelKey: "admin.nav.import", element: <ImportVillagesPage /> },
   { to: "/routes", labelKey: "admin.nav.routes", element: <RoutesPage /> },

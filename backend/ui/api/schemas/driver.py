@@ -75,6 +75,9 @@ class EarningsOut(Schema):
     pending: MoneyOut
     lifetime_earned: MoneyOut
     lifetime_commission: MoneyOut
+    # What has actually been handed over. Without it a driver who has been paid
+    # sees only that their balance fell, with nothing saying where it went.
+    lifetime_paid: MoneyOut
     completed_trips: int
 
 

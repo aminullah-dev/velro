@@ -194,7 +194,72 @@ data class Earnings(
     val pending: MoneyValue,
     val lifetimeEarned: MoneyValue,
     val lifetimeCommission: MoneyValue,
+    val lifetimePaid: MoneyValue = MoneyValue(0, available.currency),
     val completedTrips: Int,
+) {
+    /**
+     * Everything owed but not yet handed over.
+     *
+     * A driver with a payout in flight sees a smaller "available" figure and
+     * would otherwise think money went missing, so both buckets are shown and
+     * this is what they add up to.
+     */
+    val owed: MoneyValue get() = available + pending
+}
+
+/**
+ * One line of the wallet ledger.
+ *
+ * The balance a driver is shown is a projection; this is the record it is
+ * projected from. Each entry carries the balance it produced so a driver can
+ * follow the arithmetic down the screen rather than being asked to trust a
+ * single total.
+ */
+data class LedgerEntry(
+    val id: String,
+    val kind: LedgerKind,
+    val amount: MoneyValue,
+    val balanceAfter: MoneyValue,
+    val createdAt: Instant,
+    val bookingId: String? = null,
+    val tripId: String? = null,
+    val settlementId: String? = null,
+    val note: String? = null,
+) {
+    val isCredit: Boolean get() = amount.amountMinor > 0
+}
+
+enum class LedgerKind {
+    TRIP_EARNING, COMMISSION, SETTLEMENT, ADJUSTMENT, CANCELLATION_FEE, UNKNOWN,
+}
+
+data class Settlement(
+    val id: String,
+    val reference: String,
+    val amount: MoneyValue,
+    val status: SettlementStatus,
+    val periodStart: String,
+    val periodEnd: String,
+    val paidAt: Instant? = null,
+    val rejectionReason: String? = null,
+) {
+    /** Still holding the driver's money. */
+    val isOpen: Boolean
+        get() = status == SettlementStatus.PENDING || status == SettlementStatus.PROCESSING
+}
+
+/**
+ * What the payout button is allowed to do, decided by the server.
+ *
+ * The rule lives in one place. If the app worked it out from the balance and
+ * the minimum on its own, the two would disagree the first time an operator
+ * changed the minimum.
+ */
+data class PayoutOptions(
+    val minimum: MoneyValue,
+    val canRequest: Boolean,
+    val openReference: String? = null,
+    val history: List<Settlement> = emptyList(),
 )
 
 data class Session(

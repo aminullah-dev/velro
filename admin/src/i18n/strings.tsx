@@ -34,6 +34,8 @@ interface StringsContext {
   num: (value: number | string) => string;
   money: (amountMinor: number, currency?: string) => string;
   dateTime: (iso: string) => string;
+  /** A calendar day with no time: a settlement period, an expiry, a birthday. */
+  date: (iso: string) => string;
   ready: boolean;
 }
 
@@ -158,14 +160,33 @@ export function StringsProvider({ children }: { children: ReactNode }) {
     [locale, num],
   );
 
+  const date = useCallback(
+    (iso: string) => {
+      // A date-only string is a calendar day, not an instant. Parsing it as a
+      // timestamp puts it at UTC midnight, which in Kabul (+04:30) is already
+      // the same morning -- but rendering it through a timezone at all invites
+      // the day to slip, so the parts are read directly.
+      const parts = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+      if (!parts) return dateTime(iso);
+      const [, year, month, day] = parts;
+      const rendered = new Date(
+        Number(year), Number(month) - 1, Number(day),
+      ).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+      return num(rendered);
+    },
+    [dateTime, num],
+  );
+
   const setLocale = useCallback((tag: LocaleTag) => {
     localStorage.setItem(STORAGE_KEY, tag);
     setLocaleState(tag);
   }, []);
 
   const value = useMemo<StringsContext>(
-    () => ({ locale, rtl, setLocale, t, forErrorCode, num, money, dateTime, ready }),
-    [locale, rtl, setLocale, t, forErrorCode, num, money, dateTime, ready],
+    () => ({
+      locale, rtl, setLocale, t, forErrorCode, num, money, dateTime, date, ready,
+    }),
+    [locale, rtl, setLocale, t, forErrorCode, num, money, dateTime, date, ready],
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

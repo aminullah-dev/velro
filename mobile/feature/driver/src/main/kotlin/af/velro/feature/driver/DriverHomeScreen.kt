@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun DriverHomeRoute(
     onOpenDocuments: () -> Unit,
     onOpenVehicle: () -> Unit,
+    onOpenEarnings: () -> Unit,
     viewModel: DriverHomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -55,6 +56,7 @@ fun DriverHomeRoute(
         state, viewModel::onEvent,
         onOpenDocuments = onOpenDocuments,
         onOpenVehicle = onOpenVehicle,
+        onOpenEarnings = onOpenEarnings,
     )
 }
 
@@ -64,6 +66,7 @@ fun DriverHomeScreen(
     onEvent: (DriverHomeEvent) -> Unit,
     onOpenDocuments: () -> Unit = {},
     onOpenVehicle: () -> Unit = {},
+    onOpenEarnings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -126,7 +129,7 @@ fun DriverHomeScreen(
         }
 
         Spacer(Modifier.height(Spacing.xl))
-        Earnings(state)
+        Earnings(state, onOpenEarnings)
     }
 }
 
@@ -370,7 +373,7 @@ private fun VerifyPassenger(state: DriverHomeUiState, onEvent: (DriverHomeEvent)
 }
 
 @Composable
-private fun Earnings(state: DriverHomeUiState) {
+private fun Earnings(state: DriverHomeUiState, onOpenEarnings: () -> Unit) {
     val strings = LocalVelroStrings.current
     val earnings = state.earnings ?: return
 
@@ -387,6 +390,13 @@ private fun Earnings(state: DriverHomeUiState) {
             EarningRow(
                 strings["earnings.label.trips"],
                 Numerals.localise(earnings.completedTrips.toString(), strings.locale),
+            )
+            Spacer(Modifier.height(Spacing.md))
+            // The card is a summary; the ledger and payouts live behind it.
+            SecondaryAction(
+                label = strings["driver.earnings.title"],
+                onClick = onOpenEarnings,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

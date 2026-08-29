@@ -326,6 +326,9 @@ def earnings(
             lifetime_commission=MoneyOut.of(
                 Money(wallet.lifetime_commission_minor, wallet.currency)
             ),
+            lifetime_paid=MoneyOut.of(
+                Money(wallet.lifetime_paid_minor, wallet.currency)
+            ),
             completed_trips=row.completed_trips,
         ).model_dump()
     )

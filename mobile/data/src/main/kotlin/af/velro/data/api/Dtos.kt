@@ -350,8 +350,55 @@ data class EarningsDto(
     val pending: MoneyDto,
     val lifetime_earned: MoneyDto,
     val lifetime_commission: MoneyDto,
+    val lifetime_paid: MoneyDto? = null,
     val completed_trips: Int,
 )
+
+@Serializable
+data class LedgerEntryDto(
+    val id: String,
+    val kind: String,
+    val amount: MoneyDto,
+    val balance_after: MoneyDto,
+    val created_at: String,
+    val booking_id: String? = null,
+    val trip_id: String? = null,
+    val settlement_id: String? = null,
+    val note: String? = null,
+)
+
+@Serializable
+data class LedgerPageDto(
+    val entries: List<LedgerEntryDto> = emptyList(),
+    val has_more: Boolean = false,
+    val next_offset: Int = 0,
+)
+
+@Serializable
+data class SettlementDto(
+    val id: String,
+    val reference: String,
+    val amount: MoneyDto,
+    val status: String,
+    val period_start: String,
+    val period_end: String,
+    val paid_at: String? = null,
+    val rejection_reason: String? = null,
+    val driver_id: String,
+    val driver_name: String? = null,
+    val driver_phone: String? = null,
+)
+
+@Serializable
+data class PayoutOptionsDto(
+    val settlements: List<SettlementDto> = emptyList(),
+    val minimum: MoneyDto,
+    val can_request: Boolean = false,
+    val open_reference: String? = null,
+)
+
+@Serializable
+data class RequestSettlementRequest(val amount_minor: Long? = null)
 
 @Serializable
 data class OfferDto(

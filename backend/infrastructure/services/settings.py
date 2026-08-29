@@ -42,6 +42,9 @@ DEFAULTS: dict[str, Any] = {
     "support.emergency_numbers": ["119", "100"],
     "support.contact_phone": "+93700000000",
     "trip.search_window_hours": 12,
+    # A payout costs someone a journey. Below this the errand is worth more
+    # than the money, so drivers are asked to let it accumulate.
+    "settlement.minimum_minor": 50_000,           # 500 AFN
 }
 
 

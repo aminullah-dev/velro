@@ -168,6 +168,27 @@ interface VelroApi {
     @GET("driver/earnings")
     suspend fun earnings(): Response<Envelope<EarningsDto>>
 
+    @GET("driver/earnings/ledger")
+    suspend fun ledger(
+        @Query("limit") limit: Int = 30,
+        @Query("offset") offset: Int = 0,
+    ): Response<Envelope<LedgerPageDto>>
+
+    @GET("driver/settlements")
+    suspend fun payoutOptions(): Response<Envelope<PayoutOptionsDto>>
+
+    /**
+     * Ask to be paid.
+     *
+     * An absent amount means "all of it". The server holds the money against
+     * the request, so a repeat while one is open is refused rather than
+     * quietly holding it twice.
+     */
+    @POST("driver/settlements")
+    suspend fun requestSettlement(
+        @Body body: RequestSettlementRequest,
+    ): Response<Envelope<SettlementDto>>
+
     // -- vehicle --------------------------------------------------------
 
     @GET("vehicle-types")

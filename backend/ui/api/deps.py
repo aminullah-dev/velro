@@ -212,6 +212,10 @@ def wallets(session: SessionDep) -> WalletRepository:
     return WalletRepository(session)
 
 
+def settlements(session: SessionDep) -> SettlementRepository:
+    return SettlementRepository(session)
+
+
 def ratings(session: SessionDep) -> RatingRepository:
     return RatingRepository(session)
 
