@@ -2,6 +2,8 @@ package af.velro.feature.auth
 
 import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.InlineError
+import af.velro.core.ui.component.SecondaryAction
+import af.velro.feature.safety.HelpSheet
 import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Sizing
@@ -25,6 +27,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -95,6 +100,31 @@ fun SignInScreen(
         when (state.step) {
             SignInUiState.Step.PHONE -> PhoneStep(state, onEvent)
             SignInUiState.Step.CODE -> CodeStep(state, onEvent)
+        }
+
+        // Get help, from the one screen a signed-out person can reach.
+        //
+        // Every other screen sits behind the sign-in gate: PassengerNavHost
+        // sends isSignedIn=false straight to SIGN_IN with popUpTo(0), and
+        // MainActivity collects that flow with initialValue=false, so a cold
+        // start lands here too. Without this the emergency numbers were
+        // unreachable in exactly the case they were built for -- a session
+        // that expired in a valley with no data to renew it.
+        //
+        // The report door is not offered: it needs a token. The two doors that
+        // need nothing still work.
+        Spacer(Modifier.height(Spacing.xl))
+        var helpOpen by remember { mutableStateOf(false) }
+        SecondaryAction(
+            label = strings["safety.title"],
+            onClick = { helpOpen = true },
+        )
+        if (helpOpen) {
+            HelpSheet(
+                ride = null,
+                canReport = false,
+                onDismiss = { helpOpen = false },
+            )
         }
 
         if (state.errorCode != null) {

@@ -73,6 +73,15 @@ fun HelpSheet(
     /** Attached to the report so an operator knows which journey it is about. */
     tripId: String? = null,
     bookingId: String? = null,
+    /**
+     * Whether "tell VELRO" is offered at all.
+     *
+     * False on the sign-in screen: raising a report needs a token, and a form
+     * that fails on submit for somebody who has just described being in danger
+     * is worse than not offering it. The two doors that need nothing still
+     * work, which is the point.
+     */
+    canReport: Boolean = true,
     /** Overrides the built-in form, for a caller that has its own screen. */
     onReport: (() -> Unit)? = null,
     viewModel: HelpViewModel = hiltViewModel(),
@@ -89,7 +98,11 @@ fun HelpSheet(
                 // The report door only appears when there is somewhere for it
                 // to go. A button wired to nothing is the thing this whole
                 // feature exists to avoid.
-                onReport = if (onReport != null) onReport else viewModel::openReport,
+                onReport = when {
+                    !canReport -> null
+                    onReport != null -> onReport
+                    else -> viewModel::openReport
+                },
             )
         } else {
             Column(

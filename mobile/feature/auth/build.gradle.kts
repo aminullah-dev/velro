@@ -15,7 +15,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
+    kotlinOptions {
+        jvmTarget = "17"
+        freeCompilerArgs += "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
+    }
 }
 
 dependencies {
@@ -23,6 +26,7 @@ dependencies {
     implementation(project(":data"))
     implementation(project(":core:ui"))
     implementation(project(":core:i18n"))
+    implementation(project(":feature:safety"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
