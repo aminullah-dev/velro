@@ -111,6 +111,10 @@ fun DriverHomeScreen(
             InlineError(state.errorCode!!, context = state.errorContext)
         }
 
+        // What the server has told this driver. Without it the only way to
+        // learn that a bid was accepted is to notice a trip appear.
+        Inbox(state, onEvent)
+
         Spacer(Modifier.height(Spacing.lg))
 
         val assignment = state.assignment
@@ -380,22 +384,37 @@ private fun VerifyPassenger(state: DriverHomeUiState, onEvent: (DriverHomeEvent)
 @Composable
 private fun Earnings(state: DriverHomeUiState, onOpenEarnings: () -> Unit) {
     val strings = LocalVelroStrings.current
-    val earnings = state.earnings ?: return
+    // Not an early return. The earnings card used to open with
+    // `state.earnings ?: return`, which took the section's only navigation
+    // button with it -- so an approved, offline driver whose earnings call
+    // failed was left on a screen with exactly one control, the online switch,
+    // and nothing explaining why.
+    val earnings = state.earnings
 
     VelroCard {
         Column {
             Text(strings["earnings.title"], style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(Spacing.md))
-            EarningRow(strings["earnings.label.available"], earnings.available.let {
-                MoneyFormatter.format(it, strings)
-            })
-            EarningRow(strings["earnings.label.lifetime"], earnings.lifetimeEarned.let {
-                MoneyFormatter.format(it, strings)
-            })
-            EarningRow(
-                strings["earnings.label.trips"],
-                Numerals.localise(earnings.completedTrips.toString(), strings.locale),
-            )
+            if (earnings == null) {
+                // The figures did not load. Say so rather than showing zeroes,
+                // which a driver would read as "I earned nothing today".
+                Text(
+                    strings["common.state.loading"],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                EarningRow(strings["earnings.label.available"], earnings.available.let {
+                    MoneyFormatter.format(it, strings)
+                })
+                EarningRow(strings["earnings.label.lifetime"], earnings.lifetimeEarned.let {
+                    MoneyFormatter.format(it, strings)
+                })
+                EarningRow(
+                    strings["earnings.label.trips"],
+                    Numerals.localise(earnings.completedTrips.toString(), strings.locale),
+                )
+            }
             Spacer(Modifier.height(Spacing.md))
             // The card is a summary; the ledger and payouts live behind it.
             SecondaryAction(
@@ -419,5 +438,41 @@ private fun EarningRow(label: String, value: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+    }
+}
+
+/**
+ * What the server has told this driver.
+ *
+ * There is no push transport, so this list is the only way a driver learns that
+ * a passenger accepted their bid -- and until it existed the screen loaded once
+ * and never again, so the driver found out by noticing a trip appear, if they
+ * happened to look.
+ *
+ * Unread only, and tapping clears them: this is a notice, not an archive.
+ */
+@Composable
+private fun Inbox(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> Unit) {
+    val strings = LocalVelroStrings.current
+    val unread = state.inbox?.notifications?.filter { it.isUnread }.orEmpty()
+    if (unread.isEmpty()) return
+
+    Spacer(Modifier.height(Spacing.md))
+    VelroCard {
+        Column {
+            for (notification in unread.take(3)) {
+                Text(
+                    strings[notification.messageKey, notification.payload],
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+            }
+            Spacer(Modifier.height(Spacing.sm))
+            SecondaryAction(
+                label = strings["common.action.close"],
+                onClick = { onEvent(DriverHomeEvent.MarkNotificationsRead) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }

@@ -422,3 +422,28 @@ data class VehicleChecklist(
     val awaitingReview: Boolean
         get() = isComplete && !canCarry
 }
+
+
+/**
+ * One message in the inbox.
+ *
+ * Carries a message key and a payload, never a rendered sentence: the server
+ * does not know what language the reader has the app set to, and the same key
+ * resolves in the panel and both apps.
+ */
+data class Notification(
+    val id: String,
+    val messageKey: String,
+    val payload: Map<String, String> = emptyMap(),
+    val tripId: String? = null,
+    val bookingId: String? = null,
+    val createdAt: java.time.Instant,
+    val readAt: java.time.Instant? = null,
+) {
+    val isUnread: Boolean get() = readAt == null
+}
+
+data class NotificationInbox(
+    val notifications: List<Notification> = emptyList(),
+    val unread: Int = 0,
+)

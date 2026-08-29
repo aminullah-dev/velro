@@ -616,5 +616,11 @@
   "error.vehicle_documents_incomplete": "The vehicle's papers are not complete yet.",
   "error.vehicle_documents_expired": "The vehicle's permit has expired. Send a new photo of it to work again.",
   "vehicle.documents.title": "Papers for this vehicle",
-  "vehicle.documents.subtitle": "Each vehicle needs its own permit."
+  "vehicle.documents.subtitle": "Each vehicle needs its own permit.",
+  "notify.trip.cancelled": "Your trip {booking_number} was called off. You have not been charged.",
+  "ride.offers.expired_title": "Nobody answered in time",
+  "ride.offers.expired_body": "No driver named a price for this trip. Ask again — you can offer a different fare.",
+  "ride.offers.cancelled_title": "This request was cancelled",
+  "ride.offers.cancelled_body": "Ask again whenever you are ready to travel.",
+  "ride.offers.ask_again": "Ask again"
 }

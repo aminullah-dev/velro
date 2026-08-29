@@ -50,11 +50,14 @@
     "error_code": "SETTLEMENT_INVALID_TRANSITION"
   },
   "trip_to_booking": {
-    "$comment": "When a trip advances, the bookings riding on it advance to these statuses. A booking already terminal is left alone.",
+    "$comment": "When a trip advances, the bookings riding on it advance to these statuses. A booking already terminal is left alone. The three ways a trip ends without travelling all cancel the booking: a trip that is called off, expires, or never finds a driver is not coming, and a booking left at DRIVER_ASSIGNED or READY leaves a passenger holding a boarding code, waiting at a roadside. ONBOARD is deliberately not caught by this -- BOOKING has no ONBOARD to CANCELLED edge, so follow_trip leaves those alone: once someone is in the vehicle the journey happened.",
     "DRIVER_ASSIGNED": "DRIVER_ASSIGNED",
     "ARRIVED_AT_PICKUP": "READY",
     "IN_TRANSIT": "ONBOARD",
-    "COMPLETED": "COMPLETED"
+    "COMPLETED": "COMPLETED",
+    "CANCELLED": "CANCELLED",
+    "EXPIRED": "CANCELLED",
+    "NO_DRIVER_AVAILABLE": "CANCELLED"
   },
   "seat": {
     "statuses": ["AVAILABLE", "RESERVED", "OCCUPIED", "BLOCKED"],

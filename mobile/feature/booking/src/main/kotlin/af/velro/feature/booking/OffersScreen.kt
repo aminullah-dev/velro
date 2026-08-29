@@ -6,6 +6,7 @@ import af.velro.core.ui.component.ErrorState
 import af.velro.core.ui.component.InlineError
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
+import af.velro.domain.RideRequestStatus
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.theme.LocalVelroStrings
@@ -40,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -62,13 +64,15 @@ fun OffersRoute(
         if (state.cancelled) onFinished()
     }
 
-    OffersScreen(state, viewModel::onEvent)
+    OffersScreen(state, viewModel::onEvent, onAskAgain = onFinished)
 }
 
 @Composable
 fun OffersScreen(
     state: OffersUiState,
     onEvent: (OffersEvent) -> Unit,
+    /** Back to where a ride is asked for. The way out of a closed request. */
+    onAskAgain: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -103,7 +107,21 @@ fun OffersScreen(
         }
 
         val offers = request.liveOffers
-        if (offers.isEmpty()) {
+        // The status decides, not the emptiness of the list. The server closes
+        // a stale request on this very read, so once the TTL passes the reply
+        // is EXPIRED with no live offers -- and a screen branching on the list
+        // alone draws a spinner over "waiting for drivers" forever, while the
+        // view model stops polling because the request is no longer open. The
+        // passenger is left watching an animation for something that already
+        // finished without them.
+        if (!request.isOpen) {
+            Spacer(Modifier.weight(1f))
+            RequestClosed(
+                status = request.status,
+                onAskAgain = onAskAgain,
+            )
+            Spacer(Modifier.weight(1f))
+        } else if (offers.isEmpty()) {
             Spacer(Modifier.weight(1f))
             Waiting()
             Spacer(Modifier.weight(1f))
@@ -308,5 +326,45 @@ private fun OfferCard(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
             )
         }
+    }
+}
+
+/**
+ * The request ended without a ride.
+ *
+ * Expired, or cancelled from another device. Either way there is nothing left
+ * to wait for, and the passenger needs a way back to asking rather than a
+ * spinner and a dead end.
+ */
+@Composable
+private fun RequestClosed(status: RideRequestStatus, onAskAgain: () -> Unit) {
+    val strings = LocalVelroStrings.current
+    val expired = status == RideRequestStatus.EXPIRED
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = Spacing.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        Text(
+            strings[
+                if (expired) "ride.offers.expired_title"
+                else "ride.offers.cancelled_title"
+            ],
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            strings[
+                if (expired) "ride.offers.expired_body"
+                else "ride.offers.cancelled_body"
+            ],
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        PrimaryAction(
+            label = strings["ride.offers.ask_again"],
+            onClick = onAskAgain,
+        )
     }
 }

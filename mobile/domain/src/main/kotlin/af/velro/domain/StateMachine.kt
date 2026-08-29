@@ -134,5 +134,15 @@ object Lifecycles {
         TripStatus.ARRIVED_AT_PICKUP to BookingStatus.READY,
         TripStatus.IN_TRANSIT to BookingStatus.ONBOARD,
         TripStatus.COMPLETED to BookingStatus.COMPLETED,
+        // The three ways a trip ends without anybody travelling. A booking left
+        // at DRIVER_ASSIGNED or READY is a passenger holding a boarding code,
+        // waiting at a roadside for a vehicle nobody is driving.
+        //
+        // ONBOARD is not caught by this: BOOKING has no ONBOARD -> CANCELLED
+        // edge, so followTrip leaves those alone. Once someone is in the car
+        // the journey happened, whatever later becomes of the trip record.
+        TripStatus.CANCELLED to BookingStatus.CANCELLED,
+        TripStatus.EXPIRED to BookingStatus.CANCELLED,
+        TripStatus.NO_DRIVER_AVAILABLE to BookingStatus.CANCELLED,
     )
 }

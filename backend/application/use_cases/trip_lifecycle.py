@@ -28,6 +28,7 @@ from shared import error_codes
 from shared.clock import Clock
 from shared.errors import ConflictError, PermissionError
 from shared.ids import IdGenerator
+from shared.logging import get_logger
 from shared.money import Money
 
 
@@ -47,6 +48,9 @@ class AdvanceTripResult:
     bookings_advanced: int
     driver_earning: Money | None = None
     platform_commission: Money | None = None
+
+
+log = get_logger(__name__)
 
 
 class AdvanceTrip:
@@ -131,7 +135,31 @@ class AdvanceTrip:
     # -- cascades ---------------------------------------------------------
 
     def _cascade_bookings(self, trip: Trip, now: datetime) -> int:
-        return cascade_bookings(self._bookings, trip.status, now, trip_id=trip.id)
+        # Read the passengers before the cascade, not after: cancelling their
+        # bookings takes them out of active_for_trip, so a list gathered
+        # afterwards is empty. The same shape of mistake as the losing-driver
+        # notification, which failed silently for exactly this reason.
+        riders = (
+            [(row.id, row.number, row.passenger_id)
+             for row in self._bookings.active_for_trip(trip.id)]
+            if trip.status in _CALLED_OFF else []
+        )
+
+        advanced = cascade_bookings(self._bookings, trip.status, now, trip_id=trip.id)
+
+        for booking_id, number, passenger_id in riders:
+            # Cancelling a booking silently leaves someone standing at a
+            # roadside watching for a vehicle. The row is the record; delivery
+            # is best effort on top of it.
+            _tell(
+                self._notifier,
+                user_id=passenger_id,
+                message_key="notify.trip.cancelled",
+                payload={"booking_number": number, "trip_status": trip.status.value},
+                trip_id=trip.id,
+                booking_id=booking_id,
+            )
+        return advanced
 
     def _update_driver_availability(self, trip: Trip, now: datetime) -> None:
         if trip.driver_id is None:
@@ -323,6 +351,27 @@ class VerifyPassenger:
             seat_numbers=[s.seat_number for s in self._bookings.seats_of(row.id)],
             status=booking.status,
         )
+
+
+# The three ways a trip ends without anybody travelling.
+_CALLED_OFF = frozenset(
+    {TripStatus.CANCELLED, TripStatus.EXPIRED, TripStatus.NO_DRIVER_AVAILABLE}
+)
+
+
+def _tell(notifier, **kwargs) -> None:
+    """Best effort, always.
+
+    A notification that cannot be delivered must never roll back the thing it
+    was announcing: the trip really is cancelled whether or not the message
+    reaches the phone, and the row in the inbox is the record.
+    """
+    if notifier is None:
+        return
+    try:
+        notifier.notify(**kwargs)
+    except Exception:
+        log.warning("notify.failed", message_key=kwargs.get("message_key"))
 
 
 def cascade_bookings(

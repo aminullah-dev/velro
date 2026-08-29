@@ -257,6 +257,35 @@ class TestBooking:
         booking.follow_trip(BookingStatus.READY, at=NOW)
         assert booking.status is BookingStatus.READY
 
+    def test_a_cancelled_trip_cancels_the_bookings_riding_on_it(self) -> None:
+        """The passenger must not be left holding a boarding code.
+
+        A trip that is cancelled, expires, or never finds a driver is not
+        coming. Without this the booking stays at DRIVER_ASSIGNED or READY, the
+        app goes on rendering the boarding code under "Coming up", and someone
+        waits at a roadside for a vehicle nobody is driving.
+        """
+        for status in (
+            BookingStatus.PENDING,
+            BookingStatus.CONFIRMED,
+            BookingStatus.DRIVER_ASSIGNED,
+            BookingStatus.READY,
+        ):
+            booking = _booking(status)
+            booking.follow_trip(BookingStatus.CANCELLED, at=NOW)
+            assert booking.status is BookingStatus.CANCELLED, status
+
+    def test_a_passenger_already_in_the_car_is_not_cancelled(self) -> None:
+        """ONBOARD has one way out, and it is COMPLETED.
+
+        Once someone is in the vehicle the journey happened, whatever later
+        happens to the trip record. Cancelling their booking would erase a ride
+        that was taken -- and with it the fare the driver is owed.
+        """
+        booking = _booking(BookingStatus.ONBOARD)
+        booking.follow_trip(BookingStatus.CANCELLED, at=NOW)
+        assert booking.status is BookingStatus.ONBOARD
+
     def test_a_cascade_never_routes_through_cancellation(self) -> None:
         booking = _booking(BookingStatus.CONFIRMED)
         booking.follow_trip(BookingStatus.NO_SHOW, at=NOW)

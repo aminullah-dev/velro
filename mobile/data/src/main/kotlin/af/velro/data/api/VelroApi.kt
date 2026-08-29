@@ -305,4 +305,20 @@ interface VelroApi {
         @Part file: MultipartBody.Part,
         @Part("document_type_code") documentTypeCode: RequestBody,
     ): Response<Envelope<UploadedDocumentDto>>
+
+    // -- the inbox ------------------------------------------------------
+    //
+    // The row in the inbox is the record; a push, when there is one, is a
+    // convenience on top of it. Without this client the server writes
+    // "your fare was accepted" and nothing on the phone ever reads it.
+
+    @GET("notifications")
+    suspend fun notifications(
+        @Query("limit") limit: Int = 30,
+    ): Response<Envelope<InboxDto>>
+
+    @POST("notifications/read")
+    suspend fun markNotificationsRead(
+        @Body body: MarkReadRequest,
+    ): Response<Envelope<Map<String, Int>>>
 }

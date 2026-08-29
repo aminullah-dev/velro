@@ -616,5 +616,11 @@
   "error.vehicle_documents_incomplete": "اسناد موتر هنوز تکمیل نیست.",
   "error.vehicle_documents_expired": "جواز سیر موتر تاریخش گذشته است. عکس نو آن را بفرستید تا دوباره کار کرده بتوانید.",
   "vehicle.documents.title": "اسناد این موتر",
-  "vehicle.documents.subtitle": "هر موتر جواز سیر خود را ضرورت دارد."
+  "vehicle.documents.subtitle": "هر موتر جواز سیر خود را ضرورت دارد.",
+  "notify.trip.cancelled": "سفر شما {booking_number} لغو شد. هیچ پولی از شما گرفته نشده است.",
+  "ride.offers.expired_title": "کسی به وقت جواب نداد",
+  "ride.offers.expired_body": "هیچ راننده‌ای برای این سفر قیمت نداد. دوباره بپرسید — می‌توانید کرایهٔ دیگری پیشنهاد کنید.",
+  "ride.offers.cancelled_title": "این درخواست لغو شد",
+  "ride.offers.cancelled_body": "هر وقت آمادهٔ سفر بودید دوباره بپرسید.",
+  "ride.offers.ask_again": "دوباره پرسیدن"
 }

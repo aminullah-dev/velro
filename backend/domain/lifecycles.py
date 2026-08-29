@@ -80,6 +80,16 @@ TRIP_TO_BOOKING_STATUS: dict[TripStatus, BookingStatus] = {
     T.ARRIVED_AT_PICKUP: B.READY,
     T.IN_TRANSIT: B.ONBOARD,
     T.COMPLETED: B.COMPLETED,
+    # The three ways a trip ends without travelling. A booking left at
+    # DRIVER_ASSIGNED or READY is a passenger holding a boarding code, waiting
+    # at a roadside for a vehicle nobody is driving.
+    #
+    # ONBOARD is not caught by this: BOOKING has no ONBOARD -> CANCELLED edge,
+    # so follow_trip leaves those alone. Once someone is in the car the journey
+    # happened, whatever later becomes of the trip record.
+    T.CANCELLED: B.CANCELLED,
+    T.EXPIRED: B.CANCELLED,
+    T.NO_DRIVER_AVAILABLE: B.CANCELLED,
 }
 
 # Statuses in which a trip still accepts new seat bookings.

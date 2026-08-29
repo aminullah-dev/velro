@@ -476,6 +476,31 @@ data class UploadedDocumentDto(
 data class RegisterDriverRequest(val home_district_id: String? = null)
 
 
+// -- the inbox ----------------------------------------------------------
+
+@Serializable
+data class NotificationDto(
+    val id: String,
+    val message_key: String,
+    val payload: Map<String, String> = emptyMap(),
+    val channel: String,
+    val delivery_status: String,
+    val trip_id: String? = null,
+    val booking_id: String? = null,
+    val created_at: String,
+    val read_at: String? = null,
+)
+
+@Serializable
+data class InboxDto(
+    val notifications: List<NotificationDto> = emptyList(),
+    val unread: Int = 0,
+)
+
+@Serializable
+data class MarkReadRequest(val ids: List<String> = emptyList())
+
+
 // -- vehicle documents: جواز سیر, per car -------------------------------
 
 @Serializable

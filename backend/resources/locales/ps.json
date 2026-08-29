@@ -616,5 +616,11 @@
   "error.vehicle_documents_incomplete": "د موټر اسناد لا نه دي بشپړ.",
   "error.vehicle_documents_expired": "د موټر د جواز سیر نېټه تېره ده. نوی عکس یې واستوئ چې بیا کار وکړئ.",
   "vehicle.documents.title": "د دې موټر اسناد",
-  "vehicle.documents.subtitle": "هر موټر خپل جواز سیر ته اړتیا لري."
+  "vehicle.documents.subtitle": "هر موټر خپل جواز سیر ته اړتیا لري.",
+  "notify.trip.cancelled": "ستاسو سفر {booking_number} لغو شو. له تاسو څخه هیڅ پیسې نه دي اخیستل شوي.",
+  "ride.offers.expired_title": "چا په وخت ځواب ورنه کړ",
+  "ride.offers.expired_body": "هیڅ چلوونکي د دې سفر لپاره بیه ونه ښوده. بیا وپوښتئ — بل کرایه وړاندیز کولی شئ.",
+  "ride.offers.cancelled_title": "دا غوښتنه لغوه شوه",
+  "ride.offers.cancelled_body": "کله چې د سفر لپاره چمتو یاست بیا وپوښتئ.",
+  "ride.offers.ask_again": "بیا پوښتنه"
 }

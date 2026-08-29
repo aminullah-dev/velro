@@ -170,6 +170,50 @@ def upgrade() -> None:
         ).bindparams(id="01a05000-0000-7000-8000-000000000002")
     )
 
+    # Any car left ACTIVE without a valid permit goes back to PENDING.
+    #
+    # Found by running this migration against a real database: a driver whose
+    # VEHICLE_REGISTRATION was never uploaded had an ACTIVE car, and after the
+    # move that car was ACTIVE with no permit at all -- a state the application
+    # will no longer produce, because activation now checks the papers. Leaving
+    # those rows would mean the database holds a state the code calls
+    # impossible, and the first thing anyone would notice is the driver being
+    # refused at the roadside with an ACTIVE car on their screen.
+    #
+    # PENDING is the honest state: the driver sends the جواز سیر and an
+    # operator activates the car, which is the flow from here on.
+    op.execute(
+        sa.text(
+            """
+            UPDATE vehicles v
+               SET status = 'PENDING', version = version + 1
+             WHERE v.deleted_at IS NULL
+               AND v.status = 'ACTIVE'
+               AND EXISTS (
+                     SELECT 1 FROM app_settings s
+                      WHERE s.key = 'vehicle.required_documents'
+                        AND json_array_length(s.value -> 'v') > 0
+                   )
+               -- "some required code has no valid document" -- i.e. incomplete.
+               AND EXISTS (
+                     SELECT 1
+                       FROM json_array_elements_text(
+                              (SELECT value -> 'v' FROM app_settings
+                                WHERE key = 'vehicle.required_documents')
+                            ) AS required(code)
+                      WHERE NOT EXISTS (
+                            SELECT 1 FROM vehicle_documents d
+                             WHERE d.vehicle_id = v.id
+                               AND d.deleted_at IS NULL
+                               AND d.document_type_code = required.code
+                               AND d.status = 'VERIFIED'
+                               AND (d.expires_on IS NULL OR d.expires_on >= current_date)
+                          )
+                   )
+            """
+        )
+    )
+
 
 def downgrade() -> None:
     op.execute(

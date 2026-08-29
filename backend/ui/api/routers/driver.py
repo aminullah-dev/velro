@@ -216,11 +216,15 @@ def advance_trip(
     wallets: Annotated[object, Depends(deps.wallets)],
     settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
+    notifier: Annotated[object, Depends(deps.notifier)],
 ) -> dict:
     use_case = AdvanceTrip(
         trips=trips, seats=seats, bookings=bookings, drivers=drivers,
         payments=payments, commissions=commissions, wallets=wallets,
         settings=settings, audit=audit, clock=deps.clock(), new_id=deps.new_id,
+        # Without this the cancellation cascade runs silently: the passenger's
+        # booking is cancelled and nothing on their phone says so.
+        notifier=notifier,
     )
     result = use_case.execute(
         AdvanceTripCommand(

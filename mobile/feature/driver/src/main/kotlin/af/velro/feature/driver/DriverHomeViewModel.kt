@@ -3,8 +3,10 @@ package af.velro.feature.driver
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
 import af.velro.data.repository.CurrentAssignment
+import af.velro.data.repository.NotificationRepository
 import af.velro.data.repository.DriverRepository
 import af.velro.domain.DriverAvailability
+import af.velro.domain.NotificationInbox
 import af.velro.domain.DriverProfile
 import af.velro.domain.Earnings
 import af.velro.domain.Lifecycles
@@ -16,6 +18,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +36,8 @@ import kotlinx.coroutines.launch
  */
 data class DriverHomeUiState(
     val profile: DriverProfile? = null,
+    /** What the server has told this driver. Currently the only way they learn. */
+    val inbox: NotificationInbox? = null,
     val assignment: CurrentAssignment? = null,
     val offers: List<TripSummary> = emptyList(),
     val earnings: Earnings? = null,
@@ -84,6 +90,7 @@ sealed interface DriverHomeEvent {
     data class VerifyCodeChanged(val value: String) : DriverHomeEvent
     data object VerifyPassenger : DriverHomeEvent
     data object DismissError : DriverHomeEvent
+    data object MarkNotificationsRead : DriverHomeEvent
 }
 
 sealed interface DriverHomeEffect {
@@ -91,8 +98,12 @@ sealed interface DriverHomeEffect {
     data class PassengerBoarded(val name: String?) : DriverHomeEffect
 }
 
+/** Often enough to feel live, rarely enough not to drain a phone or a data bundle. */
+private const val POLL_SECONDS = 10L
+
 @HiltViewModel
 class DriverHomeViewModel @Inject constructor(
+    private val notifications: NotificationRepository,
     private val drivers: DriverRepository,
 ) : ViewModel() {
 
@@ -104,6 +115,33 @@ class DriverHomeViewModel @Inject constructor(
 
     init {
         refresh()
+        poll()
+    }
+
+    /**
+     * Keep looking, because nothing tells the driver otherwise.
+     *
+     * When a passenger accepts a bid the server writes notify.offer.accepted to
+     * the driver's inbox -- and there is no push transport, so nothing wakes the
+     * phone. Before this the screen loaded once in `init` and the ViewModel is
+     * retained on the back stack, so a driver who bid from the board and came
+     * back Home saw the same stale screen while a passenger stood at a station
+     * waiting for them.
+     *
+     * Only while there is something to learn: an unapproved driver, or one who
+     * is offline with no trip in flight, has nothing arriving and should not be
+     * spending a data bundle to hear it.
+     */
+    private fun poll() {
+        viewModelScope.launch {
+            while (isActive) {
+                delay(POLL_SECONDS * 1000)
+                val current = _state.value
+                val worthAsking = current.assignment != null ||
+                    (current.profile?.canWork == true && current.isOnline)
+                if (worthAsking) loadWork()
+            }
+        }
     }
 
     fun onEvent(event: DriverHomeEvent) {
@@ -116,6 +154,12 @@ class DriverHomeViewModel @Inject constructor(
                 _state.update { it.copy(verifyingCode = event.value.take(8), errorCode = null) }
             DriverHomeEvent.VerifyPassenger -> verify()
             DriverHomeEvent.DismissError -> _state.update { it.copy(errorCode = null) }
+            DriverHomeEvent.MarkNotificationsRead -> viewModelScope.launch {
+                notifications.markRead()
+                (notifications.inbox(limit = 20) as? ApiResult.Success)?.let { inbox ->
+                    _state.update { it.copy(inbox = inbox.value) }
+                }
+            }
         }
     }
 
@@ -133,6 +177,11 @@ class DriverHomeViewModel @Inject constructor(
     }
 
     private suspend fun loadWork() {
+        // The inbox first: it is the only thing that says a bid was accepted,
+        // and it is one small read.
+        (notifications.inbox(limit = 20) as? ApiResult.Success)?.let { inbox ->
+            _state.update { it.copy(inbox = inbox.value) }
+        }
         (drivers.currentTrip() as? ApiResult.Success)?.let { current ->
             _state.update { it.copy(assignment = current.value) }
         }
