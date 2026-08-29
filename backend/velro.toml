@@ -1,0 +1,8 @@
+# Deployment configuration. Secrets never live here -- they come from the
+# environment. Anything an operator may need to change without a redeploy is a
+# row in app_settings, not a key in this file.
+environment = "development"
+log_level = "INFO"
+log_json = false
+otp_debug_echo = true
+cors_origins = ["http://localhost:5173"]

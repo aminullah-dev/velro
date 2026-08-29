@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+velro.local.toml
+
+# Runtime artefacts
+var/
+*.log
+*.sqlite3
+*.db
+
+# Node / web
+node_modules/
+dist/
+.vite/
+
+# Android
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+captures/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

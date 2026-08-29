@@ -1,0 +1,61 @@
+[project]
+name = "velro-backend"
+version = "0.1.0"
+description = "VELRO - station-based transportation platform for Afghanistan"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy>=2.0.36",
+    "alembic>=1.14",
+    "psycopg[binary]>=3.2",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "python-jose[cryptography]>=3.3",
+    "argon2-cffi>=23.1",
+    "python-multipart>=0.0.12",
+    "openpyxl>=3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "ruff>=0.7",
+    "mypy>=1.13",
+]
+
+[tool.setuptools]
+packages = ["domain", "application", "infrastructure", "shared", "ui"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["integration: requires a live PostgreSQL database"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Alembic writes these; they are reviewed as SQL, not as prose.
+extend-exclude = ["migrations/versions", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "TID", "RUF"]
+ignore = [
+    "A002",    # `id` is the right name for an identifier argument
+    "A003",
+    "A004",    # our PermissionError deliberately shadows the builtin -- see shared/errors.py
+    "UP046",   # PEP 695 generics: not while mypy support is uneven
+    "RUF001",  # Perso-Arabic letters are the data, not a typo
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"decimal.Decimal.__float__".msg = "float is banned in money paths"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true

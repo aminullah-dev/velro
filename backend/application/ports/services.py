@@ -1,0 +1,112 @@
+"""Non-repository collaborators."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any, Protocol
+
+from domain.enums import ActorRole
+from domain.fare import FareQuote
+from domain.identity import PhoneNumber
+
+
+class NumberAllocator(Protocol):
+    """Business numbers -- VLR-2026-000001, BKG-2026-000042.
+
+    Allocated inside the transaction that uses them, from a sequence table, so
+    they are gap-free within a year and never reused.
+    """
+
+    def allocate(self, entity: str, *, year: int) -> str: ...
+
+
+class AuditLog(Protocol):
+    """Written inside the same transaction as the change it records."""
+
+    def write(
+        self,
+        action: str,
+        *,
+        actor_id: str | None,
+        actor_role: ActorRole,
+        entity_type: str,
+        entity_id: str,
+        before: dict[str, Any] | None = None,
+        after: dict[str, Any] | None = None,
+        origin: str = "api",
+        request_id: str | None = None,
+    ) -> None: ...
+
+
+class SettingsProvider(Protocol):
+    """Operator-tunable values -- commission rate, OTP lifetime, emergency numbers.
+
+    Read through here rather than as constants, so section 105 holds: nothing
+    an operator may need to change requires a deploy.
+    """
+
+    def get_int(self, key: str, default: int | None = None) -> int: ...
+    def get_str(self, key: str, default: str | None = None) -> str: ...
+    def get_bool(self, key: str, default: bool | None = None) -> bool: ...
+    def get_list(self, key: str, default: list[str] | None = None) -> list[str]: ...
+
+
+class OtpCodeGenerator(Protocol):
+    def generate(self, length: int) -> str: ...
+    def hash(self, code: str, phone: PhoneNumber) -> str: ...
+
+
+class TokenService(Protocol):
+    def issue_access_token(
+        self, *, user_id: str, roles: list[str], expires_at: datetime
+    ) -> str: ...
+
+    def read_access_token(self, token: str) -> dict[str, Any]: ...
+
+    def new_refresh_token(self) -> tuple[str, str]:
+        """Returns (plaintext, hash). Only the hash is ever stored."""
+        ...
+
+    def hash_refresh_token(self, plaintext: str) -> str:
+        """The same hash as ``new_refresh_token`` produces, for lookup."""
+        ...
+
+
+class NotificationChannel(Protocol):
+    """Push today, SMS as a second implementation of the same interface.
+
+    A message is a key plus a payload, never a rendered sentence: the device
+    renders it in the locale the person is actually reading.
+    """
+
+    name: str
+
+    def send(
+        self,
+        *,
+        user_id: str,
+        message_key: str,
+        payload: dict[str, Any],
+        locale: str,
+    ) -> bool: ...
+
+
+class SmsSender(Protocol):
+    def send(self, *, phone: PhoneNumber, message_key: str, payload: dict[str, Any]) -> bool: ...
+
+
+class VerificationCodeGenerator(Protocol):
+    """The short code a driver checks against a passenger's booking."""
+
+    def generate(self) -> str: ...
+
+
+class FareStrategy(Protocol):
+    """Pricing. ``FixedRouteFare`` now; ``DynamicFare`` later behind the same call.
+
+    A strategy never persists anything and never reads a clock of its own.
+    """
+
+    name: str
+
+    def quote(self, request: Any) -> FareQuote: ...
