@@ -254,7 +254,11 @@ fun BookingCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    Numerals.localise(booking.number, strings.locale),
+                    // A booking number is quoted to an operator and typed into
+                    // a search box. Localising its digits makes the passenger's
+                    // copy differ from the one the office is looking at, so it
+                    // stays Latin and LTR -- like a plate, for the same reason.
+                    booking.number,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

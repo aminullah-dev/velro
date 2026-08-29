@@ -559,5 +559,6 @@
   "driver.offer.title": "Your fare for this ride",
   "driver.offer.hint": "Offer what they asked, or your own price.",
   "driver.offer.match": "Agree to {amount}",
-  "driver.offer.send": "Send my price"
+  "driver.offer.send": "Send my price",
+  "ride.journey.from_to": "{origin} to {destination}"
 }

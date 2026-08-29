@@ -115,19 +115,25 @@ fun velroTypography(locale: Locale): Typography {
  * `ټ ډ ړ ږ ښ ګ ڼ ې ۍ`, exactly the letters that tell one word from another,
  * render as empty boxes. The failure is invisible on a developer's phone.
  *
- * Real weights, never synthesised: faking bold on Naskh smears the joins where
- * letters connect. Noto Naskh Arabic, SIL Open Font License 1.1; the licence
- * ships beside the files in `res/font/OFL.txt` as it requires.
+ * Real weights, never synthesised: faking bold on Perso-Arabic smears the joins
+ * where letters connect.
+ *
+ * Vazirmatn, SIL Open Font License 1.1. Chosen over Noto Naskh because it is
+ * drawn for screens rather than for books -- sturdier strokes and more open
+ * counters, which survive a cheap phone in daylight -- and because it is the
+ * face most Persian and Dari interfaces already use, so it reads as ordinary
+ * rather than foreign. Verified to keep all nine Pashto letters at every
+ * weight. The licence ships in `assets/licences/` as it requires.
  *
  * Latin stays on the system sans: it is well covered everywhere, and bundling a
  * second family would cost another megabyte for no legibility gained.
  */
 object VelroFonts {
     private val persoArabic = FontFamily(
-        Font(R.font.noto_naskh_arabic_regular, FontWeight.Normal),
-        Font(R.font.noto_naskh_arabic_medium, FontWeight.Medium),
-        Font(R.font.noto_naskh_arabic_medium, FontWeight.SemiBold),
-        Font(R.font.noto_naskh_arabic_bold, FontWeight.Bold),
+        Font(R.font.vazirmatn_regular, FontWeight.Normal),
+        Font(R.font.vazirmatn_medium, FontWeight.Medium),
+        Font(R.font.vazirmatn_medium, FontWeight.SemiBold),
+        Font(R.font.vazirmatn_bold, FontWeight.Bold),
     )
 
     fun familyFor(locale: Locale): FontFamily =

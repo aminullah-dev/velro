@@ -559,5 +559,6 @@
   "driver.offer.title": "کرایه شما برای این سفر",
   "driver.offer.hint": "همان مقدار خواسته‌شده یا قیمت خود را پیشنهاد کنید.",
   "driver.offer.match": "قبول {amount}",
-  "driver.offer.send": "فرستادن قیمت من"
+  "driver.offer.send": "فرستادن قیمت من",
+  "ride.journey.from_to": "از {origin} به {destination}"
 }

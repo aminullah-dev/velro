@@ -559,5 +559,6 @@
   "driver.offer.title": "د دې سفر لپاره ستاسو کرایه",
   "driver.offer.hint": "هماغه غوښتل شوې اندازه یا خپله بیه وړاندیز کړئ.",
   "driver.offer.match": "د {amount} منل",
-  "driver.offer.send": "زما بیه ولېږئ"
+  "driver.offer.send": "زما بیه ولېږئ",
+  "ride.journey.from_to": "له {origin} څخه {destination} ته"
 }

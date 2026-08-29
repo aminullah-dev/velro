@@ -427,7 +427,7 @@ private fun Confirmation(state: BookingFlowUiState, onFinished: (String) -> Unit
             Column {
                 LabelledValue(
                     strings["booking.label.number"],
-                    Numerals.localise(booking.number, strings.locale),
+                    booking.number,
                 )
                 Spacer(Modifier.height(Spacing.sm))
                 LabelledValue(
@@ -467,10 +467,11 @@ private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) 
         VelroCard {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Text(
-                    listOfNotNull(
-                        state.selectedStation?.name,
-                        state.selectedDestination?.name,
-                    ).joinToString(" ← "),
+                    strings[
+                        "ride.journey.from_to",
+                        "origin" to (state.selectedStation?.name ?: "—"),
+                        "destination" to (state.selectedDestination?.name ?: "—"),
+                    ],
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )

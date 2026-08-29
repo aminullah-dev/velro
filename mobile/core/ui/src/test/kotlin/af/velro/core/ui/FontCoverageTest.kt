@@ -19,6 +19,16 @@ class FontCoverageTest {
     private val persian = "پچژگک"
     private val easternDigits = "۰۱۲۳۴۵۶۷۸۹"
 
+    /**
+     * Plates, booking numbers and trip numbers are Latin.
+     *
+     * A Perso-Arabic face without them is not a smaller problem than one
+     * without Pashto: every plate and every booking number would fall back to
+     * whatever the handset happens to have, and the receipt would be set in two
+     * typefaces at once.
+     */
+    private val latin = "ABCPRWKGVLSTNabc0123456789-"
+
     @Test
     fun `every bundled weight covers Pashto Persian and Eastern digits`() {
         val fonts = File("src/main/res/font").listFiles { f -> f.extension == "ttf" }
@@ -26,7 +36,7 @@ class FontCoverageTest {
 
         for (file in fonts!!) {
             val covered = codepointsIn(file)
-            for (text in listOf(pashtoOnly, persian, easternDigits)) {
+            for (text in listOf(pashtoOnly, persian, easternDigits, latin)) {
                 val missing = text.filterNot { covered.contains(it.code) }
                 assertTrue("${file.name} is missing: $missing", missing.isEmpty())
             }
@@ -36,8 +46,8 @@ class FontCoverageTest {
     @Test
     fun `the weights are real files, not one face relabelled`() {
         val dir = File("src/main/res/font")
-        val regular = File(dir, "noto_naskh_arabic_regular.ttf")
-        val bold = File(dir, "noto_naskh_arabic_bold.ttf")
+        val regular = File(dir, "vazirmatn_regular.ttf")
+        val bold = File(dir, "vazirmatn_bold.ttf")
         assertTrue("regular missing", regular.exists())
         assertTrue("bold missing", bold.exists())
         // Synthesised bold smears the joins in Naskh, so the two must differ.
@@ -49,7 +59,7 @@ class FontCoverageTest {
 
     @Test
     fun `the open font licence ships with the app`() {
-        val licence = File("src/main/assets/licences/noto-naskh-arabic-OFL.txt")
+        val licence = File("src/main/assets/licences/vazirmatn-OFL.txt")
         assertTrue("OFL 1.1 requires the notice to ship", licence.exists())
         assertTrue(licence.readText().contains("SIL OPEN FONT LICENSE"))
     }

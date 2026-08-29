@@ -143,8 +143,11 @@ private fun RequestCard(
     VelroCard {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Text(
-                listOfNotNull(request.originStationName, request.destinationName)
-                    .joinToString(" ← "),
+                strings[
+                    "ride.journey.from_to",
+                    "origin" to (request.originStationName ?: "—"),
+                    "destination" to (request.destinationName ?: "—"),
+                ],
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
