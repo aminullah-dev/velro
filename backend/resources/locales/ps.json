@@ -608,5 +608,9 @@
   "common.shamsi_month.11": "سلواغه",
   "common.shamsi_month.12": "کب",
   "common.state.unreachable": "له سرور سره اړیکه ونه شوه. دا لست را نه شو — تش نه دی.",
-  "common.state.unreachable_hint": "پینل به بیا هڅه وکړي. انټرنېټ وګورئ."
+  "common.state.unreachable_hint": "پینل به بیا هڅه وکړي. انټرنېټ وګورئ.",
+  "error.driver_documents_expired": "ستاسو د یوه سند نېټه تېره ده. نوی عکس یې واستوئ چې بیا کار وکړئ.",
+  "driver.documents.valid_until": "تر {date} پورې اعتبار لري",
+  "driver.documents.expiring_soon": "په {date} کې پای ته رسېږي. تر هغې مخکې نوی عکس واستوئ.",
+  "driver.documents.expired": "په {date} کې پای ته رسېدلی. نوی عکس واستوئ چې بیا کار وکړئ."
 }

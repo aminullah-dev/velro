@@ -19,10 +19,8 @@ from application.use_cases.trip_lifecycle import (
     VerifyPassenger,
     VerifyPassengerCommand,
 )
-from domain.driver import Driver
 from domain.enums import (
     ActorRole,
-    DriverApprovalStatus,
     DriverAvailability,
     TripStatus,
     VehicleStatus,
@@ -90,26 +88,34 @@ def set_status(
     actor: Annotated[deps.Actor, Depends(deps.require_driver)],
     drivers: Annotated[object, Depends(deps.drivers)],
     vehicles: Annotated[object, Depends(deps.vehicles)],
+    settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
 ) -> dict:
     """Going online is where approval is enforced.
 
     An unapproved or suspended driver cannot reach the dispatch pool at all,
-    rather than being filtered out of it later (section 28).
+    rather than being filtered out of it later (section 28) -- and neither can
+    one whose licence or جواز سیر has expired since they were approved.
     """
+    from application.use_cases.driver_documents import _to_driver
+
     row = _driver_of(drivers, actor.user_id)
-    entity = Driver(
-        id=row.id, user_id=row.user_id,
-        approval_status=DriverApprovalStatus(row.approval_status),
-        availability=DriverAvailability(row.availability),
-    )
+    # Built with its documents, because approval is not enough on its own: a
+    # driver approved in Hamal is still APPROVED in Jadi with a licence that
+    # ran out in Saratan. Going online is once a shift, so the read is cheap
+    # and it is the last point before a passenger is involved.
+    entity = _to_driver(row, drivers.documents_of(row.id))
+
     if body.availability == DriverAvailability.ONLINE.value:
         entity.go_online()
-        # Approval covers the documents; it does not conjure a car. Without an
-        # active vehicle a driver could enter the dispatch pool, be offered a
-        # trip, and fail at the moment they accepted it -- in front of a
-        # passenger who is already waiting. Refuse here, where it can be
-        # explained.
+        entity.assert_documents_current(
+            frozenset(settings.get_list("driver.required_documents", [])),
+            on=deps.clock().now().date(),
+        )
+        # Documents do not conjure a car. Without an active vehicle a driver
+        # could enter the dispatch pool, be offered a trip, and fail at the
+        # moment they accepted it -- in front of a passenger who is already
+        # waiting. Refuse here, where it can be explained.
         vehicle = vehicles.current_for_driver(row.id)
         if vehicle is None:
             raise ConflictError(error_codes.VEHICLE_NOT_REGISTERED, driver_id=row.id)

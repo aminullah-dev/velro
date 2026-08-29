@@ -203,6 +203,27 @@ class Driver:
         }
         return frozenset(required - held)
 
+    def assert_documents_current(self, required: frozenset[str], *, on: date) -> None:
+        """Every required document verified and not expired, today.
+
+        Approval is a moment; a licence is a period. Checking the documents only
+        when the driver is approved means a driver approved in Hamal is still
+        approved in Jadi with a licence that ran out in Saratan -- carrying
+        passengers on a permit no longer valid, with the platform's word behind
+        them. This is the check that has to run every time work starts.
+
+        Fails closed. If the caller did not load the documents, every required
+        code comes back expired and the driver is stopped: a loud bug, rather
+        than an unlicensed driver quietly let through.
+        """
+        stale = self.missing_documents(required, on=on)
+        if stale:
+            raise ConflictError(
+                error_codes.DRIVER_DOCUMENTS_EXPIRED,
+                driver_id=self.id,
+                documents=sorted(stale),
+            )
+
     def approve(self, *, by: str, at: datetime, required_documents: frozenset[str]) -> None:
         missing = self.missing_documents(required_documents, on=at.date())
         if missing:

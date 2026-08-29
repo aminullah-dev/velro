@@ -252,6 +252,35 @@ private fun DocumentRow(
                 )
             }
 
+            // The expiry, said out loud and early.
+            //
+            // A licence or a جواز سیر that has run out stops the driver from
+            // going online. Without this line the first they learn of it is
+            // being refused at the start of a shift, with a passenger already
+            // waiting -- and nothing on the screen to explain it. The warning
+            // window exists so the replacement can be sent before that morning
+            // rather than after it.
+            document?.expiresOn?.let { expiry ->
+                val notice = expiryNotice(expiry, java.time.LocalDate.now(Calendars.KABUL))
+                if (notice != null) {
+                    val shown = Calendars.date(
+                        java.time.LocalDate.parse(expiry)
+                            .atStartOfDay(Calendars.KABUL).toInstant(),
+                        strings.locale,
+                    )
+                    Spacer(Modifier.height(Spacing.xs))
+                    Text(
+                        strings[notice.messageKey, "date" to shown],
+                        style = MaterialTheme.typography.labelSmall,
+                        color = when (notice.severity) {
+                            ExpirySeverity.PAST -> MaterialTheme.colorScheme.error
+                            ExpirySeverity.SOON -> MaterialTheme.colorScheme.secondary
+                            ExpirySeverity.FINE -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
+            }
+
             Spacer(Modifier.height(Spacing.md))
             SecondaryAction(
                 label = strings[
@@ -296,3 +325,40 @@ private fun readImage(context: Context, uri: Uri): Pair<ByteArray, String>? = ru
 }.getOrNull()
 
 private const val MAX_UPLOAD_BYTES = 6 * 1024 * 1024
+
+/** How close a document is to running out. */
+internal enum class ExpirySeverity { PAST, SOON, FINE }
+
+/**
+ * Which sentence to show under a document, and how loudly.
+ *
+ * Returns a message key rather than a rendered string so the rule can be
+ * tested without an Android context -- and so the wording stays in the locale
+ * files, where every other sentence lives.
+ */
+internal data class ExpiryNotice(val messageKey: String, val severity: ExpirySeverity)
+
+/**
+ * Thirty days is the warning window: long enough to reach an office in a
+ * valley where that is a day's travel, short enough that the line is not
+ * permanently on screen and stops being read.
+ *
+ * Returns null for a date that cannot be parsed rather than guessing. A
+ * malformed expiry rendered as "expired" would tell a driver holding a valid
+ * licence to stop working.
+ */
+internal fun expiryNotice(
+    expiresOn: String,
+    today: java.time.LocalDate,
+): ExpiryNotice? {
+    val expiry = runCatching { java.time.LocalDate.parse(expiresOn) }.getOrNull() ?: return null
+    val daysLeft = java.time.temporal.ChronoUnit.DAYS.between(today, expiry)
+    return when {
+        daysLeft < 0 -> ExpiryNotice("driver.documents.expired", ExpirySeverity.PAST)
+        daysLeft <= WARN_WITHIN_DAYS ->
+            ExpiryNotice("driver.documents.expiring_soon", ExpirySeverity.SOON)
+        else -> ExpiryNotice("driver.documents.valid_until", ExpirySeverity.FINE)
+    }
+}
+
+internal const val WARN_WITHIN_DAYS = 30L

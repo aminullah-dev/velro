@@ -66,6 +66,7 @@ mobile() {
   step "mobile core:ui" gradle :core:ui:testDebugUnitTest --console=plain -q
   # Calendar and numerals. Without this line the Nowruz fixtures never run.
   step "mobile core:i18n" gradle :core:i18n:testDebugUnitTest --console=plain -q
+  step "mobile driver"  gradle :feature:driver:testDebugUnitTest --console=plain -q
   step "mobile build"   gradle :app-driver:assembleDebug :app-passenger:assembleDebug --console=plain -q
 }
 

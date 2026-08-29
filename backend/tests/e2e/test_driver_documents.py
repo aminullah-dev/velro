@@ -356,3 +356,142 @@ def test_the_verified_photo_completes_the_checklist(
         )
     checklist = client.get("/api/v1/driver/documents", headers=session).json()["data"]
     assert checklist["missing"] == []
+
+
+def _approved_driver(client: TestClient, admin_session: dict, phone: str) -> dict:
+    """A driver with everything sent, verified, approved, and a live vehicle."""
+    session = auth(sign_in(client, phone))
+    client.post("/api/v1/driver/register", json={}, headers=session)
+    for code in REQUIRED:
+        uploaded = upload(client, session, code)
+        client.post(
+            f"/api/v1/admin/documents/{uploaded.json()['data']['id']}/review",
+            json={"verified": True, "expires_on": "2099-12-31"},
+            headers=admin_session,
+        )
+    drivers = client.get("/api/v1/admin/drivers", headers=admin_session).json()["data"]
+    driver_id = next(d["id"] for d in drivers if d["phone"] == phone)
+    approved = client.post(
+        f"/api/v1/admin/drivers/{driver_id}/approve", headers=admin_session
+    )
+    assert approved.status_code == 200, approved.text
+
+    created = client.post(
+        "/api/v1/driver/vehicle", headers=session,
+        json={"vehicle_type_code": "SEDAN", "plate_number": f"PRW-{phone[-4:]}"},
+    )
+    assert created.status_code == 200, created.text
+    client.post(
+        f"/api/v1/admin/vehicles/{created.json()['data']['id']}/decide",
+        json={"approve": True}, headers=admin_session,
+    )
+    return session
+
+
+def _expire(
+    client: TestClient, admin_session: dict, session: dict, code: str, on: str
+) -> None:
+    """Move a verified document's expiry into the past.
+
+    Standing in for time passing, which is the only way this ever happens in
+    the field: the document was valid when an administrator looked at it.
+    """
+    documents = client.get(
+        "/api/v1/driver/documents", headers=session
+    ).json()["data"]["documents"]
+    current = next(d for d in documents if d["document_type_code"] == code)
+    updated = client.post(
+        f"/api/v1/admin/documents/{current['id']}/review",
+        json={"verified": True, "expires_on": on}, headers=admin_session,
+    )
+    assert updated.status_code == 200, updated.text
+
+
+def _go_online(client: TestClient, session: dict):
+    return client.post(
+        "/api/v1/driver/status", json={"availability": "ONLINE"}, headers=session
+    )
+
+
+def test_a_driver_whose_licence_expired_cannot_go_online(
+    client: TestClient, admin_session: dict
+) -> None:
+    """The gap approval leaves open.
+
+    Everything was sent, checked and approved -- and then the licence ran out.
+    Nothing about the driver's record changes on that day: approval_status is
+    still APPROVED. Without this check they keep carrying passengers on a
+    permit that is no longer valid, with VELRO's word behind them.
+    """
+    session = _approved_driver(client, admin_session, "+93700000150")
+    assert _go_online(client, session).status_code == 200
+
+    _expire(client, admin_session, session, "LICENSE", "2020-01-01")
+    client.post("/api/v1/driver/status", json={"availability": "OFFLINE"}, headers=session)
+
+    response = _go_online(client, session)
+    assert response.status_code == 409, response.text
+    body = response.json()["error"]
+    assert body["code"] == "DRIVER_DOCUMENTS_EXPIRED"
+    assert body["context"]["documents"] == ["LICENSE"]
+
+
+def test_an_expired_jawaz_e_sair_also_stops_the_driver(
+    client: TestClient, admin_session: dict
+) -> None:
+    """جواز سیر is a permit like any other, and it runs out like any other."""
+    session = _approved_driver(client, admin_session, "+93700000151")
+    _expire(client, admin_session, session, "VEHICLE_REGISTRATION", "2021-06-30")
+
+    response = _go_online(client, session)
+    assert response.status_code == 409, response.text
+    assert response.json()["error"]["context"]["documents"] == ["VEHICLE_REGISTRATION"]
+
+
+def test_a_driver_whose_documents_are_current_still_goes_online(
+    client: TestClient, admin_session: dict
+) -> None:
+    """The check must not stop everyone.
+
+    If this fails, the gate is refusing valid drivers rather than expired ones
+    -- which would be found by every driver in Ghorband at once.
+    """
+    session = _approved_driver(client, admin_session, "+93700000152")
+    response = _go_online(client, session)
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["availability"] == "ONLINE"
+
+
+def test_re_sending_the_expired_document_lets_the_driver_work_again(
+    client: TestClient, admin_session: dict
+) -> None:
+    """The error has to be recoverable from inside the app.
+
+    A driver told "your licence expired" must be able to photograph the new one
+    and carry on. If re-uploading did not clear it, the only way back would be
+    a phone call to an operator.
+    """
+    session = _approved_driver(client, admin_session, "+93700000153")
+    _expire(client, admin_session, session, "LICENSE", "2020-01-01")
+    assert _go_online(client, session).status_code == 409
+
+    replacement = upload(client, session, "LICENSE")
+    client.post(
+        f"/api/v1/admin/documents/{replacement.json()['data']['id']}/review",
+        json={"verified": True, "expires_on": "2099-12-31"}, headers=admin_session,
+    )
+
+    # Replacing a document returns the driver to PENDING by design: the
+    # approval was for the documents that were reviewed. So the new licence
+    # being verified is not the last step -- an operator has to approve the
+    # driver again, and the app must not leave them thinking otherwise.
+    still_blocked = _go_online(client, session)
+    assert still_blocked.status_code == 409
+    assert still_blocked.json()["error"]["code"] == "DRIVER_NOT_APPROVED"
+
+    drivers = client.get("/api/v1/admin/drivers", headers=admin_session).json()["data"]
+    driver_id = next(d["id"] for d in drivers if d["phone"] == "+93700000153")
+    client.post(f"/api/v1/admin/drivers/{driver_id}/approve", headers=admin_session)
+
+    response = _go_online(client, session)
+    assert response.status_code == 200, response.text

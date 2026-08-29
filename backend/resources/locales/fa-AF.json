@@ -608,5 +608,9 @@
   "common.shamsi_month.11": "دلو",
   "common.shamsi_month.12": "حوت",
   "common.state.unreachable": "به سرور وصل نشد. این لست بارگیری نشد — خالی نیست.",
-  "common.state.unreachable_hint": "پنل باز هم کوشش می‌کند. انترنت را چک کنید."
+  "common.state.unreachable_hint": "پنل باز هم کوشش می‌کند. انترنت را چک کنید.",
+  "error.driver_documents_expired": "یکی از اسناد شما تاریخش گذشته است. عکس نو آن را بفرستید تا دوباره کار کرده بتوانید.",
+  "driver.documents.valid_until": "تا {date} اعتبار دارد",
+  "driver.documents.expiring_soon": "در {date} تمام می‌شود. پیش از آن عکس نو بفرستید.",
+  "driver.documents.expired": "در {date} تمام شده است. عکس نو بفرستید تا دوباره کار کرده بتوانید."
 }

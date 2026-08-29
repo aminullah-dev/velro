@@ -608,5 +608,9 @@
   "common.shamsi_month.11": "Dalw",
   "common.shamsi_month.12": "Hoot",
   "common.state.unreachable": "Cannot reach the server. This list could not be loaded — it is not empty.",
-  "common.state.unreachable_hint": "The panel will keep trying. Check the internet connection."
+  "common.state.unreachable_hint": "The panel will keep trying. Check the internet connection.",
+  "error.driver_documents_expired": "A document has expired. Send a new photo of it to work again.",
+  "driver.documents.valid_until": "Valid until {date}",
+  "driver.documents.expiring_soon": "Expires {date}. Send a new photo before then.",
+  "driver.documents.expired": "Expired {date}. Send a new photo to work again."
 }

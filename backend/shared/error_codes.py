@@ -65,6 +65,11 @@ DRIVER_SUSPENDED: Final = "DRIVER_SUSPENDED"
 DRIVER_OFFLINE: Final = "DRIVER_OFFLINE"
 DRIVER_ALREADY_ON_TRIP: Final = "DRIVER_ALREADY_ON_TRIP"
 DRIVER_DOCUMENTS_INCOMPLETE: Final = "DRIVER_DOCUMENTS_INCOMPLETE"
+# Distinct from INCOMPLETE on purpose: nothing is missing, the driver sent
+# everything and was approved. A licence simply ran out since. The driver
+# needs to be told which one and that re-sending it fixes it, not that their
+# paperwork is absent.
+DRIVER_DOCUMENTS_EXPIRED: Final = "DRIVER_DOCUMENTS_EXPIRED"
 DRIVER_ALREADY_REGISTERED: Final = "DRIVER_ALREADY_REGISTERED"
 DOCUMENT_NOT_FOUND: Final = "DOCUMENT_NOT_FOUND"
 DOCUMENT_TYPE_UNKNOWN: Final = "DOCUMENT_TYPE_UNKNOWN"

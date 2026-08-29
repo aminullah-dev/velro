@@ -369,6 +369,76 @@ class TestDriver:
         )
         assert driver.missing_documents(frozenset({"LICENSE"}), on=NOW.date()) == {"LICENSE"}
 
+    def test_an_approved_driver_whose_licence_expired_cannot_work(self) -> None:
+        """Approval is a moment; a licence is a period.
+
+        The driver sent everything, an administrator checked it, approval was
+        granted -- and then the licence ran out. `assert_can_work` only reads
+        approval_status, so nothing about that driver's record changes on the
+        day their permit expires. This is the check that has to notice.
+        """
+        driver = Driver(
+            id="d", user_id="u",
+            approval_status=DriverApprovalStatus.APPROVED,
+            documents=[
+                DriverDocument(
+                    id="1", driver_id="d", document_type_code="LICENSE", file_key="k",
+                    status=DocumentStatus.VERIFIED,
+                    expires_on=NOW.date() - timedelta(days=1),
+                )
+            ],
+        )
+        # Still approved -- which is exactly the problem.
+        driver.assert_can_work()
+
+        with pytest.raises(ConflictError) as exc:
+            driver.assert_documents_current(frozenset({"LICENSE"}), on=NOW.date())
+        assert exc.value.code == "DRIVER_DOCUMENTS_EXPIRED"
+        assert exc.value.context["documents"] == ["LICENSE"]
+
+    def test_a_licence_valid_today_is_still_good_on_its_last_day(self) -> None:
+        driver = Driver(
+            id="d", user_id="u",
+            approval_status=DriverApprovalStatus.APPROVED,
+            documents=[
+                DriverDocument(
+                    id="1", driver_id="d", document_type_code="LICENSE", file_key="k",
+                    status=DocumentStatus.VERIFIED, expires_on=NOW.date(),
+                )
+            ],
+        )
+        driver.assert_documents_current(frozenset({"LICENSE"}), on=NOW.date())
+
+    def test_the_expiry_check_fails_closed_when_documents_were_not_loaded(self) -> None:
+        """A caller that forgets to load the documents stops the driver.
+
+        The alternative -- an empty list reading as "nothing expired" -- turns a
+        forgotten join into an unlicensed driver carrying passengers, and no
+        test would ever catch it.
+        """
+        driver = Driver(
+            id="d", user_id="u", approval_status=DriverApprovalStatus.APPROVED,
+        )
+        with pytest.raises(ConflictError) as exc:
+            driver.assert_documents_current(frozenset({"LICENSE"}), on=NOW.date())
+        assert exc.value.code == "DRIVER_DOCUMENTS_EXPIRED"
+
+    def test_a_document_with_no_expiry_never_goes_stale(self) -> None:
+        """A tazkira does not run out; only the permits carry a date."""
+        driver = Driver(
+            id="d", user_id="u",
+            approval_status=DriverApprovalStatus.APPROVED,
+            documents=[
+                DriverDocument(
+                    id="1", driver_id="d", document_type_code="NATIONAL_ID",
+                    file_key="k", status=DocumentStatus.VERIFIED, expires_on=None,
+                )
+            ],
+        )
+        driver.assert_documents_current(
+            frozenset({"NATIONAL_ID"}), on=NOW.date() + timedelta(days=3650)
+        )
+
     def test_a_suspended_driver_is_refused_before_anything_else(self) -> None:
         driver = Driver(id="d", user_id="u", approval_status=DriverApprovalStatus.APPROVED)
         driver.suspend("documents expired")
