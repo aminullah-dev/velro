@@ -52,11 +52,16 @@ class DriverRepository @Inject constructor(
         tripId: String,
         from: TripStatus,
         to: TripStatus,
+        /** Only sent when `to` is CANCELLED, and required there. */
+        reasonCode: String? = null,
+        note: String? = null,
     ): ApiResult<AdvanceOutcome> {
         require(Lifecycles.trip.can(from, to)) {
             "the app must not offer ${from.name} -> ${to.name}"
         }
-        return mapper.call { api.advanceTrip(tripId, AdvanceTripRequest(to.name)) }
+        return mapper.call {
+            api.advanceTrip(tripId, AdvanceTripRequest(to.name, reasonCode, note))
+        }
             .map { response ->
                 AdvanceOutcome(
                     status = af.velro.domain.enumOrNull<TripStatus>(response.status) ?: to,

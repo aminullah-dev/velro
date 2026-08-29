@@ -65,20 +65,32 @@ only navigation button with it. An approved, offline driver whose earnings call
 failed was left with one control — the online switch — and nothing explaining
 it.
 
+**A driver could not cancel an assigned trip.** The API accepted `CANCELLED`
+and the schema whitelisted it; the app's `nextStep` only ever walked forward, so
+a driver whose car broke down at a pickup point had exactly two options — drive
+the trip, or abandon the passenger silently. There is now a cancel control, and
+it asks *why*: a cancellation with no recorded reason cannot be told from any
+other, and the one that costs a passenger a morning is the one a suspension has
+to be able to point at. The reason codes offered are the ones the server
+accepts, so the app cannot present a choice that fails. No fee is charged — the
+passenger did not cancel; the ride was taken from them.
+
+**Nothing called `/admin/routes/generate`.** The endpoint's own docstring says
+"Needed after a village import", and no admin page called it. So every village
+imported so far produced stations with no routes — and a station with no route
+is not on the network, whatever the map says: it cannot be chosen as an origin
+and nothing can be booked from it. It is now offered on the import page at the
+moment it is needed, and as a standing action on the routes page.
+
 ## Not fixed here, in the order they should be
-1. A driver cannot cancel an assigned trip, though the API accepts `CANCELLED`
-   and the schema whitelists it. A breakdown at `ARRIVED_AT_PICKUP` has no
-   in-app action.
-2. Nothing in the admin panel calls `/admin/routes/generate`, so an imported
-   village's stations can never be booked from.
-3. No support, help or emergency surface anywhere — the tables, the error codes
+1. No support, help or emergency surface anywhere — the tables, the error codes
    and the translated strings all exist.
-4. No screen in either app has a title bar or back affordance; `BackHandler`
+2. No screen in either app has a title bar or back affordance; `BackHandler`
    appears nowhere.
-5. The fixed-price search path is still reachable by pressing Back from the ask
+3. The fixed-price search path is still reachable by pressing Back from the ask
    step, contradicting the negotiated-fare model.
-6. A driver cannot view a document photo they uploaded, though the reviewer can.
-7. `Locale.displayName()` returns bare "دری" / "پښتو" literals into a Compose
+4. A driver cannot view a document photo they uploaded, though the reviewer can.
+5. `Locale.displayName()` returns bare "دری" / "پښتو" literals into a Compose
    file, against the house rule the same module's header asserts.
 
 ## Verified

@@ -202,6 +202,16 @@ export function ImportVillagesPage() {
               skipped: num(result.skipped_duplicates),
             })}
           </div>
+
+          {/* The import creates villages and stations; it does not create the
+              routes that make them reachable. Without this the operator
+              finishes an import believing the work is done, and every new
+              station is invisible to every passenger. Offered here because
+              this is the moment it is needed. */}
+          {result.stations_created > 0 && (
+            <BuildRoutes stationsCreated={result.stations_created} />
+          )}
+
           <button className="primary" onClick={() => setResult(null)}>
             {t("admin.import.start_over")}
           </button>
@@ -394,5 +404,62 @@ export function ImportVillagesPage() {
         </Table>
       ))}
     </>
+  );
+}
+
+
+interface GenerateResult {
+  templates_processed: number;
+  routes_created: number;
+  routes_updated: number;
+  stations_covered: number;
+}
+
+/**
+ * Build the routes an import's stations need.
+ *
+ * A station with no route is not on the network, whatever the map says: it
+ * cannot be chosen as an origin and nothing can be booked from it. The
+ * endpoint has existed since the route engine was built and nothing called it,
+ * so every village imported so far was invisible.
+ *
+ * Regenerating is safe -- an existing route for a (template, station) pair is
+ * updated rather than duplicated -- so this is offered as a plain button
+ * rather than hidden behind a confirmation.
+ */
+function BuildRoutes({ stationsCreated }: { stationsCreated: number }) {
+  const { t, num } = useStrings();
+
+  const generate = useMutation({
+    mutationFn: () => api.post<GenerateResult>("/admin/routes/generate", {}),
+  });
+
+  return (
+    <div className="card" style={{ marginBlockEnd: "var(--s-4)" }}>
+      <p>{t("admin.routes.generate_needed", { stations: num(stationsCreated) })}</p>
+      <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
+        {t("admin.routes.generate_hint")}
+      </p>
+
+      {generate.error && <ErrorBanner error={generate.error} />}
+
+      {generate.data ? (
+        <div className="banner info">
+          {t("admin.routes.generated", {
+            created: num(generate.data.routes_created),
+            updated: num(generate.data.routes_updated),
+            stations: num(generate.data.stations_covered),
+          })}
+        </div>
+      ) : (
+        <button
+          className="primary"
+          disabled={generate.isPending}
+          onClick={() => generate.mutate()}
+        >
+          {t("admin.routes.generate")}
+        </button>
+      )}
+    </div>
   );
 }

@@ -217,6 +217,7 @@ def advance_trip(
     settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
     notifier: Annotated[object, Depends(deps.notifier)],
+    cancellations: Annotated[object, Depends(deps.cancellations)],
 ) -> dict:
     use_case = AdvanceTrip(
         trips=trips, seats=seats, bookings=bookings, drivers=drivers,
@@ -225,6 +226,7 @@ def advance_trip(
         # Without this the cancellation cascade runs silently: the passenger's
         # booking is cancelled and nothing on their phone says so.
         notifier=notifier,
+        cancellations=cancellations,
     )
     result = use_case.execute(
         AdvanceTripCommand(
@@ -232,6 +234,8 @@ def advance_trip(
             target=TripStatus(body.target),
             actor_id=actor.user_id,
             actor_role=ActorRole.DRIVER,
+            reason_code=body.reason_code or "DRIVER_CANCELLED",
+            note=body.note,
         )
     )
     return ok(

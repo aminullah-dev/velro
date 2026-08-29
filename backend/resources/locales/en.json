@@ -622,5 +622,13 @@
   "ride.offers.expired_body": "No driver named a price for this trip. Ask again — you can offer a different fare.",
   "ride.offers.cancelled_title": "This request was cancelled",
   "ride.offers.cancelled_body": "Ask again whenever you are ready to travel.",
-  "ride.offers.ask_again": "Ask again"
+  "ride.offers.ask_again": "Ask again",
+  "admin.routes.generate": "Build routes for the new stations",
+  "admin.routes.generate_hint": "An imported station has no routes until this is run, and a station with no routes cannot be travelled from.",
+  "admin.routes.generated": "{created} routes created and {updated} updated, covering {stations} stations.",
+  "admin.routes.generate_needed": "The import created {stations} stations. They cannot be travelled from until routes are built for them.",
+  "driver.trip.cancel": "Cancel this trip",
+  "driver.trip.cancel_title": "Why can you not make this trip?",
+  "driver.trip.cancel_hint": "The passenger is told at once. Cancelling often will suspend you.",
+  "driver.trip.cancel_confirm": "Cancel the trip"
 }

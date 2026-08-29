@@ -622,5 +622,13 @@
   "ride.offers.expired_body": "هیڅ چلوونکي د دې سفر لپاره بیه ونه ښوده. بیا وپوښتئ — بل کرایه وړاندیز کولی شئ.",
   "ride.offers.cancelled_title": "دا غوښتنه لغوه شوه",
   "ride.offers.cancelled_body": "کله چې د سفر لپاره چمتو یاست بیا وپوښتئ.",
-  "ride.offers.ask_again": "بیا پوښتنه"
+  "ride.offers.ask_again": "بیا پوښتنه",
+  "admin.routes.generate": "د نویو دریځونو لپاره لارې جوړول",
+  "admin.routes.generate_hint": "راوړل شوی دریځ تر څو چې دا ونه چلېږي هیڅ لاره نه لري، او له بې‌لارې دریځه سفر نه شي کېدای.",
+  "admin.routes.generated": "{created} لارې جوړې شوې او {updated} نوې شوې، د {stations} دریځونو لپاره.",
+  "admin.routes.generate_needed": "دې راوړلو {stations} دریځونه جوړ کړل. تر څو چې د دوی لارې جوړې نه شي، له دوی څخه سفر نه شي کېدای.",
+  "driver.trip.cancel": "دا سفر لغوه کړئ",
+  "driver.trip.cancel_title": "ولې دا سفر نه شئ کولی؟",
+  "driver.trip.cancel_hint": "مسافر ته سمدلاسه خبر ورکول کېږي. ډېر لغو کول به ستاسو کار ودروي.",
+  "driver.trip.cancel_confirm": "سفر لغوه شي"
 }

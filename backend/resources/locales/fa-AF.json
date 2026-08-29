@@ -622,5 +622,13 @@
   "ride.offers.expired_body": "هیچ راننده‌ای برای این سفر قیمت نداد. دوباره بپرسید — می‌توانید کرایهٔ دیگری پیشنهاد کنید.",
   "ride.offers.cancelled_title": "این درخواست لغو شد",
   "ride.offers.cancelled_body": "هر وقت آمادهٔ سفر بودید دوباره بپرسید.",
-  "ride.offers.ask_again": "دوباره پرسیدن"
+  "ride.offers.ask_again": "دوباره پرسیدن",
+  "admin.routes.generate": "ساختن مسیرها برای ایستگاه‌های نو",
+  "admin.routes.generate_hint": "ایستگاهی که وارد شده تا این کار اجرا نشود هیچ مسیری ندارد، و از ایستگاه بدون مسیر سفر شده نمی‌تواند.",
+  "admin.routes.generated": "{created} مسیر ساخته شد و {updated} مسیر تازه شد، برای {stations} ایستگاه.",
+  "admin.routes.generate_needed": "این وارد کردن {stations} ایستگاه ساخت. تا زمانی که مسیرهای‌شان ساخته نشود، از آن‌ها سفر شده نمی‌تواند.",
+  "driver.trip.cancel": "لغو این سفر",
+  "driver.trip.cancel_title": "چرا این سفر را کرده نمی‌توانید؟",
+  "driver.trip.cancel_hint": "به مسافر فوراً خبر داده می‌شود. لغو کردن پی‌درپی باعث معطلی شما می‌شود.",
+  "driver.trip.cancel_confirm": "سفر لغو شود"
 }

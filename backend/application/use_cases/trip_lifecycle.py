@@ -29,7 +29,7 @@ from shared.clock import Clock
 from shared.errors import ConflictError, PermissionError
 from shared.ids import IdGenerator
 from shared.logging import get_logger
-from shared.money import Money
+from shared.money import DEFAULT_CURRENCY, Money
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +38,9 @@ class AdvanceTripCommand:
     target: TripStatus
     actor_id: str
     actor_role: ActorRole
+    # Only read when target is CANCELLED.
+    reason_code: str = "DRIVER_CANCELLED"
+    note: str | None = None
     request_id: str | None = None
 
 
@@ -69,6 +72,7 @@ class AdvanceTrip:
         clock: Clock,
         new_id: IdGenerator,
         notifier=None,
+        cancellations=None,
     ) -> None:
         self._trips = trips
         self._seats = seats
@@ -82,6 +86,7 @@ class AdvanceTrip:
         self._clock = clock
         self._new_id = new_id
         self._notifier = notifier
+        self._cancellations = cancellations
 
     def execute(self, cmd: AdvanceTripCommand) -> AdvanceTripResult:
         now = self._clock.now()
@@ -107,6 +112,9 @@ class AdvanceTrip:
         row.cancelled_at = trip.cancelled_at
         self._trips.save(row)
 
+        if trip.status in _CALLED_OFF:
+            self._record_cancellation(trip, row, cmd)
+
         advanced = self._cascade_bookings(trip, now)
         self._update_driver_availability(trip, now)
 
@@ -131,6 +139,34 @@ class AdvanceTrip:
             driver_earning=earning,
             platform_commission=commission,
         )
+
+    def _record_cancellation(self, trip: Trip, row, cmd: AdvanceTripCommand) -> None:
+        """One row per booking left holding the bag.
+
+        A cancellation with no recorded reason cannot be told from any other. A
+        driver whose car broke down and one who simply changed their mind look
+        identical afterwards -- and the second is the one that costs a passenger
+        a morning, and the one a suspension has to be able to point at.
+
+        Written per booking rather than per trip so a shared ride that strands
+        four passengers is four cancellations, which is what it was.
+        """
+        if self._cancellations is None:
+            return
+        for booking_row in self._bookings.active_for_trip(trip.id):
+            self._cancellations.create(
+                id=self._new_id(),
+                trip_id=trip.id,
+                booking_id=booking_row.id,
+                cancelled_by_user_id=cmd.actor_id,
+                cancelled_by_role=cmd.actor_role.value,
+                reason_code=cmd.reason_code,
+                note=cmd.note,
+                # No fee. The passenger did not cancel; the ride was taken away
+                # from them, and charging for that would be indefensible.
+                fee_minor=0,
+                fee_currency=DEFAULT_CURRENCY,
+            )
 
     # -- cascades ---------------------------------------------------------
 

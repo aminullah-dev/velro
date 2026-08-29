@@ -341,7 +341,12 @@ data class CurrentTripDto(
 )
 
 @Serializable
-data class AdvanceTripRequest(val target: String)
+data class AdvanceTripRequest(
+    val target: String,
+    /** Only read when target is CANCELLED. */
+    val reason_code: String? = null,
+    val note: String? = null,
+)
 
 @Serializable
 data class AdvanceTripResponse(

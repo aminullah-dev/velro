@@ -29,6 +29,18 @@ export function RoutesPage() {
   });
   const { data } = listQuery;
 
+  const generate = useMutation({
+    mutationFn: () =>
+      api.post<{
+        routes_created: number;
+        routes_updated: number;
+        stations_covered: number;
+      }>("/admin/routes/generate", {}),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["routes"] });
+    },
+  });
+
   const setPrice = useMutation({
     mutationFn: ({ id, amountMinor }: { id: string; amountMinor: number }) =>
       api.post(`/admin/routes/${id}/fare`, { amount_minor: amountMinor, ride_kind: "SHARED" }),
@@ -46,18 +58,41 @@ export function RoutesPage() {
       <PageHeader
         title={t("admin.nav.routes")}
         actions={
-          <input
-            value={search}
-            placeholder={t("admin.hint.search_routes")}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setOffset(0);
-            }}
-          />
+          <>
+            <input
+              value={search}
+              placeholder={t("admin.hint.search_routes")}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setOffset(0);
+              }}
+            />
+            {/* Routes are generated from templates, not hand-made. A station
+                added any way other than through the importer -- or a template
+                that changed -- leaves routes to build, and this is the only
+                place to do it. Regenerating updates rather than duplicates. */}
+            <button
+              className="small"
+              disabled={generate.isPending}
+              onClick={() => generate.mutate()}
+            >
+              {t("admin.routes.generate")}
+            </button>
+          </>
         }
       />
 
       {setPrice.error && <ErrorBanner error={setPrice.error} />}
+      {generate.error && <ErrorBanner error={generate.error} />}
+      {generate.data && (
+        <div className="banner info">
+          {t("admin.routes.generated", {
+            created: num(generate.data.routes_created),
+            updated: num(generate.data.routes_updated),
+            stations: num(generate.data.stations_covered),
+          })}
+        </div>
+      )}
 
       <InputDialog
         open={pricing !== null}

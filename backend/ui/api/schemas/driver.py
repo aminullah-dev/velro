@@ -40,6 +40,15 @@ class AdvanceTripIn(Schema):
     target: str = Field(
         pattern=r"^(DRIVER_ARRIVING|ARRIVED_AT_PICKUP|BOARDING|IN_TRANSIT|ARRIVED|COMPLETED|CANCELLED)$"
     )
+    # Only meaningful when target is CANCELLED. A cancellation with no recorded
+    # reason cannot be told from any other: a driver whose car broke down and
+    # one who simply changed their mind look identical afterwards, and the
+    # second is the one that costs a passenger a morning.
+    reason_code: str | None = Field(
+        default=None,
+        pattern=r"^(DRIVER_CANCELLED|VEHICLE_PROBLEM|WEATHER|OTHER)$",
+    )
+    note: str | None = Field(default=None, max_length=500)
 
 
 class AdvanceTripOut(Schema):

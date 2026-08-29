@@ -16,12 +16,22 @@ from tests.e2e.conftest import auth, road_ready_driver, sign_in
 pytestmark = pytest.mark.integration
 
 
-def _booked_trip(client: TestClient, admin_session: dict, phone: str, plate: str):
+@pytest.fixture(scope="module")
+def rider(client: TestClient) -> dict:
+    """A passenger of this module's own, signed in once.
+
+    Signing in per test trips the OTP rate limiter, which is the server working
+    correctly. Sharing the seeded passenger with test_vertical_slice makes both
+    suites pass alone and fail together, so this one is separate.
+    """
+    return auth(sign_in(client, "+93700000175"))
+
+
+def _booked_trip(
+    client: TestClient, admin_session: dict, rider: dict, phone: str, plate: str
+):
     """A passenger with a confirmed seat on a trip a driver has accepted."""
-    # A passenger of this module's own. These tests cancel open requests and
-    # create bookings; sharing the seeded passenger with test_vertical_slice
-    # makes both suites pass alone and fail together.
-    passenger = auth(sign_in(client, "+93700000175"))
+    passenger = rider
     driver, _ = road_ready_driver(client, admin_session, phone, plate)
 
     online = client.post(
@@ -81,7 +91,7 @@ def _journey(client: TestClient, headers: dict) -> dict:
 
 
 def test_a_cancelled_trip_cancels_the_booking_riding_on_it(
-    client: TestClient, admin_session: dict
+    client: TestClient, admin_session: dict, rider: dict
 ) -> None:
     """The defect, stated as a test.
 
@@ -90,7 +100,7 @@ def test_a_cancelled_trip_cancels_the_booking_riding_on_it(
     left exactly where it was -- with a live boarding code.
     """
     passenger, driver, result = _booked_trip(
-        client, admin_session, "+93700000170", "PRW-1701"
+        client, admin_session, rider, "+93700000170", "PRW-1701"
     )
     trip_id = result["trip_id"]
     booking_id = result["booking_id"]
@@ -112,11 +122,11 @@ def test_a_cancelled_trip_cancels_the_booking_riding_on_it(
 
 
 def test_the_passenger_is_told_their_trip_was_called_off(
-    client: TestClient, admin_session: dict
+    client: TestClient, admin_session: dict, rider: dict
 ) -> None:
     """A cancelled booking that nobody mentions is a passenger still waiting."""
     passenger, driver, result = _booked_trip(
-        client, admin_session, "+93700000171", "PRW-1711"
+        client, admin_session, rider, "+93700000171", "PRW-1711"
     )
     client.post(
         f"/api/v1/driver/trips/{result['trip_id']}/advance", headers=driver,
@@ -128,3 +138,57 @@ def test_the_passenger_is_told_their_trip_was_called_off(
     assert any("cancel" in key for key in keys), (
         f"nothing in the passenger's inbox says the trip was called off: {keys}"
     )
+
+
+def test_a_driver_cancellation_records_why(
+    client: TestClient, admin_session: dict, rider: dict
+) -> None:
+    """A cancellation with no reason cannot be told from any other.
+
+    A driver whose car broke down and one who simply changed their mind look
+    identical afterwards -- and the second is the one that costs a passenger a
+    morning, and the one a suspension has to be able to point at.
+    """
+    _, driver, result = _booked_trip(
+        client, admin_session, rider, "+93700000172", "PRW-1721"
+    )
+    cancelled = client.post(
+        f"/api/v1/driver/trips/{result['trip_id']}/advance", headers=driver,
+        json={"target": "CANCELLED", "reason_code": "VEHICLE_PROBLEM",
+              "note": "موتر خراب شد"},
+    )
+    assert cancelled.status_code == 200, cancelled.text
+
+    from sqlalchemy import text
+
+    from ui.api import deps
+
+    with deps._session_factory()() as session:
+        rows = session.execute(
+            text(
+                "SELECT reason_code, note, fee_minor, cancelled_by_role "
+                "FROM cancellations WHERE trip_id = :trip"
+            ),
+            {"trip": result["trip_id"]},
+        ).fetchall()
+
+    assert rows, "the cancellation was not recorded at all"
+    assert rows[0].reason_code == "VEHICLE_PROBLEM"
+    assert rows[0].note == "موتر خراب شد"
+    assert rows[0].cancelled_by_role == "DRIVER"
+    # The passenger did not cancel; the ride was taken from them.
+    assert rows[0].fee_minor == 0
+
+
+def test_a_reason_the_platform_does_not_recognise_is_refused(
+    client: TestClient, admin_session: dict, rider: dict
+) -> None:
+    """Free-text reason codes make the cancellation report meaningless."""
+    _, driver, result = _booked_trip(
+        client, admin_session, rider, "+93700000173", "PRW-1731"
+    )
+    response = client.post(
+        f"/api/v1/driver/trips/{result['trip_id']}/advance", headers=driver,
+        json={"target": "CANCELLED", "reason_code": "COULD_NOT_BE_BOTHERED"},
+    )
+    assert response.status_code == 422, response.text

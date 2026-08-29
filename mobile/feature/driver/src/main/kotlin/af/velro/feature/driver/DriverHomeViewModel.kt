@@ -75,6 +75,20 @@ data class DriverHomeUiState(
             return candidate.takeIf { Lifecycles.trip.can(status, it) }
         }
 
+    /**
+     * Whether the driver may call this trip off.
+     *
+     * Asked of the shared lifecycle rather than listed here, so the app and the
+     * server cannot disagree about it. IN_TRANSIT is not cancellable: once the
+     * car is moving with someone in it, the journey finishes or it is an
+     * incident, not a cancellation.
+     */
+    val canCancelTrip: Boolean
+        get() {
+            val status = assignment?.trip?.status ?: return false
+            return Lifecycles.trip.can(status, TripStatus.CANCELLED)
+        }
+
     /** Boarding is the only point at which checking a code makes sense. */
     val canVerifyPassenger: Boolean
         get() = assignment?.trip?.status in setOf(
@@ -87,6 +101,7 @@ sealed interface DriverHomeEvent {
     data object ToggleOnline : DriverHomeEvent
     data class AcceptOffer(val tripId: String) : DriverHomeEvent
     data object AdvanceTrip : DriverHomeEvent
+    data class CancelTrip(val reasonCode: String, val note: String?) : DriverHomeEvent
     data class VerifyCodeChanged(val value: String) : DriverHomeEvent
     data object VerifyPassenger : DriverHomeEvent
     data object DismissError : DriverHomeEvent
@@ -150,6 +165,7 @@ class DriverHomeViewModel @Inject constructor(
             DriverHomeEvent.ToggleOnline -> toggleOnline()
             is DriverHomeEvent.AcceptOffer -> accept(event.tripId)
             DriverHomeEvent.AdvanceTrip -> advance()
+            is DriverHomeEvent.CancelTrip -> cancelTrip(event.reasonCode, event.note)
             is DriverHomeEvent.VerifyCodeChanged ->
                 _state.update { it.copy(verifyingCode = event.value.take(8), errorCode = null) }
             DriverHomeEvent.VerifyPassenger -> verify()
@@ -193,6 +209,37 @@ class DriverHomeViewModel @Inject constructor(
         }
         (drivers.earnings() as? ApiResult.Success)?.let { earnings ->
             _state.update { it.copy(earnings = earnings.value) }
+        }
+    }
+
+    /**
+     * Call the trip off.
+     *
+     * A driver whose car breaks down at a pickup point had no action here at
+     * all: the API accepted CANCELLED and the app only ever walked forward, so
+     * the choice was drive the trip or abandon the passenger silently.
+     */
+    private fun cancelTrip(reasonCode: String, note: String?) {
+        val assignment = _state.value.assignment ?: return
+        _state.update { it.copy(isBusy = true, errorCode = null) }
+        viewModelScope.launch {
+            val result = drivers.advance(
+                tripId = assignment.trip.id,
+                from = assignment.trip.status,
+                to = TripStatus.CANCELLED,
+                reasonCode = reasonCode,
+                note = note?.takeIf { it.isNotBlank() },
+            )
+            when (result) {
+                is ApiResult.Success -> {
+                    // The trip is gone, so the card must go with it -- and the
+                    // driver is back to being available for work.
+                    _state.update { it.copy(isBusy = false, assignment = null) }
+                    refresh()
+                }
+                is ApiResult.Failure ->
+                    _state.update { it.copy(isBusy = false).failed(result.error) }
+            }
         }
     }
 

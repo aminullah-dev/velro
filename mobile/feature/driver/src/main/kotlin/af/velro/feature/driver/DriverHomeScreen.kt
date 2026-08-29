@@ -18,6 +18,8 @@ import af.velro.core.ui.theme.Spacing
 import af.velro.domain.TripStatus
 import af.velro.domain.VehicleStatus
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,11 +32,17 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -321,6 +329,82 @@ private fun CurrentTrip(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> 
             loading = state.isBusy,
         )
     }
+
+    // The way out. A driver whose car breaks down at a pickup point had no
+    // action here at all -- the API accepted CANCELLED and the app only ever
+    // walked forward, so the choice was drive the trip or abandon the
+    // passenger silently. Secondary and below the forward action, because
+    // cancelling is the exception.
+    if (state.canCancelTrip) {
+        var choosing by remember { mutableStateOf(false) }
+        Spacer(Modifier.height(Spacing.sm))
+        SecondaryAction(
+            label = strings["driver.trip.cancel"],
+            onClick = { choosing = true },
+            enabled = !state.isBusy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (choosing) {
+            CancelTripDialog(
+                onDismiss = { choosing = false },
+                onConfirm = { reason ->
+                    choosing = false
+                    onEvent(DriverHomeEvent.CancelTrip(reason, null))
+                },
+            )
+        }
+    }
+}
+
+/**
+ * Why the trip is being called off.
+ *
+ * A reason is asked for rather than optional: a cancellation with none cannot
+ * be told from any other, and a driver whose car broke down and one who simply
+ * changed their mind look identical in the report afterwards. The list is the
+ * reason codes the server accepts, so the app cannot offer one that fails.
+ */
+@Composable
+private fun CancelTripDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    val strings = LocalVelroStrings.current
+    val reasons = listOf("VEHICLE_PROBLEM", "WEATHER", "DRIVER_CANCELLED", "OTHER")
+    var chosen by remember { mutableStateOf(reasons.first()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(strings["driver.trip.cancel_title"]) },
+        text = {
+            Column {
+                Text(
+                    strings["driver.trip.cancel_hint"],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(Spacing.md))
+                for (reason in reasons) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { chosen = reason }
+                            .padding(vertical = Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = chosen == reason, onClick = { chosen = reason })
+                        Spacer(Modifier.width(Spacing.sm))
+                        Text(strings["cancel.reason.${reason.lowercase()}"])
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(chosen) }) {
+                Text(strings["driver.trip.cancel_confirm"])
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(strings["common.action.cancel"]) }
+        },
+    )
 }
 
 /**
