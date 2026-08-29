@@ -90,6 +90,31 @@ class SharedSpecificationTest {
     }
 
     @Test
+    fun `the ticket machine matches the specification`() {
+        assertMatchesSpec("ticket", Lifecycles.ticket, TicketStatus.entries)
+    }
+
+    @Test
+    fun `every machine in the specification is actually mirrored here`() {
+        // The tests above name their machines one at a time, so the list can
+        // fall behind the file. A machine added to lifecycles.json and not to
+        // this class is not a failing test -- it is no test at all, which is
+        // worse: the suite goes green and nobody learns the mirror was never
+        // checked.
+        val declared = spec.entries
+            .filter { !it.key.startsWith("$") }
+            .filter { (it.value as? JsonObject)?.containsKey("transitions") == true }
+            .map { it.key }
+            .toSortedSet()
+        val covered = sortedSetOf("trip", "booking", "settlement", "ticket")
+        assertEquals(
+            "lifecycles.json and this test disagree about which machines exist",
+            covered,
+            declared,
+        )
+    }
+
+    @Test
     fun `bookable trip statuses match the specification`() {
         assertEquals(
             stringList(section("trip")["bookable_in"]!!).sorted(),

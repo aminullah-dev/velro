@@ -1,0 +1,285 @@
+"""Getting help.
+
+The promise these tests protect: VELRO shows you numbers that work without
+data, tells you plainly it cannot come, and does not pretend a report is a
+rescue. Everything else here is plumbing around that.
+"""
+
+from __future__ import annotations
+
+import pytest
+from fastapi.testclient import TestClient
+
+from tests.e2e.conftest import auth, sign_in
+
+pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(scope="module")
+def rider(client: TestClient) -> dict:
+    return auth(sign_in(client, "+93700000180"))
+
+
+# -- what to dial -------------------------------------------------------
+
+def test_the_emergency_numbers_need_no_token(client: TestClient) -> None:
+    """The one endpoint in VELRO that is deliberately unauthenticated.
+
+    A passenger whose session expired, in a valley, on a phone with no data,
+    must still be able to see 119. Everything else being behind require_* is
+    correct; this being behind it would mean the app cannot show an emergency
+    number to the person most likely to need one. The numbers are public --
+    they are printed on posters -- so there is nothing to protect.
+    """
+    response = client.get("/api/v1/support/contacts")
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["emergency_numbers"] == ["119", "100"]
+
+
+def test_a_placeholder_velro_number_is_not_offered(client: TestClient) -> None:
+    """A button that dials nothing is worse than no button.
+
+    support.contact_phone ships as +93700000000. Rendering a "call VELRO" row
+    against it would put a dead control on the screen at the moment somebody is
+    frightened, and they would press it and wait.
+    """
+    data = client.get("/api/v1/support/contacts").json()["data"]
+    assert data["velro_number"] is None, (
+        "the placeholder number was offered as something to call"
+    )
+
+
+def test_the_categories_come_from_the_domain(client: TestClient) -> None:
+    """The client must not invent codes the domain will reject.
+
+    SupportTicket.__post_init__ raises on anything outside CATEGORIES, so a
+    client offering its own list produces a form that fails on submit.
+    """
+    from domain.support import CATEGORIES, URGENT_CATEGORIES
+
+    data = client.get("/api/v1/support/contacts").json()["data"]
+    assert set(data["categories"]) == CATEGORIES
+    assert set(data["urgent_categories"]) == URGENT_CATEGORIES
+
+
+# -- raising a report ---------------------------------------------------
+
+def test_raising_a_report_gives_back_a_reference(
+    client: TestClient, rider: dict
+) -> None:
+    """The reference is the only thing the person keeps.
+
+    It has to survive the screen being closed, the app being reinstalled, and a
+    phone call to an operator who needs to find the row.
+    """
+    response = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "SAFETY", "subject": "راننده از راه دیگر رفت",
+              "body": "راننده از مسیر عادی خارج شد و جواب نمی‌دهد."},
+    )
+    assert response.status_code == 201, response.text
+    data = response.json()["data"]
+    assert data["reference"].startswith("TKT-")
+    assert data["status"] == "OPEN"
+    assert data["is_urgent"] is True
+
+
+def test_a_category_the_domain_does_not_know_is_refused(
+    client: TestClient, rider: dict
+) -> None:
+    response = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "SOMETHING_INVENTED", "body": "x"},
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["error"]["code"] == "VALIDATION_FAILED"
+
+
+def test_an_empty_report_is_refused(client: TestClient, rider: dict) -> None:
+    response = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "OTHER", "body": "   "},
+    )
+    assert response.status_code == 422, response.text
+
+
+# -- who may read it ----------------------------------------------------
+
+def test_nobody_else_can_read_your_report(
+    client: TestClient, rider: dict
+) -> None:
+    """A safety report may describe an assault.
+
+    404 rather than 403, deliberately: 403 confirms the reference exists.
+    """
+    mine = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "DRIVER_CONDUCT", "body": "..."},
+    ).json()["data"]
+
+    stranger = auth(sign_in(client, "+93700000181"))
+    response = client.get(f"/api/v1/support/tickets/{mine['id']}", headers=stranger)
+    assert response.status_code == 404, response.text
+    assert response.json()["error"]["code"] == "TICKET_NOT_FOUND"
+
+
+def test_an_internal_note_never_reaches_the_person_who_reported(
+    client: TestClient, rider: dict, admin_session: dict
+) -> None:
+    """Operators need somewhere to write "this driver has three of these".
+
+    That somewhere must not be the thread the reporter is reading.
+    """
+    mine = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "VEHICLE_CONDITION", "body": "بریک خراب بود"},
+    ).json()["data"]
+
+    noted = client.post(
+        f"/api/v1/support/tickets/{mine['id']}/messages", headers=admin_session,
+        json={"body": "third complaint about this driver", "is_internal": True},
+    )
+    assert noted.status_code == 201, noted.text
+
+    theirs = client.get(
+        f"/api/v1/support/tickets/{mine['id']}", headers=rider
+    ).json()["data"]
+    bodies = [m["body"] for m in theirs["messages"]]
+    assert "third complaint about this driver" not in bodies
+    assert all(m["is_internal"] is False for m in theirs["messages"])
+
+    staff = client.get(
+        f"/api/v1/support/tickets/{mine['id']}", headers=admin_session
+    ).json()["data"]
+    assert any(m["is_internal"] for m in staff["messages"])
+
+
+def test_a_passenger_cannot_write_an_internal_note(
+    client: TestClient, rider: dict
+) -> None:
+    mine = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "OTHER", "body": "..."},
+    ).json()["data"]
+    response = client.post(
+        f"/api/v1/support/tickets/{mine['id']}/messages", headers=rider,
+        json={"body": "sneaky", "is_internal": True},
+    )
+    assert response.status_code == 403, response.text
+
+
+# -- the queue ----------------------------------------------------------
+
+def test_danger_sorts_above_money(
+    client: TestClient, rider: dict, admin_session: dict
+) -> None:
+    """The ordering is the triage.
+
+    Nobody is watching overnight, so a safety report raised at 02:00 must not
+    be pushed down the page by a fare dispute raised at 09:00 -- there is no
+    human awake to notice it happening.
+    """
+    client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "FARE_DISPUTE", "body": "کرایه زیاد بود"},
+    )
+    client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "SAFETY", "body": "خطر"},
+    )
+
+    queue = client.get(
+        "/api/v1/admin/support/tickets", headers=admin_session
+    ).json()["data"]
+    urgent = [t for t in queue["tickets"] if t["is_urgent"]]
+    ordinary = [t for t in queue["tickets"] if not t["is_urgent"]]
+    assert urgent, "no urgent ticket in the queue at all"
+    assert ordinary, "no ordinary ticket to compare against"
+
+    first_ordinary = queue["tickets"].index(ordinary[0])
+    last_urgent = max(queue["tickets"].index(t) for t in urgent)
+    assert last_urgent < first_ordinary, (
+        "a fare dispute was ranked above a safety report"
+    )
+    assert queue["urgent_open"] >= 1
+
+
+def test_a_passenger_cannot_read_the_queue(
+    client: TestClient, rider: dict
+) -> None:
+    response = client.get("/api/v1/admin/support/tickets", headers=rider)
+    assert response.status_code in (401, 403), response.text
+
+
+# -- answering ----------------------------------------------------------
+
+def test_a_reply_from_the_reporter_reopens_a_resolved_report(
+    client: TestClient, rider: dict, admin_session: dict
+) -> None:
+    """Marking something fixed is a claim.
+
+    The person who raised it is the one who knows whether it was, so their
+    reply pulls it back open rather than landing in a closed thread nobody
+    is watching.
+    """
+    mine = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "LOST_ITEM", "body": "بکس خود را جا ماندم"},
+    ).json()["data"]
+
+    resolved = client.post(
+        f"/api/v1/admin/support/tickets/{mine['id']}/decide",
+        headers=admin_session, json={"status": "RESOLVED"},
+    )
+    assert resolved.status_code == 200, resolved.text
+    assert resolved.json()["data"]["status"] == "RESOLVED"
+
+    replied = client.post(
+        f"/api/v1/support/tickets/{mine['id']}/messages", headers=rider,
+        json={"body": "هنوز پیدا نشده"},
+    )
+    assert replied.status_code == 201, replied.text
+    assert replied.json()["data"]["status"] == "IN_PROGRESS", (
+        "the reporter said it was not fixed and the request stayed resolved"
+    )
+
+
+def test_a_closed_report_takes_no_more_messages(
+    client: TestClient, rider: dict, admin_session: dict
+) -> None:
+    mine = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "APP_PROBLEM", "body": "اپ بسته می‌شود"},
+    ).json()["data"]
+    client.post(
+        f"/api/v1/admin/support/tickets/{mine['id']}/decide",
+        headers=admin_session, json={"status": "CLOSED"},
+    )
+    response = client.post(
+        f"/api/v1/support/tickets/{mine['id']}/messages", headers=rider,
+        json={"body": "still broken"},
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["error"]["code"] == "TICKET_CLOSED"
+
+
+def test_the_reporter_is_told_when_it_is_answered(
+    client: TestClient, rider: dict, admin_session: dict
+) -> None:
+    """A reply nobody sees is not a reply.
+
+    There is no push transport, so the inbox row is the whole mechanism.
+    """
+    mine = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "OTHER", "body": "سوال دارم"},
+    ).json()["data"]
+    client.post(
+        f"/api/v1/support/tickets/{mine['id']}/messages", headers=admin_session,
+        json={"body": "we are looking into it"},
+    )
+
+    inbox = client.get("/api/v1/notifications", headers=rider).json()["data"]
+    keys = [n["message_key"] for n in inbox["notifications"]]
+    assert "notify.support.answered" in keys, keys

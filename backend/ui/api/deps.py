@@ -53,7 +53,6 @@ from infrastructure.db.repositories.ops import (
     ImportJobRepository,
     NotificationRepository,
     RatingRepository,
-    SupportTicketRepository,
 )
 from infrastructure.db.repositories.routing import (
     FareRepository,
@@ -70,6 +69,10 @@ from infrastructure.db.repositories.supply import (
     DriverRepository,
     VehicleDocumentRepository,
     VehicleRepository,
+)
+from infrastructure.db.repositories.support import (
+    SupportTicketRepository,
+    TicketMessageRepository,
 )
 from infrastructure.db.repositories.trips import (
     BookingRepository,
@@ -266,6 +269,14 @@ def notifier(session: SessionDep):
     )
 
 
+def support_tickets(session: SessionDep) -> SupportTicketRepository:
+    return SupportTicketRepository(session)
+
+
+def ticket_messages(session: SessionDep) -> TicketMessageRepository:
+    return TicketMessageRepository(session)
+
+
 def notifications(session: SessionDep) -> NotificationRepository:
     return NotificationRepository(session)
 
@@ -456,6 +467,7 @@ __all__ = [
     "SettlementRepository",
     "StationRepository",
     "SupportTicketRepository",
+    "TicketMessageRepository",
     "VillageRepository",
     "app_settings",
     "audit",

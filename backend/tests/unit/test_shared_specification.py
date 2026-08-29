@@ -14,12 +14,19 @@ from pathlib import Path
 import pytest
 
 from domain.booking import CANCELLABLE_STATUSES
-from domain.enums import BookingStatus, SeatStatus, SettlementStatus, TripStatus
+from domain.enums import (
+    BookingStatus,
+    SeatStatus,
+    SettlementStatus,
+    TicketStatus,
+    TripStatus,
+)
 from domain.fare import CommissionSplit
 from domain.lifecycles import (
     BOOKABLE_TRIP_STATUSES,
     BOOKING_LIFECYCLE,
     SETTLEMENT_LIFECYCLE,
+    TICKET_LIFECYCLE,
     TRIP_LIFECYCLE,
     TRIP_TO_BOOKING_STATUS,
 )
@@ -32,12 +39,38 @@ SPEC = json.loads(
 )
 
 
+# The machines the parametrised test below covers. Kept beside it so the guard
+# can compare the two.
+COVERED = {"trip", "booking", "settlement", "ticket"}
+
+
+def test_every_machine_in_the_specification_is_actually_tested() -> None:
+    """The list above is hand-maintained, so it can fall behind the file.
+
+    A machine added to lifecycles.json and not to that list is not a failing
+    test -- it is no test at all, which is worse, because the suite goes green
+    and nobody learns the Kotlin mirror was never checked either.
+    """
+    machines = {
+        key for key, value in SPEC.items()
+        if not key.startswith("$") and isinstance(value, dict) and "transitions" in value
+    }
+    assert machines == COVERED, (
+        "lifecycles.json declares "
+        + ", ".join(sorted(machines - COVERED) or ["nothing"])
+        + " which no test covers; and this test names "
+        + ", ".join(sorted(COVERED - machines) or ["nothing"])
+        + " which the specification does not declare"
+    )
+
+
 @pytest.mark.parametrize(
     ("name", "machine", "enum"),
     [
         ("trip", TRIP_LIFECYCLE, TripStatus),
         ("booking", BOOKING_LIFECYCLE, BookingStatus),
         ("settlement", SETTLEMENT_LIFECYCLE, SettlementStatus),
+        ("ticket", TICKET_LIFECYCLE, TicketStatus),
     ],
 )
 def test_transition_tables_match_the_specification(name: str, machine, enum) -> None:

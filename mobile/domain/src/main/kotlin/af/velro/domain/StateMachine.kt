@@ -112,6 +112,26 @@ object Lifecycles {
         errorCode = "SETTLEMENT_INVALID_TRANSITION",
     )
 
+    // RESOLVED is deliberately not terminal. An operator marking something
+    // fixed is a claim; the person who raised it is the one who knows whether
+    // it was, so a resolved request can go back to IN_PROGRESS. Only CLOSED
+    // ends it, and only staff close.
+    val ticket = StateMachine(
+        mapOf(
+            TicketStatus.OPEN to setOf(
+                TicketStatus.IN_PROGRESS, TicketStatus.RESOLVED, TicketStatus.CLOSED,
+            ),
+            TicketStatus.IN_PROGRESS to setOf(
+                TicketStatus.RESOLVED, TicketStatus.CLOSED,
+            ),
+            TicketStatus.RESOLVED to setOf(
+                TicketStatus.IN_PROGRESS, TicketStatus.CLOSED,
+            ),
+            TicketStatus.CLOSED to emptySet(),
+        ),
+        errorCode = "TICKET_INVALID_TRANSITION",
+    )
+
     /** Statuses in which a trip still accepts new seat bookings. */
     val bookableTripStatuses = setOf(
         TripStatus.SCHEDULED,

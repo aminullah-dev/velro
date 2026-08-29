@@ -13,7 +13,6 @@ from infrastructure.db.models.ops import (
     ImportJobRow,
     NotificationRow,
     RatingRow,
-    SupportTicketRow,
 )
 from infrastructure.db.repositories.base import SqlRepository
 from shared import error_codes
@@ -150,16 +149,6 @@ class ImportJobRepository(SqlRepository[ImportJobRow]):
         if entity:
             stmt = stmt.where(ImportJobRow.entity == entity)
         return list(self.session.scalars(stmt).all())
-
-
-class SupportTicketRepository(SqlRepository[SupportTicketRow]):
-    model = SupportTicketRow
-    not_found_code = error_codes.TICKET_NOT_FOUND
-
-    def create(self, **fields) -> SupportTicketRow:
-        row = SupportTicketRow(**fields)
-        self.session.add(row)
-        return row
 
 
 class DeviceTokenRepository(SqlRepository[DeviceTokenRow]):

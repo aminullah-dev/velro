@@ -40,6 +40,9 @@ enum class SeatStatus { AVAILABLE, RESERVED, OCCUPIED, BLOCKED }
 
 enum class SettlementStatus { PENDING, PROCESSING, PAID, REJECTED }
 
+/** A support request. RESOLVED is not terminal -- see Lifecycles.ticket. */
+enum class TicketStatus { OPEN, IN_PROGRESS, RESOLVED, CLOSED }
+
 /**
  * Money moving out to a driver, or in from one. Mirrors the server: cash fares
  * mean the driver holds the money and owes the platform its share, so a

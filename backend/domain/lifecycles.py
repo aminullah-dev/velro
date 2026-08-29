@@ -6,7 +6,7 @@ allowed to have an opinion about which status follows which.
 
 from __future__ import annotations
 
-from domain.enums import BookingStatus, SettlementStatus, TripStatus
+from domain.enums import BookingStatus, SettlementStatus, TicketStatus, TripStatus
 from domain.state_machine import StateMachine
 from shared import error_codes
 
@@ -56,6 +56,26 @@ BOOKING_LIFECYCLE: StateMachine[BookingStatus] = StateMachine(
     },
     conflict_code=error_codes.BOOKING_INVALID_TRANSITION,
     entity="booking",
+)
+
+# RESOLVED is deliberately not terminal. An operator marking something fixed is
+# a claim; the person who raised it is the one who knows whether it was, so a
+# resolved ticket can go back to IN_PROGRESS. Only CLOSED ends it.
+TICKET_LIFECYCLE: StateMachine[TicketStatus] = StateMachine(
+    {
+        TicketStatus.OPEN: frozenset(
+            {TicketStatus.IN_PROGRESS, TicketStatus.RESOLVED, TicketStatus.CLOSED}
+        ),
+        TicketStatus.IN_PROGRESS: frozenset(
+            {TicketStatus.RESOLVED, TicketStatus.CLOSED}
+        ),
+        TicketStatus.RESOLVED: frozenset(
+            {TicketStatus.IN_PROGRESS, TicketStatus.CLOSED}
+        ),
+        TicketStatus.CLOSED: frozenset(),
+    },
+    conflict_code=error_codes.TICKET_INVALID_TRANSITION,
+    entity="ticket",
 )
 
 SETTLEMENT_LIFECYCLE: StateMachine[SettlementStatus] = StateMachine(

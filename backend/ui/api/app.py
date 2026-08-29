@@ -31,6 +31,7 @@ from ui.api.routers import (
     negotiation,
     notifications,
     settlements,
+    support,
     vehicle_documents,
     vehicles,
 )
@@ -94,6 +95,7 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
         auth.router, geography.router, bookings.router,
         driver.router, dispatch.router, admin.router, imports.router,
         documents.router, vehicles.router, vehicle_documents.router,
+        support.router,
         settlements.driver_router, settlements.admin_router,
         negotiation.router, negotiation.driver_router, negotiation.admin_router,
         notifications.router,
