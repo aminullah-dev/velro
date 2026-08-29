@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.PathSensitivity
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -30,4 +32,12 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)
+}
+
+// The font test reads res/font and assets at runtime, which Gradle cannot infer
+// from the source set -- without this it would be considered up to date after a
+// font is swapped, and the guard would pass on a font it never opened.
+tasks.withType<Test>().configureEach {
+    inputs.dir("src/main/res/font").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir("src/main/assets/licences").withPathSensitivity(PathSensitivity.RELATIVE)
 }

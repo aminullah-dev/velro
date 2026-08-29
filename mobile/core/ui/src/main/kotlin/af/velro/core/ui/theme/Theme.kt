@@ -11,6 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
+import af.velro.core.ui.R
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -107,16 +109,29 @@ fun velroTypography(locale: Locale): Typography {
 /**
  * Fonts.
  *
- * OUTSTANDING: a Perso-Arabic family with complete Pashto coverage
- * (ټ ډ ړ ږ ښ ګ ڼ ې ۍ) must be dropped into `core/ui/src/main/res/font/` and
- * wired here. Until then this falls back to the system font, which varies by
- * manufacturer and is known to drop Pashto glyphs on several devices common in
- * this market -- so Pashto will render with tofu boxes on some handsets.
- * See `docs/adr/0002-fonts.md`.
+ * Perso-Arabic is bundled rather than left to the system font. Android's
+ * Arabic face varies by manufacturer, and several inexpensive handsets common
+ * in this market ship one covering Persian and Arabic but not Pashto -- so
+ * `ټ ډ ړ ږ ښ ګ ڼ ې ۍ`, exactly the letters that tell one word from another,
+ * render as empty boxes. The failure is invisible on a developer's phone.
+ *
+ * Real weights, never synthesised: faking bold on Naskh smears the joins where
+ * letters connect. Noto Naskh Arabic, SIL Open Font License 1.1; the licence
+ * ships beside the files in `res/font/OFL.txt` as it requires.
+ *
+ * Latin stays on the system sans: it is well covered everywhere, and bundling a
+ * second family would cost another megabyte for no legibility gained.
  */
 object VelroFonts {
+    private val persoArabic = FontFamily(
+        Font(R.font.noto_naskh_arabic_regular, FontWeight.Normal),
+        Font(R.font.noto_naskh_arabic_medium, FontWeight.Medium),
+        Font(R.font.noto_naskh_arabic_medium, FontWeight.SemiBold),
+        Font(R.font.noto_naskh_arabic_bold, FontWeight.Bold),
+    )
+
     fun familyFor(locale: Locale): FontFamily =
-        if (locale == Locale.ENGLISH) FontFamily.SansSerif else FontFamily.Default
+        if (locale == Locale.ENGLISH) FontFamily.SansSerif else persoArabic
 }
 
 @Composable
