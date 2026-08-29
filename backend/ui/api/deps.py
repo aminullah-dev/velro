@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from application.pricing.fixed import FixedRouteFare
 from application.use_cases.dispatch import NearestStationMatching
-from domain.enums import ActorRole
+from domain.enums import ActorRole, UserStatus
 from domain.identity import (
     ADMIN,
     DISPATCHER,
@@ -298,12 +298,42 @@ class Actor:
 
 def current_actor(
     request: Request,
+    session: SessionDep,
     authorization: Annotated[str | None, Header()] = None,
 ) -> Actor:
+    """Who is making this request, confirmed against the database.
+
+    The claims inside a token are a cache, not the authority. A signed token
+    stays valid until it expires, so trusting its ``roles`` means a revoked
+    role, a suspended account or a deleted user keeps working for the lifetime
+    of the access token -- fifteen minutes during which someone who has just
+    been suspended can still approve drivers and change prices.
+
+    So the user is re-read on every authenticated request and the roles come
+    from the database. Two primary-key lookups against small, hot, indexed
+    tables; the cost is not measurable next to what the request goes on to do,
+    and it makes "suspend this account" mean now rather than eventually.
+    """
     if not authorization or not authorization.lower().startswith("bearer "):
         raise AuthenticationError(error_codes.TOKEN_INVALID)
+
     claims = tokens().read_access_token(authorization.split(" ", 1)[1].strip())
-    actor = Actor(user_id=claims["sub"], roles=list(claims.get("roles", [])))
+    user_id = claims.get("sub")
+    if not user_id:
+        raise AuthenticationError(error_codes.TOKEN_INVALID)
+
+    users_repo = UserRepository(session)
+    row = users_repo.find(user_id)
+    if row is None:
+        # A token signed for a user who no longer exists. Valid signature,
+        # absent subject.
+        raise AuthenticationError(error_codes.USER_NOT_FOUND, user_id=user_id)
+    if row.status != UserStatus.ACTIVE.value:
+        raise AuthenticationError(
+            error_codes.USER_SUSPENDED, user_id=user_id, status=row.status
+        )
+
+    actor = Actor(user_id=row.id, roles=users_repo.roles_of(row.id))
     request.state.actor_id = actor.user_id
     return actor
 
