@@ -2,6 +2,7 @@ package af.velro.driver
 
 import af.velro.feature.auth.SignInRoute
 import af.velro.feature.driver.DocumentsRoute
+import af.velro.feature.driver.BoardRoute
 import af.velro.feature.driver.DriverHomeRoute
 import af.velro.feature.driver.EarningsRoute
 import af.velro.feature.driver.VehicleRoute
@@ -18,6 +19,7 @@ private object Routes {
     const val DOCUMENTS = "documents"
     const val VEHICLE = "vehicle"
     const val EARNINGS = "earnings"
+    const val BOARD = "board"
 }
 
 /**
@@ -56,10 +58,12 @@ fun DriverNavHost(
                 onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
                 onOpenVehicle = { navController.navigate(Routes.VEHICLE) },
                 onOpenEarnings = { navController.navigate(Routes.EARNINGS) },
+                onOpenBoard = { navController.navigate(Routes.BOARD) },
             )
         }
         composable(Routes.DOCUMENTS) { DocumentsRoute() }
         composable(Routes.VEHICLE) { VehicleRoute() }
         composable(Routes.EARNINGS) { EarningsRoute() }
+        composable(Routes.BOARD) { BoardRoute() }
     }
 }

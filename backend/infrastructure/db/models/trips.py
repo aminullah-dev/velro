@@ -12,13 +12,16 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.enums import (
     BookingStatus,
+    FareOfferStatus,
     PaymentMethod,
     RideKind,
+    RideRequestStatus,
     SeatStatus,
     TripStatus,
 )
@@ -201,7 +204,13 @@ class BookingSeatRow(Auditable, Base):
 
 
 class RideRequestRow(Auditable, Base):
-    """An on-demand private ride awaiting dispatch."""
+    """A passenger asking to be driven, at a price they proposed.
+
+    Section 89: VELRO does not price a journey. Nobody knows the distance
+    between two villages in Ghorband, or which stretch of road is asphalt and
+    which is dirt, so the fare is agreed between the passenger and a driver --
+    which is how it is already agreed at the station.
+    """
 
     __tablename__ = "ride_requests"
 
@@ -225,12 +234,68 @@ class RideRequestRow(Auditable, Base):
     requested_for: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False)
-    quoted_fare_minor: Mapped[int | None] = mapped_column(Integer)
-    quoted_fare_currency: Mapped[str | None] = mapped_column(String(3))
+    # What the passenger proposed. Not a quote from the platform -- there is no
+    # platform quote.
+    offered_fare_minor: Mapped[int] = mapped_column(Integer, nullable=False)
+    offered_fare_currency: Mapped[str] = mapped_column(
+        String(3), default="AFN", nullable=False
+    )
+    # What was finally settled on, which is the accepted offer, not the asking
+    # price. Null until a driver is agreed.
+    agreed_fare_minor: Mapped[int | None] = mapped_column(Integer)
+    accepted_offer_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    note: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
         Index("ix_ride_requests_status_expires_at", "status", "expires_at"),
+        # The driver's board: open requests from a station, soonest first.
+        Index("ix_ride_requests_origin_status", "origin_station_id", "status"),
         CheckConstraint("passenger_count > 0", name="ck_ride_requests_passenger_count_positive"),
+        CheckConstraint(
+            "offered_fare_minor > 0", name="ck_ride_requests_offer_positive"
+        ),
+        enum_check("status", RideRequestStatus, name="ride_requests_status"),
+    )
+
+
+class FareOfferRow(Auditable, Base):
+    """One driver's price for one request.
+
+    A row per driver, not per exchange: changing your mind is withdrawing and
+    offering again, so the passenger sees one number from each driver rather
+    than a negotiation history to read through at the roadside.
+    """
+
+    __tablename__ = "fare_offers"
+
+    ride_request_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("ride_requests.id", ondelete="RESTRICT"),
+        nullable=False, index=True,
+    )
+    driver_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("drivers.id", ondelete="RESTRICT"),
+        nullable=False, index=True,
+    )
+    vehicle_id: Mapped[str | None] = mapped_column(String(36))
+    amount_minor: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount_currency: Mapped[str] = mapped_column(String(3), default="AFN", nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(12), default=FareOfferStatus.OFFERED.value, nullable=False
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        # One live offer per driver per request. A driver who offers twice is
+        # either double-tapping or gaming the list; both are the same mistake.
+        Index(
+            "uq_fare_offers_request_driver_open",
+            "ride_request_id", "driver_id",
+            unique=True,
+            postgresql_where=text("status = 'OFFERED'"),
+        ),
+        CheckConstraint("amount_minor > 0", name="ck_fare_offers_amount_positive"),
+        enum_check("status", FareOfferStatus, name="fare_offers_status"),
     )
 
 

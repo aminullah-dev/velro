@@ -134,6 +134,53 @@ interface VelroApi {
         @Body body: RateTripRequest,
     ): Response<Envelope<RateTripResponse>>
 
+    // -- negotiated fares, section 89 ------------------------------------
+
+    /**
+     * Ask to be driven, at a price the passenger names.
+     *
+     * There is no endpoint that suggests a fare, because there is no fare to
+     * suggest: VELRO does not know the distance between two Ghorband villages
+     * or which stretch of the road is dirt.
+     */
+    @POST("ride-requests")
+    suspend fun requestRide(
+        @Body body: RequestRideRequest,
+    ): Response<Envelope<RideRequestDto>>
+
+    @GET("ride-requests")
+    suspend fun myRideRequests(): Response<Envelope<List<RideRequestDto>>>
+
+    @POST("ride-requests/{id}/cancel")
+    suspend fun cancelRideRequest(
+        @Path("id") id: String,
+    ): Response<Envelope<Map<String, String>>>
+
+    @POST("fare-offers/{id}/accept")
+    suspend fun acceptOffer(
+        @Path("id") id: String,
+    ): Response<Envelope<AcceptedOfferDto>>
+
+    @GET("driver/ride-requests")
+    suspend fun openRideRequests(
+        @Query("station_id") stationId: String? = null,
+        @Query("limit") limit: Int = 30,
+    ): Response<Envelope<List<RideRequestDto>>>
+
+    @POST("driver/ride-requests/{id}/offer")
+    suspend fun offerFare(
+        @Path("id") id: String,
+        @Body body: OfferFareRequest,
+    ): Response<Envelope<FareOfferDto>>
+
+    @POST("driver/fare-offers/{id}/withdraw")
+    suspend fun withdrawOffer(
+        @Path("id") id: String,
+    ): Response<Envelope<Map<String, String>>>
+
+    @GET("driver/fare-offers")
+    suspend fun myFareOffers(): Response<Envelope<List<FareOfferDto>>>
+
     // -- driver ---------------------------------------------------------
 
     @GET("driver/me")

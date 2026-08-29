@@ -61,6 +61,7 @@ from infrastructure.db.models.trips import (  # noqa: F401
     BookingRow,
     BookingSeatRow,
     DispatchOfferRow,
+    FareOfferRow,
     RideRequestRow,
     TripRow,
     TripSeatRow,

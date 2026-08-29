@@ -40,7 +40,11 @@ class FareQuote:
     currency: str
     ride_kind: RideKind
     seat_count: int
-    route_id: str
+    # None for a negotiated fare. Two people can agree to make a journey
+    # whether or not VELRO has a route modelled for it, and refusing the
+    # booking because the route table is incomplete would be the platform
+    # putting its own bookkeeping ahead of the trip.
+    route_id: str | None
     from_sequence: int
     to_sequence: int
     fare_rule_id: str | None = None

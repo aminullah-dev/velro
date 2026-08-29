@@ -149,6 +149,30 @@ class SettlementStatus(StrEnum):
     REJECTED = "REJECTED"
 
 
+class RideRequestStatus(StrEnum):
+    """A passenger asking to be driven, at a price they proposed."""
+
+    OPEN = "OPEN"                # drivers can still offer
+    MATCHED = "MATCHED"          # an offer was accepted; a trip exists
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"          # nobody offered in time
+
+
+class FareOfferStatus(StrEnum):
+    """A driver's answer to a passenger's price.
+
+    ACCEPTED is the passenger accepting the driver's number, not the driver
+    accepting the passenger's -- a driver who is happy with the asking price
+    offers exactly that amount, which keeps one path instead of two.
+    """
+
+    OFFERED = "OFFERED"
+    ACCEPTED = "ACCEPTED"
+    DECLINED = "DECLINED"        # the passenger chose someone else
+    WITHDRAWN = "WITHDRAWN"      # the driver took it back
+    EXPIRED = "EXPIRED"
+
+
 class SettlementDirection(StrEnum):
     """Money moving out to a driver, or in from one.
 

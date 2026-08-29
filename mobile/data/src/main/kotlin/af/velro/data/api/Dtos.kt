@@ -474,3 +474,70 @@ data class UploadedDocumentDto(
 
 @Serializable
 data class RegisterDriverRequest(val home_district_id: String? = null)
+
+
+// -- negotiated fares, section 89 ---------------------------------------
+
+@Serializable
+data class RequestRideRequest(
+    val origin_station_id: String,
+    val destination_id: String,
+    val passenger_count: Int = 1,
+    val offered_fare_minor: Long,
+    val vehicle_type_code: String? = null,
+    val note: String? = null,
+)
+
+@Serializable
+data class OfferFareRequest(
+    val amount_minor: Long,
+    val note: String? = null,
+)
+
+@Serializable
+data class FareOfferDto(
+    val id: String,
+    val ride_request_id: String,
+    val driver_id: String,
+    val amount: MoneyDto,
+    val status: String,
+    val note: String? = null,
+    val created_at: String = "",
+    val driver_name: String? = null,
+    val driver_rating: Double? = null,
+    val driver_trips: Int = 0,
+    val vehicle_plate: String? = null,
+    val vehicle_description: String? = null,
+)
+
+@Serializable
+data class RideRequestDto(
+    val id: String,
+    val status: String,
+    val origin_station_id: String,
+    val origin_station_name: String? = null,
+    val destination_id: String,
+    val destination_name: String? = null,
+    val passenger_count: Int,
+    val offered_fare: MoneyDto,
+    val agreed_fare: MoneyDto? = null,
+    val note: String? = null,
+    val expires_at: String = "",
+    val created_at: String = "",
+    val trip_id: String? = null,
+    val offers: List<FareOfferDto> = emptyList(),
+    val passenger_name: String? = null,
+    val already_offered: Boolean = false,
+)
+
+@Serializable
+data class AcceptedOfferDto(
+    val ride_request_id: String,
+    val trip_id: String,
+    val trip_number: String,
+    val booking_id: String,
+    val booking_number: String,
+    val verification_code: String,
+    val driver_id: String,
+    val agreed_fare: MoneyDto,
+)

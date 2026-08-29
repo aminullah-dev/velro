@@ -85,22 +85,29 @@ class GeographyRepository:
         )
         return list(self.session.scalars(stmt).all())
 
-    def get_station(self, id: str) -> StationRow:
-        row = self.session.scalars(
+    def find_station(self, id: str) -> StationRow | None:
+        """None when absent. ``get_station`` raises; never mix the two."""
+        return self.session.scalars(
             select(StationRow).where(StationRow.id == id, StationRow.deleted_at.is_(None))
         ).one_or_none()
+
+    def get_station(self, id: str) -> StationRow:
+        row = self.find_station(id)
         if row is None:
             from shared.errors import NotFoundError
 
             raise NotFoundError(error_codes.STATION_NOT_FOUND, id=id)
         return row
 
-    def get_destination(self, id: str) -> DestinationRow:
-        row = self.session.scalars(
+    def find_destination(self, id: str) -> DestinationRow | None:
+        return self.session.scalars(
             select(DestinationRow).where(
                 DestinationRow.id == id, DestinationRow.deleted_at.is_(None)
             )
         ).one_or_none()
+
+    def get_destination(self, id: str) -> DestinationRow:
+        row = self.find_destination(id)
         if row is None:
             from shared.errors import NotFoundError
 

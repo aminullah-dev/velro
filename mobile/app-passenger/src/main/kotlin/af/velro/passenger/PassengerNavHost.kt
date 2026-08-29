@@ -8,6 +8,7 @@ import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.feature.auth.SignInRoute
 import af.velro.feature.booking.BookingFlowRoute
+import af.velro.feature.booking.OffersRoute
 import af.velro.feature.trip.BookingDetailRoute
 import af.velro.feature.trip.HistoryRoute
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +47,7 @@ private object Routes {
     const val BOOK = "book"
     const val BOOKING_DETAIL = "booking/{bookingId}"
     const val HISTORY = "history"
+    const val OFFERS = "offers"
 
     fun bookingDetail(id: String) = "booking/$id"
 }
@@ -98,6 +100,17 @@ fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rem
 
         composable(Routes.BOOKING_DETAIL) {
             BookingDetailRoute()
+        }
+
+        composable(Routes.OFFERS) {
+            OffersRoute(
+                onRideAgreed = { bookingId ->
+                    navController.navigate(Routes.bookingDetail(bookingId)) {
+                        popUpTo(Routes.HOME)
+                    }
+                },
+                onFinished = { navController.popBackStack() },
+            )
         }
 
         composable(Routes.HISTORY) {

@@ -4,14 +4,20 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
-from domain.enums import BookingStatus, TripStatus
+from domain.enums import (
+    BookingStatus,
+    FareOfferStatus,
+    RideRequestStatus,
+    TripStatus,
+)
 from domain.lifecycles import BOOKABLE_TRIP_STATUSES
 from infrastructure.db.models.trips import (
     BookingRow,
     BookingSeatRow,
     DispatchOfferRow,
+    FareOfferRow,
     RideRequestRow,
     TripRow,
     TripStopRow,
@@ -227,12 +233,135 @@ class BookingRepository(SqlRepository[BookingRow]):
 
 class RideRequestRepository(SqlRepository[RideRequestRow]):
     model = RideRequestRow
-    not_found_code = error_codes.TRIP_NOT_FOUND
+    not_found_code = error_codes.RIDE_REQUEST_NOT_FOUND
 
     def create(self, **fields) -> RideRequestRow:
         row = RideRequestRow(**fields)
         self.session.add(row)
+        self.session.flush()
         return row
+
+    def find_open_for_passenger(self, passenger_id: str) -> RideRequestRow | None:
+        """The one request a passenger already has in the air, if any."""
+        return self.session.scalars(
+            self._base()
+            .where(
+                RideRequestRow.passenger_id == passenger_id,
+                RideRequestRow.status == RideRequestStatus.OPEN.value,
+            )
+            .order_by(RideRequestRow.created_at.desc())
+        ).first()
+
+    def list_for_passenger(
+        self, passenger_id: str, *, limit: int = 20
+    ) -> list[RideRequestRow]:
+        return list(
+            self.session.scalars(
+                self._base()
+                .where(RideRequestRow.passenger_id == passenger_id)
+                .order_by(RideRequestRow.created_at.desc(), RideRequestRow.id.desc())
+                .limit(min(limit, 50))
+            ).all()
+        )
+
+    def open_board(
+        self, *, station_ids=None, at: datetime | None = None, limit: int = 50
+    ) -> list[RideRequestRow]:
+        """What a driver sees: open requests that have not run out of time.
+
+        Filtered by station when the driver has a home station, because a
+        request from three valleys away is noise they have to read past.
+        """
+        stmt = self._base().where(RideRequestRow.status == RideRequestStatus.OPEN.value)
+        if at is not None:
+            stmt = stmt.where(RideRequestRow.expires_at > at)
+        ids = [i for i in (station_ids or []) if i]
+        if ids:
+            stmt = stmt.where(RideRequestRow.origin_station_id.in_(ids))
+        return list(
+            self.session.scalars(
+                # Oldest first: someone has been waiting longest.
+                stmt.order_by(RideRequestRow.created_at.asc()).limit(min(limit, 100))
+            ).all()
+        )
+
+    def expire_stale(self, *, at: datetime) -> int:
+        """Close requests nobody answered in time."""
+        result = self.session.execute(
+            update(RideRequestRow)
+            .where(
+                RideRequestRow.status == RideRequestStatus.OPEN.value,
+                RideRequestRow.expires_at <= at,
+                RideRequestRow.deleted_at.is_(None),
+            )
+            .values(status=RideRequestStatus.EXPIRED.value)
+        )
+        return int(result.rowcount or 0)
+
+
+class FareOfferRepository(SqlRepository[FareOfferRow]):
+    model = FareOfferRow
+    not_found_code = error_codes.FARE_OFFER_NOT_FOUND
+
+    def create(self, **fields) -> FareOfferRow:
+        row = FareOfferRow(**fields)
+        self.session.add(row)
+        self.session.flush()
+        return row
+
+    def open_for(self, ride_request_id: str, driver_id: str) -> FareOfferRow | None:
+        return self.session.scalars(
+            self._base().where(
+                FareOfferRow.ride_request_id == ride_request_id,
+                FareOfferRow.driver_id == driver_id,
+                FareOfferRow.status == FareOfferStatus.OFFERED.value,
+            )
+        ).first()
+
+    def for_request(self, ride_request_id: str) -> list[FareOfferRow]:
+        """Every offer on a request, cheapest first.
+
+        Cheapest first because that is what a passenger came to compare; the
+        screen still shows the rating beside each, so cheapest is a default
+        order rather than a recommendation.
+        """
+        return list(
+            self.session.scalars(
+                self._base()
+                .where(FareOfferRow.ride_request_id == ride_request_id)
+                .order_by(FareOfferRow.amount_minor.asc(), FareOfferRow.created_at.asc())
+            ).all()
+        )
+
+    def open_for_driver(self, driver_id: str, *, limit: int = 20) -> list[FareOfferRow]:
+        return list(
+            self.session.scalars(
+                self._base()
+                .where(
+                    FareOfferRow.driver_id == driver_id,
+                    FareOfferRow.status == FareOfferStatus.OFFERED.value,
+                )
+                .order_by(FareOfferRow.created_at.desc())
+                .limit(min(limit, 50))
+            ).all()
+        )
+
+    def decline_others(self, *, request_id: str, except_id: str, at: datetime) -> int:
+        """Tell every other driver at once that the request is taken.
+
+        Without this they keep an offer that can never be accepted, and find out
+        only by driving to a station where nobody is waiting.
+        """
+        result = self.session.execute(
+            update(FareOfferRow)
+            .where(
+                FareOfferRow.ride_request_id == request_id,
+                FareOfferRow.id != except_id,
+                FareOfferRow.status == FareOfferStatus.OFFERED.value,
+            )
+            .values(status=FareOfferStatus.DECLINED.value, responded_at=at)
+        )
+        return int(result.rowcount or 0)
 
 
 class DispatchOfferRepository(SqlRepository[DispatchOfferRow]):

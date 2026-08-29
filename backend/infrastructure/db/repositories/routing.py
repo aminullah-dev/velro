@@ -23,6 +23,23 @@ class RouteRepository(SqlRepository[RouteRow]):
     model = RouteRow
     not_found_code = error_codes.ROUTE_NOT_FOUND
 
+    def find_for(self, origin_station_id: str, destination_id: str):
+        """The active route between two places, if one has been generated.
+
+        A negotiated ride does not need one -- two people agreed to make the
+        journey whether or not VELRO has modelled it -- so this returns None
+        rather than raising, and the trip simply carries no route.
+        """
+        return self.session.scalars(
+            self._base()
+            .where(
+                RouteRow.origin_station_id == origin_station_id,
+                RouteRow.destination_id == destination_id,
+                RouteRow.status == RouteStatus.ACTIVE.value,
+            )
+            .order_by(RouteRow.code)
+        ).first()
+
     def stops_of(self, route_id: str) -> list[RouteStopRow]:
         stmt = (
             select(RouteStopRow)

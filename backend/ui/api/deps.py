@@ -72,6 +72,7 @@ from infrastructure.db.repositories.supply import (
 from infrastructure.db.repositories.trips import (
     BookingRepository,
     DispatchOfferRepository,
+    FareOfferRepository,
     RideRequestRepository,
     TripRepository,
 )
@@ -222,6 +223,14 @@ def wallets(session: SessionDep) -> WalletRepository:
 
 def settlements(session: SessionDep) -> SettlementRepository:
     return SettlementRepository(session)
+
+
+def ride_requests(session: SessionDep) -> RideRequestRepository:
+    return RideRequestRepository(session)
+
+
+def fare_offers(session: SessionDep) -> FareOfferRepository:
+    return FareOfferRepository(session)
 
 
 def ratings(session: SessionDep) -> RatingRepository:

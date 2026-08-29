@@ -49,6 +49,7 @@ fun DriverHomeRoute(
     onOpenDocuments: () -> Unit,
     onOpenVehicle: () -> Unit,
     onOpenEarnings: () -> Unit,
+    onOpenBoard: () -> Unit,
     viewModel: DriverHomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -57,6 +58,7 @@ fun DriverHomeRoute(
         onOpenDocuments = onOpenDocuments,
         onOpenVehicle = onOpenVehicle,
         onOpenEarnings = onOpenEarnings,
+        onOpenBoard = onOpenBoard,
     )
 }
 
@@ -67,6 +69,7 @@ fun DriverHomeScreen(
     onOpenDocuments: () -> Unit = {},
     onOpenVehicle: () -> Unit = {},
     onOpenEarnings: () -> Unit = {},
+    onOpenBoard: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -120,10 +123,12 @@ fun DriverHomeScreen(
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(Spacing.sm))
-                Text(
-                    strings["empty.trips"],
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // Section 89: work arrives as passengers naming a price, so the
+                // board is the primary action for a driver who is online.
+                PrimaryAction(
+                    label = strings["driver.board.title"],
+                    onClick = onOpenBoard,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
