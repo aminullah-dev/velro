@@ -336,3 +336,41 @@ def test_safety_is_the_first_category_offered(client: TestClient) -> None:
     urgent = set(data["urgent_categories"])
     positions = [i for i, c in enumerate(data["categories"]) if c in urgent]
     assert positions == list(range(len(urgent))), data["categories"]
+
+
+def test_a_dispatcher_cannot_read_a_safety_report(
+    client: TestClient, rider: dict
+) -> None:
+    """A finance manager and a dispatcher are staff. Neither is support staff.
+
+    Actor.role collapses all six staff roles into DISPATCHER or ADMIN, so a
+    check written against it handed anyone on staff the power to read a report
+    that may describe an assault and to write notes on it -- while the queue
+    endpoint beside it correctly refused them. Two gates on one feature that
+    disagree is worse than either alone.
+    """
+    from domain.identity import DISPATCHER, FINANCE_MANAGER, STAFF_ROLES
+    from ui.api.deps import SUPPORT_STAFF_ROLES
+
+    # The premise: these really are staff, and really are not support staff.
+    assert {DISPATCHER, FINANCE_MANAGER} <= STAFF_ROLES
+    assert not ({DISPATCHER, FINANCE_MANAGER} & SUPPORT_STAFF_ROLES)
+
+
+def test_the_two_support_gates_agree(client: TestClient) -> None:
+    """require_support and is_support_staff must never diverge.
+
+    They guard the same rows through different endpoints: one the queue, one a
+    ticket by id. A reviewer found them disagreeing, and the only reason that
+    was not a leak in production is that nobody had a dispatcher account yet.
+    """
+    import inspect
+
+    from ui.api import deps
+
+    source = inspect.getsource(deps.require_support)
+    assert "SUPPORT_STAFF_ROLES" in source, (
+        "require_support no longer reads the shared set, so it can drift from "
+        "is_support_staff"
+    )
+    assert "SUPPORT_STAFF_ROLES" in inspect.getsource(deps.is_support_staff)

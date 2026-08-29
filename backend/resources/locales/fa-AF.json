@@ -637,7 +637,7 @@
   "safety.call_emergency": "زنگ زدن به {number}",
   "safety.call_emergency_hint": "پولیس و امبولانس. بدون انترنت هم کار می‌کند.",
   "safety.tell_someone": "معلومات خود را به کسی که اعتماد دارید بفرستید",
-  "safety.tell_someone_hint": "پیامی با موتر، راننده و موقعیت شما باز می‌شود. خودتان انتخاب می‌کنید به کی بفرستید.",
+  "safety.tell_someone_hint": "پیامی با موتر، راننده و سفر شما باز می‌شود. خودتان انتخاب می‌کنید به کی بفرستید.",
   "safety.sms_body": "من در موتر ولرو هستم. پلیت {plate}. راننده {driver}. رزرو {booking}. از {origin} به {destination}.",
   "safety.details_title": "موتری که در آن هستید",
   "safety.read_aloud": "این را در تیلفون خوانده می‌توانید.",

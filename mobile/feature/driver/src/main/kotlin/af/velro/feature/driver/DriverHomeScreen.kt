@@ -84,16 +84,52 @@ fun DriverHomeScreen(
 ) {
     val strings = LocalVelroStrings.current
 
+    // Get help, above every early return.
+    //
+    // It used to sit at the foot of the screen, below the guards for loading
+    // and for a null profile -- and DriverRepository.profile() is a bare
+    // network call with no cache, so on any cold start without data the driver
+    // got a full-screen Retry page and no help control at all. That is the
+    // case ADR 0010 opens with: a driver alone on a mountain road at night.
+    //
+    // The sheet needs nothing from the profile: the numbers are compiled in
+    // and `ride` is already null-safe.
+    var helpOpen by remember { mutableStateOf(false) }
+    if (helpOpen) {
+        val assignment = state.assignment
+        HelpSheet(
+            ride = assignment?.let {
+                RideFacts(
+                    bookingNumber = it.trip.number,
+                    driverName = state.profile?.fullName,
+                    plate = state.profile?.vehicle?.plateNumber,
+                    origin = null,
+                    destination = null,
+                )
+            },
+            tripId = assignment?.trip?.id,
+            onDismiss = { helpOpen = false },
+        )
+    }
+
     if (state.isLoading) {
-        LoadingState(modifier)
+        Column(modifier.fillMaxSize().statusBarsPadding().padding(Spacing.lg)) {
+            HelpButton { helpOpen = true }
+            LoadingState()
+        }
         return
     }
     if (state.profile == null) {
-        ErrorState(
-            errorCode = state.errorCode ?: "INTERNAL_ERROR",
-            context = state.errorContext,
-            onRetry = { onEvent(DriverHomeEvent.Refresh) },
-        )
+        // The offline case. The Retry page used to be the whole screen,
+        // so a driver with no data had no way to an emergency number.
+        Column(modifier.fillMaxSize().statusBarsPadding().padding(Spacing.lg)) {
+            HelpButton { helpOpen = true }
+            ErrorState(
+                errorCode = state.errorCode ?: "INTERNAL_ERROR",
+                context = state.errorContext,
+                onRetry = { onEvent(DriverHomeEvent.Refresh) },
+            )
+        }
         return
     }
 
@@ -105,6 +141,10 @@ fun DriverHomeScreen(
             .imePadding()
             .padding(horizontal = Spacing.gutter, vertical = Spacing.lg)
     ) {
+        // At the top, not the foot of a scroll. The moment it is needed
+        // is the moment nobody scrolls.
+        HelpButton { helpOpen = true }
+
         DriverSummary(state.profile!!)
 
         Spacer(Modifier.height(Spacing.lg))
@@ -145,38 +185,6 @@ fun DriverHomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-        }
-
-        // Get help. A driver alone on a mountain road at night is the case
-        // that started this, and until now the driver app had no path to any
-        // kind of help at all. The car's own details are the read-out block --
-        // it is what somebody is asked for on a call.
-        Spacer(Modifier.height(Spacing.lg))
-        var helpOpen by remember { mutableStateOf(false) }
-        SecondaryAction(
-            label = strings["safety.title"],
-            onClick = { helpOpen = true },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (helpOpen) {
-            val assignment = state.assignment
-            HelpSheet(
-                ride = assignment?.let {
-                    RideFacts(
-                        bookingNumber = it.trip.number,
-                        driverName = state.profile?.fullName,
-                        plate = state.profile?.vehicle?.plateNumber,
-                        // TripSummary carries ids, not names -- the same
-                        // gap that leaves the current-trip card unable to say
-                        // where to drive. A driver knows where they are; the
-                        // plate and the trip number are what somebody asks for.
-                        origin = null,
-                        destination = null,
-                    )
-                },
-                tripId = assignment?.trip?.id,
-                onDismiss = { helpOpen = false },
-            )
         }
 
         Spacer(Modifier.height(Spacing.xl))
@@ -593,4 +601,22 @@ private fun Inbox(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> Unit) 
             )
         }
     }
+}
+
+/**
+ * The way to the emergency numbers, rendered in every state of the screen.
+ *
+ * Loading, failed, and working all show it. A driver who cannot reach 119
+ * because a profile request timed out is the failure this feature was written
+ * to prevent, and for a while it was the failure this screen shipped.
+ */
+@Composable
+private fun HelpButton(onClick: () -> Unit) {
+    val strings = LocalVelroStrings.current
+    SecondaryAction(
+        label = strings["safety.title"],
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(Modifier.height(Spacing.md))
 }

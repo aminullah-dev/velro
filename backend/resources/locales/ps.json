@@ -637,7 +637,7 @@
   "safety.call_emergency": "{number} ته زنګ ووهئ",
   "safety.call_emergency_hint": "پولیس او امبولانس. له انټرنېټ پرته هم کار کوي.",
   "safety.tell_someone": "خپل معلومات هغه چا ته ولېږئ چې باور پرې لرئ",
-  "safety.tell_someone_hint": "د موټر، چلوونکي او ستاسو د ځای پیغام پرانیستل کېږي. تاسو پخپله ټاکئ چا ته یې لېږئ.",
+  "safety.tell_someone_hint": "د موټر، چلوونکي او ستاسو د سفر پیغام پرانیستل کېږي. تاسو پخپله ټاکئ چا ته یې لېږئ.",
   "safety.sms_body": "زه د ولرو په موټر کې یم. پلېټ {plate}. چلوونکی {driver}. بکنګ {booking}. له {origin} څخه {destination} ته.",
   "safety.details_title": "هغه موټر چې پکې یاست",
   "safety.read_aloud": "دا په تلیفون کې لوستلی شئ.",

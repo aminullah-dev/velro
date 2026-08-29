@@ -239,3 +239,34 @@ def test_every_safety_string_the_sheet_asks_for_exists() -> None:
     used = _literal_keys(source_root, (r'strings\["([a-z][a-zA-Z0-9._]*)"',))
     missing = {k for k in used if k not in english}
     assert not missing, f"the help sheet asks for keys with no message: {sorted(missing)}"
+
+
+def test_the_safety_promise_matches_what_the_message_carries() -> None:
+    """The hint must not promise a field the body does not have.
+
+    It said "the car, the driver and where you are" while safety.sms_body
+    carried plate, driver, booking and journey and no location at all -- and
+    the design deliberately refuses location, because a movement trail on a
+    woman is something VELRO would then hold and could be compelled to hand
+    over. A promise of a coordinate that is not in the message is the exact
+    failure this whole feature exists to prevent, and it was in the copy.
+    """
+    for locale in LOCALES:
+        messages = load(locale)
+        body = messages["safety.sms_body"]
+        hint = messages["safety.tell_someone_hint"]
+
+        assert "{maps_url}" not in body, (
+            f"{locale}: the message claims a location the app never supplies"
+        )
+        # Every placeholder the body promises must be one the app fills in.
+        supplied = {"plate", "driver", "booking", "origin", "destination"}
+        used = set(re.findall(r"\{(\w+)\}", body))
+        assert used <= supplied, f"{locale}: sms_body uses {used - supplied}"
+
+        # And the hint must not mention a location either, in any script.
+        for word in ("location", "موقعیت", "ځای", "where you are"):
+            assert word not in hint, (
+                f"{locale}: the hint promises {word!r}, which the message "
+                "does not carry"
+            )

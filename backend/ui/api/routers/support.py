@@ -146,8 +146,16 @@ def contacts(
     velro = settings.get_str("support.contact_phone", "").strip()
     return ok(
         ContactsOut(
+            # Filtered on shape, not on truthiness. The admin panel splits a
+            # list setting on the ASCII comma only, and the panel defaults to
+            # Dari -- so an operator typing "119، 100" with the Afghan comma
+            # U+060C, or Eastern digits, produced one element that every layer
+            # accepted and that dialled nothing. The app then cached it and
+            # stopped consulting the compiled-in numbers, on every handset that
+            # synced, permanently.
             emergency_numbers=[
-                n for n in settings.get_list("support.emergency_numbers", []) if n
+                n for n in settings.get_list("support.emergency_numbers", [])
+                if _is_short_dialable(n)
             ],
             # A placeholder number is worse than no button: it dials nothing at
             # the moment somebody is frightened. The default in settings.py is
@@ -181,6 +189,19 @@ def _ordered(codes: frozenset[str]) -> list[str]:
         return (2, code)
 
     return sorted(codes, key=rank)
+
+
+def _is_short_dialable(number: str) -> bool:
+    """An emergency number: 3-15 ASCII digits, optionally with a leading plus.
+
+    Deliberately not _is_dialable, which requires six digits and would delete
+    119 and 100 -- the only two numbers here that bring anybody.
+    """
+    candidate = number.strip()
+    if candidate.startswith("+"):
+        candidate = candidate[1:]
+    # ASCII only: a dialler given Eastern Arabic-Indic digits does not dial.
+    return 3 <= len(candidate) <= 15 and all("0" <= c <= "9" for c in candidate)
 
 
 def _is_dialable(number: str) -> bool:
@@ -247,7 +268,7 @@ def my_ticket(
     messages: Annotated[object, Depends(deps.ticket_messages)],
 ) -> dict:
     row = tickets.get(ticket_id)
-    is_staff = actor.role in STAFF_ROLES
+    is_staff = deps.is_support_staff(actor)
     if not is_staff and row.user_id != actor.user_id:
         # The same answer as a missing ticket, so this cannot be used to
         # discover that a reference exists.
@@ -276,6 +297,7 @@ def reply(
             ticket_id=ticket_id,
             actor_id=actor.user_id,
             actor_role=actor.role,
+            is_staff=deps.is_support_staff(actor),
             body=body.body,
             is_internal=body.is_internal,
         )
@@ -332,6 +354,7 @@ def decide(
             ticket_id=ticket_id,
             actor_id=actor.user_id,
             actor_role=actor.role,
+            is_staff=deps.is_support_staff(actor),
             target=TicketStatus(body.status),
         )
     )

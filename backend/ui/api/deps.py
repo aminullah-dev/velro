@@ -448,9 +448,29 @@ def require_finance(actor: ActorDep) -> Actor:
     return actor
 
 
+#: Who may act on a support request as staff.
+#:
+#: Narrower than STAFF_ROLES on purpose. A finance manager and a dispatcher are
+#: staff, and neither should be reading a report that may describe an assault
+#: or writing notes on it.
+SUPPORT_STAFF_ROLES = frozenset({SUPER_ADMIN, ADMIN, SUPPORT_AGENT})
+
+
 def require_support(actor: ActorDep) -> Actor:
-    actor.require(SUPER_ADMIN, ADMIN, SUPPORT_AGENT)
+    actor.require(*SUPPORT_STAFF_ROLES)
     return actor
+
+
+def is_support_staff(actor: Actor) -> bool:
+    """The same rule as require_support, for the endpoints that must not 403.
+
+    Deliberately reads actor.roles rather than actor.role: the latter collapses
+    all six staff roles into DISPATCHER or ADMIN, so a check written against it
+    hands a finance manager the same powers over a safety report as a support
+    agent -- while the queue endpoint next to it refuses them. Two gates on one
+    feature that disagree is worse than either gate alone.
+    """
+    return bool(set(actor.roles) & SUPPORT_STAFF_ROLES)
 
 
 __all__ = [
@@ -483,6 +503,7 @@ __all__ = [
     "fares",
     "geography",
     "idempotency",
+    "is_support_staff",
     "matching",
     "new_id",
     "notifications",

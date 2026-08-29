@@ -57,6 +57,7 @@ dependencies {
     implementation(project(":feature:auth"))
     implementation(project(":feature:booking"))
     implementation(project(":feature:trip"))
+    implementation(project(":feature:safety"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

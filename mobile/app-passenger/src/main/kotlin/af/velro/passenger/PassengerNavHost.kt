@@ -30,6 +30,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import af.velro.feature.safety.HelpSheet
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -80,11 +85,28 @@ fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rem
         }
 
         composable(Routes.HOME) {
-            HomeScreen(
-                onBook = { navController.navigate(Routes.BOOK) },
-                onOpenBooking = { navController.navigate(Routes.bookingDetail(it)) },
-                onOpenHistory = { navController.navigate(Routes.HISTORY) },
-            )
+            // Get help, on the screen a passenger is on when they are not
+            // mid-journey.
+            //
+            // It used to exist only inside `if (booking.isActive)` on booking
+            // detail, so it vanished the moment a ride was cancelled or
+            // completed -- and an expired session offline is still "signed in"
+            // (TokenStore reads DataStore; nothing produces a 401 without a
+            // server), so the sign-in copy was unreachable too. A woman
+            // harassed during a ride had no way to tell VELRO once she was out
+            // of the car.
+            var helpOpen by remember { mutableStateOf(false) }
+            Box(Modifier.fillMaxSize()) {
+                HomeScreen(
+                    onBook = { navController.navigate(Routes.BOOK) },
+                    onOpenBooking = { navController.navigate(Routes.bookingDetail(it)) },
+                    onOpenHistory = { navController.navigate(Routes.HISTORY) },
+                    onGetHelp = { helpOpen = true },
+                )
+                if (helpOpen) {
+                    HelpSheet(ride = null, onDismiss = { helpOpen = false })
+                }
+            }
         }
 
         composable(Routes.BOOK) {
@@ -140,13 +162,25 @@ private fun HomeScreen(
     onBook: () -> Unit,
     onOpenBooking: (String) -> Unit,
     onOpenHistory: () -> Unit,
+    onGetHelp: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val strings = LocalVelroStrings.current
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(strings["app.name"]) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(strings["app.name"]) },
+                // In the bar, so it is on screen whatever the list below is
+                // doing -- loading, empty, or failed.
+                actions = {
+                    TextButton(onClick = onGetHelp) {
+                        Text(strings["safety.title"])
+                    }
+                },
+            )
+        },
     ) { padding ->
         Column(
             Modifier

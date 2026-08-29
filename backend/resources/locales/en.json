@@ -637,7 +637,7 @@
   "safety.call_emergency": "Call {number}",
   "safety.call_emergency_hint": "Police and ambulance. Works without internet.",
   "safety.tell_someone": "Send your details to someone you trust",
-  "safety.tell_someone_hint": "Opens a message with the car, the driver and where you are. You choose who to send it to.",
+  "safety.tell_someone_hint": "Opens a message with the car, the driver and your journey. You choose who to send it to.",
   "safety.sms_body": "I am in a VELRO car. Plate {plate}. Driver {driver}. Booking {booking}. From {origin} to {destination}.",
   "safety.details_title": "The car you are in",
   "safety.read_aloud": "You can read this out on the phone.",

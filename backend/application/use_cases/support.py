@@ -137,6 +137,12 @@ class ReplyCommand:
     ticket_id: str
     actor_id: str
     actor_role: ActorRole
+    #: Decided by the caller from the actor's real roles, not inferred here.
+    #:
+    #: ActorRole collapses six staff roles into two, so `actor_role in
+    #: STAFF_ROLES` hands a finance manager the same powers over a safety
+    #: report as a support agent.
+    is_staff: bool
     body: str
     is_internal: bool = False
     request_id: str | None = None
@@ -156,7 +162,7 @@ class ReplyToTicket:
     def execute(self, cmd: ReplyCommand) -> TicketStatus:
         now = self._clock.now()
         row = self._tickets.get(cmd.ticket_id)
-        is_staff = cmd.actor_role in STAFF_ROLES
+        is_staff = cmd.is_staff
 
         if not is_staff and row.user_id != cmd.actor_id:
             # The same answer as a missing ticket, so the endpoint cannot be
@@ -218,6 +224,7 @@ class DecideTicketCommand:
     ticket_id: str
     actor_id: str
     actor_role: ActorRole
+    is_staff: bool
     target: TicketStatus
     request_id: str | None = None
 
@@ -233,7 +240,7 @@ class DecideTicket:
         self._clock = clock
 
     def execute(self, cmd: DecideTicketCommand) -> TicketStatus:
-        if cmd.actor_role not in STAFF_ROLES:
+        if not cmd.is_staff:
             raise PermissionError(error_codes.PERMISSION_DENIED, action="support.decide")
 
         now = self._clock.now()

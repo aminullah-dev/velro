@@ -48,9 +48,17 @@ class SafetyRepository @Inject constructor(
                 json.decodeFromString(SafetyContactsDto.serializer(), it).toDomain()
             }.getOrNull()
         }
-        // A cached copy with no numbers in it is worse than the default: it
-        // would render a sheet with nothing to dial.
-        return parsed?.takeIf { it.emergencyNumbers.isNotEmpty() } ?: SafetyContacts.BUILT_IN
+        // Filtered on shape here too, not only on the server.
+        //
+        // A cached copy with nothing dialable in it is worse than the default:
+        // it renders a sheet whose buttons open a dialler with nothing in it,
+        // and it does so for as long as the row survives -- across restarts,
+        // through every later offline stretch. The compiled-in numbers exist
+        // precisely so there is always something behind a bad one.
+        val usable = parsed?.copy(
+            emergencyNumbers = parsed.emergencyNumbers.filter(::isShortDialable),
+        )
+        return usable?.takeIf { it.emergencyNumbers.isNotEmpty() } ?: SafetyContacts.BUILT_IN
     }
 
     /**
@@ -64,7 +72,7 @@ class SafetyRepository @Inject constructor(
         val result = mapper.call { api.safetyContacts() }
         if (result !is ApiResult.Success) return
         val fetched = result.value
-        if (fetched.emergency_numbers.isEmpty()) return
+        if (fetched.emergency_numbers.none(::isShortDialable)) return
         runCatching {
             db.cacheMetadata().put(
                 CacheMetadataEntity(
@@ -90,6 +98,17 @@ class SafetyRepository @Inject constructor(
         }.map { it.reference }
 
     private companion object {
+        /**
+         * An emergency number: 3-15 ASCII digits, optional leading plus.
+         *
+         * Same rule as the server's _is_short_dialable. Applied on both sides
+         * because either can be the one that is out of date.
+         */
+        fun isShortDialable(number: String): Boolean {
+            val candidate = number.trim().removePrefix("+")
+            return candidate.length in 3..15 && candidate.all { it in '0'..'9' }
+        }
+
         val json = Json { ignoreUnknownKeys = true }
     }
 }

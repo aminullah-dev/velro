@@ -167,6 +167,9 @@ export function SupportPage() {
 
       {open && (
         <TicketThread
+          // Keyed by ticket, so opening a second one cannot inherit the first
+          // one's half-typed draft or its internal-note flag.
+          key={open}
           ticket={queue.tickets.find((candidate) => candidate.id === open)}
           onClose={() => setOpen(null)}
         />
@@ -206,6 +209,11 @@ function TicketThread({
       }),
     onSuccess: () => {
       setBody("");
+      // Cleared too. It used to stay ticked after sending, so an operator who
+      // wrote one note and then typed the actual answer sent that internally
+      // as well -- and the person who reported an assault got silence, while
+      // the panel showed a thread that looked answered.
+      setInternal(false);
       invalidate();
     },
   });
