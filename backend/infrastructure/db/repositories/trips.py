@@ -241,16 +241,43 @@ class RideRequestRepository(SqlRepository[RideRequestRow]):
         self.session.flush()
         return row
 
-    def find_open_for_passenger(self, passenger_id: str) -> RideRequestRow | None:
-        """The one request a passenger already has in the air, if any."""
+    def find_open_for_passenger(
+        self, passenger_id: str, *, at: datetime | None = None
+    ) -> RideRequestRow | None:
+        """The one request a passenger already has in the air, if any.
+
+        ``at`` excludes ones that have run out of time. Without it a request
+        nobody answered blocks the passenger from ever asking again, which is
+        the app silently breaking for them with nothing they can do about it.
+        """
+        stmt = self._base().where(
+            RideRequestRow.passenger_id == passenger_id,
+            RideRequestRow.status == RideRequestStatus.OPEN.value,
+        )
+        if at is not None:
+            stmt = stmt.where(RideRequestRow.expires_at > at)
         return self.session.scalars(
-            self._base()
+            stmt.order_by(RideRequestRow.created_at.desc())
+        ).first()
+
+    def expire_stale_for_passenger(self, passenger_id: str, *, at: datetime) -> int:
+        """Close this passenger's requests that ran out of time.
+
+        Scoped to one passenger rather than sweeping the table: this runs on an
+        ordinary read, and a request should be closed by someone looking at it,
+        not by whoever happens to open the app next.
+        """
+        result = self.session.execute(
+            update(RideRequestRow)
             .where(
                 RideRequestRow.passenger_id == passenger_id,
                 RideRequestRow.status == RideRequestStatus.OPEN.value,
+                RideRequestRow.expires_at <= at,
+                RideRequestRow.deleted_at.is_(None),
             )
-            .order_by(RideRequestRow.created_at.desc())
-        ).first()
+            .values(status=RideRequestStatus.EXPIRED.value)
+        )
+        return int(result.rowcount or 0)
 
     def list_for_passenger(
         self, passenger_id: str, *, limit: int = 20

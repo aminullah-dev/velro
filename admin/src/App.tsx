@@ -14,6 +14,7 @@ import { LocationsPage } from "./pages/Locations";
 import { RoutesPage } from "./pages/Routes";
 import { SettingsPage } from "./pages/Settings";
 import { SignInPage } from "./pages/SignIn";
+import { NegotiationsPage } from "./pages/Negotiations";
 import { SettlementsPage } from "./pages/Settlements";
 import { TripsPage } from "./pages/Trips";
 import { VehicleApprovalsPage } from "./pages/VehicleApprovals";
@@ -25,6 +26,11 @@ const NAV = [
   { to: "/", labelKey: "admin.nav.dashboard", element: <DashboardPage /> },
   { to: "/dispatch", labelKey: "admin.nav.operations", element: <DispatchPage /> },
   { to: "/trips", labelKey: "admin.nav.trips", element: <TripsPage /> },
+  {
+    to: "/negotiations",
+    labelKey: "admin.nav.negotiations",
+    element: <NegotiationsPage />,
+  },
   { to: "/bookings", labelKey: "admin.nav.bookings", element: <BookingsPage /> },
   { to: "/drivers", labelKey: "admin.nav.drivers", element: <DriversPage /> },
   { to: "/approvals", labelKey: "admin.nav.approvals", element: <ApprovalsPage /> },

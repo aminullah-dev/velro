@@ -560,5 +560,13 @@
   "driver.offer.hint": "همان مقدار خواسته‌شده یا قیمت خود را پیشنهاد کنید.",
   "driver.offer.match": "قبول {amount}",
   "driver.offer.send": "فرستادن قیمت من",
-  "ride.journey.from_to": "از {origin} به {destination}"
+  "ride.journey.from_to": "از {origin} به {destination}",
+  "admin.nav.negotiations": "درخواست‌های جاری",
+  "admin.negotiations.title": "مسافران منتظر",
+  "admin.negotiations.none": "فعلاً کسی منتظر نیست.",
+  "admin.negotiations.asking": "پیشنهاد مسافر",
+  "admin.negotiations.offers": "پیشنهادها",
+  "admin.negotiations.no_offers": "هنوز جوابی نیست",
+  "admin.negotiations.readonly": "فقط برای دیدن. کرایه میان مسافر و راننده توافق می‌شود.",
+  "admin.col.waiting": "منتظر از"
 }

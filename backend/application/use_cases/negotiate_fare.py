@@ -67,12 +67,15 @@ class RequestRide:
                 error_codes.DESTINATION_NOT_FOUND, destination_id=cmd.destination_id
             )
 
+        now = self._clock.now()
         # One open request at a time. A passenger with three live requests is
         # taking three drivers off the board for one journey.
-        if self._requests.find_open_for_passenger(cmd.passenger_id) is not None:
+        #
+        # ``at`` is what stops a request nobody answered from blocking them for
+        # ever: the row may still say OPEN until someone reads it, but a
+        # deadline that has passed does not hold a place.
+        if self._requests.find_open_for_passenger(cmd.passenger_id, at=now) is not None:
             raise ConflictError(error_codes.BOOKING_LIMIT_REACHED, limit=1)
-
-        now = self._clock.now()
         ttl = self._settings.get_int(
             "ride_request.ttl_minutes", DEFAULT_REQUEST_TTL_MINUTES
         )

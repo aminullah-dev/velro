@@ -353,3 +353,148 @@ def test_the_board_says_when_this_driver_has_already_offered(
     rows = client.get("/api/v1/driver/ride-requests", headers=driver_a).json()["data"]
     assert next(r for r in rows if r["id"] == asked["id"])["already_offered"] is True
     _clear(client, rider)
+
+
+# -- running out of time -------------------------------------------------
+
+def test_an_expired_request_does_not_lock_the_passenger_out(
+    client: TestClient, journey: dict
+) -> None:
+    """The worst failure this flow can have.
+
+    A passenger asks, nobody answers, and the request sits OPEN for ever. Only
+    one request may be open at a time, so they can never ask again -- the app
+    is simply broken for them, with no error to explain it and nothing they can
+    do. Nothing runs on a schedule here, so expiry has to happen when someone
+    reads.
+    """
+    from datetime import timedelta
+
+    from infrastructure.db.repositories.trips import RideRequestRepository
+    from shared.clock import SystemClock
+    from ui.api import deps
+
+    session = auth(sign_in(client, "+93700000110"))
+    asked = _ask(client, session, journey)
+
+    # Push it past its deadline, as forty-five quiet minutes would.
+    with deps._session_factory()() as db:
+        requests = RideRequestRepository(db)
+        row = requests.find(asked["id"])
+        row.expires_at = SystemClock().now() - timedelta(minutes=1)
+        db.commit()
+
+    # Asking again directly, without reading the list first. A fresh install
+    # goes straight here, so the ask path has to clear the way by itself rather
+    # than relying on a screen having been opened.
+    again = client.post(
+        "/api/v1/ride-requests",
+        json={
+            "origin_station_id": journey["station_id"],
+            "destination_id": journey["destination_id"],
+            "passenger_count": 1,
+            "offered_fare_minor": 50_000,
+        },
+        headers=session,
+    )
+    assert again.status_code == 201, again.text
+    _clear(client, session)
+
+
+def test_reading_a_stale_request_closes_it(client: TestClient, journey: dict) -> None:
+    """The other half, tested apart from the first.
+
+    Both the ask and the read clear stale requests, and either alone would save
+    the passenger -- which means a regression in one would hide behind the
+    other. They are checked separately so that cannot happen.
+    """
+    from datetime import timedelta
+
+    from infrastructure.db.repositories.trips import RideRequestRepository
+    from shared.clock import SystemClock
+    from ui.api import deps
+
+    session = auth(sign_in(client, "+93700000112"))
+    asked = _ask(client, session, journey)
+    with deps._session_factory()() as db:
+        row = RideRequestRepository(db).find(asked["id"])
+        row.expires_at = SystemClock().now() - timedelta(minutes=1)
+        db.commit()
+
+    # Reading alone, without asking again: a passenger staring at "waiting for
+    # drivers" must not spin on a request that died an hour ago.
+    listed = client.get("/api/v1/ride-requests", headers=session).json()["data"]
+    assert any(r["id"] == asked["id"] and r["status"] == "EXPIRED" for r in listed)
+    _clear(client, session)
+
+
+def test_an_expired_request_is_off_the_drivers_board(
+    client: TestClient, driver_a: dict, journey: dict
+) -> None:
+    from datetime import timedelta
+
+    from infrastructure.db.repositories.trips import RideRequestRepository
+    from shared.clock import SystemClock
+    from ui.api import deps
+
+    session = auth(sign_in(client, "+93700000111"))
+    asked = _ask(client, session, journey)
+    with deps._session_factory()() as db:
+        requests = RideRequestRepository(db)
+        row = requests.find(asked["id"])
+        row.expires_at = SystemClock().now() - timedelta(minutes=1)
+        db.commit()
+
+    board = client.get("/api/v1/driver/ride-requests", headers=driver_a).json()["data"]
+    assert all(r["id"] != asked["id"] for r in board)
+    _clear(client, session)
+
+
+# -- what support can see ------------------------------------------------
+
+def test_support_can_see_who_is_waiting_and_what_they_were_offered(
+    client: TestClient, driver_a: dict, journey: dict, admin_session: dict
+) -> None:
+    """A passenger ringing to say nobody will take them was unlookupable."""
+    session = auth(sign_in(client, "+93700000113"))
+    asked = _ask(client, session, journey, 45_000)
+    client.post(
+        f"/api/v1/driver/ride-requests/{asked['id']}/offer",
+        json={"amount_minor": 60_000}, headers=driver_a,
+    )
+
+    board = client.get("/api/v1/admin/ride-requests", headers=admin_session)
+    assert board.status_code == 200, board.text
+    row = next(r for r in board.json()["data"] if r["id"] == asked["id"])
+    assert row["passenger_phone"], "an operator needs to know who is calling"
+    assert row["offer_count"] == 1
+    assert row["offers"][0]["amount"]["amount_minor"] == 60_000
+    assert row["offered_fare"]["amount_minor"] == 45_000
+    _clear(client, session)
+
+
+def test_a_driver_cannot_read_the_operations_view(
+    client: TestClient, driver_a: dict
+) -> None:
+    assert client.get(
+        "/api/v1/admin/ride-requests", headers=driver_a
+    ).status_code == 403
+
+
+def test_there_is_no_way_for_staff_to_change_an_agreed_fare(client: TestClient) -> None:
+    """The fare is between the passenger and the driver.
+
+    An operator who could edit it would be a third party to a private
+    agreement, so the operations view is read-only by construction -- there is
+    no endpoint to write one, and this fails if someone adds one.
+    """
+    from ui.api.app import asgi
+
+    writable = [
+        path
+        for path, ops in asgi.openapi()["paths"].items()
+        if ("ride-request" in path or "fare-offer" in path)
+        and path.startswith("/api/v1/admin")
+        and any(m in ops for m in ("post", "put", "patch", "delete"))
+    ]
+    assert not writable, f"staff can write to a negotiation: {writable}"

@@ -271,6 +271,17 @@ button.small { min-height: 32px; padding: var(--s-1) var(--s-3); font-size: 13px
 
 /* Reason dialog -------------------------------------------------------- */
 
+.col { display: flex; flex-direction: column; }
+
+/* A heading between two tables on one page. Enough space above to read as a
+   new section, not so much that the page falls apart. */
+.section {
+  margin: var(--s-8) 0 var(--s-3);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.section:first-of-type { margin-top: var(--s-4); }
+
 .reason-dialog {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);

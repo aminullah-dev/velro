@@ -6,7 +6,7 @@
  * dropped, so a mistyped token ships as a missing corner radius or a
  * transparent background that nobody notices until a screenshot.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 
@@ -19,4 +19,36 @@ if (missing.length) {
   console.error(`undefined CSS variables: ${missing.join(", ")}`);
   process.exit(1);
 }
-console.log(`css tokens ok (${defined.size} defined, ${used.size} used)`);
+
+/**
+ * Every className the pages use must exist too.
+ *
+ * An unknown class is not an error either -- the element simply renders
+ * unstyled, which looks like a layout bug rather than a typo. Only single-word
+ * literal classNames are checked; anything built from a template string is
+ * beyond a regex and is left alone.
+ */
+const classes = new Set([...css.matchAll(/\.([a-z][\w-]*)\s*[{,:]/g)].map((m) => m[1]));
+const pages = readdirSync(new URL("../src/pages", import.meta.url));
+const components = readdirSync(new URL("../src/components", import.meta.url));
+const sources = [
+  ...pages.map((f) => new URL(`../src/pages/${f}`, import.meta.url)),
+  ...components.map((f) => new URL(`../src/components/${f}`, import.meta.url)),
+];
+
+const unknown = new Set();
+for (const file of sources) {
+  const text = readFileSync(file, "utf8");
+  for (const [, value] of text.matchAll(/className="([a-z][\w\s-]*)"/g)) {
+    for (const name of value.trim().split(/\s+/)) {
+      if (name && !classes.has(name)) unknown.add(name);
+    }
+  }
+}
+if (unknown.size) {
+  console.error(`classNames with no CSS rule: ${[...unknown].sort().join(", ")}`);
+  process.exit(1);
+}
+console.log(
+  `css ok (${defined.size} vars, ${classes.size} classes; ${used.size} vars used)`,
+);

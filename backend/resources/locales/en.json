@@ -560,5 +560,13 @@
   "driver.offer.hint": "Offer what they asked, or your own price.",
   "driver.offer.match": "Agree to {amount}",
   "driver.offer.send": "Send my price",
-  "ride.journey.from_to": "{origin} to {destination}"
+  "ride.journey.from_to": "{origin} to {destination}",
+  "admin.nav.negotiations": "Live requests",
+  "admin.negotiations.title": "Passengers waiting",
+  "admin.negotiations.none": "Nobody is waiting right now.",
+  "admin.negotiations.asking": "Asking",
+  "admin.negotiations.offers": "Offers",
+  "admin.negotiations.no_offers": "No answer yet",
+  "admin.negotiations.readonly": "Read only. The fare is agreed between the passenger and the driver.",
+  "admin.col.waiting": "Waiting since"
 }

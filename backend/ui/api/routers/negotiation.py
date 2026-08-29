@@ -64,6 +64,9 @@ class FareOfferOut(Schema):
 
 
 class RideRequestOut(Schema):
+    # Populated only for staff; a passenger already knows their own name.
+    passenger_phone: str | None = None
+    offer_count: int = 0
     id: str
     status: str
     origin_station_id: str
@@ -124,6 +127,10 @@ def my_ride_requests(
     vehicles: Annotated[object, Depends(deps.vehicles)],
     geo: Annotated[object, Depends(deps.geography)],
 ) -> dict:
+    # Reading closes what ran out of time: the passenger's own screen is the
+    # most reliable moment to notice, and it is where a stale "waiting for
+    # drivers" would otherwise spin for ever.
+    requests.expire_stale_for_passenger(actor.user_id, at=deps.clock().now())
     rows = requests.list_for_passenger(actor.user_id, limit=20)
     enricher = _OfferEnricher(drivers=drivers, users=users, vehicles=vehicles)
     return ok(
@@ -317,6 +324,44 @@ def my_offers(
             for o in offers.open_for_driver(driver.id, limit=50)
         ]
     )
+
+
+admin_router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@admin_router.get("/ride-requests")
+def live_negotiations(
+    actor: Annotated[deps.Actor, Depends(deps.require_operations)],
+    requests: Annotated[object, Depends(deps.ride_requests)],
+    offers: Annotated[object, Depends(deps.fare_offers)],
+    drivers: Annotated[object, Depends(deps.drivers)],
+    users: Annotated[object, Depends(deps.users)],
+    vehicles: Annotated[object, Depends(deps.vehicles)],
+    geo: Annotated[object, Depends(deps.geography)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> dict:
+    """Who is waiting, and what they have been offered.
+
+    Support has been blind to this: a passenger ringing to say nobody will take
+    them, or that a price looks wrong, could not be looked up at all. Read-only
+    on purpose -- the fare is between the passenger and the driver, and an
+    operator who could change it would be a third party to a private agreement.
+    """
+    rows = requests.open_board(at=deps.clock().now(), limit=limit)
+    enricher = _OfferEnricher(drivers=drivers, users=users, vehicles=vehicles)
+    passengers = {u.id: u for u in users.by_ids({r.passenger_id for r in rows})}
+    out = []
+    for row in rows:
+        made = enricher.decorate(offers.for_request(row.id))
+        body = _request_out(row, made, geo=geo).model_dump()
+        user = passengers.get(row.passenger_id)
+        body["passenger_name"] = user.full_name if user else None
+        body["passenger_phone"] = user.phone if user else None
+        # The number an operator is really being asked about: has anyone
+        # answered this person at all.
+        body["offer_count"] = len(made)
+        out.append(body)
+    return ok(out)
 
 
 class _OfferEnricher:

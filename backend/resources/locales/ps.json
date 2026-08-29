@@ -560,5 +560,13 @@
   "driver.offer.hint": "هماغه غوښتل شوې اندازه یا خپله بیه وړاندیز کړئ.",
   "driver.offer.match": "د {amount} منل",
   "driver.offer.send": "زما بیه ولېږئ",
-  "ride.journey.from_to": "له {origin} څخه {destination} ته"
+  "ride.journey.from_to": "له {origin} څخه {destination} ته",
+  "admin.nav.negotiations": "روانې غوښتنې",
+  "admin.negotiations.title": "منتظر مسافر",
+  "admin.negotiations.none": "اوس مهال څوک نه دي منتظر.",
+  "admin.negotiations.asking": "د مسافر وړاندیز",
+  "admin.negotiations.offers": "وړاندیزونه",
+  "admin.negotiations.no_offers": "لا ځواب نشته",
+  "admin.negotiations.readonly": "یوازې د کتلو لپاره. کرایه د مسافر او ډرایور ترمنځ هوکړه کیږي.",
+  "admin.col.waiting": "له کله منتظر"
 }

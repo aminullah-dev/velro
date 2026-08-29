@@ -93,7 +93,7 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
         driver.router, dispatch.router, admin.router, imports.router,
         documents.router, vehicles.router,
         settlements.driver_router, settlements.admin_router,
-        negotiation.router, negotiation.driver_router,
+        negotiation.router, negotiation.driver_router, negotiation.admin_router,
     ):
         app.include_router(router, prefix=API_PREFIX)
 
