@@ -159,13 +159,15 @@ def accept_offer(
     numbers: Annotated[object, Depends(deps.numbers)],
     codes: Annotated[object, Depends(deps.verification_codes)],
     audit: Annotated[object, Depends(deps.audit)],
+    users: Annotated[object, Depends(deps.users)],
+    notifier: Annotated[object, Depends(deps.notifier)],
 ) -> dict:
     """Take one driver's price. The journey exists from here."""
     use_case = AcceptOffer(
         requests=requests, offers=offers, trips=trips, bookings=bookings,
         seats=seats, drivers=drivers, vehicles=vehicles, routes=routes,
         geography=geo, numbers=numbers, codes=codes, audit=audit,
-        clock=deps.clock(), new_id=deps.new_id,
+        users=users, notifier=notifier, clock=deps.clock(), new_id=deps.new_id,
     )
     result = use_case.execute(
         AcceptOfferCommand(offer_id=offer_id, passenger_id=actor.user_id)
@@ -263,11 +265,12 @@ def offer_fare(
     drivers: Annotated[object, Depends(deps.drivers)],
     vehicles: Annotated[object, Depends(deps.vehicles)],
     audit: Annotated[object, Depends(deps.audit)],
+    notifier: Annotated[object, Depends(deps.notifier)],
 ) -> dict:
     """Name your price. Offering exactly what was asked is agreeing to it."""
     use_case = OfferFare(
         requests=requests, offers=offers, drivers=drivers, vehicles=vehicles,
-        audit=audit, clock=deps.clock(), new_id=deps.new_id,
+        audit=audit, notifier=notifier, clock=deps.clock(), new_id=deps.new_id,
     )
     offer = use_case.execute(
         OfferFareCommand(

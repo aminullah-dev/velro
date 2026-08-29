@@ -48,6 +48,7 @@ from infrastructure.db.repositories.money import (
 )
 from infrastructure.db.repositories.ops import (
     CancellationRepository,
+    DeviceTokenRepository,
     IdempotencyRepository,
     ImportJobRepository,
     NotificationRepository,
@@ -239,6 +240,25 @@ def ratings(session: SessionDep) -> RatingRepository:
 
 def cancellations(session: SessionDep) -> CancellationRepository:
     return CancellationRepository(session)
+
+
+def device_tokens(session: SessionDep) -> DeviceTokenRepository:
+    return DeviceTokenRepository(session)
+
+
+def notifier(session: SessionDep):
+    """Writes the notification, then tries to deliver it.
+
+    No transport is configured yet: Firebase credentials are an environment
+    concern and are not in this repository. Until they are, the row is still
+    written and the message waits in the app -- which is the part that has to
+    work whatever the network did.
+    """
+    from infrastructure.services.messaging import build_notifier
+
+    return build_notifier(
+        NotificationRepository(session), DeviceTokenRepository(session), clock()
+    )
 
 
 def notifications(session: SessionDep) -> NotificationRepository:

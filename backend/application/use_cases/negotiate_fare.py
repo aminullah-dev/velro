@@ -17,7 +17,10 @@ from shared import error_codes
 from shared.clock import Clock
 from shared.errors import ConflictError, NotFoundError, PermissionError
 from shared.ids import IdGenerator
+from shared.logging import get_logger
 from shared.money import Money
+
+log = get_logger(__name__)
 
 # How long a request stays on the drivers' board. Long enough for someone to
 # finish a journey and look, short enough that a passenger is not still being
@@ -127,14 +130,15 @@ class OfferFare:
     """
 
     def __init__(
-        self, *, requests, offers, drivers, vehicles, audit, clock: Clock,
-        new_id: IdGenerator,
+        self, *, requests, offers, drivers, vehicles, audit, notifier=None,
+        clock: Clock, new_id: IdGenerator,
     ) -> None:
         self._requests = requests
         self._offers = offers
         self._drivers = drivers
         self._vehicles = vehicles
         self._audit = audit
+        self._notifier = notifier
         self._clock = clock
         self._new_id = new_id
 
@@ -193,6 +197,18 @@ class OfferFare:
             },
             request_id=cmd.request_id,
         )
+        # The passenger is not sitting on the offers screen. Telling them is the
+        # difference between a negotiation and a message nobody reads.
+        _tell(
+            self._notifier,
+            user_id=row.passenger_id,
+            message_key="notify.offer.received",
+            payload={
+                "ride_request_id": row.id,
+                "amount_minor": offered.amount_minor,
+                "currency": offered.currency,
+            },
+        )
         return _to_offer(created)
 
 
@@ -233,6 +249,21 @@ class WithdrawOffer:
             request_id=cmd.request_id,
         )
         return offer
+
+
+def _tell(notifier, **kwargs) -> None:
+    """Best effort, always.
+
+    A notification that cannot be sent must never undo a ride that was agreed.
+    The row is written inside the same transaction either way, so the message is
+    waiting in the app even when every channel failed.
+    """
+    if notifier is None:
+        return
+    try:
+        notifier.notify(**kwargs)
+    except Exception:
+        log.warning("notify.failed", message_key=kwargs.get("message_key"))
 
 
 def _to_offer(row) -> FareOffer:
@@ -279,7 +310,8 @@ class AcceptOffer:
 
     def __init__(
         self, *, requests, offers, trips, bookings, seats, drivers, vehicles,
-        routes, geography, numbers, codes, audit, clock: Clock, new_id: IdGenerator,
+        routes, geography, numbers, codes, audit, users=None, notifier=None,
+        clock: Clock, new_id: IdGenerator,
     ) -> None:
         self._requests = requests
         self._offers = offers
@@ -293,6 +325,8 @@ class AcceptOffer:
         self._numbers = numbers
         self._codes = codes
         self._audit = audit
+        self._users = users
+        self._notifier = notifier
         self._clock = clock
         self._new_id = new_id
 
@@ -436,7 +470,40 @@ class AcceptOffer:
         self._offers.save(offer_row)
         # Every other driver is told at once rather than left refreshing a
         # request that is already taken.
+        # Read who is losing *before* declining them, and keep the ids rather
+        # than the rows: the UPDATE expires those objects, so re-reading their
+        # status afterwards finds DECLINED and matches nobody.
+        losing_driver_ids = {
+            o.driver_id
+            for o in self._offers.for_request(request_row.id)
+            if o.id != offer_row.id and o.status == FareOfferStatus.OFFERED.value
+        }
         self._offers.decline_others(request_id=request_row.id, except_id=offer_row.id, at=now)
+
+        # The chosen driver is on their way to a passenger, so they are told
+        # first and by name.
+        _tell(
+            self._notifier,
+            user_id=driver.user_id,
+            message_key="notify.offer.accepted",
+            payload={
+                "trip_id": trip.id,
+                "booking_number": booking_row.number,
+                "amount_minor": agreed.amount_minor,
+                "currency": agreed.currency,
+            },
+            trip_id=trip.id,
+            booking_id=booking_row.id,
+        )
+        # And everyone else, so nobody drives to a station where the passenger
+        # has already gone.
+        for other in self._drivers.by_ids(losing_driver_ids):
+            _tell(
+                self._notifier,
+                user_id=other.user_id,
+                message_key="notify.offer.declined",
+                payload={"ride_request_id": request_row.id},
+            )
 
         self._audit.write(
             "fare_offer.accepted",

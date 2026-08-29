@@ -568,5 +568,12 @@
   "admin.negotiations.offers": "Offers",
   "admin.negotiations.no_offers": "No answer yet",
   "admin.negotiations.readonly": "Read only. The fare is agreed between the passenger and the driver.",
-  "admin.col.waiting": "Waiting since"
+  "admin.col.waiting": "Waiting since",
+  "notify.offer.received": "A driver offered {amount_minor} for your ride.",
+  "notify.offer.accepted": "Your fare was accepted. Booking {booking_number}.",
+  "notify.offer.declined": "That passenger chose another driver.",
+  "notify.request.expired": "Nobody answered your request in time.",
+  "inbox.title": "Messages",
+  "inbox.empty": "Nothing yet.",
+  "inbox.mark_read": "Mark all as read"
 }

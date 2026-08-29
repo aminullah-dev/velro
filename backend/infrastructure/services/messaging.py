@@ -98,3 +98,69 @@ class RecordingNotifier:
                 row.sent_at = self._clock.now()
                 return
             row.delivery_status = "FAILED"
+
+
+class DeviceTokenPushChannel:
+    """Push to a person's registered devices.
+
+    Delivery is attempted through whichever transport is configured. With none
+    configured -- which is the case until Firebase credentials exist -- this
+    still writes the notification row and reports not-delivered, so the message
+    is waiting in the app when the person next opens it and the failure is
+    visible in the admin panel rather than silent.
+
+    A push is a convenience. The inbox is the record.
+    """
+
+    name = "push"
+
+    def __init__(self, tokens, transport=None, *, app: str | None = None) -> None:
+        self._tokens = tokens
+        self._transport = transport
+        self._app = app
+
+    def send(
+        self, *, user_id: str, message_key: str, payload: dict[str, Any], locale: str
+    ) -> bool:
+        rows = self._tokens.for_users([user_id], app=self._app)
+        if not rows:
+            log.info("push.no_device", user_id=user_id, message_key=message_key)
+            return False
+        if self._transport is None:
+            log.info(
+                "push.not_configured",
+                user_id=user_id, message_key=message_key, devices=len(rows),
+            )
+            return False
+
+        delivered = False
+        for row in rows:
+            try:
+                ok = self._transport.send(
+                    token=row.token, message_key=message_key,
+                    payload=payload, locale=row.locale or locale,
+                )
+            except TokenRejectedError:
+                # The device is gone -- uninstalled, or the token rotated.
+                # Keeping it means retrying a dead address for ever.
+                self._tokens.forget(row.token)
+                continue
+            delivered = delivered or bool(ok)
+        return delivered
+
+
+class TokenRejectedError(Exception):
+    """The push service says this token no longer addresses anything."""
+
+
+def build_notifier(notifications, tokens, clock, *, transport=None, app=None):
+    """The notifier the API uses.
+
+    One place that decides which channels exist, so wiring Firebase later is a
+    transport passed in here rather than an edit at every call site.
+    """
+    return RecordingNotifier(
+        notifications,
+        [DeviceTokenPushChannel(tokens, transport, app=app)],
+        clock,
+    )

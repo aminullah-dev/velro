@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 
 from infrastructure.db.models.ops import (
     CancellationRow,
+    DeviceTokenRow,
     IdempotencyRow,
     ImportJobRow,
     NotificationRow,
@@ -64,6 +65,36 @@ class NotificationRepository(SqlRepository[NotificationRow]):
         row = NotificationRow(**fields)
         self.session.add(row)
         return row
+
+    def unread_count(self, user_id: str) -> int:
+        return int(
+            self.session.scalar(
+                select(func.count())
+                .select_from(NotificationRow)
+                .where(
+                    NotificationRow.user_id == user_id,
+                    NotificationRow.read_at.is_(None),
+                    NotificationRow.deleted_at.is_(None),
+                )
+            )
+            or 0
+        )
+
+    def mark_read(self, user_id: str, *, at: datetime, ids=None) -> int:
+        """Mark everything, or just what was named.
+
+        Scoped to the caller's own rows: an id from someone else's inbox does
+        nothing rather than marking their notification read.
+        """
+        stmt = update(NotificationRow).where(
+            NotificationRow.user_id == user_id,
+            NotificationRow.read_at.is_(None),
+            NotificationRow.deleted_at.is_(None),
+        )
+        wanted = [i for i in (ids or []) if i]
+        if wanted:
+            stmt = stmt.where(NotificationRow.id.in_(wanted))
+        return int(self.session.execute(stmt.values(read_at=at)).rowcount or 0)
 
     def for_user(self, user_id: str, *, limit: int = 30):
         stmt = (
@@ -129,3 +160,64 @@ class SupportTicketRepository(SqlRepository[SupportTicketRow]):
         row = SupportTicketRow(**fields)
         self.session.add(row)
         return row
+
+
+class DeviceTokenRepository(SqlRepository[DeviceTokenRow]):
+    """Where a push actually goes.
+
+    A person has one token per device per app, and phones are shared and
+    reinstalled -- so registering is an upsert on the token itself, and a token
+    that reappears under a different user moves rather than duplicating. Sending
+    a driver's ride offer to whoever had the handset last is the failure this
+    prevents.
+    """
+
+    model = DeviceTokenRow
+    not_found_code = error_codes.USER_NOT_FOUND
+
+    def register(
+        self, *, id: str, user_id: str, token: str, platform: str, app: str,
+        device_id: str | None, locale: str | None, at: datetime,
+    ) -> DeviceTokenRow:
+        row = self.session.scalars(
+            self._base().where(DeviceTokenRow.token == token)
+        ).first()
+        if row is None:
+            row = DeviceTokenRow(
+                id=id, user_id=user_id, token=token, platform=platform,
+                app=app, device_id=device_id, locale=locale, last_seen_at=at,
+            )
+            self.session.add(row)
+            self.session.flush()
+            return row
+        row.user_id = user_id
+        row.platform = platform
+        row.app = app
+        row.device_id = device_id
+        row.locale = locale
+        row.last_seen_at = at
+        row.version += 1
+        self.session.add(row)
+        return row
+
+    def for_users(self, user_ids, *, app: str | None = None) -> list[DeviceTokenRow]:
+        wanted = [i for i in set(user_ids) if i]
+        if not wanted:
+            return []
+        stmt = self._base().where(DeviceTokenRow.user_id.in_(wanted))
+        if app:
+            stmt = stmt.where(DeviceTokenRow.app == app)
+        return list(self.session.scalars(stmt).all())
+
+    def forget(self, token: str) -> int:
+        """Drop a token the push service says is dead.
+
+        Kept as a hard delete: a stale token is not history, it is an address
+        that no longer exists, and keeping it means retrying it for ever.
+        """
+        return int(
+            self.session.execute(
+                DeviceTokenRow.__table__.delete().where(DeviceTokenRow.token == token)
+            ).rowcount
+            or 0
+        )

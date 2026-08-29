@@ -568,5 +568,12 @@
   "admin.negotiations.offers": "پیشنهادها",
   "admin.negotiations.no_offers": "هنوز جوابی نیست",
   "admin.negotiations.readonly": "فقط برای دیدن. کرایه میان مسافر و راننده توافق می‌شود.",
-  "admin.col.waiting": "منتظر از"
+  "admin.col.waiting": "منتظر از",
+  "notify.offer.received": "یک راننده {amount_minor} پیشنهاد داد.",
+  "notify.offer.accepted": "کرایه شما قبول شد. رزرو {booking_number}.",
+  "notify.offer.declined": "آن مسافر راننده دیگری را انتخاب کرد.",
+  "notify.request.expired": "کسی به موقع به درخواست شما جواب نداد.",
+  "inbox.title": "پیام‌ها",
+  "inbox.empty": "فعلاً چیزی نیست.",
+  "inbox.mark_read": "همه را خوانده‌شده نشان کن"
 }

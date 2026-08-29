@@ -568,5 +568,12 @@
   "admin.negotiations.offers": "وړاندیزونه",
   "admin.negotiations.no_offers": "لا ځواب نشته",
   "admin.negotiations.readonly": "یوازې د کتلو لپاره. کرایه د مسافر او ډرایور ترمنځ هوکړه کیږي.",
-  "admin.col.waiting": "له کله منتظر"
+  "admin.col.waiting": "له کله منتظر",
+  "notify.offer.received": "یوه ډرایور {amount_minor} وړاندیز کړ.",
+  "notify.offer.accepted": "ستاسو کرایه ومنل شوه. بکنګ {booking_number}.",
+  "notify.offer.declined": "هغه مسافر بل ډرایور وټاکه.",
+  "notify.request.expired": "چا ستاسو غوښتنې ته پر وخت ځواب ورنکړ.",
+  "inbox.title": "پیغامونه",
+  "inbox.empty": "لا هیڅ نشته.",
+  "inbox.mark_read": "ټول لوستل شوي وښایاست"
 }

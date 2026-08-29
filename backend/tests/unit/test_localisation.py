@@ -168,3 +168,21 @@ def test_every_fare_component_key_has_a_message() -> None:
     assert emitted, "no fare component keys found -- has the pricing engine moved?"
     missing = sorted(k for k in emitted if k not in english)
     assert not missing, f"fare components with no message: {missing}"
+
+
+def test_every_notification_message_key_has_a_message() -> None:
+    """These are chosen in the use cases and rendered on a device.
+
+    Nothing in the source scan sees them -- the app looks them up by whatever
+    the server sent -- so they are checked against the code that emits them.
+    """
+    english = load("en")
+    emitted = set()
+    for path in (_REPO / "backend" / "application").rglob("*.py"):
+        emitted |= set(
+            re.findall(r'message_key="(notify\.[a-z_.]+)"', path.read_text())
+        )
+
+    assert emitted, "no notification keys found -- have the use cases moved?"
+    missing = sorted(k for k in emitted if k not in english)
+    assert not missing, f"notifications with no message: {missing}"
