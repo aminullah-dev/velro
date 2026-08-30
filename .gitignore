@@ -54,3 +54,10 @@ backend/var/
 
 # Build artifacts
 admin/tsconfig.tsbuildinfo
+
+# Release signing. The keystore and its password live in ~/.velro-keys and are
+# passed to Gradle through the environment -- never committed. A keystore in
+# the repository is one push away from letting anyone ship an update that
+# Android accepts as VELRO.
+*.jks
+*.keystore

@@ -49,12 +49,19 @@
             </intent-filter>
         </activity>
 
-        <!-- WorkManager is initialised through Hilt, so the default initialiser
-             is removed rather than racing with it. -->
+        <!-- WorkManager is initialised through Hilt (the Application
+             implements Configuration.Provider), so androidx.startup's own
+             initialiser must not also run.
+
+             This said node="merge" before, which is what a release build
+             caught: merge *keeps* the provider and folds attributes into it.
+             Only node="remove" takes it out. The comment claimed removal the
+             whole time; the manifest did the opposite, and two initialisers
+             raced at every cold start. Invisible in debug, because lint only
+             treats it as fatal when assembling a release. -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
-            android:exported="false"
-            tools:node="merge" />
+            tools:node="remove" />
     </application>
 </manifest>

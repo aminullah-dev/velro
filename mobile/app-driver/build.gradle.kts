@@ -23,9 +23,30 @@ android {
 
     buildFeatures { compose = true }
 
+    // Read from the environment, never from a file in the repository. An
+    // unsigned release APK cannot be installed on a handset at all, so this is
+    // not optional -- but a keystore or its password inside the repo would be
+    // one `git push` away from letting anyone ship an update that Android
+    // accepts as VELRO. Absent, the release build is simply unsigned and says
+    // so, rather than silently signing with the debug key.
+    val keystorePath: String? = System.getenv("VELRO_KEYSTORE")
+    val keystorePassword: String? = System.getenv("VELRO_KEYSTORE_PASSWORD")
+
+    signingConfigs {
+        if (keystorePath != null && keystorePassword != null) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = System.getenv("VELRO_KEY_ALIAS") ?: "velro"
+                keyPassword = System.getenv("VELRO_KEY_PASSWORD") ?: keystorePassword
+            }
+        }
+    }
+
     buildTypes {
         debug { applicationIdSuffix = ".debug" }
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
