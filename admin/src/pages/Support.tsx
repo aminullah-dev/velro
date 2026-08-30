@@ -34,10 +34,17 @@ interface Queue {
   urgent_open: number;
 }
 
+// "All" is deliberately not `null`. Passing no status makes the server fall
+// back to the working queue — OPEN and IN_PROGRESS only — so a button labelled
+// All was hiding every answered and closed request. An operator who clicks it,
+// sees nothing and concludes the report was never raised has been told a
+// falsehood by the one screen built to answer that call.
 const FILTERS = [
-  { key: null, labelKey: "admin.support.filter_all" },
+  { key: "ALL", labelKey: "admin.support.filter_all" },
   { key: "OPEN", labelKey: "admin.support.filter_open" },
   { key: "IN_PROGRESS", labelKey: "admin.support.filter_in_progress" },
+  { key: "RESOLVED", labelKey: "ticket.status.resolved" },
+  { key: "CLOSED", labelKey: "ticket.status.closed" },
 ] as const;
 
 /**
@@ -51,14 +58,16 @@ const FILTERS = [
  */
 export function SupportPage() {
   const { t, num, dateTime } = useStrings();
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>("OPEN");
   const [open, setOpen] = useState<string | null>(null);
 
   const listQuery = useQuery({
     queryKey: ["support", status],
     queryFn: () =>
       api.get<Queue>(
-        `/admin/support/tickets${status ? `?status=${status}` : ""}`,
+        // ALL is sent, not omitted. Omitting it makes the server fall back
+        // to the working queue, which is exactly the bug this filter had.
+        `/admin/support/tickets?status=${status}`,
       ),
     // Short, because this is the queue somebody watches when they are on shift.
     refetchInterval: 30_000,

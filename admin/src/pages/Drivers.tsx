@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Empty, ErrorBanner, Ltr, PageHeader, StatusChip, Table, gate } from "../components/ui";
+import { Empty, ErrorBanner, Ltr, PageHeader, Phone, StatusChip, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Driver {
@@ -70,7 +70,7 @@ export function DriversPage() {
           {drivers.map((driver) => (
             <tr key={driver.id}>
               <td>{driver.full_name ?? "—"}</td>
-              <td><Ltr>{driver.phone}</Ltr></td>
+              <td><Phone number={driver.phone} /></td>
               <td><StatusChip status={driver.approval_status} kind="driver" /></td>
               <td>
                 <span className={`chip ${driver.availability === "OFFLINE" ? "" : "active"}`}>

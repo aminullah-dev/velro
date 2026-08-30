@@ -424,3 +424,44 @@ def test_an_internal_note_alone_does_not_claim_somebody_answered(
         f"/api/v1/support/tickets/{mine['id']}", headers=rider
     ).json()["data"]
     assert after["status"] == "OPEN"
+
+
+def test_asking_for_every_status_really_returns_every_status(
+    client: TestClient, rider: dict, admin_session: dict
+) -> None:
+    """The button labelled "All" must not hide anything.
+
+    Omitting the filter gives the working queue -- OPEN and IN_PROGRESS -- which
+    is the right default and the wrong answer to "show me everything". An
+    operator who clicks All, sees nothing and concludes the report was never
+    raised has been told a falsehood by the one screen built to answer that
+    call.
+    """
+    mine = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "LOST_ITEM", "body": "چتر"},
+    ).json()["data"]
+    client.post(
+        f"/api/v1/admin/support/tickets/{mine['id']}/decide",
+        headers=admin_session, json={"status": "CLOSED"},
+    )
+
+    def references(query: str) -> set[str]:
+        data = client.get(
+            f"/api/v1/admin/support/tickets{query}", headers=admin_session
+        ).json()["data"]
+        return {t["reference"] for t in data["tickets"]}
+
+    assert mine["reference"] not in references(""), "the default queue is not an archive"
+    assert mine["reference"] in references("?status=ALL")
+    assert mine["reference"] in references("?status=CLOSED")
+
+
+def test_a_status_the_server_does_not_know_is_refused(
+    client: TestClient, admin_session: dict
+) -> None:
+    """A typo must not silently widen or narrow the queue."""
+    response = client.get(
+        "/api/v1/admin/support/tickets?status=EVERYTHING", headers=admin_session
+    )
+    assert response.status_code == 422, response.text

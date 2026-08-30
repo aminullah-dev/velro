@@ -234,7 +234,13 @@ class DriverHomeViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     // The trip is gone, so the card must go with it -- and the
                     // driver is back to being available for work.
-                    _state.update { it.copy(isBusy = false, assignment = null) }
+                    _state.update {
+                        // lastVerified goes with the trip. Left set, a green
+                        // tick from this morning's passenger appears above
+                        // tonight's, and the driver boards the wrong person
+                        // believing the code was checked.
+                        it.copy(isBusy = false, assignment = null, lastVerified = null)
+                    }
                     refresh()
                 }
                 is ApiResult.Failure ->
@@ -258,7 +264,9 @@ class DriverHomeViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = drivers.setAvailability(target)) {
                 is ApiResult.Success -> {
-                    _state.update { it.copy(isBusy = false) }
+                    // Same reason as cancelling: the tick belongs to the
+                    // trip that was verified, not to the driver.
+                    _state.update { it.copy(isBusy = false, lastVerified = null) }
                     refresh()
                 }
                 is ApiResult.Failure ->

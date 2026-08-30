@@ -281,3 +281,23 @@ export function MoneyStat({ labelKey, amountMinor, currency }: {
 export function Ltr({ children }: { children: ReactNode }) {
   return <span className="ltr tabular">{children}</span>;
 }
+
+/**
+ * A phone number an operator can actually ring.
+ *
+ * Every real task in this panel starts with somebody on a line, and half of
+ * them end with the operator ringing back. A number rendered as text means
+ * reading eleven digits off a screen and typing them into a handset, which is
+ * where transposed digits come from.
+ *
+ * Latin and unmirrored, like every other number here: it is dialled off a
+ * keypad, not read as prose.
+ */
+export function Phone({ number }: { number: string | null | undefined }) {
+  if (!number) return <>—</>;
+  return (
+    <a className="ltr tabular" href={`tel:${number.replace(/[^\d+]/g, "")}`}>
+      {number}
+    </a>
+  );
+}

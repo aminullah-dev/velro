@@ -10,6 +10,9 @@ from infrastructure.db.models.ops import SupportTicketRow, TicketMessageRow
 from infrastructure.db.repositories.base import SqlRepository
 from shared import error_codes
 
+#: The value a caller passes to mean "no status filter at all".
+ANY_STATUS = "ALL"
+
 
 class SupportTicketRepository(SqlRepository[SupportTicketRow]):
     model = SupportTicketRow
@@ -47,10 +50,16 @@ class SupportTicketRepository(SqlRepository[SupportTicketRow]):
         )
         stmt = self._base().order_by(urgency.desc(), SupportTicketRow.created_at)
 
-        if status:
+        if status == ANY_STATUS:
+            # Everything, including answered and closed. Asked for explicitly,
+            # because the default below is a working queue and not an archive --
+            # and a client that wanted "all" and simply omitted the filter was
+            # silently given the queue instead, which is how a panel ends up
+            # telling an operator a report was never raised.
+            pass
+        elif status:
             stmt = stmt.where(SupportTicketRow.status == status)
         else:
-            # The default queue is work still to do, not an archive.
             stmt = stmt.where(
                 SupportTicketRow.status.in_(
                     (TicketStatus.OPEN.value, TicketStatus.IN_PROGRESS.value)

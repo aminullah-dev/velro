@@ -279,3 +279,30 @@ fun ConfirmDialog(
         },
     )
 }
+
+/**
+ * A problem the client found, said in the client's own words.
+ *
+ * `InlineError` resolves a *server* error code through `error.<code>`. Something
+ * the app decided by itself — a photograph too large to send — has no server
+ * code, and forcing one would invent an error the backend never raises. This
+ * takes a message key directly.
+ */
+@Composable
+fun InlineMessage(
+    messageKey: String,
+    modifier: Modifier = Modifier,
+    params: Map<String, Any?> = emptyMap(),
+) {
+    val strings = LocalVelroStrings.current
+    Row(
+        modifier = modifier.fillMaxWidth().padding(vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            strings[messageKey, params],
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+}

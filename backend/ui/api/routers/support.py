@@ -312,7 +312,11 @@ def queue(
     actor: Annotated[deps.Actor, Depends(deps.require_support)],
     tickets: Annotated[object, Depends(deps.support_tickets)],
     messages: Annotated[object, Depends(deps.ticket_messages)],
-    status: str | None = None,
+    # "ALL" means every status. Omitting it gives the working queue, which is
+    # the right default and the wrong answer to "show me everything".
+    status: Annotated[
+        str | None, Query(pattern=r"^(ALL|OPEN|IN_PROGRESS|RESOLVED|CLOSED)$")
+    ] = None,
     category: str | None = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> dict:

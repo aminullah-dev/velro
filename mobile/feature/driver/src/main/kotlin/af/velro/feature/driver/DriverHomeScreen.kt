@@ -625,7 +625,9 @@ private fun Inbox(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> Unit) 
             }
             Spacer(Modifier.height(Spacing.sm))
             SecondaryAction(
-                label = strings["common.action.close"],
+                // Not "Close": this marks every message read and they do
+                // not come back. The label has to say so.
+                label = strings["inbox.mark_read"],
                 onClick = { onEvent(DriverHomeEvent.MarkNotificationsRead) },
                 modifier = Modifier.fillMaxWidth(),
             )

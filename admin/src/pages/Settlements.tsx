@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Empty, ErrorBanner, Ltr, PageHeader, Table, gate } from "../components/ui";
+import { Empty, ErrorBanner, Ltr, PageHeader, Phone, Table, gate } from "../components/ui";
 import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 
@@ -129,8 +129,10 @@ export function SettlementsPage() {
               <td>
                 <div>{d.driver_name ?? "—"}</div>
                 {d.driver_phone && (
-                  <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
-                    <Ltr>{d.driver_phone}</Ltr>
+                  <span style={{ fontSize: 12 }}>
+                    {/* Dialable: this is the table an operator works through
+                        when cash is owed, and every row ends in a phone call. */}
+                    <Phone number={d.driver_phone} />
                   </span>
                 )}
               </td>

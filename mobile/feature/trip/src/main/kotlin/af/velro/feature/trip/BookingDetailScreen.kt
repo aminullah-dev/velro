@@ -185,7 +185,9 @@ fun BookingDetailScreen(
         if (state.ratingSubmitted) {
             Spacer(Modifier.height(Spacing.lg))
             Text(
-                strings["rating.action.submit"],
+                // Not the button's own label. "Submit" as a receipt tells a
+                // passenger nothing about whether it was.
+                strings["rating.thanks"],
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
             )

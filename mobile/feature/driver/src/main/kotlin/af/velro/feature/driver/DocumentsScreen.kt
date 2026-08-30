@@ -2,6 +2,7 @@ package af.velro.feature.driver
 
 import af.velro.core.i18n.Calendars
 import af.velro.core.ui.component.ErrorState
+import af.velro.core.ui.component.InlineMessage
 import af.velro.core.ui.component.InlineError
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
@@ -14,6 +15,8 @@ import af.velro.domain.DocumentChecklist
 import af.velro.domain.DocumentStatus
 import af.velro.domain.DriverDocument
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -63,6 +66,8 @@ fun DocumentsScreen(
     val strings = LocalVelroStrings.current
     val context = LocalContext.current
     var pendingType by remember { mutableStateOf<String?>(null) }
+    // A problem the app found by itself, which has no server error code.
+    var localProblem by remember { mutableStateOf<String?>(null) }
 
     // The system photo picker. It needs no permission and shows only what the
     // person chooses, which matters for a screen about identity documents --
@@ -76,6 +81,10 @@ fun DocumentsScreen(
         val read = readImage(context, uri)
         if (read != null) {
             onEvent(DocumentsEvent.Upload(kind, read.first, read.second))
+        } else {
+            // Silence here is what made this a defect: a driver tapped, waited,
+            // and the screen did not change.
+            localProblem = "driver.documents.too_large"
         }
     }
 
@@ -100,6 +109,8 @@ fun DocumentsScreen(
         val read = readImage(context, target.uri)
         if (read != null) {
             onEvent(DocumentsEvent.Upload(kind, read.first, read.second))
+        } else {
+            localProblem = "driver.documents.too_large"
         }
         // Deleted as soon as it is read. A face photograph sitting in the cache
         // outlives its purpose the moment the upload has the bytes.
@@ -143,6 +154,7 @@ fun DocumentsScreen(
     ) {
         // The title moved into the bar, so it is not repeated here.
         Spacer(Modifier.height(Spacing.sm))
+        localProblem?.let { InlineMessage(it) }
         Text(
             strings[statusHeadlineKey(checklist)],
             style = MaterialTheme.typography.bodyMedium,
@@ -316,15 +328,45 @@ private fun DocumentStatusLabel(document: DriverDocument?) {
  * rather than sent and rejected after a long upload on a slow connection.
  */
 private fun readImage(context: Context, uri: Uri): Pair<ByteArray, String>? = runCatching {
-    val type = context.contentResolver.getType(uri) ?: "image/jpeg"
     val bytes = context.contentResolver.openInputStream(uri)?.use { stream ->
         stream.readBytes()
     } ?: return null
-    if (bytes.size > MAX_UPLOAD_BYTES) return null
-    bytes to type
+    if (bytes.size <= MAX_UPLOAD_BYTES) {
+        return@runCatching bytes to (context.contentResolver.getType(uri) ?: "image/jpeg")
+    }
+
+    // Too big to send, so shrink it rather than refuse it. A modern phone
+    // camera routinely produces more than six megabytes, and refusing meant a
+    // driver tapped, waited, and saw nothing at all -- the callers had no else
+    // branch. Refusing is also the wrong answer: he cannot make his camera take
+    // a smaller photograph, so it would end his application.
+    //
+    // inSampleSize halves in powers of two and decodes at that size, so the
+    // full image is never held in memory on a cheap handset.
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    var sample = 1
+    while (bounds.outWidth / sample > MAX_EDGE_PX || bounds.outHeight / sample > MAX_EDGE_PX) {
+        sample *= 2
+    }
+    val bitmap = BitmapFactory.decodeByteArray(
+        bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample },
+    ) ?: return null
+
+    val out = java.io.ByteArrayOutputStream()
+    // 85 keeps a tazkira's small print legible; a reviewer has to read a number
+    // off it, and that is the whole purpose of the upload.
+    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+    bitmap.recycle()
+    val shrunk = out.toByteArray()
+    if (shrunk.size > MAX_UPLOAD_BYTES) return null
+    shrunk to "image/jpeg"
 }.getOrNull()
 
 private const val MAX_UPLOAD_BYTES = 6 * 1024 * 1024
+
+/** Long edge after downscaling. A tazkira is legible well below this. */
+private const val MAX_EDGE_PX = 2048
 
 /** How close a document is to running out. */
 internal enum class ExpirySeverity { PAST, SOON, FINE }

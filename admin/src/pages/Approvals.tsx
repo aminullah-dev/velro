@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, session } from "../api/client";
-import { Empty, ErrorBanner, Loading, Ltr, PageHeader, Table, gate } from "../components/ui";
+import { Empty, ErrorBanner, Loading, PageHeader, Phone, Table, gate } from "../components/ui";
 import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 
@@ -141,7 +141,7 @@ export function ApprovalsPage() {
           {pending.map((driver) => (
             <tr key={driver.id}>
               <td>{driver.full_name ?? "—"}</td>
-              <td><Ltr>{driver.phone}</Ltr></td>
+              <td><Phone number={driver.phone} /></td>
               <td><span className="chip attention">{t("admin.approvals.pending")}</span></td>
               <td>
                 <button
