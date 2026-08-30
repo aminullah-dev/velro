@@ -40,7 +40,10 @@ private val LightScheme = lightColorScheme(
     onError = VelroColors.White,
     errorContainer = VelroColors.Red100,
     onErrorContainer = VelroColors.Red700,
-    background = VelroColors.White,
+    // The page is a shade off white so that a white card sits *on* it. Both
+    // were white, which left a hairline border doing all the work of saying
+    // where a card began -- the flatness the design read as.
+    background = VelroColors.Neutral50,
     onBackground = VelroColors.Neutral900,
     surface = VelroColors.White,
     onSurface = VelroColors.Neutral900,
@@ -61,7 +64,9 @@ private val DarkScheme = darkColorScheme(
     onSecondary = VelroColors.Neutral900,
     error = VelroColors.Red500,
     onError = VelroColors.White,
-    background = VelroColors.DarkSurface,
+    // Same relationship after dark, where a shadow is invisible and lightness
+    // is the only thing that can lift a card off its page.
+    background = VelroColors.DarkBackground,
     onBackground = VelroColors.DarkOnSurface,
     surface = VelroColors.DarkSurface,
     onSurface = VelroColors.DarkOnSurface,

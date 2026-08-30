@@ -64,6 +64,17 @@ fun VelroScreen(
      */
     snackbarHost: SnackbarHostState? = null,
     scrollable: Boolean = true,
+    /**
+     * Replaces the app bar entirely.
+     *
+     * A home screen gives its top to the brand rather than to a title and two
+     * controls; every other screen keeps the bar. Passing a header means the
+     * `title` and `actions` arguments are not drawn -- they would be a second
+     * bar stacked on the first -- but `title` is still required, because it is
+     * what the screen is called and a screen with no name is a screen nobody
+     * can describe in a bug report.
+     */
+    header: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -77,7 +88,8 @@ fun VelroScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = {
+        topBar = if (header != null) header else {
+            {
             TopAppBar(
                 title = {
                     Text(
@@ -111,6 +123,7 @@ fun VelroScreen(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
             )
+            }
         },
         snackbarHost = { snackbarHost?.let { SnackbarHost(it) } },
     ) { insets ->

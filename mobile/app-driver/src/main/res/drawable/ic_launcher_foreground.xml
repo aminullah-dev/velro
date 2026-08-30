@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The VELRO mark: a road narrowing to a point, which also reads as a V.
-     Drawn as a vector so it stays crisp at every density and adds nothing to
-     the APK. Kept inside the 66dp adaptive-icon safe zone. -->
+<!-- The VELRO mark, on the driver's dark ground.
+     Identical geometry to the passenger icon: a road narrowing to a point,
+     which also reads as a V. Only the colours change. On the green tile the
+     road is white; here white would glare, so it takes the brand green at its
+     lightest step, the same relationship the app's own dark theme uses.
+     Kept inside the 66dp adaptive-icon safe zone. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -10,17 +13,17 @@
 
     <!-- The road, widening towards the viewer. -->
     <path
-        android:fillColor="#FFFFFF"
+        android:fillColor="#8FD9BC"
         android:pathData="M54,78 L36,30 L45,30 L54,58 L63,30 L72,30 Z" />
 
     <!-- Centre line: three dashes, shortening with distance. -->
     <path
-        android:fillColor="#8FD9BC"
+        android:fillColor="#0E6042"
         android:pathData="M53,70 h2 v-6 h-2 Z" />
     <path
-        android:fillColor="#8FD9BC"
+        android:fillColor="#0E6042"
         android:pathData="M53,60 h2 v-5 h-2 Z" />
     <path
-        android:fillColor="#8FD9BC"
+        android:fillColor="#0E6042"
         android:pathData="M53,51 h2 v-4 h-2 Z" />
 </vector>

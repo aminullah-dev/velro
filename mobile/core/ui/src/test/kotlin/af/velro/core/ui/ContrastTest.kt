@@ -64,6 +64,36 @@ class ContrastTest {
     }
 
     @Test
+    fun `light mode text is readable on the page itself, not only on a card`() {
+        // The page ground is Neutral50 and the cards on it are white, so every
+        // pair above is really two pairs. Section headings, empty states and
+        // helper text sit on the ground, and the ground is the darker of the
+        // two -- measuring only against white would pass a pairing that fails
+        // where the text actually is.
+        val ground = VelroColors.Neutral50
+        assertContrast("body on the page", VelroColors.Neutral700, ground, TEXT)
+        assertContrast("heading on the page", VelroColors.Neutral900, ground, TEXT)
+        assertContrast("muted on the page", VelroColors.Neutral500, ground, TEXT)
+        assertContrast("primary green on the page", VelroColors.Green700, ground, TEXT)
+        assertContrast("accent on the page", VelroColors.Amber600, ground, TEXT)
+    }
+
+    @Test
+    fun `a card is distinguishable from the page under it`() {
+        // Not a legibility threshold -- a card is not text -- but the whole
+        // point of the change that introduced it. If these two ever collapse
+        // to the same colour again the product goes back to being a wireframe
+        // held together by hairlines, and nothing else would catch it.
+        val separation = ratio(VelroColors.White, VelroColors.Neutral50)
+        assertTrue(
+            "a white card must not be the same colour as the page it lies on",
+            separation > 1.0,
+        )
+        val dark = ratio(VelroColors.DarkSurface, VelroColors.DarkBackground)
+        assertTrue("and the same after dark, where a shadow shows nothing", dark > 1.0)
+    }
+
+    @Test
     fun `light mode control boundaries are visible`() {
         // The failure this whole file exists for. Neutral300 sat here at
         // 1.47:1 -- a field edge that disappears in daylight.

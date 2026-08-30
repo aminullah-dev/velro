@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#0E6042</color>
+    <!-- Neutral900, not the brand green.
+         Both apps shipped a byte-identical icon: same green tile, same mark,
+         so on a home screen the only thing telling a driver's two VELRO
+         installs apart was the label under them. A driver reaching for the
+         right app at a station does it by colour, at arm's length, in a
+         hurry. Same mark, because it is the same product; different ground,
+         because it is not the same app. -->
+    <color name="ic_launcher_background">#101828</color>
 </resources>

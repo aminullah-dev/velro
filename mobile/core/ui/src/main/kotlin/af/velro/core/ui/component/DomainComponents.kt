@@ -449,17 +449,13 @@ fun BoardingCode(code: String, modifier: Modifier = Modifier) {
 @Composable
 fun DriverSummary(profile: DriverProfile, modifier: Modifier = Modifier) {
     val strings = LocalVelroStrings.current
+    // The greeting used to open this card. It now opens the screen, inside the
+    // brand header, which is where a greeting belongs -- and having it in both
+    // places said the driver's name to him twice in the space of one screen.
+    // What is left is the thing the card is actually for: the vehicle he is
+    // signed in with, which is what a passenger will be looking for.
     VelroCard(modifier) {
         Column {
-            // Substitution accepts "" happily, so the null name rendered as
-            // "Hello, " -- a greeting with the person cut off the end.
-            Text(
-                if (profile.fullName != null)
-                    strings["driver.greeting", "name" to profile.fullName]
-                else strings["driver.greeting_no_name"],
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.size(Spacing.sm))
             val vehicle = profile.vehicle
             if (vehicle != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

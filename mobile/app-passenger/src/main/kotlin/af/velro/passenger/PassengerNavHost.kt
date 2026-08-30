@@ -5,6 +5,8 @@ import af.velro.domain.RideRequest
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.ConfirmDialog
 import af.velro.core.ui.component.BookingCard
+import af.velro.core.ui.component.BrandHeader
+import af.velro.core.ui.component.OnBrandAction
 import af.velro.core.ui.component.EmptyState
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
@@ -42,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -213,14 +216,27 @@ private fun HomeScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(strings["app.name"]) },
-                // In the bar, so it is on screen whatever the list below is
-                // doing -- loading, empty, or failed.
+    Scaffold { padding ->
+        Column(
+            Modifier
+                .padding(bottom = padding.calculateBottomPadding())
+                .fillMaxSize()
+        ) {
+            // The brand owns the top of the screen, and the one action the
+            // screen exists for sits inside it. Previously this was a white
+            // Material app bar with the word VELRO in it, above a white page
+            // with a green rectangle floating on it.
+            BrandHeader(
+                title = strings["app.name"],
                 actions = {
-                    TextButton(onClick = onGetHelp) {
+                    // In the header, so it is on screen whatever the list
+                    // below is doing -- loading, empty, or failed.
+                    TextButton(
+                        onClick = onGetHelp,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                    ) {
                         Text(strings["safety.title"])
                     }
                     // Icon rather than a second label: two words of Dari in a
@@ -230,18 +246,20 @@ private fun HomeScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.Logout,
                             contentDescription = strings["auth.action.sign_out"],
+                            tint = MaterialTheme.colorScheme.onPrimary,
                         )
                     }
                 },
-            )
-        },
-    ) { padding ->
-        Column(
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(horizontal = Spacing.gutter)
-        ) {
+            ) {
+                Spacer(Modifier.height(Spacing.lg))
+                OnBrandAction(
+                    label = strings["home.action.search"],
+                    onClick = onBook,
+                    icon = Icons.Filled.DirectionsCar,
+                )
+            }
+
+            Column(Modifier.fillMaxSize().padding(horizontal = Spacing.gutter)) {
             Spacer(Modifier.height(Spacing.lg))
 
             // The ask she has open right now, above everything.
@@ -255,13 +273,6 @@ private fun HomeScreen(
                 OpenRequestCard(request = request, onOpen = onOpenOffers)
                 Spacer(Modifier.height(Spacing.lg))
             }
-
-            PrimaryAction(
-                label = strings["home.action.search"],
-                onClick = onBook,
-                icon = Icons.Filled.DirectionsCar,
-            )
-            Spacer(Modifier.height(Spacing.xl))
 
             Row(
                 Modifier.fillMaxWidth(),
@@ -293,6 +304,7 @@ private fun HomeScreen(
                         BookingCard(booking = booking, onClick = { onOpenBooking(booking.id) })
                     }
                 }
+            }
             }
         }
     }

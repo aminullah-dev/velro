@@ -4,6 +4,7 @@ import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.MoneyFormatter
 import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.DriverSummary
+import af.velro.core.ui.component.BrandHeader
 import af.velro.core.ui.component.ErrorState
 import af.velro.core.ui.component.ConfirmDialog
 import af.velro.core.ui.component.VelroScreen
@@ -51,6 +52,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -241,26 +243,34 @@ fun DriverHomeScreen(
     VelroScreen(
         title = strings["driver.nav.home"],
         snackbarHost = snackbarHost,
-        actions = {
-            // In the bar rather than the first row of the scroll. It still
-            // never scrolls away, which is the whole requirement -- but as a
-            // full-width button it was the largest thing on the driver's home
-            // screen, above his own name and above the switch that decides
-            // whether he gets work at all. The loading and failed states below
-            // keep the big button: there is nothing there to compete with, and
-            // that is the case it was written for.
-            TextButton(onClick = { helpOpen = true }) {
-                Text(strings["safety.title"])
-            }
-            IconButton(onClick = { signingOut = true }) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Logout,
-                    contentDescription = strings["auth.action.sign_out"],
-                )
-            }
+        // The brand header carries the title, the controls and the greeting,
+        // so the frame must not draw a second bar above it.
+        header = {
+            BrandHeader(
+                title = strings["app.name"],
+                subtitle = state.profile?.fullName?.let {
+                    strings["driver.greeting", "name" to it]
+                } ?: strings["driver.greeting_no_name"],
+                actions = {
+                    TextButton(
+                        onClick = { helpOpen = true },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                    ) { Text(strings["safety.title"]) }
+                    IconButton(onClick = { signingOut = true }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = strings["auth.action.sign_out"],
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                },
+            )
         },
         modifier = modifier,
     ) {
+        // The greeting moved into the header, so this is the vehicle alone.
         DriverSummary(state.profile!!)
 
         Spacer(Modifier.height(Spacing.lg))
@@ -836,9 +846,51 @@ private fun Earnings(state: DriverHomeUiState, onOpenEarnings: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                EarningRow(strings["earnings.label.available"], earnings.available.let {
-                    MoneyFormatter.format(it, strings)
-                })
+                // What he can take out today, at the size it matters.
+                //
+                // All three figures were the same weight in the same size, so
+                // the number a driver opens this card to read sat level with
+                // his lifetime total and his trip count. A summary with no
+                // hierarchy is a table, and he has to read all of it to find
+                // the one line he came for.
+                //
+                // A negative balance is not a small available balance: on a
+                // cash trip the driver already took the fare at the roadside,
+                // so VELRO's share is money he is holding for us. Calling that
+                // "available" and printing it in the take-your-money green,
+                // which is what this card did, tells him the opposite of what
+                // is true about his own wallet. The two words for it already
+                // existed -- they were only ever used on the earnings screen
+                // behind this card.
+                val owes = earnings.available.amountMinor < 0
+                Text(
+                    if (owes) strings["driver.earnings.owed"]
+                    else strings["earnings.label.available"],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    MoneyFormatter.format(
+                        if (owes) earnings.available.copy(
+                            amountMinor = -earnings.available.amountMinor
+                        ) else earnings.available,
+                        strings,
+                    ),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color =
+                        if (owes) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.primary,
+                )
+                if (owes) {
+                    Spacer(Modifier.height(Spacing.xs))
+                    Text(
+                        strings["driver.earnings.owed_explained"],
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.height(Spacing.md))
                 EarningRow(strings["earnings.label.lifetime"], earnings.lifetimeEarned.let {
                     MoneyFormatter.format(it, strings)
                 })

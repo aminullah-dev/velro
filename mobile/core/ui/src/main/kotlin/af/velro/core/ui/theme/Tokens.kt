@@ -55,6 +55,13 @@ object VelroColors {
     val White = Color(0xFFFFFFFF)
 
     // Dark surfaces, for a driver working after sunset.
+    //
+    // DarkBackground sits *under* DarkSurface rather than equal to it. Both
+    // themes used one colour for the page and for the cards on it, so a card
+    // was separated from its page by a one-pixel line and nothing else --
+    // which is what made the product read as a wireframe rather than a
+    // finished app. A card should be a surface lying on a ground.
+    val DarkBackground = Color(0xFF0B0F14)
     val DarkSurface = Color(0xFF13181F)
     val DarkSurfaceRaised = Color(0xFF1B222C)
     val DarkOnSurface = Color(0xFFE7EBF0)
@@ -81,6 +88,14 @@ object Radius {
     val lg: Dp = 16.dp
     val xl: Dp = 24.dp
     val pill: Dp = 999.dp
+
+    /**
+     * Cards and sheets.
+     *
+     * Softer than a control's radius on purpose, so a surface and a button
+     * read as different kinds of thing without either being labelled.
+     */
+    val card: Dp = 20.dp
 }
 
 object Sizing {

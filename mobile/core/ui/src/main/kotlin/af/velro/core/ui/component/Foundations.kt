@@ -56,7 +56,7 @@ fun PrimaryAction(
         // A button mid-request is disabled, not merely spinning: a double tap
         // on a slow connection is the most common way to send a request twice.
         enabled = enabled && !loading,
-        shape = RoundedCornerShape(Radius.md),
+        shape = RoundedCornerShape(Radius.lg),
         colors = ButtonDefaults.buttonColors(),
     ) {
         if (loading) {
@@ -98,16 +98,27 @@ fun VelroCard(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    val shape = RoundedCornerShape(Radius.lg)
+    val shape = RoundedCornerShape(Radius.card)
     val colors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
     )
-    // A flat card with a hairline border rather than a shadow: stacked
-    // elevation reads as clutter on a small screen.
+    // One soft shadow, not a stack of them.
+    //
+    // This used to be a hairline border and nothing else, on the reasoning
+    // that stacked elevation reads as clutter on a small screen. That is true
+    // of stacked elevation; it was not true of the alternative actually
+    // shipped, which was a white card on a white page separated by one pixel
+    // of grey. The card now lies on a slightly darker ground and casts a
+    // shadow you would not name if asked -- which is the point.
+    //
+    // The border stays, faintly. A shadow is invisible in bright sunlight and
+    // invisible again in dark mode, and the edge of a card should not depend
+    // on either.
     val border = androidx.compose.foundation.BorderStroke(
         1.dp, MaterialTheme.colorScheme.outlineVariant
     )
+    val elevation = CardDefaults.cardElevation(defaultElevation = CARD_LIFT)
     if (onClick != null) {
         Card(
             onClick = onClick,
@@ -115,13 +126,70 @@ fun VelroCard(
             shape = shape,
             colors = colors,
             border = border,
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = CARD_LIFT,
+                pressedElevation = CARD_LIFT,
+            ),
         ) { Box(Modifier.padding(Spacing.lg)) { content() } }
     } else {
-        Card(modifier = modifier.fillMaxWidth(), shape = shape, colors = colors, border = border) {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            shape = shape,
+            colors = colors,
+            border = border,
+            elevation = elevation,
+        ) {
             Box(Modifier.padding(Spacing.lg)) { content() }
         }
     }
 }
+
+/**
+ * The primary action, for use inside [BrandHeader].
+ *
+ * Same shape and same height as [PrimaryAction] -- it is the same button, and
+ * a person moving between screens should not have to notice that. Only the
+ * colours invert, because the ground it sits on has: a green button on a green
+ * field is a rectangle you can barely find, and tinting it darker green makes
+ * the one control on the screen the least visible thing on it.
+ */
+@Composable
+fun OnBrandAction(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false,
+    icon: ImageVector? = null,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().height(Sizing.buttonHeight),
+        enabled = enabled && !loading,
+        shape = RoundedCornerShape(Radius.lg),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
+        ),
+    ) {
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(Sizing.iconSm),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        } else {
+            if (icon != null) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(Sizing.iconMd))
+                androidx.compose.foundation.layout.Spacer(Modifier.size(Spacing.sm))
+            }
+            Text(label, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+/** Barely there, and deliberately so: enough to separate, not enough to notice. */
+private val CARD_LIFT = 2.dp
 
 /**
  * The three states every screen must have.
