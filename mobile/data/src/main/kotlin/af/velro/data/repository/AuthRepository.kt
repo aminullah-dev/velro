@@ -13,8 +13,10 @@ import af.velro.domain.Locale
 import af.velro.domain.Session
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 @Singleton
 class AuthRepository @Inject constructor(
@@ -59,16 +61,30 @@ class AuthRepository @Inject constructor(
     /**
      * Sign out.
      *
-     * Clears the local session first so the app never appears signed in after
-     * the person tapped sign out, then tells the server. Wiping the cache too:
-     * a shared handset is common, and the next person must not see the last
-     * one's bookings.
+     * The cache is wiped before the session is cleared, and both run off the
+     * main thread.
+     *
+     * Both of those are repairs for the same crash. `clearAllTables` is Room's
+     * one blocking call -- every other access here is a suspend DAO, which Room
+     * moves off the main thread itself -- and the caller is a
+     * `rememberCoroutineScope` in MainActivity, which is the main thread. So
+     * tapping sign out threw IllegalStateException and killed the app, in both
+     * apps, every time.
+     *
+     * It threw between the two lines: after the session was cleared and before
+     * the cache was, which is exactly the state this function exists to
+     * prevent. The handset was left signed out with the previous person's
+     * journeys still on it, and a shared handset is the normal case here. So
+     * the cache goes first: if anything fails now, the worst outcome is an app
+     * that still looks signed in, which is a confusion rather than a leak.
      */
     suspend fun signOut(allDevices: Boolean = false) {
         if (allDevices) {
             runCatching { api.logoutAllDevices() }
         }
-        tokens.clear()
-        db.clearAllTables()
+        withContext(Dispatchers.IO) {
+            db.clearAllTables()
+            tokens.clear()
+        }
     }
 }

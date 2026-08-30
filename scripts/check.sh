@@ -70,6 +70,25 @@ mobile() {
   # The emergency numbers and the categories the sheet ships compiled in.
   step "mobile safety"  gradle :feature:safety:testDebugUnitTest --console=plain -q
   step "mobile build"   gradle :app-driver:assembleDebug :app-passenger:assembleDebug --console=plain -q
+
+  # Room migrations and the sign-out path, on a real device.
+  #
+  # These need an emulator, so they are skipped when none is attached rather
+  # than failing -- but skipping quietly is how they rotted: an exported schema
+  # was overwritten and committed, and the migration tests had been failing
+  # unnoticed because nothing ever ran them. Both defects they cover are
+  # unrecoverable on somebody's phone, so the skip says so out loud.
+  local adb="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}/platform-tools/adb"
+  command -v adb >/dev/null && adb=adb
+  if [ -x "$adb" ] || command -v "$adb" >/dev/null 2>&1; then
+    if "$adb" devices 2>/dev/null | grep -q "	device$"; then
+      step "mobile device" gradle :data:connectedDebugAndroidTest --console=plain -q
+    else
+      printf '  \033[33m- mobile device (nothing attached; migrations unverified)\033[0m\n'
+    fi
+  else
+    printf '  \033[33m- mobile device (no adb; migrations unverified)\033[0m\n'
+  fi
 }
 
 case "$TARGET" in
