@@ -172,8 +172,8 @@ private fun Journey(request: RideRequest) {
             Text(
                 strings[
                     "ride.journey.from_to",
-                    "origin" to (request.originStationName ?: "—"),
-                    "destination" to (request.destinationName ?: "—"),
+                    "origin" to (request.originStationName ?: strings["common.value.unknown"]),
+                    "destination" to (request.destinationName ?: strings["common.value.unknown"]),
                 ],
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
@@ -230,7 +230,7 @@ private fun OfferCard(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        offer.driverName ?: "—",
+                        offer.driverName ?: strings["common.value.no_name"],
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )

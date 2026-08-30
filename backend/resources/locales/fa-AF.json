@@ -638,7 +638,7 @@
   "safety.call_emergency_hint": "پولیس و امبولانس. بدون انترنت هم کار می‌کند.",
   "safety.tell_someone": "معلومات خود را به کسی که اعتماد دارید بفرستید",
   "safety.tell_someone_hint": "پیامی با موتر، راننده و سفر شما باز می‌شود. خودتان انتخاب می‌کنید به کی بفرستید.",
-  "safety.sms_body": "من در موتر ولرو هستم. پلیت {plate}. راننده {driver}. رزرو {booking}. از {origin} به {destination}.",
+  "safety.sms_body": "من در موتر ولرو هستم. پلیت {plate}. راننده {driver}. شماره راننده {driver_phone}. رزرو {booking}. از {origin} به {destination}.",
   "safety.details_title": "موتری که در آن هستید",
   "safety.read_aloud": "این را در تیلفون خوانده می‌توانید.",
   "safety.report": "به ولرو بگویید چه شد",
@@ -704,5 +704,8 @@
   "home.open_request.expiring": "کمتر از یک دقیقه باقی است",
   "home.open_request.open": "دیدن قیمت‌ها",
   "driver.action.call_passenger": "زنگ زدن به مسافر",
-  "booking.action.call_driver": "زنگ زدن به راننده"
+  "booking.action.call_driver": "زنگ زدن به راننده",
+  "common.value.no_name": "نام داده نشده",
+  "common.value.unknown": "نامعلوم",
+  "driver.greeting_no_name": "سلام"
 }

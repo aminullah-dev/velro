@@ -469,8 +469,8 @@ private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) 
                 Text(
                     strings[
                         "ride.journey.from_to",
-                        "origin" to (state.selectedStation?.name ?: "—"),
-                        "destination" to (state.selectedDestination?.name ?: "—"),
+                        "origin" to (state.selectedStation?.name ?: strings["common.value.unknown"]),
+                        "destination" to (state.selectedDestination?.name ?: strings["common.value.unknown"]),
                     ],
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,

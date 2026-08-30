@@ -350,8 +350,12 @@ fun DriverSummary(profile: DriverProfile, modifier: Modifier = Modifier) {
     val strings = LocalVelroStrings.current
     VelroCard(modifier) {
         Column {
+            // Substitution accepts "" happily, so the null name rendered as
+            // "Hello, " -- a greeting with the person cut off the end.
             Text(
-                strings["driver.greeting", "name" to (profile.fullName ?: "")],
+                if (profile.fullName != null)
+                    strings["driver.greeting", "name" to profile.fullName]
+                else strings["driver.greeting_no_name"],
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.size(Spacing.sm))

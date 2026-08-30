@@ -69,7 +69,7 @@ export function DriversPage() {
         >
           {drivers.map((driver) => (
             <tr key={driver.id}>
-              <td>{driver.full_name ?? "—"}</td>
+              <td>{driver.full_name ?? t("common.value.no_name")}</td>
               <td><Phone number={driver.phone} /></td>
               <td><StatusChip status={driver.approval_status} kind="driver" /></td>
               <td>

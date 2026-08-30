@@ -148,8 +148,8 @@ private fun RequestCard(
             Text(
                 strings[
                     "ride.journey.from_to",
-                    "origin" to (request.originStationName ?: "—"),
-                    "destination" to (request.destinationName ?: "—"),
+                    "origin" to (request.originStationName ?: strings["common.value.unknown"]),
+                    "destination" to (request.destinationName ?: strings["common.value.unknown"]),
                 ],
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,

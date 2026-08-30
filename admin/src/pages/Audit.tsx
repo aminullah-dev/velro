@@ -80,9 +80,15 @@ export function AuditPage() {
               <tr key={entry.id}>
                 <td>{dateTime(entry.occurred_at)}</td>
                 <td>
-                  {entry.actor_name ?? "—"}
+                  {entry.actor_name ?? (
+                    /* The id is not a name, but it is an answer. Every row of
+                       this table read "— · ADMIN"; the one question the log
+                       exists to settle is which person, and the id was already
+                       on the client, unprinted. */
+                    <Ltr>{entry.actor_id ?? t("common.value.unknown")}</Ltr>
+                  )}
                   <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
-                    {" · "}{entry.actor_role}
+                    {" · "}{t(`role.${entry.actor_role.toLowerCase()}`)}
                   </span>
                 </td>
                 <td><Ltr>{entry.action}</Ltr></td>

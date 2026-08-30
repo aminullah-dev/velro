@@ -63,7 +63,7 @@ export function BookingsPage() {
               <tr key={booking.id}>
                 <td><Ltr>{booking.number}</Ltr></td>
                 <td><StatusChip status={booking.status} kind="booking" /></td>
-                <td>{booking.passenger_name ?? "—"}</td>
+                <td>{booking.passenger_name ?? t("common.value.no_name")}</td>
                 {/* A phone number is a sequence to be dialled, never mirrored. */}
                 <td><Ltr>{booking.passenger_phone}</Ltr></td>
                 <td><Ltr>{booking.trip_number}</Ltr></td>

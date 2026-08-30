@@ -49,16 +49,19 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -129,6 +132,8 @@ fun DriverHomeScreen(
                 RideFacts(
                     bookingNumber = it.trip.number,
                     driverName = state.profile?.fullName,
+                    // His own sheet: the number he would read out is his own.
+                    driverPhone = null,
                     plate = state.profile?.vehicle?.plateNumber,
                     origin = null,
                     destination = null,
@@ -400,11 +405,18 @@ private fun CurrentTrip(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> 
 
             Spacer(Modifier.height(Spacing.sm))
             for (rider in assignment.manifest) {
-                // Who to look for, and what to collect from them.
+                // Who to look for, and what to collect from them. The booking
+                // number is what he calls out at the station and what the
+                // passenger already has on her own screen -- it identifies one
+                // rider out of three, which a name he was never given cannot.
                 Text(
-                    rider.passengerName ?: strings["driver.label.passengers"],
-                    style = MaterialTheme.typography.bodyMedium,
+                    strings["booking.label.number"],
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(rider.number, style = MaterialTheme.typography.bodyMedium)
+                }
                 rider.fareTotalMinor?.let { minor ->
                     Text(
                         MoneyFormatter.format(

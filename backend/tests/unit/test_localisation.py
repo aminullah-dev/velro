@@ -260,7 +260,7 @@ def test_the_safety_promise_matches_what_the_message_carries() -> None:
             f"{locale}: the message claims a location the app never supplies"
         )
         # Every placeholder the body promises must be one the app fills in.
-        supplied = {"plate", "driver", "booking", "origin", "destination"}
+        supplied = {"plate", "driver", "driver_phone", "booking", "origin", "destination"}
         used = set(re.findall(r"\{(\w+)\}", body))
         assert used <= supplied, f"{locale}: sms_body uses {used - supplied}"
 
@@ -270,3 +270,43 @@ def test_the_safety_promise_matches_what_the_message_carries() -> None:
                 f"{locale}: the hint promises {word!r}, which the message "
                 "does not carry"
             )
+
+
+def test_no_person_is_rendered_as_a_dash() -> None:
+    """A missing person is a fact, and an em-dash does not state it.
+
+    The rule is deliberately narrow. A dash for a distance nobody measured or a
+    destination with no parent is honest -- there is no sentence to say. A dash
+    where a *person* belongs is different: it is the answer to "who drove me",
+    "who do I collect this money from", "who suspended this driver". Those have
+    answers, and where the name is absent the phone or the id is the answer.
+
+    Scoped to fields whose name says they hold a person, so it cannot be
+    satisfied by deleting the dash from a distance column.
+    """
+    offenders: list[str] = []
+    # Named one by one on purpose. A pattern over anything ending in "name"
+    # also catches parent_name and origin_station_name, which are places: a
+    # place nobody named has no phone number and no id, so the dash there is
+    # the whole truth. These eight are people.
+    people = (
+        "driver_name", "driverName",
+        "passenger_name", "passengerName",
+        "full_name", "fullName",
+        "actor_name", "actorName",
+    )
+    pattern = re.compile(r'(?:{})\s*\?[?:]\s*"—"'.format("|".join(people)))
+    roots = (
+        (_REPO / "mobile", (".kt",)),
+        (_REPO / "admin" / "src", (".tsx", ".ts")),
+    )
+    for root, suffixes in roots:
+        for path in root.rglob("*"):
+            if path.suffix not in suffixes or "/build/" in str(path):
+                continue
+            for number, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                if pattern.search(line):
+                    offenders.append(f"{path.relative_to(_REPO)}:{number}")
+    assert not offenders, "a person rendered as a dash: " + ", ".join(sorted(offenders))

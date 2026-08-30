@@ -85,7 +85,7 @@ export function NegotiationsPage() {
           {rows.map((row) => (
             <tr key={row.id}>
               <td>
-                <div>{row.passenger_name ?? "—"}</div>
+                <div>{row.passenger_name ?? t("common.value.no_name")}</div>
                 {row.passenger_phone && (
                   <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
                     <Ltr>{row.passenger_phone}</Ltr>

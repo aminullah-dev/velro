@@ -638,7 +638,7 @@
   "safety.call_emergency_hint": "Police and ambulance. Works without internet.",
   "safety.tell_someone": "Send your details to someone you trust",
   "safety.tell_someone_hint": "Opens a message with the car, the driver and your journey. You choose who to send it to.",
-  "safety.sms_body": "I am in a VELRO car. Plate {plate}. Driver {driver}. Booking {booking}. From {origin} to {destination}.",
+  "safety.sms_body": "I am in a VELRO car. Plate {plate}. Driver {driver}. Driver's number {driver_phone}. Booking {booking}. From {origin} to {destination}.",
   "safety.details_title": "The car you are in",
   "safety.read_aloud": "You can read this out on the phone.",
   "safety.report": "Tell VELRO what happened",
@@ -704,5 +704,8 @@
   "home.open_request.expiring": "Less than a minute left",
   "home.open_request.open": "See the prices",
   "driver.action.call_passenger": "Call the passenger",
-  "booking.action.call_driver": "Call the driver"
+  "booking.action.call_driver": "Call the driver",
+  "common.value.no_name": "No name given",
+  "common.value.unknown": "Not known",
+  "driver.greeting_no_name": "Hello"
 }

@@ -115,6 +115,7 @@ fun BookingDetailScreen(
                     ride = RideFacts(
                         bookingNumber = booking.number,
                         driverName = booking.driverName,
+                        driverPhone = booking.driverPhone,
                         plate = booking.vehiclePlate,
                         origin = booking.pickupStationName,
                         destination = booking.dropoffDestinationName,
@@ -253,9 +254,13 @@ private fun Vehicle(booking: Booking) {
     Column {
         Text(strings["receipt.label.driver"], style = MaterialTheme.typography.labelSmall,
              color = MaterialTheme.colorScheme.onSurfaceVariant)
-        booking.driverName?.let {
-            Text(it, style = MaterialTheme.typography.bodyLarge)
-        }
+        // The label prints unconditionally, so the value must too: a heading
+        // with nothing beneath it reads as a rendering fault, not as an
+        // unanswered question.
+        Text(
+            booking.driverName ?: strings["common.value.no_name"],
+            style = MaterialTheme.typography.bodyLarge,
+        )
         booking.vehiclePlate?.let { plate ->
             Spacer(Modifier.height(Spacing.sm))
             Text(strings["receipt.label.vehicle"], style = MaterialTheme.typography.labelSmall,
@@ -302,14 +307,17 @@ private fun Journey(origin: String?, destination: String?) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(origin ?: "—", style = MaterialTheme.typography.bodyLarge)
+        Text(origin ?: strings["common.value.unknown"], style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(Spacing.sm))
         Text(
             strings["location.label.destination"],
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(destination ?: "—", style = MaterialTheme.typography.bodyLarge)
+        Text(
+            destination ?: strings["common.value.unknown"],
+            style = MaterialTheme.typography.bodyLarge,
+        )
     }
 }
 

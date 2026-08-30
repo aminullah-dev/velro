@@ -140,7 +140,7 @@ export function ApprovalsPage() {
         >
           {pending.map((driver) => (
             <tr key={driver.id}>
-              <td>{driver.full_name ?? "—"}</td>
+              <td>{driver.full_name ?? t("common.value.no_name")}</td>
               <td><Phone number={driver.phone} /></td>
               <td><span className="chip attention">{t("admin.approvals.pending")}</span></td>
               <td>

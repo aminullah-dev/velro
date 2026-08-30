@@ -42,6 +42,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 data class RideFacts(
     val bookingNumber: String,
     val driverName: String?,
+    /**
+     * Carried beside the name, not instead of it.
+     *
+     * A name can be absent, and it can be a single letter somebody typed to
+     * get past a form. A number is the one thing a relative or a police post
+     * can act on, so it travels in its own right rather than as a fallback
+     * that any non-empty string defeats.
+     */
+    val driverPhone: String?,
     val plate: String?,
     val origin: String?,
     val destination: String?,
@@ -256,8 +265,14 @@ private fun RideDetails(ride: RideFacts) {
                     )
                 }
             }
-            ride.driverName?.let {
-                Text(it, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                ride.driverName ?: strings["common.value.no_name"],
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            ride.driverPhone?.let {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(it, style = MaterialTheme.typography.bodyMedium)
+                }
             }
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 Text(ride.bookingNumber, style = MaterialTheme.typography.bodyMedium)
@@ -291,11 +306,12 @@ private fun RideDetails(ride: RideFacts) {
 internal fun smsBody(ride: RideFacts, strings: af.velro.core.i18n.Strings): String =
     strings[
         "safety.sms_body",
-        "plate" to (ride.plate ?: "—"),
-        "driver" to (ride.driverName ?: "—"),
+        "plate" to (ride.plate ?: strings["common.value.unknown"]),
+        "driver" to (ride.driverName ?: strings["common.value.no_name"]),
+        "driver_phone" to (ride.driverPhone ?: strings["common.value.unknown"]),
         "booking" to ride.bookingNumber,
-        "origin" to (ride.origin ?: "—"),
-        "destination" to (ride.destination ?: "—"),
+        "origin" to (ride.origin ?: strings["common.value.unknown"]),
+        "destination" to (ride.destination ?: strings["common.value.unknown"]),
     ]
 
 /**

@@ -127,7 +127,7 @@ export function SettlementsPage() {
           {(debtors ?? []).map((d) => (
             <tr key={d.driver_id}>
               <td>
-                <div>{d.driver_name ?? "—"}</div>
+                <div>{d.driver_name ?? t("common.value.no_name")}</div>
                 {d.driver_phone && (
                   <span style={{ fontSize: 12 }}>
                     {/* Dialable: this is the table an operator works through
@@ -177,7 +177,7 @@ export function SettlementsPage() {
               {/* A reference is quoted over the phone; never mirrored. */}
               <td><Ltr>{s.reference}</Ltr></td>
               <td>
-                <div>{s.driver_name ?? "—"}</div>
+                <div>{s.driver_name ?? t("common.value.no_name")}</div>
                 {s.driver_phone && (
                   <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
                     <Ltr>{s.driver_phone}</Ltr>

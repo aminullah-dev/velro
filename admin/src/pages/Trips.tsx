@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, query } from "../api/client";
-import { Empty, Ltr, PageHeader, Pager, StatusChip, Table, gate } from "../components/ui";
+import { Empty, Ltr, PageHeader, Pager, Phone, StatusChip, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Trip {
@@ -13,6 +13,7 @@ interface Trip {
   origin_station_name: string;
   destination_name: string;
   driver_name: string | null;
+  driver_phone: string | null;
   plate_number: string | null;
   seat_capacity: number;
   seats_available: number;
@@ -87,7 +88,7 @@ export function TripsPage() {
                 <td>{dateTime(trip.scheduled_departure_at)}</td>
                 <td>{trip.origin_station_name}</td>
                 <td>{trip.destination_name}</td>
-                <td>{trip.driver_name ?? "—"}</td>
+                <td>{trip.driver_name ?? <Phone number={trip.driver_phone} />}</td>
                 <td>{trip.plate_number ? <Ltr>{trip.plate_number}</Ltr> : "—"}</td>
                 <td className="num">
                   {num(trip.booked_seats)} / {num(trip.seat_capacity)}

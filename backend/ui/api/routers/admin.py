@@ -749,6 +749,7 @@ class VehicleAdminOut(Schema):
     id: str
     driver_id: str
     driver_name: str | None
+    driver_phone: str | None
     vehicle_type_code: str
     plate_number: str
     seat_capacity: int
@@ -765,7 +766,7 @@ def vehicles(
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> dict:
     stmt = (
-        select(VehicleRow, UserRow.full_name)
+        select(VehicleRow, UserRow.full_name, UserRow.phone)
         .join(DriverRow, DriverRow.id == VehicleRow.driver_id)
         .join(UserRow, UserRow.id == DriverRow.user_id)
         .where(VehicleRow.deleted_at.is_(None))
@@ -776,11 +777,12 @@ def vehicles(
         [
             VehicleAdminOut(
                 id=v.id, driver_id=v.driver_id, driver_name=driver_name,
+                driver_phone=driver_phone,
                 vehicle_type_code=v.vehicle_type_code, plate_number=v.plate_number,
                 seat_capacity=v.seat_capacity, brand=v.brand, model=v.model,
                 colour=v.colour, status=v.status,
             ).model_dump()
-            for v, driver_name in session.execute(stmt).all()
+            for v, driver_name, driver_phone in session.execute(stmt).all()
         ]
     )
 
@@ -796,6 +798,7 @@ class TripAdminOut(Schema):
     origin_station_name: str
     destination_name: str
     driver_name: str | None
+    driver_phone: str | None
     plate_number: str | None
     seat_capacity: int
     seats_available: int
@@ -816,7 +819,7 @@ def trips_list(
     stmt = (
         select(
             TripRow, StationRow.name, DestinationRow.name,
-            UserRow.full_name, VehicleRow.plate_number,
+            UserRow.full_name, UserRow.phone, VehicleRow.plate_number,
         )
         .join(StationRow, StationRow.id == TripRow.origin_station_id)
         .join(DestinationRow, DestinationRow.id == TripRow.destination_id)
@@ -841,12 +844,12 @@ def trips_list(
                 id=t.id, number=t.number, status=t.status, ride_kind=t.ride_kind,
                 scheduled_departure_at=t.scheduled_departure_at,
                 origin_station_name=origin, destination_name=destination,
-                driver_name=driver_name, plate_number=plate,
+                driver_name=driver_name, driver_phone=driver_phone, plate_number=plate,
                 seat_capacity=t.seat_capacity,
                 seats_available=availability.get(t.id, 0),
                 booked_seats=t.seat_capacity - availability.get(t.id, 0),
             ).model_dump()
-            for t, origin, destination, driver_name, plate in rows
+            for t, origin, destination, driver_name, driver_phone, plate in rows
         ],
         meta={"total": int(total or 0), "limit": limit, "offset": offset},
     )

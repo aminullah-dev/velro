@@ -638,7 +638,7 @@
   "safety.call_emergency_hint": "پولیس او امبولانس. له انټرنېټ پرته هم کار کوي.",
   "safety.tell_someone": "خپل معلومات هغه چا ته ولېږئ چې باور پرې لرئ",
   "safety.tell_someone_hint": "د موټر، چلوونکي او ستاسو د سفر پیغام پرانیستل کېږي. تاسو پخپله ټاکئ چا ته یې لېږئ.",
-  "safety.sms_body": "زه د ولرو په موټر کې یم. پلېټ {plate}. چلوونکی {driver}. بکنګ {booking}. له {origin} څخه {destination} ته.",
+  "safety.sms_body": "زه د ولرو په موټر کې یم. پلېټ {plate}. ډرایور {driver}. د ډرایور شمېره {driver_phone}. بکنګ {booking}. له {origin} څخه {destination} ته.",
   "safety.details_title": "هغه موټر چې پکې یاست",
   "safety.read_aloud": "دا په تلیفون کې لوستلی شئ.",
   "safety.report": "ولرو ته ووایاست څه وشول",
@@ -704,5 +704,8 @@
   "home.open_request.expiring": "تر یوې دقیقې لږ پاتې دي",
   "home.open_request.open": "بیې وګورئ",
   "driver.action.call_passenger": "مسافر ته زنګ ووهئ",
-  "booking.action.call_driver": "چلوونکي ته زنګ ووهئ"
+  "booking.action.call_driver": "چلوونکي ته زنګ ووهئ",
+  "common.value.no_name": "نوم نه دی ورکړل شوی",
+  "common.value.unknown": "نامعلوم",
+  "driver.greeting_no_name": "سلام"
 }

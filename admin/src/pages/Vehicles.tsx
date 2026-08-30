@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Empty, Ltr, PageHeader, Table, gate } from "../components/ui";
+import { Empty, Ltr, PageHeader, Phone, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Vehicle {
-  id: string; driver_id: string; driver_name: string | null;
+  id: string; driver_id: string; driver_name: string | null; driver_phone: string | null;
   vehicle_type_code: string; plate_number: string; seat_capacity: number;
   brand: string | null; model: string | null; colour: string | null; status: string;
 }
@@ -44,7 +44,7 @@ export function VehiclesPage() {
             <tr key={vehicle.id}>
               {/* A plate is read character by character; never mirrored. */}
               <td><Ltr>{vehicle.plate_number}</Ltr></td>
-              <td>{vehicle.driver_name ?? "—"}</td>
+              <td>{vehicle.driver_name ?? <Phone number={vehicle.driver_phone} />}</td>
               <td>
                 <span className="chip">
                   {t(`vehicle_type.${vehicle.vehicle_type_code.toLowerCase()}`)}
