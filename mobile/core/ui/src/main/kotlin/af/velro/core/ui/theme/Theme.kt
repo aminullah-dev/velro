@@ -46,7 +46,9 @@ private val LightScheme = lightColorScheme(
     onSurface = VelroColors.Neutral900,
     surfaceVariant = VelroColors.Neutral100,
     onSurfaceVariant = VelroColors.Neutral700,
-    outline = VelroColors.Neutral300,
+    // outline carries meaning -- it is the edge of a control -- so it owes 3:1.
+    // outlineVariant is a decorative divider and does not.
+    outline = VelroColors.Neutral400,
     outlineVariant = VelroColors.Neutral200,
 )
 
@@ -65,7 +67,9 @@ private val DarkScheme = darkColorScheme(
     onSurface = VelroColors.DarkOnSurface,
     surfaceVariant = VelroColors.DarkSurfaceRaised,
     onSurfaceVariant = VelroColors.Neutral300,
-    outline = VelroColors.Neutral700,
+    // Neutral700 was 1.70:1 on the dark surface -- the same invisible-border
+    // problem as light mode, and worse at night with headlights behind you.
+    outline = VelroColors.Neutral500,
 )
 
 /**

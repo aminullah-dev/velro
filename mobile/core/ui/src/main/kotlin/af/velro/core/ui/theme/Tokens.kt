@@ -40,6 +40,14 @@ object VelroColors {
     val Neutral900 = Color(0xFF101828)
     val Neutral700 = Color(0xFF344054)
     val Neutral500 = Color(0xFF667085)
+    // The boundary of a control -- a field edge, a card outline.
+    //
+    // Measured, not chosen by eye: WCAG puts non-text contrast at 3:1 and the
+    // old outline was Neutral300 at 1.47:1 against white. That is a border you
+    // can see on a clean screen in a room, and cannot see on a cracked one in
+    // Ghorband sunlight -- which is where somebody has to find the phone field
+    // before they can sign in at all. 3.59:1.
+    val Neutral400 = Color(0xFF7D8899)
     val Neutral300 = Color(0xFFD0D5DD)
     val Neutral200 = Color(0xFFE4E7EC)
     val Neutral100 = Color(0xFFF2F4F7)

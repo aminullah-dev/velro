@@ -8,7 +8,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +34,17 @@ data class SignInUiState(
     val isSubmitting: Boolean = false,
     val errorCode: String? = null,
     val errorContext: Map<String, Any?> = emptyMap(),
+    /**
+     * Seconds left before another code may be asked for.
+     *
+     * The server sends this with every accepted request and enforces its own
+     * limit regardless (3 per 60s, `otp.max_per_window`). Counting it down here
+     * is not the security control -- it is the cost control. Every send is a
+     * real SMS at about $0.45 against a ~$50/month budget, so a person who taps
+     * "send again" three times because nothing arrived yet has spent $1.35, and
+     * the third tap earns a rate-limit error they cannot interpret. Showing the
+     * wait turns all three into one.
+     */
     val resendAfterSeconds: Int = 0,
     /** Development builds echo the code so a developer with no SMS gateway can sign in. */
     val debugCode: String? = null,
@@ -40,6 +53,7 @@ data class SignInUiState(
 
     val canSubmitPhone: Boolean get() = phone.filter(Char::isDigit).length >= 9 && !isSubmitting
     val canSubmitCode: Boolean get() = code.length >= 4 && !isSubmitting
+    val canResend: Boolean get() = resendAfterSeconds <= 0 && !isSubmitting
 }
 
 sealed interface SignInEvent {
@@ -97,6 +111,10 @@ class SignInViewModel @Inject constructor(
     private fun requestCode() {
         val current = _state.value
         if (!current.canSubmitPhone) return
+        // The resend button is disabled while the clock runs, but the guard
+        // lives here too: a disabled button is a drawing, and this is the only
+        // place that spends money.
+        if (current.step == SignInUiState.Step.CODE && !current.canResend) return
 
         _state.update { it.copy(isSubmitting = true, errorCode = null) }
         viewModelScope.launch {
@@ -113,6 +131,26 @@ class SignInViewModel @Inject constructor(
                     )
                 }
                 is ApiResult.Failure -> _state.update { it.failed(result.error) }
+            }
+            startResendCountdown()
+        }
+    }
+
+    private var countdown: Job? = null
+
+    /**
+     * Tick the resend clock down to zero.
+     *
+     * In the ViewModel rather than the composable so it keeps running across a
+     * rotation -- a countdown that restarts when the screen turns would hand
+     * back the button early, which is the one thing it exists to prevent.
+     */
+    private fun startResendCountdown() {
+        countdown?.cancel()
+        countdown = viewModelScope.launch {
+            while (_state.value.resendAfterSeconds > 0) {
+                delay(1_000)
+                _state.update { it.copy(resendAfterSeconds = it.resendAfterSeconds - 1) }
             }
         }
     }

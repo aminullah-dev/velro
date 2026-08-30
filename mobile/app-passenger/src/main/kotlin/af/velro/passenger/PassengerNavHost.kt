@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Row
@@ -279,10 +280,13 @@ private fun HomeScreen(
 
             when {
                 state.isLoading -> LoadingState()
+                // No action here on purpose. "Search for a car" is already the
+                // screen's primary button, forty pixels up -- repeating it in
+                // the empty state gives one screen two primary actions and
+                // makes the second look like a different, unexplained one.
                 state.bookings.isEmpty() -> EmptyState(
                     messageKey = "empty.bookings",
-                    actionKey = "home.action.search",
-                    onAction = onBook,
+                    icon = Icons.Filled.ReceiptLong,
                 )
                 else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     items(state.bookings, key = { it.id }) { booking ->

@@ -28,11 +28,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -361,24 +365,66 @@ fun DriverSummary(profile: DriverProfile, modifier: Modifier = Modifier) {
             Spacer(Modifier.size(Spacing.sm))
             val vehicle = profile.vehicle
             if (vehicle != null) {
-                Text(
-                    listOfNotNull(vehicle.brand, vehicle.model).joinToString(" ") +
-                        "  •  " + vehicle.plateNumber,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val description = listOfNotNull(vehicle.brand, vehicle.model)
+                        .joinToString(" ")
+                    if (description.isNotBlank()) {
+                        Text(
+                            description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.size(Spacing.sm))
+                    }
+                    // The plate, in its own box and never mirrored.
+                    //
+                    // It was concatenated into this Dari line with a bullet,
+                    // which puts a Latin registration inside an RTL paragraph
+                    // and lets bidi reorder its parts. A plate is matched
+                    // against the metal on a car at a station; the one thing
+                    // it may never do is read differently on screen than it
+                    // does on the vehicle.
+                    CompositionLocalProvider(
+                        LocalLayoutDirection provides LayoutDirection.Ltr
+                    ) {
+                        Text(
+                            vehicle.plateNumber,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                    RoundedCornerShape(Radius.sm),
+                                )
+                                .padding(horizontal = Spacing.sm, vertical = Spacing.xxs),
+                        )
+                    }
+                }
             }
             if (profile.ratingAverage != null) {
                 Spacer(Modifier.size(Spacing.xs))
-                Text(
-                    "★ " + Numerals.localise(
-                        String.format("%.1f", profile.ratingAverage), strings.locale
-                    ) + "  (" + Numerals.localise(
-                        profile.ratingCount.toString(), strings.locale
-                    ) + ")",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // A vector, not the ★ character. That glyph renders as a
+                    // different shape on every handset that lacks it, and on
+                    // some it renders as nothing at all -- which would leave a
+                    // bare number with no indication it is a rating.
+                    Icon(
+                        Icons.Filled.Star,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(Sizing.iconSm),
+                    )
+                    Spacer(Modifier.size(Spacing.xs))
+                    Text(
+                        Numerals.localise(
+                            String.format("%.1f", profile.ratingAverage), strings.locale
+                        ) + "  (" + Numerals.localise(
+                            profile.ratingCount.toString(), strings.locale
+                        ) + ")",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

@@ -242,6 +242,16 @@ fun DriverHomeScreen(
         title = strings["driver.nav.home"],
         snackbarHost = snackbarHost,
         actions = {
+            // In the bar rather than the first row of the scroll. It still
+            // never scrolls away, which is the whole requirement -- but as a
+            // full-width button it was the largest thing on the driver's home
+            // screen, above his own name and above the switch that decides
+            // whether he gets work at all. The loading and failed states below
+            // keep the big button: there is nothing there to compete with, and
+            // that is the case it was written for.
+            TextButton(onClick = { helpOpen = true }) {
+                Text(strings["safety.title"])
+            }
             IconButton(onClick = { signingOut = true }) {
                 Icon(
                     Icons.AutoMirrored.Filled.Logout,
@@ -251,10 +261,6 @@ fun DriverHomeScreen(
         },
         modifier = modifier,
     ) {
-        // At the top, not the foot of a scroll. The moment it is needed
-        // is the moment nobody scrolls.
-        HelpButton { helpOpen = true }
-
         DriverSummary(state.profile!!)
 
         Spacer(Modifier.height(Spacing.lg))
@@ -308,11 +314,24 @@ fun DriverHomeScreen(
                 }
 
                 Spacer(Modifier.height(Spacing.sm))
-                PrimaryAction(
-                    label = strings["driver.board.title"],
-                    onClick = onOpenBoard,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                // Emphasis follows whether there is anything to act on. As an
+                // unconditional PrimaryAction this was a full-width green
+                // button sitting directly under the sentence "nobody is
+                // waiting right now" -- the only primary action on the screen,
+                // pointing at an empty list.
+                if (state.waiting.isEmpty()) {
+                    SecondaryAction(
+                        label = strings["driver.board.title"],
+                        onClick = onOpenBoard,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    PrimaryAction(
+                        label = strings["driver.board.title"],
+                        onClick = onOpenBoard,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
             // Offline. This branch did not exist, so the screen fell through to
             // earnings and said nothing -- a driver could sit on it while a

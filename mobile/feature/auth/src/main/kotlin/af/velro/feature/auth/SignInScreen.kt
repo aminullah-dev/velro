@@ -171,9 +171,14 @@ private fun PhoneStep(state: SignInUiState, onEvent: (SignInEvent) -> Unit) {
 private fun CodeStep(state: SignInUiState, onEvent: (SignInEvent) -> Unit) {
     val strings = LocalVelroStrings.current
 
+    // Says what happened, not what the field is called -- the field carries its
+    // own label, and a heading repeating it word for word left the screen
+    // saying "verification code" twice with nothing telling the person a
+    // message had actually gone out.
     Text(
-        strings["auth.field.code"],
-        style = MaterialTheme.typography.titleLarge,
+        strings["auth.hint.code_sent"],
+        style = MaterialTheme.typography.titleMedium,
+        textAlign = TextAlign.Center,
     )
     Spacer(Modifier.height(Spacing.sm))
     Text(
@@ -187,6 +192,7 @@ private fun CodeStep(state: SignInUiState, onEvent: (SignInEvent) -> Unit) {
         OutlinedTextField(
             value = state.code,
             onValueChange = { onEvent(SignInEvent.CodeChanged(Numerals.latin(it))) },
+            label = { Text(strings["auth.field.code"]) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             textStyle = MaterialTheme.typography.titleLarge.copy(textAlign = TextAlign.Center),
@@ -213,8 +219,17 @@ private fun CodeStep(state: SignInUiState, onEvent: (SignInEvent) -> Unit) {
         TextButton(onClick = { onEvent(SignInEvent.Back) }) {
             Text(strings["common.action.back"])
         }
-        TextButton(onClick = { onEvent(SignInEvent.RequestCode) }) {
-            Text(strings["auth.action.resend_code"])
+        TextButton(
+            onClick = { onEvent(SignInEvent.RequestCode) },
+            enabled = state.canResend,
+        ) {
+            Text(
+                if (state.canResend) {
+                    strings["auth.action.resend_code"]
+                } else {
+                    strings["auth.action.resend_code_in", "seconds" to state.resendAfterSeconds]
+                },
+            )
         }
     }
 }

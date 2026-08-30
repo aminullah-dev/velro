@@ -69,6 +69,7 @@ mobile() {
   step "mobile driver"  gradle :feature:driver:testDebugUnitTest --console=plain -q
   # The emergency numbers and the categories the sheet ships compiled in.
   step "mobile safety"  gradle :feature:safety:testDebugUnitTest --console=plain -q
+  step "mobile auth"    gradle :feature:auth:testDebugUnitTest --console=plain -q
   step "mobile build"   gradle :app-driver:assembleDebug :app-passenger:assembleDebug --console=plain -q
 
   # Room migrations and the sign-out path, on a real device.
