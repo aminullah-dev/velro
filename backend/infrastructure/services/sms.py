@@ -253,6 +253,34 @@ class FallbackSmsSender:
             phone=phone, message_key=message_key, payload=payload, locale=locale
         )
         accepted = any(attempt.accepted for attempt in made)
+
+        for attempt in made:
+            if not attempt.accepted:
+                continue
+            # The provider's message id, which is the only handle anybody has
+            # on a message after it leaves here.
+            #
+            # Without this line a sent message is unfindable: the carrier
+            # decides delivery minutes later and asynchronously, and the only
+            # way to ask what happened is to name the message. Discovered while
+            # testing the first real Afghan numbers -- the sends succeeded, and
+            # there was no way to learn whether either arrived, because nothing
+            # had written down what to look up.
+            #
+            # Never the code, never the body, never the unmasked number: this
+            # is an operational breadcrumb, not a copy of the message.
+            log.info(
+                "sms.accepted",
+                phone=phone.masked,
+                message_key=message_key,
+                provider=attempt.provider,
+                message_id=attempt.provider_message_id,
+                network=attempt.network.value if attempt.network else None,
+                segments=attempt.segments,
+                cost_micros=attempt.cost_micros,
+                latency_ms=attempt.latency_ms,
+            )
+
         if not accepted:
             log.error(
                 "sms.every_route_refused",

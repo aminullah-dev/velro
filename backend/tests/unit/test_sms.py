@@ -291,3 +291,62 @@ class TestWhichCredentialPairIsSent:
         request = self.seen_request(api_key_sid="SK1111111111111111111111111111111")
         assert "AC0000000000000000000000000000000" in str(request.url)
         assert "SK1111111111111111111111111111111" not in str(request.url)
+
+
+class TestWhatIsRecordedAboutASend:
+    """A message that was sent and not written down cannot be looked up.
+
+    The carrier decides delivery minutes later and asynchronously, and the
+    only way to ask what happened is to name the message. The first real
+    Afghan sends were unfindable for exactly this reason: they succeeded, and
+    nothing had recorded the id to ask about.
+    """
+
+    def send_and_capture(self, monkeypatch) -> list[dict]:
+        lines: list[dict] = []
+        from infrastructure.services import sms as sms_module
+
+        class Recorder:
+            def info(self, event: str, **fields) -> None:
+                lines.append({"event": event, **fields})
+
+            def error(self, event: str, **fields) -> None:
+                lines.append({"event": event, **fields})
+
+        monkeypatch.setattr(sms_module, "log", Recorder())
+        FallbackSmsSender([sender("VELRO")]).send(
+            phone=MTN, message_key="auth.sms.otp",
+            payload={"code": "12345", "ttl_minutes": 5}, locale="fa-AF",
+        )
+        return lines
+
+    def test_the_provider_message_id_is_recorded(self, monkeypatch) -> None:
+        [line] = self.send_and_capture(monkeypatch)
+        assert line["event"] == "sms.accepted"
+        assert line["message_id"] == "SM0123456789abcdef"
+
+    def test_the_cost_and_network_travel_with_it(self, monkeypatch) -> None:
+        [line] = self.send_and_capture(monkeypatch)
+        assert line["cost_micros"] == 346_700
+        assert line["network"] == "MTN"
+        assert line["segments"] == 1
+
+    def test_neither_the_code_nor_the_number_is_written_down(
+        self, monkeypatch
+    ) -> None:
+        """An operational breadcrumb, not a copy of the message. A log line
+        carrying the OTP is the same leak as returning it in the response,
+        with a longer retention period."""
+        [line] = self.send_and_capture(monkeypatch)
+        # Checked field by field rather than over repr(line): the fake message
+        # id in these fixtures happens to contain the digits of the fake code,
+        # and a substring search over the whole line reports that as a leak.
+        # A test that cries wolf about its own fixtures gets muted, and then it
+        # is not protecting anything.
+        assert "code" not in line, "the payload must not be logged at all"
+        assert all(
+            str(value) != "12345" for value in line.values()
+        ), "the sign-in code must never be a logged value"
+        assert MTN.value not in line.values(), "nor the unmasked number"
+        assert line["phone"] == MTN.masked
+        assert line["phone"] != MTN.value
