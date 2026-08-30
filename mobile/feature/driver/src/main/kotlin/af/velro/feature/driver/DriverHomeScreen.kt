@@ -19,6 +19,7 @@ import af.velro.feature.safety.HelpSheet
 import af.velro.feature.safety.RideFacts
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
+import af.velro.domain.MoneyValue
 import af.velro.domain.TripStatus
 import af.velro.domain.VehicleStatus
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -357,6 +359,7 @@ private fun Offers(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> Unit)
 @Composable
 private fun CurrentTrip(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> Unit) {
     val strings = LocalVelroStrings.current
+    val context = LocalContext.current
     val assignment = state.assignment ?: return
     val trip = assignment.trip
 
@@ -377,12 +380,48 @@ private fun CurrentTrip(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> 
                 Calendars.time(trip.scheduledDepartureAt, strings.locale),
                 style = MaterialTheme.typography.titleLarge,
             )
-            Text(
-                strings["driver.label.passengers"] + ": " +
-                    Numerals.localise(assignment.manifest.size.toString(), strings.locale),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            // Where to drive. Until now the card showed a trip number, a
+            // clock time and a head count, and he could not tell the station
+            // he was meant to be at.
+            val origin = trip.originStationName
+            val destination = trip.destinationName
+            if (origin != null && destination != null) {
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    strings[
+                        "ride.journey.from_to",
+                        "origin" to origin,
+                        "destination" to destination,
+                    ],
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+
+            Spacer(Modifier.height(Spacing.sm))
+            for (rider in assignment.manifest) {
+                // Who to look for, and what to collect from them.
+                Text(
+                    rider.passengerName ?: strings["driver.label.passengers"],
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                rider.fareTotalMinor?.let { minor ->
+                    Text(
+                        MoneyFormatter.format(
+                            MoneyValue(minor.toLong(), rider.fareCurrency ?: "AFN"), strings,
+                        ),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                rider.passengerPhone?.let { phone ->
+                    SecondaryAction(
+                        label = strings["driver.action.call_passenger"],
+                        onClick = { context.dialNumber(phone) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
         }
     }
 
@@ -651,4 +690,22 @@ private fun HelpButton(onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(Spacing.md))
+}
+
+/**
+ * Open the dialler with a number in it.
+ *
+ * ACTION_DIAL, never ACTION_CALL: no CALL_PHONE permission, and the app never
+ * places a call the person did not see. The <queries> block both manifests
+ * gained for the safety sheet is what makes this resolve at all.
+ */
+private fun android.content.Context.dialNumber(number: String) {
+    runCatching {
+        startActivity(
+            android.content.Intent(
+                android.content.Intent.ACTION_DIAL,
+                android.net.Uri.parse("tel:$number"),
+            ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
 }

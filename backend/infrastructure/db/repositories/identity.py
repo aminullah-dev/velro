@@ -23,6 +23,17 @@ class UserRepository(SqlRepository[UserRow]):
     model = UserRow
     not_found_code = error_codes.USER_NOT_FOUND
 
+    def get_many(self, ids: list[str]) -> list[UserRow]:
+        """Several users in one query.
+
+        A manifest names every passenger on a shared trip, and a lookup per row
+        is how a screen on a valley connection becomes a screen that never
+        finishes loading.
+        """
+        if not ids:
+            return []
+        return list(self.session.scalars(self._base().where(UserRow.id.in_(ids))).all())
+
     def find_by_phone(self, phone: str) -> UserRow | None:
         return self.find_by(phone=phone)
 

@@ -357,3 +357,71 @@ def test_a_staff_sign_in_is_audited_as_staff(client: TestClient) -> None:
         assert entry.actor_role == "ADMIN", entry.actor_role
         # A device id that was never sent is absent, not stored as null.
         assert "device_id" not in (entry.after or {}) or entry.after["device_id"]
+
+
+def test_the_driver_is_told_where_to_drive_and_who_he_is_meeting(
+    client: TestClient, admin_session: dict
+) -> None:
+    """The moment he won the bid, the app stopped telling him anything.
+
+    The current-trip card showed a trip number, a clock time and a head count.
+    Not the station he must drive to, not the person he is meeting, not the
+    fare he himself agreed to collect — all of which the server either already
+    held or was one join away from.
+    """
+    from tests.e2e.conftest import auth, road_ready_driver, sign_in
+
+    passenger = auth(sign_in(client, "+93700000190"))
+    driver, _ = road_ready_driver(client, admin_session, "+93700000191", "PRW-1911")
+    client.post("/api/v1/driver/status", headers=driver, json={"availability": "ONLINE"})
+
+    districts = client.get("/api/v1/geo/districts", headers=passenger).json()["data"]
+    journey = None
+    for district in districts:
+        villages = client.get(
+            f"/api/v1/geo/districts/{district['id']}/villages", headers=passenger
+        ).json()["data"]
+        for village in villages:
+            stations = client.get(
+                f"/api/v1/geo/villages/{village['id']}/stations", headers=passenger
+            ).json()["data"]
+            for station in stations:
+                destinations = client.get(
+                    f"/api/v1/geo/stations/{station['id']}/destinations", headers=passenger
+                ).json()["data"]
+                if destinations:
+                    journey = (station["id"], destinations[0]["id"])
+                    break
+            if journey:
+                break
+        if journey:
+            break
+    assert journey, "the seed produced no station with a destination"
+
+    asked = client.post(
+        "/api/v1/ride-requests", headers=passenger,
+        json={
+            "origin_station_id": journey[0], "destination_id": journey[1],
+            "passenger_count": 1, "offered_fare_minor": 40_000,
+        },
+    )
+    assert asked.status_code == 201, asked.text
+    offer = client.post(
+        f"/api/v1/driver/ride-requests/{asked.json()['data']['id']}/offer",
+        headers=driver, json={"amount_minor": 55_000},
+    ).json()["data"]
+    client.post(f"/api/v1/fare-offers/{offer['id']}/accept", headers=passenger)
+
+    current = client.get("/api/v1/driver/trips/current", headers=driver).json()["data"]
+    assert current is not None, "the driver has no current trip after winning"
+
+    trip = current["trip"]
+    assert trip["origin_station_name"], "he cannot tell where to drive"
+    assert trip["destination_name"], "he cannot tell where he is going"
+
+    rider = current["manifest"][0]
+    # The fare he agreed to collect, in cash, from a person he has to find.
+    assert rider["fare_total_minor"] == 55_000
+    assert rider["fare_currency"] == "AFN"
+    assert "passenger_phone" in rider, "no way to find the passenger at the station"
+    assert "passenger_name" in rider

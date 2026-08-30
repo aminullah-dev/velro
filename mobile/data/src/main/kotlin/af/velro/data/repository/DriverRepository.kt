@@ -95,6 +95,10 @@ class DriverRepository @Inject constructor(
                             seatCount = entry.seat_count,
                             pickupStationId = entry.pickup_station_id,
                             dropoffDestinationId = entry.dropoff_destination_id,
+                            passengerName = entry.passenger_name,
+                            passengerPhone = entry.passenger_phone,
+                            fareTotalMinor = entry.fare_total_minor,
+                            fareCurrency = entry.fare_currency,
                         )
                     },
                 )
@@ -148,4 +152,10 @@ data class ManifestEntry(
     val seatCount: Int,
     val pickupStationId: String,
     val dropoffDestinationId: String,
+    /** Who he is looking for at the station, and how to reach them. */
+    val passengerName: String? = null,
+    val passengerPhone: String? = null,
+    /** The fare he agreed, which he collects in cash. */
+    val fareTotalMinor: Int? = null,
+    val fareCurrency: String? = null,
 )

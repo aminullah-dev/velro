@@ -101,6 +101,30 @@ class TripRepository(SqlRepository[TripRow]):
         )
         return self.session.scalars(stmt).one_or_none()
 
+    def place_names(self, trip_ids: list[str]) -> dict[str, tuple[str | None, str | None]]:
+        """(origin station name, destination name) per trip.
+
+        One query for a list rather than one per row: the driver's board renders
+        several of these, and a name lookup per card is how a screen on a slow
+        connection becomes a screen that never finishes.
+        """
+        if not trip_ids:
+            return {}
+        from sqlalchemy import select
+
+        from infrastructure.db.models.geography import DestinationRow, StationRow
+
+        stmt = (
+            select(TripRow.id, StationRow.name, DestinationRow.name)
+            .join(StationRow, StationRow.id == TripRow.origin_station_id, isouter=True)
+            .join(DestinationRow, DestinationRow.id == TripRow.destination_id, isouter=True)
+            .where(TripRow.id.in_(trip_ids))
+        )
+        return {
+            trip_id: (origin, destination)
+            for trip_id, origin, destination in self.session.execute(stmt).all()
+        }
+
     def seats_available_map(self, trip_ids: list[str]) -> dict[str, int]:
         """Availability for a list of trips in one query.
 

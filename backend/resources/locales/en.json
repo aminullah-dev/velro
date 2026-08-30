@@ -702,5 +702,6 @@
   "home.open_request.waiting": "Waiting for drivers",
   "home.open_request.expires_in": "{minutes} minutes left",
   "home.open_request.expiring": "Less than a minute left",
-  "home.open_request.open": "See the prices"
+  "home.open_request.open": "See the prices",
+  "driver.action.call_passenger": "Call the passenger"
 }

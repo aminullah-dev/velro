@@ -167,7 +167,10 @@ data class TripSummary(
     val rideKind: RideKind,
     val scheduledDepartureAt: Instant,
     val originStationId: String,
+    /** The name, so a driver can be told where to drive. */
+    val originStationName: String? = null,
     val destinationId: String,
+    val destinationName: String? = null,
     val seatCapacity: Int,
     val seatsAvailable: Int,
     val driverId: String? = null,

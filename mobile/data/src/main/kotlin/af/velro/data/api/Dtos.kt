@@ -146,7 +146,9 @@ data class SearchResultDto(
 @Serializable
 data class SearchTripsRequest(
     val origin_station_id: String,
+    val origin_station_name: String? = null,
     val destination_id: String,
+    val destination_name: String? = null,
     val departure_after: String? = null,
     val seat_count: Int = 1,
     val ride_kind: String? = null,
@@ -317,7 +319,10 @@ data class TripSummaryDto(
     val ride_kind: String,
     val scheduled_departure_at: String,
     val origin_station_id: String,
+    /** The name, so the driver's card can say where to drive. */
+    val origin_station_name: String? = null,
     val destination_id: String,
+    val destination_name: String? = null,
     val seat_capacity: Int,
     val seats_available: Int,
     val driver_id: String? = null,
@@ -332,6 +337,10 @@ data class ManifestEntryDto(
     val seat_count: Int,
     val pickup_station_id: String,
     val dropoff_destination_id: String,
+    val passenger_name: String? = null,
+    val passenger_phone: String? = null,
+    val fare_total_minor: Int? = null,
+    val fare_currency: String? = null,
 )
 
 @Serializable

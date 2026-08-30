@@ -702,5 +702,6 @@
   "home.open_request.waiting": "د چلوونکو په تمه",
   "home.open_request.expires_in": "{minutes} دقیقې پاتې دي",
   "home.open_request.expiring": "تر یوې دقیقې لږ پاتې دي",
-  "home.open_request.open": "بیې وګورئ"
+  "home.open_request.open": "بیې وګورئ",
+  "driver.action.call_passenger": "مسافر ته زنګ ووهئ"
 }

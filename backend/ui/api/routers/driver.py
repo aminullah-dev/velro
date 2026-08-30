@@ -286,11 +286,16 @@ def current_trip(
     drivers: Annotated[object, Depends(deps.drivers)],
     trips: Annotated[object, Depends(deps.trips)],
     bookings: Annotated[object, Depends(deps.bookings)],
+    users: Annotated[object, Depends(deps.users)],
 ) -> dict:
     row = _driver_of(drivers, actor.user_id)
     trip = trips.active_for_driver(row.id)
     if trip is None:
         return ok(None)
+    riders = bookings.active_for_trip(trip.id)
+    passengers = {
+        u.id: u for u in users.get_many([b.passenger_id for b in riders])
+    } if riders else {}
     manifest = [
         {
             "booking_id": b.id,
@@ -299,8 +304,19 @@ def current_trip(
             "seat_count": b.seat_count,
             "pickup_station_id": b.pickup_station_id,
             "dropoff_destination_id": b.dropoff_destination_id,
+            # Who he is meeting and what he is collecting. Without these the
+            # card showed a trip number, a clock time and a head count, and he
+            # could not tell who to look for at the station or how much cash to
+            # take -- for a fare he himself agreed.
+            "passenger_name": (passengers.get(b.passenger_id) or _none()).full_name,
+            # The phone is how two people find each other at a station. Sent
+            # only here, on a trip in progress -- never on a receipt from last
+            # month, where it would be a directory of everyone he has driven.
+            "passenger_phone": (passengers.get(b.passenger_id) or _none()).phone,
+            "fare_total_minor": b.fare_total_minor,
+            "fare_currency": b.fare_total_currency,
         }
-        for b in bookings.active_for_trip(trip.id)
+        for b in riders
     ]
     return ok({"trip": _trip_summary(trip, trips), "manifest": manifest})
 
@@ -368,10 +384,24 @@ def _driver_of(drivers, user_id: str):
 
 def _trip_summary(trip, trips) -> dict:
     available = trips.seats_available_map([trip.id]).get(trip.id, 0)
+    origin, destination = trips.place_names([trip.id]).get(trip.id, (None, None))
     return TripSummaryOut(
         id=trip.id, number=trip.number, status=trip.status, ride_kind=trip.ride_kind,
         scheduled_departure_at=trip.scheduled_departure_at,
-        origin_station_id=trip.origin_station_id, destination_id=trip.destination_id,
+        origin_station_id=trip.origin_station_id, origin_station_name=origin,
+        destination_id=trip.destination_id, destination_name=destination,
         seat_capacity=trip.seat_capacity, seats_available=available,
         driver_id=trip.driver_id, vehicle_id=trip.vehicle_id,
     ).model_dump()
+
+
+class _Missing:
+    """A passenger row that is not there. Keeps the manifest a list of dicts
+    with the same keys rather than one that sometimes omits them."""
+
+    full_name = None
+    phone = None
+
+
+def _none() -> _Missing:
+    return _Missing()

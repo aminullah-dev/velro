@@ -97,7 +97,15 @@ class TripSummaryOut(Schema):
     ride_kind: str
     scheduled_departure_at: datetime
     origin_station_id: str
+    #: The name, not only the id.
+    #:
+    #: A driver who has won a bid needs to know where to drive, and the
+    #: app cannot turn an id into a place: the geography cache lives in
+    #: another module that feature/driver does not depend on. Sending
+    #: the name costs one join the endpoint is already making.
+    origin_station_name: str | None = None
     destination_id: str
+    destination_name: str | None = None
     seat_capacity: int
     seats_available: int
     driver_id: str | None = None
