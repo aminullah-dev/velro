@@ -5,6 +5,8 @@ import af.velro.core.i18n.MoneyFormatter
 import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.DriverSummary
 import af.velro.core.ui.component.ErrorState
+import af.velro.core.ui.component.ConfirmDialog
+import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.component.InlineError
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
@@ -37,6 +39,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -61,6 +67,7 @@ fun DriverHomeRoute(
     onOpenEarnings: () -> Unit,
     onOpenBoard: () -> Unit,
     onOpenReports: () -> Unit,
+    onSignOut: () -> Unit,
     viewModel: DriverHomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -70,6 +77,7 @@ fun DriverHomeRoute(
         onOpenVehicle = onOpenVehicle,
         onOpenEarnings = onOpenEarnings,
         onOpenReports = onOpenReports,
+        onSignOut = onSignOut,
         onOpenBoard = onOpenBoard,
     )
 }
@@ -83,6 +91,7 @@ fun DriverHomeScreen(
     onOpenEarnings: () -> Unit = {},
     onOpenBoard: () -> Unit = {},
     onOpenReports: () -> Unit = {},
+    onSignOut: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -98,6 +107,19 @@ fun DriverHomeScreen(
     // The sheet needs nothing from the profile: the numbers are compiled in
     // and `ride` is already null-safe.
     var helpOpen by remember { mutableStateOf(false) }
+    var signingOut by remember { mutableStateOf(false) }
+    if (signingOut) {
+        // Confirmed because it wipes the local cache. On a handset shared
+        // in a household that is right, and it is also unrecoverable
+        // without a connection to sign back in.
+        ConfirmDialog(
+            titleKey = "auth.action.sign_out",
+            bodyKey = "auth.sign_out_warning",
+            confirmKey = "auth.action.sign_out",
+            onConfirm = { signingOut = false; onSignOut() },
+            onDismiss = { signingOut = false },
+        )
+    }
     if (helpOpen) {
         val assignment = state.assignment
         HelpSheet(
@@ -137,13 +159,17 @@ fun DriverHomeScreen(
         return
     }
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .imePadding()
-            .padding(horizontal = Spacing.gutter, vertical = Spacing.lg)
+    VelroScreen(
+        title = strings["driver.nav.home"],
+        actions = {
+            IconButton(onClick = { signingOut = true }) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = strings["auth.action.sign_out"],
+                )
+            }
+        },
+        modifier = modifier,
     ) {
         // At the top, not the foot of a scroll. The moment it is needed
         // is the moment nobody scrolls.

@@ -242,3 +242,40 @@ fun InlineError(
 fun ScreenPadding(content: @Composable () -> Unit) {
     Box(Modifier.padding(PaddingValues(horizontal = Spacing.gutter))) { content() }
 }
+
+/**
+ * Ask before something that cannot be undone.
+ *
+ * Takes message keys rather than strings so a caller cannot slip an untranslated
+ * sentence into a dialog — which is the one place people read carefully.
+ */
+@Composable
+fun ConfirmDialog(
+    titleKey: String,
+    bodyKey: String,
+    confirmKey: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    destructive: Boolean = false,
+) {
+    val strings = LocalVelroStrings.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(strings[titleKey]) },
+        text = { Text(strings[bodyKey]) },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onConfirm) {
+                Text(
+                    strings[confirmKey],
+                    color = if (destructive) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
+                )
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(strings["common.action.cancel"])
+            }
+        },
+    )
+}

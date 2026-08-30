@@ -693,5 +693,6 @@
   "safety.reply": "فرستادن",
   "safety.closed_note": "این راپور بسته است. اگر ضرورت دارید راپور نو بدهید.",
   "safety.awaiting_answer": "هنوز کسی جواب نداده است.",
-  "driver.nav.home": "ولرو"
+  "driver.nav.home": "ولرو",
+  "auth.sign_out_warning": "سفرهای شما از این تیلفون پاک می‌شود. برای ورود دوباره به انترنت ضرورت دارید."
 }

@@ -34,6 +34,7 @@ private object Routes {
 @Composable
 fun DriverNavHost(
     isSignedIn: Boolean,
+    onSignOut: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
 ) {
     LaunchedEffect(isSignedIn) {
@@ -62,6 +63,7 @@ fun DriverNavHost(
                 onOpenEarnings = { navController.navigate(Routes.EARNINGS) },
                 onOpenBoard = { navController.navigate(Routes.BOARD) },
                 onOpenReports = { navController.navigate(Routes.REPORTS) },
+                onSignOut = onSignOut,
             )
         }
         // Every pushed destination is given a way back. Until now none of

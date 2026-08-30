@@ -693,5 +693,6 @@
   "safety.reply": "Send",
   "safety.closed_note": "This report is closed. Raise a new one if you need to.",
   "safety.awaiting_answer": "Nobody has answered yet.",
-  "driver.nav.home": "VELRO"
+  "driver.nav.home": "VELRO",
+  "auth.sign_out_warning": "Your journeys will be removed from this phone. You will need a connection to sign in again."
 }

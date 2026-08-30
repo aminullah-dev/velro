@@ -1,5 +1,6 @@
 package af.velro.passenger
 
+import af.velro.core.ui.component.ConfirmDialog
 import af.velro.core.ui.component.BookingCard
 import af.velro.core.ui.component.EmptyState
 import af.velro.core.ui.component.LoadingState
@@ -36,6 +37,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,7 +64,11 @@ private object Routes {
 }
 
 @Composable
-fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rememberNavController()) {
+fun PassengerNavHost(
+    isSignedIn: Boolean,
+    onSignOut: () -> Unit = {},
+    navController: NavHostController = rememberNavController(),
+) {
     LaunchedEffect(isSignedIn) {
         // A session that ended -- a revoked refresh token, or signing out --
         // returns to sign-in and clears the back stack, so pressing back cannot
@@ -104,6 +112,7 @@ fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rem
                     onOpenBooking = { navController.navigate(Routes.bookingDetail(it)) },
                     onOpenHistory = { navController.navigate(Routes.HISTORY) },
                     onGetHelp = { helpOpen = true },
+                    onSignOut = onSignOut,
                 )
                 if (helpOpen) {
                     HelpSheet(
@@ -177,10 +186,25 @@ private fun HomeScreen(
     onOpenBooking: (String) -> Unit,
     onOpenHistory: () -> Unit,
     onGetHelp: () -> Unit,
+    onSignOut: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val strings = LocalVelroStrings.current
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var signingOut by remember { mutableStateOf(false) }
+
+    // Confirmed, because it wipes the local cache: on a handset shared between
+    // a household this is the right behaviour, and it is also unrecoverable
+    // without a working connection to sign back in.
+    if (signingOut) {
+        ConfirmDialog(
+            titleKey = "auth.action.sign_out",
+            bodyKey = "auth.sign_out_warning",
+            confirmKey = "auth.action.sign_out",
+            onConfirm = { signingOut = false; onSignOut() },
+            onDismiss = { signingOut = false },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -191,6 +215,15 @@ private fun HomeScreen(
                 actions = {
                     TextButton(onClick = onGetHelp) {
                         Text(strings["safety.title"])
+                    }
+                    // Icon rather than a second label: two words of Dari in a
+                    // bar leaves nothing for the title. The description is what
+                    // a screen reader announces.
+                    IconButton(onClick = { signingOut = true }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = strings["auth.action.sign_out"],
+                        )
                     }
                 },
             )
