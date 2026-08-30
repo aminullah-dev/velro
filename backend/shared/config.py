@@ -69,6 +69,16 @@ _DEFAULTS: dict[str, Any] = {
 
 _REQUIRED = ("database_url", "jwt_secret")
 _ENV_PREFIX = "VELRO_"
+# Ours, but not application settings, so `load` never reads them and the stray
+# check below would otherwise reject them. Listed one by one rather than by
+# pattern: the whole value of that check is that an unrecognised VELRO_ variable
+# stops the server, and a wildcard is how it stops recognising anything.
+_ENV_EXCEPTIONS = frozenset(
+    {
+        "VELRO_CONFIG",           # which file to read, read before the file
+        "VELRO_TEST_DATABASE_URL",  # the test harness picks its own database
+    }
+)
 
 
 def _coerce(target: Any, raw: str) -> Any:
@@ -95,6 +105,28 @@ def load(config_path: str | Path | None = None, env: dict[str, str] | None = Non
         if raw is not None:
             values[key] = _coerce(values.get(key), raw)
 
+    # A VELRO_-prefixed variable matching no setting is a typo, and a typo is a
+    # setting somebody believes they made. It stayed at its default in silence:
+    # VELRO_SMS_PROVIDR=twilio leaves a production server on the console sender
+    # that delivers nothing. Named exceptions rather than a prefix free-for-all,
+    # because the environment legitimately carries a few of our own.
+    settable = {
+        f"{_ENV_PREFIX}{key.upper()}"
+        for key in {*values, *_REQUIRED, "supported_locales", "cors_origins"}
+    }
+    strays = sorted(
+        name
+        for name in env
+        if name.startswith(_ENV_PREFIX)
+        and name not in settable
+        and name not in _ENV_EXCEPTIONS
+    )
+    if strays:
+        raise ConfigurationError(
+            "unknown environment variables (a typo leaves the setting at its "
+            "default): " + ", ".join(strays)
+        )
+
     missing = [key for key in _REQUIRED if not values.get(key)]
     if missing:
         raise ConfigurationError(
@@ -115,5 +147,30 @@ def load(config_path: str | Path | None = None, env: dict[str, str] | None = Non
     if settings.default_locale not in settings.supported_locales:
         raise ConfigurationError(
             f"default_locale {settings.default_locale!r} is not in supported_locales"
+        )
+
+    # The one setting that must not merely default to off.
+    #
+    # otp_debug_echo returns the OTP in the API response, so a deployment with
+    # it on hands the code for any phone number to anyone who asks for it. That
+    # is not a debug leak, it is every account in Ghorband: the person does not
+    # need the handset, the network, or the server -- only the number.
+    #
+    # Defaulting to False protects a deployment nobody misconfigures. This
+    # refuses to start one that somebody did, because the failure is silent and
+    # total, and an environment variable set once during a demo outlives the
+    # demo.
+    if settings.is_production and settings.otp_debug_echo:
+        raise ConfigurationError(
+            f"{_ENV_PREFIX}OTP_DEBUG_ECHO cannot be on in production: it returns "
+            "the sign-in code to whoever asks for it"
+        )
+    if settings.is_production and settings.sms_provider == "console":
+        # The console sender delivers nothing. In production that is an
+        # authentication system that cannot sign anybody in, discovered by the
+        # first real person who tries.
+        raise ConfigurationError(
+            f"{_ENV_PREFIX}SMS_PROVIDER is 'console' in production: no message "
+            "would ever reach a handset"
         )
     return settings
