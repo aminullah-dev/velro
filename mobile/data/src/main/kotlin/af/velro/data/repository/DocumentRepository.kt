@@ -23,8 +23,13 @@ class DocumentRepository @Inject constructor(
     private val mapper: ResponseMapper,
 ) {
 
-    suspend fun registerAsDriver(homeDistrictId: String? = null): ApiResult<Unit> =
-        mapper.call { api.registerAsDriver(RegisterDriverRequest(homeDistrictId)) }.map { }
+    suspend fun registerAsDriver(
+        homeDistrictId: String? = null,
+        fullName: String? = null,
+    ): ApiResult<Unit> =
+        mapper.call {
+            api.registerAsDriver(RegisterDriverRequest(homeDistrictId, fullName))
+        }.map { }
 
     suspend fun checklist(): ApiResult<DocumentChecklist> =
         mapper.call { api.documents() }.map { dto ->

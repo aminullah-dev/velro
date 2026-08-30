@@ -24,7 +24,8 @@ from application.use_cases.driver_documents import (
     UploadDocumentCommand,
     UploadDriverDocument,
 )
-from domain.enums import DocumentStatus
+from application.use_cases.record_name import RecordName, RecordNameCommand
+from domain.enums import ActorRole, DocumentStatus
 from shared import error_codes
 from shared.errors import NotFoundError
 from ui.api import deps
@@ -78,6 +79,11 @@ class ReviewOut(Schema):
 
 class RegisterDriverIn(Schema):
     home_district_id: str | None = None
+    # Asked here because it is the one moment he is already telling VELRO who
+    # he is: the next screen wants a photograph of his tazkira. Optional, and
+    # a blank one is not a failure -- an operator fills it at approval from the
+    # document itself, which is a better source than a form on a cracked screen.
+    full_name: str | None = Field(default=None, max_length=160)
 
 
 def _document_out(row, current_ids: set[str]) -> DocumentOut:
@@ -133,6 +139,23 @@ def register_as_driver(
     Deliberately open to any signed-in user: applying is not a privilege.
     Working is, and that still needs documents and an administrator.
     """
+    # Before RegisterDriver, so a name typed by somebody who turns out to be
+    # registered already is not lost -- though only when the request as a whole
+    # succeeds: one session per request, and a 4xx rolls the whole thing back.
+    RecordName(users=users, audit=audit, clock=deps.clock()).execute(
+        RecordNameCommand(
+            user_id=actor.user_id,
+            actor_id=actor.user_id,
+            raw_name=body.full_name,
+            actor_role=ActorRole.DRIVER,
+            # He is naming himself, but on a handset the household shares.
+            # Filling a blank is safe; replacing a name that is already there
+            # belongs to him on his own account screen, or to an operator with
+            # the tazkira in front of them.
+            allow_overwrite=False,
+        )
+    )
+
     use_case = RegisterDriver(
         drivers=drivers, users=users, audit=audit,
         clock=deps.clock(), new_id=deps.new_id,

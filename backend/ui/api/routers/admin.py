@@ -17,6 +17,7 @@ from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
@@ -24,6 +25,7 @@ from application.use_cases.generate_routes import (
     GenerateRoutes,
     GenerateRoutesCommand,
 )
+from application.use_cases.record_name import RecordName, RecordNameCommand
 from domain.enums import (
     DriverApprovalStatus,
     TripStatus,
@@ -642,18 +644,35 @@ class DriverDecisionIn(Schema):
     reason: str | None = None
 
 
+class ApproveDriverIn(Schema):
+    # The name as it reads on the tazkira the operator is looking at.
+    #
+    # Every field is optional so that a caller who posts no body at all keeps
+    # working, which several tests and the existing panel do.
+    full_name: str | None = Field(default=None, max_length=160)
+
+
 @router.post("/drivers/{driver_id}/approve")
 def approve_driver(
     driver_id: str,
     actor: Annotated[deps.Actor, Depends(deps.require_operations)],
     drivers_repo: Annotated[object, Depends(deps.drivers)],
+    users: Annotated[object, Depends(deps.users)],
     settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
+    body: ApproveDriverIn | None = None,
 ) -> dict:
     """Approval is what lets a driver receive work at all (section 28).
 
     The document check lives in the domain entity, so this cannot approve
     someone whose licence is missing however the request is shaped.
+
+    This is also the best name VELRO ever gets, and the only place a wrong one
+    can be put right. The operator is authenticated, is reading a tazkira, and
+    has a decision to make -- so unlike the driver's own apply form, this may
+    replace a name that is already there. Which matters: the apply form appears
+    on whatever handset the household shares, and the name it collected may be
+    a brother's, or a single letter typed to get past the field.
     """
     from domain.driver import Driver, DriverDocument
     from domain.enums import DocumentStatus
@@ -696,6 +715,16 @@ def approve_driver(
         entity_id=driver_id,
         before={"approval_status": before},
         after={"approval_status": row.approval_status},
+    )
+
+    RecordName(users=users, audit=audit, clock=deps.clock()).execute(
+        RecordNameCommand(
+            user_id=row.user_id,
+            actor_id=actor.user_id,
+            raw_name=body.full_name if body else None,
+            actor_role=actor.role,
+            allow_overwrite=True,
+        )
     )
     return ok({"driver_id": driver_id, "approval_status": row.approval_status})
 

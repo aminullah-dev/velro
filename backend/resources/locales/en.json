@@ -707,5 +707,12 @@
   "booking.action.call_driver": "Call the driver",
   "common.value.no_name": "No name given",
   "common.value.unknown": "Not known",
-  "driver.greeting_no_name": "Hello"
+  "driver.greeting_no_name": "Hello",
+  "driver.welcome.title": "Drive with VELRO",
+  "driver.welcome.body": "Apply, then send photographs of your tazkira, your licence and the car's papers. VELRO checks them and tells you.",
+  "profile.field.name": "Your name",
+  "profile.hint.name_driver": "Passengers see this name when they choose your car.",
+  "profile.hint.name_optional": "You can leave this empty, or ask someone to write it for you.",
+  "admin.approvals.record_name": "Name on the tazkira",
+  "admin.approvals.name_hint": "Passengers see this name when they choose his car. Leave it empty to approve without changing it."
 }

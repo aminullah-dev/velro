@@ -707,5 +707,12 @@
   "booking.action.call_driver": "زنگ زدن به راننده",
   "common.value.no_name": "نام داده نشده",
   "common.value.unknown": "نامعلوم",
-  "driver.greeting_no_name": "سلام"
+  "driver.greeting_no_name": "سلام",
+  "driver.welcome.title": "با ولرو موتر برانید",
+  "driver.welcome.body": "درخواست بدهید، بعد عکس تذکره، جواز رانندگی و اسناد موتر را بفرستید. ولرو آن‌ها را بررسی می‌کند و به شما خبر می‌دهد.",
+  "profile.field.name": "نام شما",
+  "profile.hint.name_driver": "مسافران این نام را وقتی می‌بینند که موتر شما را انتخاب می‌کنند.",
+  "profile.hint.name_optional": "این را خالی گذاشته می‌توانید، یا از کسی بخواهید که برای شما بنویسد.",
+  "admin.approvals.record_name": "نام روی تذکره",
+  "admin.approvals.name_hint": "مسافران این نام را وقتی می‌بینند که موتر او را انتخاب می‌کنند. اگر خالی بماند، نام تغییر نمی‌کند."
 }

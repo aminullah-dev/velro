@@ -488,7 +488,10 @@ data class UploadedDocumentDto(
 )
 
 @Serializable
-data class RegisterDriverRequest(val home_district_id: String? = null)
+data class RegisterDriverRequest(
+    val home_district_id: String? = null,
+    val full_name: String? = null,
+)
 
 
 // -- the inbox ----------------------------------------------------------

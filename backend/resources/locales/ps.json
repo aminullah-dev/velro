@@ -707,5 +707,12 @@
   "booking.action.call_driver": "چلوونکي ته زنګ ووهئ",
   "common.value.no_name": "نوم نه دی ورکړل شوی",
   "common.value.unknown": "نامعلوم",
-  "driver.greeting_no_name": "سلام"
+  "driver.greeting_no_name": "سلام",
+  "driver.welcome.title": "له ولرو سره موټر وچلوئ",
+  "driver.welcome.body": "غوښتنه وکړئ، بیا د خپلې تذکرې، د موټر چلولو جواز او د موټر د اسنادو عکسونه ولېږئ. ولرو یې ګوري او تاسو ته خبر درکوي.",
+  "profile.field.name": "ستاسو نوم",
+  "profile.hint.name_driver": "مسافران دا نوم هغه وخت ویني چې ستاسو موټر غوره کوي.",
+  "profile.hint.name_optional": "دا خالي پرېښودلی شئ، یا له چا وغواړئ چې ستاسو لپاره یې ولیکي.",
+  "admin.approvals.record_name": "په تذکره کې نوم",
+  "admin.approvals.name_hint": "مسافران دا نوم هغه وخت ویني چې د هغه موټر غوره کوي. که خالي پاتې شي، نوم نه بدلېږي."
 }

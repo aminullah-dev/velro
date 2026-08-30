@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -136,9 +137,38 @@ fun DocumentsScreen(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Spacer(Modifier.height(Spacing.lg))
+
+            // The one moment he is already telling VELRO who he is: the screen
+            // after this asks him to photograph his tazkira.
+            //
+            // No LTR wrapper, unlike the phone and the plate elsewhere -- a
+            // name is written in the direction of the language it is in. And no
+            // Numerals fold: that is right for a plate and wrong for a person.
+            OutlinedTextField(
+                value = state.typedName,
+                onValueChange = { onEvent(DocumentsEvent.NameChanged(it)) },
+                label = { Text(strings["profile.field.name"]) },
+                supportingText = { Text(strings["profile.hint.name_driver"]) },
+                singleLine = true,
+                enabled = !state.isLoading,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                strings["profile.hint.name_optional"],
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Spacing.xs),
+            )
+
+            Spacer(Modifier.height(Spacing.lg))
             PrimaryAction(
+                // Always enabled. The field is optional, and an empty one is
+                // the way past it -- a disabled button in front of a man who
+                // cannot write would end his application here.
                 label = strings["driver.documents.apply"],
                 onClick = { onEvent(DocumentsEvent.RegisterAsDriver) },
+                loading = state.isLoading,
+                modifier = Modifier.fillMaxWidth(),
             )
             if (state.errorCode != null) {
                 InlineError(state.errorCode!!, context = state.errorContext)

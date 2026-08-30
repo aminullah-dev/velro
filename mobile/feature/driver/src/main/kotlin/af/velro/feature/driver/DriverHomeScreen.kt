@@ -153,15 +153,31 @@ fun DriverHomeScreen(
         return
     }
     if (state.profile == null) {
-        // The offline case. The Retry page used to be the whole screen,
-        // so a driver with no data had no way to an emergency number.
         Column(modifier.fillMaxSize().statusBarsPadding().padding(Spacing.lg)) {
             HelpButton { helpOpen = true }
-            ErrorState(
-                errorCode = state.errorCode ?: "INTERNAL_ERROR",
-                context = state.errorContext,
-                onRetry = { onEvent(DriverHomeEvent.Refresh) },
-            )
+            if (state.errorCode == "PERMISSION_DENIED") {
+                // Not a failure: this is everybody's first minute in the app.
+                //
+                // GET driver/me is behind require_driver, so a person who has
+                // just installed VELRO Driver and signed in gets a 403 -- and
+                // this branch showed them "you do not have permission to do
+                // this" over a Retry button that retries a 403 for ever. The
+                // apply form was only reachable from a screen that needs the
+                // profile this call could not return, so nobody could become a
+                // VELRO driver through the driver app at all. Every driver in
+                // the database was put there by the seed or by an operator.
+                BecomeADriver(onOpenDocuments)
+            } else {
+                // The genuine failure: no signal, or the server is down.
+                // Retry is the right offer, and the help button above it is
+                // why this branch is not just an ErrorState -- a driver with
+                // no data still needs an emergency number.
+                ErrorState(
+                    errorCode = state.errorCode ?: "INTERNAL_ERROR",
+                    context = state.errorContext,
+                    onRetry = { onEvent(DriverHomeEvent.Refresh) },
+                )
+            }
         }
         return
     }
@@ -226,6 +242,38 @@ fun DriverHomeScreen(
 
         Spacer(Modifier.height(Spacing.xl))
         Earnings(state, onOpenEarnings)
+    }
+}
+
+/**
+ * The first screen of a driver's life with VELRO.
+ *
+ * Deliberately not an error page: nothing has gone wrong, the person simply
+ * does not drive for VELRO yet. It says what applying involves, because the
+ * next screen asks for a tazkira and a licence and a jawaz-e-sair, and finding
+ * that out after tapping is worse than being told.
+ */
+@Composable
+private fun BecomeADriver(onOpenDocuments: () -> Unit) {
+    val strings = LocalVelroStrings.current
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            strings["driver.welcome.title"],
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(Spacing.sm))
+        Text(
+            strings["driver.welcome.body"],
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(Spacing.lg))
+        PrimaryAction(
+            label = strings["driver.documents.apply"],
+            onClick = onOpenDocuments,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

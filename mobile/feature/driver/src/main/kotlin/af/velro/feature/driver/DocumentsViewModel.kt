@@ -28,6 +28,15 @@ data class DocumentsUiState(
     val errorCode: String? = null,
     val errorContext: Map<String, Any?> = emptyMap(),
     val justUploaded: String? = null,
+    /**
+     * Kept in state rather than sent and forgotten.
+     *
+     * A refused request rolls back everything it wrote -- one session per
+     * request on the server -- so a name that went out with a rejected
+     * registration was never stored. Holding it here means he is not asked to
+     * type it a second time on a phone he is holding one-handed.
+     */
+    val typedName: String = "",
 ) {
     val isUploading: Boolean get() = uploadingType != null
 }
@@ -35,6 +44,7 @@ data class DocumentsUiState(
 sealed interface DocumentsEvent {
     data object Refresh : DocumentsEvent
     data object RegisterAsDriver : DocumentsEvent
+    data class NameChanged(val value: String) : DocumentsEvent
     data class Upload(
         val documentTypeCode: String,
         val bytes: ByteArray,
@@ -71,6 +81,9 @@ class DocumentsViewModel @Inject constructor(
         when (event) {
             DocumentsEvent.Refresh -> refresh()
             DocumentsEvent.RegisterAsDriver -> register()
+            is DocumentsEvent.NameChanged ->
+                // 160 is the column, so the field cannot outgrow the row.
+                _state.update { it.copy(typedName = event.value.take(160)) }
             is DocumentsEvent.Upload -> upload(event)
             DocumentsEvent.DismissError -> _state.update { it.copy(errorCode = null) }
         }
@@ -85,7 +98,16 @@ class DocumentsViewModel @Inject constructor(
                 is ApiResult.Failure -> _state.update {
                     // Not yet a driver is not an error to alarm anyone with --
                     // it is the state before applying.
-                    if (result.error.code == "DRIVER_NOT_FOUND") {
+                    //
+                    // PERMISSION_DENIED as well as DRIVER_NOT_FOUND: this
+                    // endpoint sits behind require_driver, so somebody who has
+                    // never applied is refused by the guard and never reaches
+                    // the DRIVER_NOT_FOUND inside it. Only checking the inner
+                    // code meant the apply screen carried a red "you do not
+                    // have permission to do this" above its own Apply button.
+                    if (result.error.code == "DRIVER_NOT_FOUND" ||
+                        result.error.code == "PERMISSION_DENIED"
+                    ) {
                         it.copy(isLoading = false, checklist = null, errorCode = null)
                     } else {
                         it.failed(result.error)
@@ -98,7 +120,9 @@ class DocumentsViewModel @Inject constructor(
     private fun register() {
         _state.update { it.copy(isLoading = true, errorCode = null) }
         viewModelScope.launch {
-            when (val result = documents.registerAsDriver()) {
+            when (val result = documents.registerAsDriver(
+                fullName = _state.value.typedName.trim().ifEmpty { null },
+            )) {
                 is ApiResult.Success -> refresh()
                 is ApiResult.Failure -> _state.update { it.failed(result.error) }
             }

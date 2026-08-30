@@ -46,6 +46,7 @@ export function ApprovalsPage() {
   // background refresh cannot swap what the open dialog is about.
   const [verifying, setVerifying] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
+  const [naming, setNaming] = useState<string | null>(null);
 
   const drivers = useQuery({
     queryKey: ["drivers", "pending"],
@@ -72,7 +73,12 @@ export function ApprovalsPage() {
   });
 
   const approve = useMutation({
-    mutationFn: (driverId: string) => api.post(`/admin/drivers/${driverId}/approve`),
+    mutationFn: ({ driverId, name }: { driverId: string; name: string }) =>
+      api.post(`/admin/drivers/${driverId}/approve`, {
+        // Empty means the operator did not answer, which leaves whatever the
+        // driver gave alone. Only a name typed here replaces one.
+        full_name: name.trim() || null,
+      }),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ["drivers"] });
       client.invalidateQueries({ queryKey: ["driver-documents", selected] });
@@ -109,6 +115,27 @@ export function ApprovalsPage() {
         onConfirm={(expires) => {
           if (verifying) review.mutate({ id: verifying, verified: true, expires });
           setVerifying(null);
+        }}
+      />
+
+      {/* The best name in the system: an operator, authenticated, reading a
+          tazkira, on the one screen with a decision attached. It is also the
+          only place a wrong name can be corrected -- the apply form appears on
+          whatever handset a household shares. */}
+      <InputDialog
+        open={naming !== null}
+        titleKey="admin.approvals.record_name"
+        labelKey="profile.field.name"
+        confirmKey="admin.approvals.approve_driver"
+        hintKey="admin.approvals.name_hint"
+        field="text"
+        required={false}
+        destructive={false}
+        initialValue={pending.find((d) => d.id === naming)?.full_name ?? ""}
+        onCancel={() => setNaming(null)}
+        onConfirm={(name) => {
+          if (naming) approve.mutate({ driverId: naming, name });
+          setNaming(null);
         }}
       />
 
@@ -260,7 +287,7 @@ export function ApprovalsPage() {
                 <button
                   className="primary"
                   disabled={data.missing.length > 0 || approve.isPending}
-                  onClick={() => approve.mutate(selected)}
+                  onClick={() => setNaming(selected)}
                 >
                   {t("admin.approvals.approve_driver")}
                 </button>

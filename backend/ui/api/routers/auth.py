@@ -20,6 +20,7 @@ from application.use_cases.authenticate import (
     VerifyOtp,
     VerifyOtpCommand,
 )
+from application.use_cases.record_name import RecordName, RecordNameCommand
 from domain.enums import ActorRole
 from ui.api import deps
 from ui.api.errors import ok
@@ -148,10 +149,26 @@ def update_me(
     body: UpdateProfileIn,
     actor: deps.ActorDep,
     users: Annotated[object, Depends(deps.users)],
+    audit: Annotated[object, Depends(deps.audit)],
 ) -> dict:
     row = users.get(actor.user_id)
     if body.full_name is not None:
-        row.full_name = body.full_name
+        # Through RecordName rather than assigned, so this agrees with the
+        # apply form and the approval screen about what a name is. The visible
+        # difference: "" now clears the name instead of storing an empty
+        # string, which was neither a name nor an absence -- every fallback in
+        # the product tests for null, so "" rendered as a blank that no code
+        # path knew was blank.
+        RecordName(users=users, audit=audit, clock=deps.clock()).execute(
+            RecordNameCommand(
+                user_id=actor.user_id,
+                actor_id=actor.user_id,
+                raw_name=body.full_name,
+                actor_role=actor.role,
+                # Their own account. Nobody else's name is reachable from here.
+                allow_overwrite=True,
+            )
+        )
     if body.locale is not None:
         row.locale = body.locale
     row.updated_by = actor.user_id
