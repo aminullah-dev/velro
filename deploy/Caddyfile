@@ -1,0 +1,48 @@
+# Reverse proxy and HTTPS for both surfaces, on subdomains of the domain the
+# company already owns -- no separate purchase, no free third-party
+# subdomain service. Caddy asks Let's Encrypt for a certificate the moment
+# each domain first resolves here; there is no separate step to remember.
+
+api.velro.linumic.com {
+	reverse_proxy api:8000
+
+	# Every response already carries a request_id (backend/ui/api/app.py); this
+	# adds Caddy's own, so a slow or failed request can be found in both the
+	# edge log and the application log by one shared id.
+	header X-Request-Id {http.request.uuid}
+
+	encode gzip
+
+	log {
+		output file /data/access.log {
+			roll_size 50mb
+			roll_keep 10
+		}
+	}
+}
+
+admin.velro.linumic.com {
+	# The admin panel calls its own origin at a relative /api/v1 (admin/src/
+	# api/client.ts), so both the static files and the proxied API have to be
+	# behind the same domain -- reverse-proxying the API subdomain instead
+	# would mean shipping a CORS setup for a request that never had to leave
+	# the browser's own origin.
+	handle /api/v1/* {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv/admin
+		try_files {path} /index.html
+		file_server
+	}
+
+	encode gzip
+
+	log {
+		output file /data/access.log {
+			roll_size 50mb
+			roll_keep 10
+		}
+	}
+}

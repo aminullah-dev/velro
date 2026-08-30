@@ -27,7 +27,7 @@ android {
     sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
     buildTypes {
         release {
-            buildConfigField("String", "API_BASE_URL", "\"https://api.velro.af/api/v1/\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://api.velro.linumic.com/api/v1/\"")
         }
     }
     compileOptions {

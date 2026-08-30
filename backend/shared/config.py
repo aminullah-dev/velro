@@ -77,6 +77,16 @@ _DEFAULTS: dict[str, Any] = {
     "twilio_sender_number": "",
     "push_provider": "console",
     "storage_root": "var/storage",
+    # Both tuple-typed, and both absent from this dict until now. `_coerce`
+    # only knows to split a comma-separated env value when the *existing*
+    # value it is replacing is already a tuple -- so with no entry here,
+    # setting VELRO_CORS_ORIGINS or VELRO_SUPPORTED_LOCALES silently produced
+    # a bare string instead. cors_origins then reached
+    # `CORSMiddleware(allow_origins=list(cfg.cors_origins))` in ui/api/app.py,
+    # and list() on a string explodes it into individual characters -- found
+    # only by setting the variable for the first time, for this deployment.
+    "cors_origins": (),
+    "supported_locales": ("en", "fa-AF", "ps"),
 }
 
 _REQUIRED = ("database_url", "jwt_secret")

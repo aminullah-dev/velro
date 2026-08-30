@@ -83,3 +83,37 @@ def test_an_unknown_key_is_refused_rather_than_ignored() -> None:
             env={**BASE, "VELRO_OTP_DEBUG_ECH": "true"},
         )
     assert "unknown" in str(raised.value).lower()
+
+
+class TestTupleSettingsFromTheEnvironment:
+    """cors_origins and supported_locales are the only tuple-typed settings.
+
+    Both were missing from _DEFAULTS, which _coerce reads to decide whether an
+    env value should be split on commas. Missing means it never was a tuple to
+    begin with, so an env value came through as a bare string -- and
+    ui/api/app.py does `list(cfg.cors_origins)`, which on a string produces one
+    entry per character. Silent because nobody had ever set
+    VELRO_CORS_ORIGINS before the first real deployment did.
+    """
+
+    def test_cors_origins_from_env_is_a_tuple(self) -> None:
+        config = settings(VELRO_CORS_ORIGINS="https://admin.velro.linumic.com")
+        assert config.cors_origins == ("https://admin.velro.linumic.com",)
+
+    def test_multiple_cors_origins_split_on_commas(self) -> None:
+        config = settings(VELRO_CORS_ORIGINS="https://a.example,https://b.example")
+        assert config.cors_origins == ("https://a.example", "https://b.example")
+
+    def test_a_single_origin_does_not_explode_into_characters(self) -> None:
+        """The regression this whole class exists for."""
+        config = settings(VELRO_CORS_ORIGINS="https://admin.velro.linumic.com")
+        assert list(config.cors_origins) == ["https://admin.velro.linumic.com"]
+
+    def test_supported_locales_from_env_is_also_a_tuple(self) -> None:
+        config = settings(VELRO_SUPPORTED_LOCALES="en,fa-AF")
+        assert config.supported_locales == ("en", "fa-AF")
+
+    def test_neither_setting_it_leaves_the_dataclass_defaults(self) -> None:
+        config = settings()
+        assert config.cors_origins == ()
+        assert config.supported_locales == ("en", "fa-AF", "ps")

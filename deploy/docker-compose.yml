@@ -1,0 +1,94 @@
+# The whole VELRO backend, on one VPS.
+#
+# Three containers because the product needs three things: a database that
+# keeps its data across restarts, an API that can be redeployed without
+# touching the database, and something in front of both that speaks HTTPS.
+# Nothing here reaches for more than that -- no orchestrator, no service
+# mesh, no second region. A station-based transportation product for one
+# valley does not need them, and each one would be a new way for a Friday
+# night deploy to fail with no one awake to notice.
+#
+# Usage:
+#   cp .env.example .env    # fill in real secrets, never commit this file
+#   docker compose up -d
+#   docker compose exec api alembic upgrade head
+#   docker compose exec api python scripts/seed.py   # first deploy only
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: velro
+      POSTGRES_USER: velro
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U velro"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No published port. Nothing outside this compose file has any business
+    # reaching Postgres directly, and a port left open here is one less thing
+    # standing between a scan of the VPS's IP and a copy of everyone's phone
+    # number.
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      VELRO_ENVIRONMENT: production
+      VELRO_DATABASE_URL: postgresql+psycopg://velro:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/velro
+      VELRO_JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      VELRO_CORS_ORIGINS: ${CORS_ORIGINS:-https://admin.velro.linumic.com}
+      VELRO_SMS_PROVIDER: ${SMS_PROVIDER:-twilio}
+      VELRO_TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      VELRO_TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      VELRO_TWILIO_SENDER_ID: ${TWILIO_SENDER_ID:-}
+      VELRO_TWILIO_SENDER_NUMBER: ${TWILIO_SENDER_NUMBER:-}
+      VELRO_STORAGE_ROOT: /app/var/storage
+      # otp_debug_echo is deliberately absent: config.load refuses to start a
+      # production deployment with it set, so it must never appear here even
+      # as "false" -- the guard exists precisely so this file cannot be the
+      # place someone flips it back on during a debugging session and forgets.
+    volumes:
+      # Tazkiras, driving licences, vehicle papers. A named volume, not a bind
+      # mount into the image: the container is rebuilt on every deploy and
+      # these documents must not go with it.
+      - api_storage:/app/var/storage
+    healthcheck:
+      # /readyz, not /healthz: liveness never touches the database on purpose
+      # (a Postgres blip must not make an orchestrator kill a healthy
+      # process), which means it would report healthy the instant this
+      # container's own database connection is broken. Compose only needs to
+      # know the API can actually serve a request.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data       # the ACME account and issued certificates
+      - caddy_config:/config
+      - ../admin/dist:/srv/admin:ro   # built by `npm run build` before deploy
+
+volumes:
+  db_data:
+  api_storage:
+  caddy_data:
+  caddy_config:
