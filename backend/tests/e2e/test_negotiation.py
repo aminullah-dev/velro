@@ -498,3 +498,51 @@ def test_there_is_no_way_for_staff_to_change_an_agreed_fare(client: TestClient) 
         and any(m in ops for m in ("post", "put", "patch", "delete"))
     ]
     assert not writable, f"staff can write to a negotiation: {writable}"
+
+
+def test_asking_twice_says_what_is_wrong_and_where_to_go(
+    client: TestClient, rider: dict, journey: dict
+) -> None:
+    """The refusal a passenger actually meets, and the one she could not read.
+
+    It used to raise BOOKING_LIMIT_REACHED with limit=1. That code's sentence
+    interpolates {maximum}, so the placeholder rendered raw — "You already have
+    {maximum} active bookings." — and it spoke of bookings she does not have.
+    She has one open ask, and what she needs is the route back to it.
+    """
+    _clear(client, rider)
+    first = _ask(client, rider, journey, 40_000)
+
+    second = client.post(
+        "/api/v1/ride-requests",
+        json={
+            "origin_station_id": journey["station_id"],
+            "destination_id": journey["destination_id"],
+            "passenger_count": 1,
+            "offered_fare_minor": 45_000,
+        },
+        headers=rider,
+    )
+    assert second.status_code == 409, second.text
+    error = second.json()["error"]
+    assert error["code"] == "RIDE_REQUEST_ALREADY_OPEN"
+    # The id travels with it, so the app can offer the way back rather than
+    # only the refusal.
+    assert error["context"]["ride_request_id"] == first["id"]
+
+
+def test_the_refusal_has_a_sentence_with_no_placeholder_left_in_it(
+    client: TestClient,
+) -> None:
+    """A message key whose parameters are never supplied reads as {maximum}."""
+    import json
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3] / "backend" / "resources" / "locales"
+    for locale in ("en", "fa-AF", "ps"):
+        messages = json.loads((root / f"{locale}.json").read_text(encoding="utf-8"))
+        sentence = messages["error.ride_request_already_open"]
+        assert not re.search(r"\{\w+\}", sentence), (
+            f"{locale}: the sentence expects a parameter the server does not send"
+        )

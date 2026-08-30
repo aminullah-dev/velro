@@ -124,6 +124,11 @@ SETTLEMENT_DIRECTION_INVALID: Final = "SETTLEMENT_DIRECTION_INVALID"
 RIDE_REQUEST_NOT_FOUND: Final = "RIDE_REQUEST_NOT_FOUND"
 RIDE_REQUEST_NOT_OPEN: Final = "RIDE_REQUEST_NOT_OPEN"
 RIDE_REQUEST_EXPIRED: Final = "RIDE_REQUEST_EXPIRED"
+# Distinct from BOOKING_LIMIT_REACHED, which it used to borrow. That code's
+# sentence interpolates {maximum} and the negotiation path passed limit=1, so a
+# passenger read the placeholder raw -- and it spoke of bookings, which she does
+# not have. She has one open ask, and what she needs is the way back to it.
+RIDE_REQUEST_ALREADY_OPEN: Final = "RIDE_REQUEST_ALREADY_OPEN"
 FARE_OFFER_NOT_FOUND: Final = "FARE_OFFER_NOT_FOUND"
 FARE_OFFER_NOT_OPEN: Final = "FARE_OFFER_NOT_OPEN"
 FARE_OFFER_SELF: Final = "FARE_OFFER_SELF"

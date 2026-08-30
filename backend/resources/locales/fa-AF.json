@@ -695,5 +695,12 @@
   "safety.awaiting_answer": "هنوز کسی جواب نداده است.",
   "driver.nav.home": "ولرو",
   "auth.sign_out_warning": "سفرهای شما از این تیلفون پاک می‌شود. برای ورود دوباره به انترنت ضرورت دارید.",
-  "rating.thanks": "تشکر. نظر شما فرستاده شد."
+  "rating.thanks": "تشکر. نظر شما فرستاده شد.",
+  "error.ride_request_already_open": "شما همین حالا یک درخواست سفر باز دارید. آن را باز کنید تا قیمت‌های رانندگان را ببینید.",
+  "home.open_request.title": "شما درخواست سفر داده‌اید",
+  "home.open_request.offers": "{count} راننده قیمت داده‌اند",
+  "home.open_request.waiting": "منتظر رانندگان",
+  "home.open_request.expires_in": "{minutes} دقیقه باقی است",
+  "home.open_request.expiring": "کمتر از یک دقیقه باقی است",
+  "home.open_request.open": "دیدن قیمت‌ها"
 }

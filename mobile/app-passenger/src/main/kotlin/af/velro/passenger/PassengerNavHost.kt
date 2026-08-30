@@ -1,5 +1,8 @@
 package af.velro.passenger
 
+import af.velro.core.i18n.Calendars
+import af.velro.domain.RideRequest
+import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.ConfirmDialog
 import af.velro.core.ui.component.BookingCard
 import af.velro.core.ui.component.EmptyState
@@ -45,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -112,6 +116,7 @@ fun PassengerNavHost(
                     onOpenBooking = { navController.navigate(Routes.bookingDetail(it)) },
                     onOpenHistory = { navController.navigate(Routes.HISTORY) },
                     onGetHelp = { helpOpen = true },
+                    onOpenOffers = { navController.navigate(Routes.OFFERS) },
                     onSignOut = onSignOut,
                 )
                 if (helpOpen) {
@@ -186,6 +191,7 @@ private fun HomeScreen(
     onOpenBooking: (String) -> Unit,
     onOpenHistory: () -> Unit,
     onGetHelp: () -> Unit,
+    onOpenOffers: () -> Unit,
     onSignOut: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -236,6 +242,19 @@ private fun HomeScreen(
                 .padding(horizontal = Spacing.gutter)
         ) {
             Spacer(Modifier.height(Spacing.lg))
+
+            // The ask she has open right now, above everything.
+            //
+            // Home showed only bookings, so a woman who closed the app while
+            // drivers were bidding had no route back to her own request — and
+            // the server refuses a second one while the first is alive, so she
+            // was locked out of the journey she had started, by her own app,
+            // with no way to see why.
+            state.openRequest?.let { request ->
+                OpenRequestCard(request = request, onOpen = onOpenOffers)
+                Spacer(Modifier.height(Spacing.lg))
+            }
+
             PrimaryAction(
                 label = strings["home.action.search"],
                 onClick = onBook,
@@ -271,6 +290,64 @@ private fun HomeScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+
+/**
+ * Her open ask, with a clock on it.
+ *
+ * The countdown matters more than it looks: a request expires on its own, and
+ * without a visible deadline the only two states she can tell apart are
+ * "something is happening" and "nothing is happening" — which are the same
+ * picture. Rendered from expiresAt, which the server already sends.
+ */
+@Composable
+private fun OpenRequestCard(request: RideRequest, onOpen: () -> Unit) {
+    val strings = LocalVelroStrings.current
+    val offers = request.liveOffers.size
+
+    VelroCard {
+        Column(Modifier.fillMaxWidth()) {
+            Text(
+                strings["home.open_request.title"],
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(Spacing.xs))
+            Text(
+                if (offers > 0) {
+                    strings["home.open_request.offers", "count" to offers]
+                } else {
+                    strings["home.open_request.waiting"]
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            request.expiresAt?.let { deadline ->
+                // Recomputed on every recomposition against the real clock, so
+                // it cannot show a number that stopped being true while the
+                // screen was in the background.
+                val minutes = Calendars.minutesUntil(deadline, java.time.Instant.now())
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    if (minutes >= 1) {
+                        strings["home.open_request.expires_in", "minutes" to minutes]
+                    } else {
+                        strings["home.open_request.expiring"]
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(Modifier.height(Spacing.md))
+            PrimaryAction(
+                label = strings["home.open_request.open"],
+                onClick = onOpen,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

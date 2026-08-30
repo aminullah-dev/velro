@@ -77,8 +77,15 @@ class RequestRide:
         # ``at`` is what stops a request nobody answered from blocking them for
         # ever: the row may still say OPEN until someone reads it, but a
         # deadline that has passed does not hold a place.
-        if self._requests.find_open_for_passenger(cmd.passenger_id, at=now) is not None:
-            raise ConflictError(error_codes.BOOKING_LIMIT_REACHED, limit=1)
+        open_already = self._requests.find_open_for_passenger(cmd.passenger_id, at=now)
+        if open_already is not None:
+            # Its id travels with the error so the app can offer the way back
+            # rather than only the refusal. Being told "no" with no route to the
+            # thing saying no is what makes a person reinstall the app.
+            raise ConflictError(
+                error_codes.RIDE_REQUEST_ALREADY_OPEN,
+                ride_request_id=open_already.id,
+            )
         ttl = self._settings.get_int(
             "ride_request.ttl_minutes", DEFAULT_REQUEST_TTL_MINUTES
         )

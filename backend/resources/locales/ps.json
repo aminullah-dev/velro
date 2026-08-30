@@ -695,5 +695,12 @@
   "safety.awaiting_answer": "لا چا ځواب نه دی ورکړی.",
   "driver.nav.home": "ولرو",
   "auth.sign_out_warning": "ستاسو سفرونه به له دې تلیفونه پاک شي. د بیا ننوتلو لپاره به انټرنېټ ته اړتیا ولرئ.",
-  "rating.thanks": "مننه. ستاسو نظر ولېږل شو."
+  "rating.thanks": "مننه. ستاسو نظر ولېږل شو.",
+  "error.ride_request_already_open": "تاسو دمخه د سفر یوه غوښتنه پرانیستې لرئ. پرانیزئ یې چې د چلوونکو بیې وګورئ.",
+  "home.open_request.title": "تاسو د سفر غوښتنه کړې",
+  "home.open_request.offers": "{count} چلوونکو بیه ښودلې",
+  "home.open_request.waiting": "د چلوونکو په تمه",
+  "home.open_request.expires_in": "{minutes} دقیقې پاتې دي",
+  "home.open_request.expiring": "تر یوې دقیقې لږ پاتې دي",
+  "home.open_request.open": "بیې وګورئ"
 }
