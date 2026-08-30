@@ -717,5 +717,12 @@
   "admin.approvals.name_hint": "مسافران این نام را وقتی می‌بینند که موتر او را انتخاب می‌کنند. اگر خالی بماند، نام تغییر نمی‌کند.",
   "driver.offline.title": "شما آفلاین هستید",
   "driver.offline.body": "مسافران شما را دیده نمی‌توانند و شما هم نمی‌بینید که کی منتظر است. برای شروع، کلید بالا را روشن کنید.",
-  "driver.offline.waiting": "همین حالا کسی منتظر است"
+  "driver.offline.waiting": "همین حالا کسی منتظر است",
+  "driver.requests.none": "همین حالا کسی منتظر نیست. وقتی باشد، همین‌جا می‌بینید.",
+  "driver.board.already_offered": "شما قیمت داده‌اید",
+  "driver.requests.arrived": "مسافر نو منتظر است",
+  "driver.verify.boarded": "مسافر تأیید شد. سوار شده است.",
+  "driver.verify.boarded_named": "{name} سوار شده است.",
+  "driver.trip.completed": "سفر تکمیل شد. {amount} به دست آوردید.",
+  "driver.trip.completed_plain": "سفر تکمیل شد."
 }

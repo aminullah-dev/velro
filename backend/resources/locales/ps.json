@@ -717,5 +717,12 @@
   "admin.approvals.name_hint": "مسافران دا نوم هغه وخت ویني چې د هغه موټر غوره کوي. که خالي پاتې شي، نوم نه بدلېږي.",
   "driver.offline.title": "تاسو آفلاین یاست",
   "driver.offline.body": "مسافران تاسو نه شي لیدلی، او تاسو هم نه وینئ چې څوک انتظار باسي. د پیل لپاره، پورتنۍ تڼۍ چالانه کړئ.",
-  "driver.offline.waiting": "همدا اوس څوک انتظار باسي"
+  "driver.offline.waiting": "همدا اوس څوک انتظار باسي",
+  "driver.requests.none": "همدا اوس څوک انتظار نه باسي. کله چې وي، همدلته به یې وګورئ.",
+  "driver.board.already_offered": "تاسو بیه ورکړې ده",
+  "driver.requests.arrived": "نوی مسافر انتظار باسي",
+  "driver.verify.boarded": "مسافر تایید شو. سپور شوی دی.",
+  "driver.verify.boarded_named": "{name} سپور شوی دی.",
+  "driver.trip.completed": "سفر بشپړ شو. {amount} مو ترلاسه کړل.",
+  "driver.trip.completed_plain": "سفر بشپړ شو."
 }

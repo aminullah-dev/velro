@@ -20,6 +20,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -52,6 +54,15 @@ fun VelroScreen(
     title: String,
     onBack: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {},
+    /**
+     * Where a transient message lands.
+     *
+     * Optional because most screens have nothing to say in passing. Added
+     * when the driver's effects channel turned out to have no collector at
+     * all -- three effects had been firing into nothing since they were
+     * written, and there was nowhere on screen for the answer to appear.
+     */
+    snackbarHost: SnackbarHostState? = null,
     scrollable: Boolean = true,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
@@ -101,6 +112,7 @@ fun VelroScreen(
                 ),
             )
         },
+        snackbarHost = { snackbarHost?.let { SnackbarHost(it) } },
     ) { insets ->
         val scroll = Modifier
             .fillMaxSize()

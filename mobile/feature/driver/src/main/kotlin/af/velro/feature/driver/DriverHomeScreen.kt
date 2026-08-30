@@ -23,6 +23,13 @@ import af.velro.domain.MoneyValue
 import af.velro.domain.TripStatus
 import af.velro.domain.VehicleStatus
 import androidx.compose.foundation.layout.Arrangement
+import android.content.Context
+import android.media.RingtoneManager
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import af.velro.domain.RideRequest
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Column
@@ -39,6 +46,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
@@ -48,6 +57,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
@@ -76,8 +86,53 @@ fun DriverHomeRoute(
     viewModel: DriverHomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // The effects channel had no collector at all until now -- PassengerBoarded
+    // has been fired into nothing since it was written. Which also means this
+    // is the first time anything on the driver's handset makes a noise.
+    val context = LocalContext.current
+    val strings = LocalVelroStrings.current
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is DriverHomeEffect.RequestsArrived -> {
+                    // Sound and vibration, because a driver waiting for work is
+                    // not staring at the screen -- he is parked, talking, or
+                    // watching the road. There is no push transport, so this is
+                    // the only thing that can reach him, and it only works
+                    // while the app is open. That limit is real and not
+                    // something this file can fix.
+                    ringOnce(context)
+                    snackbar.showSnackbar(strings["driver.requests.arrived"])
+                }
+                is DriverHomeEffect.TripCompleted -> {
+                    // Also never collected before now. A driver finished a
+                    // journey and the app said nothing about what he had
+                    // earned for it.
+                    snackbar.showSnackbar(
+                        effect.earning?.let {
+                            strings[
+                                "driver.trip.completed",
+                                "amount" to MoneyFormatter.format(it, strings),
+                            ]
+                        } ?: strings["driver.trip.completed_plain"]
+                    )
+                }
+                is DriverHomeEffect.PassengerBoarded -> {
+                    snackbar.showSnackbar(
+                        effect.name?.let {
+                            strings["driver.verify.boarded_named", "name" to it]
+                        } ?: strings["driver.verify.boarded"]
+                    )
+                }
+            }
+        }
+    }
+
     DriverHomeScreen(
         state, viewModel::onEvent,
+        snackbarHost = snackbar,
         onOpenDocuments = onOpenDocuments,
         onOpenVehicle = onOpenVehicle,
         onOpenEarnings = onOpenEarnings,
@@ -97,6 +152,7 @@ fun DriverHomeScreen(
     onOpenBoard: () -> Unit = {},
     onOpenReports: () -> Unit = {},
     onSignOut: () -> Unit = {},
+    snackbarHost: SnackbarHostState? = null,
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -184,6 +240,7 @@ fun DriverHomeScreen(
 
     VelroScreen(
         title = strings["driver.nav.home"],
+        snackbarHost = snackbarHost,
         actions = {
             IconButton(onClick = { signingOut = true }) {
                 Icon(
@@ -230,8 +287,27 @@ fun DriverHomeScreen(
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(Spacing.sm))
-                // Section 89: work arrives as passengers naming a price, so the
-                // board is the primary action for a driver who is online.
+
+                // The work, not a door to it. This was a single button
+                // labelled "waiting passengers", so a driver sitting online
+                // with somebody offering 200 afghani two miles away saw a
+                // green rectangle and no reason to press it. Nothing rings on
+                // this handset -- there is no push transport -- so if the
+                // screen does not say it, he does not know it.
+                if (state.waiting.isEmpty()) {
+                    Text(
+                        strings["driver.requests.none"],
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    for (request in state.waiting.take(3)) {
+                        WaitingRequest(request, onOpenBoard)
+                        Spacer(Modifier.height(Spacing.sm))
+                    }
+                }
+
+                Spacer(Modifier.height(Spacing.sm))
                 PrimaryAction(
                     label = strings["driver.board.title"],
                     onClick = onOpenBoard,
@@ -242,11 +318,52 @@ fun DriverHomeScreen(
             // earnings and said nothing -- a driver could sit on it while a
             // passenger waited at a station, with no way to learn that the
             // switch above was the only thing between them.
-            else -> OfflineNotice(state.waitingCount)
+            else -> OfflineNotice(state.waiting.size)
         }
 
         Spacer(Modifier.height(Spacing.xl))
         Earnings(state, onOpenEarnings)
+    }
+}
+
+/**
+ * One waiting passenger, on the driver's own home screen.
+ *
+ * The fare is the loudest thing on it deliberately: what a driver decides
+ * with is the money and the road, in that order, and both have to survive
+ * being read at arm's length in a parked car in sunlight.
+ */
+@Composable
+private fun WaitingRequest(request: RideRequest, onOpen: () -> Unit) {
+    val strings = LocalVelroStrings.current
+    VelroCard(Modifier.fillMaxWidth().clickable { onOpen() }) {
+        Column {
+            Text(
+                MoneyFormatter.format(request.offeredFare, strings),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(Spacing.xxs))
+            Text(
+                strings[
+                    "ride.journey.from_to",
+                    "origin" to (request.originStationName
+                        ?: strings["common.value.unknown"]),
+                    "destination" to (request.destinationName
+                        ?: strings["common.value.unknown"]),
+                ],
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (request.alreadyOffered) {
+                Spacer(Modifier.height(Spacing.xxs))
+                Text(
+                    strings["driver.board.already_offered"],
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 
@@ -807,6 +924,39 @@ private fun android.content.Context.dialNumber(number: String) {
                 android.content.Intent.ACTION_DIAL,
                 android.net.Uri.parse("tel:$number"),
             ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
+}
+
+
+/**
+ * A short sound and a buzz, once.
+ *
+ * The system notification tone rather than a bundled sound file: a driver in
+ * Ghorband has already chosen a volume he can hear over a Corolla engine, and
+ * an app that ships its own tone ignores that choice. RingtoneManager also
+ * respects silent mode, which a raw MediaPlayer would not -- if he has
+ * silenced the phone he meant it, and the vibration still reaches him.
+ */
+private fun ringOnce(context: Context) {
+    runCatching {
+        RingtoneManager
+            .getRingtone(
+                context,
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+            )
+            ?.play()
+    }
+    runCatching {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE)
+                as VibratorManager).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        vibrator.vibrate(
+            VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE)
         )
     }
 }

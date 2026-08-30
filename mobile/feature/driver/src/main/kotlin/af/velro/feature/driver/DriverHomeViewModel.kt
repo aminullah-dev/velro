@@ -4,6 +4,7 @@ import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
 import af.velro.data.repository.CurrentAssignment
 import af.velro.data.repository.NegotiationRepository
+import af.velro.domain.RideRequest
 import af.velro.data.repository.NotificationRepository
 import af.velro.data.repository.DriverRepository
 import af.velro.domain.DriverAvailability
@@ -52,7 +53,7 @@ data class DriverHomeUiState(
      * old. He had no way to find out that turning the switch on would show
      * him a fare.
      */
-    val waitingCount: Int = 0,
+    val waiting: List<RideRequest> = emptyList(),
 
     val isLoading: Boolean = true,
     val isBusy: Boolean = false,
@@ -123,6 +124,15 @@ sealed interface DriverHomeEvent {
 sealed interface DriverHomeEffect {
     data class TripCompleted(val earning: MoneyValue?) : DriverHomeEffect
     data class PassengerBoarded(val name: String?) : DriverHomeEffect
+
+    /**
+     * New work appeared while he had the app open.
+     *
+     * An effect rather than state, because it must fire once per arrival. A
+     * boolean in state would replay on every rotation and ring at him for a
+     * request he already saw.
+     */
+    data class RequestsArrived(val count: Int) : DriverHomeEffect
 }
 
 /** Often enough to feel live, rarely enough not to drain a phone or a data bundle. */
@@ -226,8 +236,16 @@ class DriverHomeViewModel @Inject constructor(
         // Not gated on being online. One small read, and it is the only thing
         // that turns "you are offline" from a status into a reason to act.
         if (_state.value.assignment == null) {
-            (negotiation.openRequests() as? ApiResult.Success)?.let { waiting ->
-                _state.update { it.copy(waitingCount = waiting.value.size) }
+            (negotiation.openRequests() as? ApiResult.Success)?.let { fetched ->
+                val previous = _state.value.waiting.map { it.id }.toSet()
+                val arrived = fetched.value.filter { it.id !in previous }
+                _state.update { it.copy(waiting = fetched.value) }
+                // Something new, and he is in a position to take it. There is
+                // no push transport, so this ring is the only thing standing
+                // between a request and a driver who is looking at his lap.
+                if (arrived.isNotEmpty() && _state.value.isOnline) {
+                    _effects.send(DriverHomeEffect.RequestsArrived(arrived.size))
+                }
             }
         }
         (drivers.earnings() as? ApiResult.Success)?.let { earnings ->

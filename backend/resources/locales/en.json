@@ -717,5 +717,12 @@
   "admin.approvals.name_hint": "Passengers see this name when they choose his car. Leave it empty to approve without changing it.",
   "driver.offline.title": "You are offline",
   "driver.offline.body": "Passengers cannot see you, and you cannot see who is waiting. Turn the switch above on to start.",
-  "driver.offline.waiting": "Someone is waiting right now"
+  "driver.offline.waiting": "Someone is waiting right now",
+  "driver.requests.none": "Nobody is waiting right now. You will see them here.",
+  "driver.board.already_offered": "You have named a price",
+  "driver.requests.arrived": "A new passenger is waiting",
+  "driver.verify.boarded": "Passenger verified. They are on board.",
+  "driver.verify.boarded_named": "{name} is on board.",
+  "driver.trip.completed": "Trip complete. You earned {amount}.",
+  "driver.trip.completed_plain": "Trip complete."
 }
