@@ -74,12 +74,26 @@ class TwilioSmsSender:
         account_sid: str,
         auth_token: str,
         sender: str,
+        api_key_sid: str | None = None,
         client: httpx.Client | None = None,
         timeout_seconds: float = 10.0,
     ) -> None:
         self._account_sid = account_sid
         self._auth_token = auth_token
         self._sender = sender
+        # Twilio accepts two credential shapes, and they are not interchangeable
+        # in the way the first version of this assumed.
+        #
+        # With the account's own Auth Token, the username IS the account SID, so
+        # one value serves both the URL path and the auth pair. With an API key
+        # -- which is what production should use, because it can be revoked
+        # without rotating the whole account's password -- the username is the
+        # key's own SK... sid and the URL still needs the AC... account sid.
+        #
+        # Sending both as one value fails with 20003 Authenticate, and it fails
+        # identically whether the mistake is a wrong password or a mismatched
+        # pair, which is what made this take a while to see on a live server.
+        self._auth_user = api_key_sid or account_sid
         self._client = client
         self._timeout = timeout_seconds
 
@@ -114,7 +128,7 @@ class TwilioSmsSender:
             client = self._client or httpx.Client(timeout=self._timeout)
             response = client.post(
                 f"{TWILIO_API}/Accounts/{self._account_sid}/Messages.json",
-                auth=(self._account_sid, self._auth_token),
+                auth=(self._auth_user, self._auth_token),
                 data={"To": phone.value, "From": self._sender, "Body": body},
             )
         except httpx.HTTPError as error:

@@ -362,6 +362,7 @@ def sms() -> ConsoleSmsSender | FallbackSmsSender:
     senders = [
         TwilioSmsSender(
             account_sid=configured.twilio_account_sid,
+            api_key_sid=configured.twilio_api_key_sid or None,
             auth_token=configured.twilio_auth_token,
             sender=sender,
         )

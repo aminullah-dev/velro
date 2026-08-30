@@ -237,3 +237,57 @@ class TestThePrice:
         free would understate the bill."""
         assert _price_to_micros(None) is None
         assert _price_to_micros("") is None
+
+
+class TestWhichCredentialPairIsSent:
+    """Twilio takes two credential shapes and they are not interchangeable.
+
+    With the account's own Auth Token the username IS the account sid, so one
+    value serves the URL and the auth pair. With an API key -- what production
+    should use, since it revokes without rotating the whole account -- the
+    username is the key's SK... sid while the URL still needs the AC... one.
+
+    Sending the account sid as the username with an API key's secret fails
+    with 20003 Authenticate, which is the same error a plain wrong password
+    gives. That ambiguity is why this was only caught against a live server,
+    and it is what this class exists to stop happening again.
+    """
+
+    def seen_request(self, **kwargs) -> httpx.Request:
+        captured: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured.append(request)
+            return httpx.Response(201, json=ACCEPTED)
+
+        TwilioSmsSender(
+            account_sid="AC0000000000000000000000000000000",
+            auth_token="the-secret",
+            sender="VELRO",
+            client=transport(handler),
+            **kwargs,
+        ).attempt(
+            phone=MTN, message_key="auth.sms.otp",
+            payload={"code": "1", "ttl_minutes": 5}, locale="fa-AF",
+        )
+        return captured[0]
+
+    def test_without_a_key_the_account_sid_is_the_username(self) -> None:
+        request = self.seen_request()
+        assert "AC0000000000000000000000000000000" in str(request.url)
+        assert request.headers["authorization"] == httpx.BasicAuth(
+            "AC0000000000000000000000000000000", "the-secret"
+        )._auth_header
+
+    def test_with_a_key_the_key_sid_is_the_username(self) -> None:
+        request = self.seen_request(api_key_sid="SK1111111111111111111111111111111")
+        assert request.headers["authorization"] == httpx.BasicAuth(
+            "SK1111111111111111111111111111111", "the-secret"
+        )._auth_header
+
+    def test_the_url_always_carries_the_account_sid_not_the_key(self) -> None:
+        """The half that was wrong on the live server: the key sid went into
+        both places, so the path pointed at an account that does not exist."""
+        request = self.seen_request(api_key_sid="SK1111111111111111111111111111111")
+        assert "AC0000000000000000000000000000000" in str(request.url)
+        assert "SK1111111111111111111111111111111" not in str(request.url)

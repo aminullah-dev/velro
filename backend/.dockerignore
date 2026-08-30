@@ -1,0 +1,38 @@
+# The Dockerfile does `COPY . .`, so anything not excluded here ships inside
+# the production image.
+
+# velro.toml is the development config, and it is checked in -- it sets
+# environment = "development" and otp_debug_echo = true. config.load reads it
+# before the environment, so a variable that is merely *absent* from the
+# environment falls back to whatever this file says. The first real production
+# deploy failed at startup for exactly that reason: OTP_DEBUG_ECHO was gone
+# from .env and still true inside the image.
+#
+# The guard caught it, which is the guard working. But a production image has
+# no business carrying a development config in the first place, and the fix
+# belongs here rather than in a comment telling people to remember.
+velro.toml
+
+# Local virtualenv: several hundred megabytes, wrong platform, and it would
+# shadow the site-packages that `pip install .` produces in the image.
+.venv/
+venv/
+
+# Uploaded documents and generated files. The compose file mounts a named
+# volume at /app/var/storage; baking a local copy in would both bloat the
+# image and put somebody's tazkira inside a build artefact.
+var/
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Tests do not run in the production image, and the fixtures include captured
+# API responses.
+tests/
+
+.env
+.env.*
+!.env.example

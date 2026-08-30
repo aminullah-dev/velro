@@ -43,6 +43,11 @@ class Settings:
     otp_debug_echo: bool = False
     sms_provider: str = "console"
     twilio_account_sid: str = ""
+    # The API key's own SK... sid, when one is used. Empty means the account's
+    # own Auth Token is the credential, in which case the username IS the
+    # account sid. Production should prefer a key: it can be revoked on its own
+    # without rotating the password to the whole account.
+    twilio_api_key_sid: str = ""
     twilio_auth_token: str = ""
     # The registered alphanumeric sender ID -- what Etisalat, MTN, Roshan and
     # Salaam require, and what AWCC refuses. Registration takes about a week.
@@ -72,6 +77,7 @@ _DEFAULTS: dict[str, Any] = {
     "otp_debug_echo": False,
     "sms_provider": "console",
     "twilio_account_sid": "",
+    "twilio_api_key_sid": "",
     "twilio_auth_token": "",
     "twilio_sender_id": "",
     "twilio_sender_number": "",
