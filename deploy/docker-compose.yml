@@ -43,7 +43,15 @@ services:
       db:
         condition: service_healthy
     environment:
-      VELRO_ENVIRONMENT: production
+      # Overridable, not because staging is the plan -- because it wasn't.
+      # SMS is Twilio-shaped but not yet Twilio-real: no account SID, no
+      # sender. config.load refuses "production" with no real SMS provider,
+      # which is exactly right and exactly why the first real deploy had to
+      # set this to "staging" in .env until that credential exists. Once it
+      # does, deleting the line in .env is the whole flip back to production
+      # -- the default here stays production so a deployment that never
+      # touches this variable gets the strict behaviour, not the loose one.
+      VELRO_ENVIRONMENT: ${VELRO_ENVIRONMENT:-production}
       VELRO_DATABASE_URL: postgresql+psycopg://velro:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/velro
       VELRO_JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       VELRO_CORS_ORIGINS: ${CORS_ORIGINS:-https://admin.velro.linumic.com}
