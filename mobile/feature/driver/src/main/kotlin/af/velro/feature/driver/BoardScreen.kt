@@ -81,9 +81,17 @@ fun BoardScreen(
         return
     }
 
+    // This screen owns a LazyColumn, so the frame must not scroll for it.
+    // Without this the board crashed outright -- a lazy list inside a
+    // verticalScroll is measured with infinite height, which Compose refuses.
+    // It never showed up in testing because the crash needs a request to be
+    // waiting: with an empty board the other branch renders an EmptyState and
+    // nothing is nested. So the driver's board worked perfectly until the
+    // moment somebody actually wanted a car, and then it killed the app.
     VelroScreen(
         title = strings["driver.board.title"],
         onBack = onBack,
+        scrollable = false,
         modifier = modifier,
     ) {
         Spacer(Modifier.height(Spacing.md))

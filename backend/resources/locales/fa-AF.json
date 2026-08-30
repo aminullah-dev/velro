@@ -110,6 +110,7 @@
   "location.label.district": "ولسوالی",
   "location.label.village": "قریه",
   "location.label.station": "ایستگاه",
+  "location.label.origin": "محل سوارشدن",
   "location.label.destination": "مقصد",
   "location.hint.search": "نام قریه یا ایستگاه را بنویسید",
   "location.distance.metres": "{distance} متر فاصله",

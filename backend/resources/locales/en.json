@@ -110,6 +110,7 @@
   "location.label.district": "District",
   "location.label.village": "Village",
   "location.label.station": "Station",
+  "location.label.origin": "Pick-up",
   "location.label.destination": "Destination",
   "location.hint.search": "Type a village or station name",
   "location.distance.metres": "{distance} m away",

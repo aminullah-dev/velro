@@ -56,7 +56,32 @@ admin() {
   step "admin build"   npm run --silent build
 }
 
+# A LazyColumn inside VelroScreen's scrolling frame crashes at measure time:
+# Compose refuses a lazy list given infinite height. It is not a compile error
+# and no unit test sees it, because the crash needs the list to have at least
+# one row -- an empty branch renders an EmptyState and nothing is nested. The
+# driver's board shipped this way: it worked all the way through testing and
+# died the first time a passenger was actually waiting for a car.
+#
+# VelroScreen(scrollable = false) is the fix, and this is what stops the next
+# screen repeating it.
+nested_lazy_lists() {
+  local bad=0 f
+  while IFS= read -r f; do
+    # Skip the file that defines VelroScreen: it names the lazy types in its
+    # own documentation, which is the opposite of the mistake.
+    grep -q "fun VelroScreen(" "$f" && continue
+    grep -q "VelroScreen(" "$f" || continue
+    grep -qE "LazyColumn\(|LazyRow\(|LazyVerticalGrid\(" "$f" || continue
+    grep -q "scrollable = false" "$f" && continue
+    echo "  $f has a lazy list inside VelroScreen but never passes scrollable = false" >&2
+    bad=1
+  done < <(find "$ROOT/mobile" -name "*.kt" -not -path "*/build/*")
+  return $bad
+}
+
 mobile() {
+
   cd "$ROOT/mobile"
   command -v gradle >/dev/null || { echo "gradle not found; skipping mobile"; return 0; }
   # :domain is a plain Kotlin module, so this also proves it stayed free of
@@ -70,6 +95,7 @@ mobile() {
   # The emergency numbers and the categories the sheet ships compiled in.
   step "mobile safety"  gradle :feature:safety:testDebugUnitTest --console=plain -q
   step "mobile auth"    gradle :feature:auth:testDebugUnitTest --console=plain -q
+  step "mobile nesting" nested_lazy_lists
   step "mobile build"   gradle :app-driver:assembleDebug :app-passenger:assembleDebug --console=plain -q
 
   # Room migrations and the sign-out path, on a real device.

@@ -42,6 +42,91 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+/**
+ * Where the journey starts and where it ends.
+ *
+ * A dot, a line, a square -- the shape every transport product uses, because a
+ * journey is two places and the space between them, and that reads without any
+ * words at all. That matters more here than in Kabul or London: a passenger who
+ * cannot read the station names can still see two ends and a line.
+ *
+ * VELRO already fetched both names, cached them in Room, mapped them into the
+ * domain and then showed them to nobody -- the only reader was the emergency
+ * help sheet. A booking card said "BKG-000014", "seat 3" and a fare, and never
+ * said the trip went from Siahgird to Charikar.
+ *
+ * No map is involved, and deliberately so: the booking flow must work on a
+ * handset that has never successfully loaded a tile. This is the whole visual
+ * of a route, in two text rows and eight pixels of line.
+ *
+ * The rail sits at the start edge, so it moves to the right in Dari and Pashto
+ * and to the left in English without a mirrored asset -- Row already resolves
+ * start against the layout direction.
+ */
+@Composable
+fun JourneyLine(
+    origin: String?,
+    destination: String?,
+    modifier: Modifier = Modifier,
+    style: androidx.compose.ui.text.TextStyle? = null,
+) {
+    val strings = LocalVelroStrings.current
+    // Nothing to draw rather than a line between two blanks. A booking made
+    // before the names were being sent still renders, just without this.
+    if (origin.isNullOrBlank() && destination.isNullOrBlank()) return
+
+    val text = style ?: MaterialTheme.typography.bodyLarge
+    val faded = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(modifier = modifier.fillMaxWidth()) {
+        // The rail. Fixed height per row so the dots line up with the first
+        // line of each name even when a long name wraps.
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(end = Spacing.md),
+        ) {
+            Box(
+                Modifier
+                    .padding(top = Spacing.sm)
+                    .size(RAIL_DOT)
+                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50)),
+            )
+            Box(
+                Modifier
+                    .padding(vertical = Spacing.xxs)
+                    .size(width = RAIL_WIDTH, height = RAIL_GAP)
+                    .background(MaterialTheme.colorScheme.outline),
+            )
+            // A square, not a second dot: the two ends of a journey are not
+            // interchangeable, and shape distinguishes them for someone who
+            // cannot rely on colour.
+            Box(
+                Modifier
+                    .size(RAIL_DOT)
+                    .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(Radius.sm / 4)),
+            )
+        }
+
+        Column(Modifier.fillMaxWidth()) {
+            Text(
+                origin?.takeIf { it.isNotBlank() } ?: strings["location.label.origin"],
+                style = text,
+                color = if (origin.isNullOrBlank()) faded else MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.size(Spacing.sm))
+            Text(
+                destination?.takeIf { it.isNotBlank() } ?: strings["location.label.destination"],
+                style = text,
+                color = if (destination.isNullOrBlank()) faded else MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+private val RAIL_DOT = 10.dp
+private val RAIL_WIDTH = 2.dp
+private val RAIL_GAP = 18.dp
+
 /** A station in a browse or search list. */
 @Composable
 fun StationRow(
@@ -268,6 +353,18 @@ fun BookingCard(
                 )
                 StatusChip(booking.status.messageKey(), booking.status.tone())
             }
+
+            Spacer(Modifier.size(Spacing.md))
+
+            // The journey itself, above the reference number and the seat.
+            // This card used to lead with "BKG-000014" -- the one thing on it
+            // the passenger never chose and cannot use to recognise their own
+            // trip in a list of four.
+            JourneyLine(
+                origin = booking.pickupStationName,
+                destination = booking.dropoffDestinationName,
+                style = MaterialTheme.typography.bodyMedium,
+            )
 
             Spacer(Modifier.size(Spacing.md))
 

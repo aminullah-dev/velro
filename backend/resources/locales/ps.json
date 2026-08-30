@@ -110,6 +110,7 @@
   "location.label.district": "ولسوالي",
   "location.label.village": "کلی",
   "location.label.station": "دریځ",
+  "location.label.origin": "د سپرېدو ځای",
   "location.label.destination": "منزل",
   "location.hint.search": "د کلي یا دریځ نوم ولیکئ",
   "location.distance.metres": "{distance} متره واټن",
