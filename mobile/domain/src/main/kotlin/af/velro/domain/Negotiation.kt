@@ -63,6 +63,14 @@ data class RideRequest(
      * a departure time on a card.
      */
     val requestedFor: Instant? = null,
+    /**
+     * When the passenger wants to come back, if they said.
+     *
+     * Null is one way, and most journeys are. A return is not a second
+     * request: in Ghorband a car to Charikar or Kabul is hired for both legs
+     * at one price, argued once, and the way back is usually a different day.
+     */
+    val returnFor: Instant? = null,
     val expiresAt: Instant? = null,
     val createdAt: Instant? = null,
     val tripId: String? = null,

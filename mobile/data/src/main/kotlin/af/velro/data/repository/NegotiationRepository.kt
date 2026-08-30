@@ -38,6 +38,8 @@ class NegotiationRepository @Inject constructor(
         note: String? = null,
         /** Null means now. The server treats an absent value the same way. */
         requestedFor: Instant? = null,
+        /** Null means one way. */
+        returnFor: Instant? = null,
     ): ApiResult<RideRequest> =
         mapper.call {
             api.requestRide(
@@ -48,6 +50,7 @@ class NegotiationRepository @Inject constructor(
                     offered_fare_minor = offeredFareMinor,
                     note = note?.trim()?.ifBlank { null },
                     requested_for = requestedFor?.toString(),
+                    return_for = returnFor?.toString(),
                 )
             )
         }.map(::toDomain)
@@ -127,6 +130,7 @@ class NegotiationRepository @Inject constructor(
         agreedFare = dto.agreed_fare?.let { MoneyValue(it.amount_minor, it.currency) },
         note = dto.note,
         requestedFor = dto.requested_for.toInstantOrNull(),
+        returnFor = dto.return_for?.toInstantOrNull(),
         expiresAt = dto.expires_at.toInstantOrNull(),
         createdAt = dto.created_at.toInstantOrNull(),
         tripId = dto.trip_id,

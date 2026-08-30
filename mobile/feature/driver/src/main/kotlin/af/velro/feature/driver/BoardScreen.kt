@@ -177,6 +177,19 @@ private fun RequestCard(
                     color = MaterialTheme.colorScheme.secondary,
                 )
             }
+            // The way back, if there is one.
+            //
+            // A driver naming a price without this is naming it for half the
+            // job: in Ghorband the return is usually a different day, so it
+            // means keeping the car free tomorrow as well.
+            request.returnFor?.let { back ->
+                Text(
+                    strings["ride.return.label"] + ": " +
+                        Calendars.dateTime(back, strings.locale),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

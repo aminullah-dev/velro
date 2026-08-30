@@ -46,6 +46,10 @@ class RequestRideIn(Schema):
     # and the trip it becomes were all built for a departure time, and this
     # layer was the one place it was dropped.
     requested_for: datetime | None = None
+    # When they want to come back. Null is one way, which is most journeys --
+    # but a car to Kabul is hired for both legs at one price, so the driver has
+    # to be told about the second one before he names it.
+    return_for: datetime | None = None
 
 
 class OfferFareIn(Schema):
@@ -87,6 +91,7 @@ class RideRequestOut(Schema):
     # whether he is being asked to leave now or at six tomorrow morning; it was
     # the same question the request could not previously ask.
     requested_for: str
+    return_for: str | None = None
     expires_at: str
     created_at: str
     trip_id: str | None
@@ -123,6 +128,7 @@ def request_ride(
             vehicle_type_code=body.vehicle_type_code,
             note=body.note,
             requested_for=body.requested_for,
+            return_for=body.return_for,
         )
     )
     return ok(_request_out(row, [], geo=geo).model_dump())
@@ -454,6 +460,7 @@ def _request_out(row, offers, *, geo) -> RideRequestOut:
         ),
         note=row.note,
         requested_for=row.requested_for.isoformat(),
+        return_for=row.return_for.isoformat() if row.return_for else None,
         expires_at=row.expires_at.isoformat(),
         created_at=row.created_at.isoformat() if row.created_at else "",
         trip_id=row.trip_id,

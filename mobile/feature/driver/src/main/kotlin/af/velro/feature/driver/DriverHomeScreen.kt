@@ -394,6 +394,14 @@ private fun WaitingRequest(request: RideRequest, onOpen: () -> Unit) {
                     color = MaterialTheme.colorScheme.secondary,
                 )
             }
+            request.returnFor?.let { back ->
+                Text(
+                    strings["ride.return.label"] + ": " +
+                        Calendars.dateTime(back, strings.locale),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
             if (request.alreadyOffered) {
                 Spacer(Modifier.height(Spacing.xxs))
                 Text(

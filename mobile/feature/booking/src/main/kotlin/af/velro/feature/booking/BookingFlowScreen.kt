@@ -34,8 +34,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -390,7 +393,18 @@ private fun DeparturePicker(state: BookingFlowUiState, onEvent: (BookingEvent) -
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                // Opened at the chosen hour rather than at the start of the
+                // list. The return defaults to two in the afternoon, which is
+                // ten chips along: the row showed 04:00 onwards with nothing
+                // apparently selected, and a picker that hides your own choice
+                // reads as a picker you have not used yet.
+                LazyRow(
+                    state = rememberLazyListState(
+                        initialFirstVisibleItemIndex =
+                            hours.indexOf(state.departureHour).coerceAtLeast(0)
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
                     items(hours, key = { it }) { hour ->
                         FilterChip(
                             selected = state.departureHour == hour,
@@ -407,6 +421,69 @@ private fun DeparturePicker(state: BookingFlowUiState, onEvent: (BookingEvent) -
                         )
                     }
                 }
+            }
+
+            // The way back, offered only once there is a day to count it from.
+            //
+            // Ghorband returns are usually not the same day: a car to Kabul
+            // goes today and comes back tomorrow or later. That is why the
+            // return belongs in this ask rather than in a second negotiation
+            // afterwards -- one car, one driver, one price argued once. A
+            // passenger who agrees only the outbound has to find a car again
+            // from a town that is not theirs.
+            Spacer(Modifier.height(Spacing.xs))
+            Text(
+                strings["ride.ask.return"],
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                val backs = listOf(
+                    null to strings["ride.return.none"],
+                    0 to strings["ride.return.same_day"],
+                    1 to strings["ride.return.next_day"],
+                    2 to strings["ride.return.in_days", "days" to 2],
+                    3 to strings["ride.return.in_days", "days" to 3],
+                )
+                for ((after, label) in backs) {
+                    FilterChip(
+                        selected = state.returnAfterDays == after,
+                        onClick = {
+                            onEvent(BookingEvent.ReturnChanged(after, state.returnHour))
+                        },
+                        label = { Text(label) },
+                    )
+                }
+            }
+
+            if (state.returnAfterDays != null) {
+                LazyRow(
+                    state = rememberLazyListState(
+                        initialFirstVisibleItemIndex =
+                            state.returnHours.indexOf(state.returnHour).coerceAtLeast(0)
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    items(state.returnHours, key = { it }) { hour ->
+                        FilterChip(
+                            selected = state.returnHour == hour,
+                            onClick = {
+                                onEvent(
+                                    BookingEvent.ReturnChanged(state.returnAfterDays, hour)
+                                )
+                            },
+                            label = {
+                                Text(
+                                    Numerals.localise("%02d:00".format(hour), strings.locale)
+                                )
+                            },
+                        )
+                    }
+                }
+                Text(
+                    strings["ride.return.hint"],
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -535,8 +612,19 @@ private fun Confirmation(state: BookingFlowUiState, onFinished: (String) -> Unit
 private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {
     val strings = LocalVelroStrings.current
 
+    // Scrolls, because this step is a form and forms grow.
+    //
+    // The frame around it does not scroll -- the other steps are lazy lists
+    // that scroll themselves -- so for as long as this one happened to fit on
+    // screen, nobody noticed. Adding the departure and return pickers pushed
+    // "request a car" past the bottom edge with no way to reach it, which is
+    // the whole screen's only action: the passenger could choose a fare, a
+    // day, an hour and a return, and then could not ask for the car.
     Column(
-        Modifier.fillMaxWidth().imePadding(),
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .imePadding(),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         VelroCard {

@@ -232,6 +232,11 @@ class RideRequestRow(Auditable, Base):
     passenger_count: Mapped[int] = mapped_column(Integer, nullable=False)
     vehicle_type_code: Mapped[str | None] = mapped_column(String(24))
     requested_for: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # When they want to come back, if they said. Null is "one way", which
+    # is most of them.
+    return_for: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False)
     # What the passenger proposed. Not a quote from the platform -- there is no

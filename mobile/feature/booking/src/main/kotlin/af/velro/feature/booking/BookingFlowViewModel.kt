@@ -49,6 +49,8 @@ import kotlinx.coroutines.launch
 private const val EARLIEST_DEPARTURE_HOUR = 4
 private const val LATEST_DEPARTURE_HOUR = 20
 private const val DEFAULT_DEPARTURE_HOUR = 6
+// Coming back is an afternoon thing far more often than a dawn one.
+private const val DEFAULT_RETURN_HOUR = 14
 
 data class BookingFlowUiState(
     val step: Step = Step.ORIGIN_DISTRICT,
@@ -94,6 +96,18 @@ data class BookingFlowUiState(
      */
     val departureDay: Int? = null,
     val departureHour: Int = DEFAULT_DEPARTURE_HOUR,
+
+    /**
+     * Days after the outbound to come back, or null for one way.
+     *
+     * Counted from the departure rather than from today, because that is how
+     * the journey is described: "back the day after", not "back on the
+     * fourteenth". Ghorband returns are usually not the same day -- a car to
+     * Kabul goes today and comes back tomorrow or later -- so 0 is offered but
+     * is not the default.
+     */
+    val returnAfterDays: Int? = null,
+    val returnHour: Int = DEFAULT_RETURN_HOUR,
     val askedRequestId: String? = null,
 ) {
     enum class Step {
@@ -130,6 +144,42 @@ data class BookingFlowUiState(
     }
 
     /**
+     * The return leg as an instant, or null for one way.
+     *
+     * Null whenever there is no departure day either: a return counted from
+     * "now" would be counted from nothing.
+     */
+    fun returnFor(): Instant? {
+        val out = departureDay ?: return null
+        val after = returnAfterDays ?: return null
+        return LocalDate.now(Calendars.KABUL)
+            .plusDays((out + after).toLong())
+            .atTime(returnHour, 0)
+            .atZone(Calendars.KABUL)
+            .toInstant()
+    }
+
+    /**
+     * The hours worth offering for the return leg.
+     *
+     * A same-day return must leave after the outbound does, so those hours
+     * start above the departure hour; on any later day the whole range is
+     * open. Reusing the outbound's list here would have offered a six o'clock
+     * return on a six o'clock departure -- a request the server refuses, and
+     * being refused for choosing what the app offered is worse than never
+     * being offered it.
+     *
+     * A return landing on today is impossible to reach: the earliest departure
+     * is today, and a same-day return must be later than it.
+     */
+    val returnHours: List<Int>
+        get() {
+            val first =
+                if (returnAfterDays == 0) departureHour + 1 else EARLIEST_DEPARTURE_HOUR
+            return (maxOf(first, EARLIEST_DEPARTURE_HOUR)..LATEST_DEPARTURE_HOUR).toList()
+        }
+
+    /**
      * The hours still worth offering for the chosen day.
      *
      * Today's list starts after the current hour: showing four in the morning
@@ -159,6 +209,7 @@ sealed interface BookingEvent {
     data class FareChanged(val text: String) : BookingEvent
     data class NoteChanged(val text: String) : BookingEvent
     data class DepartureChanged(val day: Int?, val hour: Int) : BookingEvent
+    data class ReturnChanged(val afterDays: Int?, val hour: Int) : BookingEvent
     data object AskForRide : BookingEvent
     data class TripChosen(val option: TripOption) : BookingEvent
     data object Search : BookingEvent
@@ -213,7 +264,18 @@ class BookingFlowViewModel @Inject constructor(
             is BookingEvent.NoteChanged -> _state.update { it.copy(note = event.text) }
 
             is BookingEvent.DepartureChanged -> _state.update {
-                it.copy(departureDay = event.day, departureHour = event.hour)
+                // A return is relative to the outbound, so moving the outbound
+                // to "now" takes the return with it: "back two days after"
+                // means nothing once there is no departure day to count from.
+                it.copy(
+                    departureDay = event.day,
+                    departureHour = event.hour,
+                    returnAfterDays = if (event.day == null) null else it.returnAfterDays,
+                )
+            }
+
+            is BookingEvent.ReturnChanged -> _state.update {
+                it.copy(returnAfterDays = event.afterDays, returnHour = event.hour)
             }
             BookingEvent.AskForRide -> ask()
             BookingEvent.Search -> search()
@@ -319,6 +381,7 @@ class BookingFlowViewModel @Inject constructor(
                 offeredFareMinor = minor,
                 note = current.note,
                 requestedFor = current.requestedFor(),
+                returnFor = current.returnFor(),
             )
             when (result) {
                 is ApiResult.Success -> _state.update {

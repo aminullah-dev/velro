@@ -553,6 +553,13 @@
   "ride.when.day_after": "In two days",
   "ride.when.at_hour": "At {hour}",
   "ride.when.departure": "Departure",
+  "ride.ask.return": "Do you return?",
+  "ride.return.none": "One way",
+  "ride.return.same_day": "Same day",
+  "ride.return.next_day": "The next day",
+  "ride.return.in_days": "{days} days later",
+  "ride.return.label": "Return",
+  "ride.return.hint": "One driver, one fare, both ways.",
   "ride.offers.title": "Drivers who answered",
   "ride.offers.waiting": "Waiting for drivers to answer.",
   "ride.offers.you_asked": "You asked for {amount}",
@@ -736,5 +743,6 @@
   "driver.trip.completed": "Trip complete. You earned {amount}.",
   "driver.trip.completed_plain": "Trip complete.",
   "error.ride_request_departure_past": "That time has already passed. Choose a later one.",
-  "error.ride_request_departure_too_far": "You can arrange a ride up to {horizon_days} days ahead."
+  "error.ride_request_departure_too_far": "You can arrange a ride up to {horizon_days} days ahead.",
+  "error.ride_request_return_before_departure": "The return must be after you set out."
 }

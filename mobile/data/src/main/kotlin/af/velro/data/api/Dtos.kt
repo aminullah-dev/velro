@@ -558,6 +558,8 @@ data class RequestRideRequest(
     val note: String? = null,
     /** ISO-8601. Omitted means now, which is what every request meant before. */
     val requested_for: String? = null,
+    /** ISO-8601. Omitted means one way, which is most journeys. */
+    val return_for: String? = null,
 )
 
 @Serializable
@@ -596,6 +598,7 @@ data class RideRequestDto(
     val note: String? = null,
     /** When the journey is for, as opposed to when it was asked for. */
     val requested_for: String = "",
+    val return_for: String? = null,
     val expires_at: String = "",
     val created_at: String = "",
     val trip_id: String? = null,

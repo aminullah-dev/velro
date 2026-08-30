@@ -73,7 +73,7 @@ class FakeAudit:
         return None
 
 
-def request(requested_for: datetime | None):
+def request(requested_for: datetime | None, return_for: datetime | None = None):
     requests = FakeRequests()
     use_case = RequestRide(
         requests=requests,
@@ -91,6 +91,7 @@ def request(requested_for: datetime | None):
             passenger_count=1,
             offered_fare_minor=30000,
             requested_for=requested_for,
+            return_for=return_for,
         )
     )
     return requests.rows[0]
@@ -159,3 +160,60 @@ class TestWhatTheFieldLetsIn:
     def test_the_last_day_inside_the_horizon_is_accepted(self) -> None:
         row = request(NOW + timedelta(days=13, hours=23))
         assert row["requested_for"] == NOW + timedelta(days=13, hours=23)
+
+
+class TestTheWayBack:
+    """The return leg.
+
+    Ghorband returns are usually not the same day: a car to Kabul goes today
+    and comes back tomorrow or the day after. That is precisely why the return
+    has to be part of the ask rather than a second negotiation later -- one
+    car, one driver, one price, argued once at the roadside. A passenger who
+    agrees only the outbound is a passenger who has to find a car again from a
+    town that is not theirs.
+    """
+
+    def test_a_one_way_journey_records_no_return(self) -> None:
+        assert request(None)["return_for"] is None
+
+    def test_a_return_is_kept_as_asked(self) -> None:
+        out = NOW + timedelta(days=1)
+        back = NOW + timedelta(days=3)
+        assert request(out, back)["return_for"] == back
+
+    def test_a_return_the_same_day_is_allowed(self) -> None:
+        """Unusual in Ghorband, not impossible, and not ours to refuse."""
+        out = NOW + timedelta(days=1)
+        back = out + timedelta(hours=8)
+        assert request(out, back)["return_for"] == back
+
+    def test_a_return_before_the_outbound_is_refused(self) -> None:
+        out = NOW + timedelta(days=3)
+        with pytest.raises(ConflictError) as raised:
+            request(out, NOW + timedelta(days=1))
+        assert raised.value.code == error_codes.RIDE_REQUEST_RETURN_BEFORE_DEPARTURE
+
+    def test_a_return_at_the_same_instant_is_refused(self) -> None:
+        """Not a journey. The boundary, so ``<=`` cannot quietly become ``<``."""
+        out = NOW + timedelta(days=1)
+        with pytest.raises(ConflictError) as raised:
+            request(out, out)
+        assert raised.value.code == error_codes.RIDE_REQUEST_RETURN_BEFORE_DEPARTURE
+
+    def test_a_return_beyond_the_horizon_is_refused(self) -> None:
+        """The outbound is fine and the return is not, which is the case a
+        guard written only against `requested_for` would wave through."""
+        out = NOW + timedelta(days=13)
+        with pytest.raises(ConflictError) as raised:
+            request(out, NOW + timedelta(days=40))
+        assert raised.value.code == error_codes.RIDE_REQUEST_DEPARTURE_TOO_FAR
+
+    def test_the_outbound_deadline_ignores_the_return(self) -> None:
+        """Bidding closes before the car leaves, not before it comes back.
+
+        Taking the return into account here would hold a request open for days
+        after the journey had started.
+        """
+        out = NOW + timedelta(hours=13)
+        row = request(out, NOW + timedelta(days=4))
+        assert row["expires_at"] < out

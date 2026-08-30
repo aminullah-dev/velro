@@ -54,6 +54,7 @@ class RequestRideCommand:
     vehicle_type_code: str | None = None
     note: str | None = None
     requested_for: datetime | None = None
+    return_for: datetime | None = None
     request_id: str | None = None
 
 
@@ -116,6 +117,31 @@ class RequestRide:
                 horizon_days=horizon_days,
             )
 
+        # The way back, if they want one.
+        #
+        # In Ghorband a car to Charikar or Kabul is hired for the journey and
+        # the return together: one car, one driver, one price argued once. The
+        # return is rarely the same day, which is exactly why it has to be
+        # asked for up front -- a passenger who negotiates only the outbound is
+        # a passenger who has to find a car again from the other end, in a town
+        # that is not theirs.
+        #
+        # It is validated against the departure, not against now: a return
+        # before the outbound is not a late booking, it is a nonsense.
+        return_for = cmd.return_for
+        if return_for is not None and return_for <= requested_for:
+            raise ConflictError(
+                error_codes.RIDE_REQUEST_RETURN_BEFORE_DEPARTURE,
+                requested_for=requested_for.isoformat(),
+                return_for=return_for.isoformat(),
+            )
+        if return_for is not None and return_for > now + timedelta(days=horizon_days):
+            raise ConflictError(
+                error_codes.RIDE_REQUEST_DEPARTURE_TOO_FAR,
+                requested_for=return_for.isoformat(),
+                horizon_days=horizon_days,
+            )
+
         # One open request at a time. A passenger with three live requests is
         # taking three drivers off the board for one journey.
         #
@@ -153,6 +179,7 @@ class RequestRide:
             passenger_count=cmd.passenger_count,
             vehicle_type_code=cmd.vehicle_type_code,
             requested_for=requested_for,
+            return_for=return_for,
             expires_at=expires_at,
             status=RideRequestStatus.OPEN.value,
             offered_fare_minor=cmd.offered_fare_minor,
