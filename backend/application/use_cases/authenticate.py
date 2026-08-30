@@ -71,7 +71,7 @@ class RequestOtp:
         self._debug_echo = debug_echo
 
     def execute(self, cmd: RequestOtpCommand) -> RequestOtpResult:
-        phone = PhoneNumber.parse(cmd.phone)
+        phone = PhoneNumber.parse(cmd.phone, default_country_code=_country(self._settings))
         now = self._clock.now()
 
         window = self._settings.get_int("otp.resend_window_seconds", 60)
@@ -158,7 +158,7 @@ class VerifyOtp:
         self._refresh_ttl = refresh_ttl_seconds
 
     def execute(self, cmd: VerifyOtpCommand) -> Session:
-        phone = PhoneNumber.parse(cmd.phone)
+        phone = PhoneNumber.parse(cmd.phone, default_country_code=_country(self._settings))
         now = self._clock.now()
 
         row = self._otps.find_active(phone.value, at=now)
@@ -327,3 +327,21 @@ class RefreshSession:
             is_new_user=False,
             expires_in_seconds=self._access_ttl,
         )
+
+
+def _country(settings) -> str:
+    """Which country a number typed without a prefix belongs to.
+
+    A row rather than a constant, for the same reason every other operational
+    number is: Ghorband is +93, and a hardcoded 93 is exactly the kind of
+    city-specific constant the product is supposed not to contain. It is also
+    what lets somebody test against a real handset in another country without
+    editing code -- otherwise "3438677631" silently becomes +933438677631, the
+    code goes to an account nobody owns, and the failure looks like a broken
+    OTP rather than a wrong country.
+
+    Digits only. A malformed value would build an unparseable number for every
+    user at once, so it falls back rather than propagating.
+    """
+    value = settings.get_str("auth.default_country_code", "93").strip().lstrip("+")
+    return value if value.isdigit() and 1 <= len(value) <= 4 else "93"

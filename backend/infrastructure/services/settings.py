@@ -51,6 +51,10 @@ DEFAULTS: dict[str, Any] = {
     "vehicle.required_documents": ["VEHICLE_REGISTRATION"],
     "vehicle.optional_documents": [],
     "driver.location_ping_seconds": 20,
+    # Which country a phone number typed without a prefix belongs to.
+    # Ghorband is +93. A row, not a constant, so a test deployment can
+    # point at a real handset somewhere else without editing code.
+    "auth.default_country_code": "93",
     "support.emergency_numbers": ["119", "100"],
     "support.contact_phone": "+93700000000",
     "trip.search_window_hours": 12,
@@ -116,14 +120,29 @@ class SqlSettingsProvider:
 
 
 def _unwrap(stored: Any) -> Any:
-    """Values are stored as JSON so a list or an object round-trips intact."""
+    """Values are stored as JSON so a list or an object round-trips intact.
+
+    Everything written through `wrap` arrives as ``{"v": ...}``. A bare value
+    means the row was written by hand -- a migration, or somebody at a psql
+    prompt -- and the driver has already decoded it.
+
+    A scalar string is therefore returned as a string, never re-parsed. The
+    previous version ran json.loads on it, so a setting whose value happened to
+    look like a number changed type on the way out: "93" became 93 and every
+    get_str for it raised SETTING_TYPE_INVALID -- for every user at once, from
+    a row that reads correctly in the database. Only text that is plainly a
+    JSON container is parsed, because that is the one case where keeping it as
+    a string would be the surprise.
+    """
     if isinstance(stored, dict) and set(stored) == {"v"}:
         return stored["v"]
     if isinstance(stored, str):
-        try:
-            return json.loads(stored)
-        except json.JSONDecodeError:
-            return stored
+        head = stored.lstrip()[:1]
+        if head in ("{", "["):
+            try:
+                return json.loads(stored)
+            except json.JSONDecodeError:
+                return stored
     return stored
 
 

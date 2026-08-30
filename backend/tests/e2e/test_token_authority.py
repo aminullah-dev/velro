@@ -166,3 +166,44 @@ def test_a_brand_new_user_can_sign_in(client: TestClient) -> None:
     )
     assert profile.status_code == 200
     assert profile.json()["data"]["status"] == "ACTIVE"
+
+
+def test_a_number_typed_without_a_prefix_follows_the_configured_country(
+    client: TestClient,
+) -> None:
+    """+93 is a setting, not a constant.
+
+    Ghorband is Afghanistan, and it stays the default. But a hardcoded country
+    code is exactly the city-specific constant this product is supposed not to
+    contain -- and it is what makes a real handset in another country
+    untestable: "3438677631" silently becomes +933438677631, the code goes to
+    an account nobody owns, and the failure looks like a broken OTP rather than
+    a wrong country.
+    """
+    from application.use_cases.authenticate import _country
+
+    class Settings:
+        def __init__(self, value):
+            self.value = value
+
+        def get_str(self, key, default=None):
+            return self.value if key == "auth.default_country_code" else default
+
+    assert _country(Settings("93")) == "93"
+    assert _country(Settings("1")) == "1"
+    assert _country(Settings("+1")) == "1"
+    # A malformed value would build an unparseable number for every user at
+    # once, so it falls back rather than propagating.
+    assert _country(Settings("")) == "93"
+    assert _country(Settings("nonsense")) == "93"
+    assert _country(Settings("99999")) == "93"
+
+
+def test_an_afghan_number_is_unchanged_by_the_default(client: TestClient) -> None:
+    """The product's own numbers must keep working exactly as before."""
+    from domain.identity import PhoneNumber
+
+    assert str(PhoneNumber.parse("0700123456")) == "+93700123456"
+    assert str(PhoneNumber.parse("+93700123456")) == "+93700123456"
+    # And a fully-qualified foreign number is honoured whatever the default is.
+    assert str(PhoneNumber.parse("+1 343 867 7631", default_country_code="93")) == "+13438677631"
