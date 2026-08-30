@@ -384,6 +384,16 @@ private fun WaitingRequest(request: RideRequest, onOpen: () -> Unit) {
                 ],
                 style = MaterialTheme.typography.bodyMedium,
             )
+            // Same reason as the board: a request is no longer always "now",
+            // so the preview on his own home screen has to say when.
+            request.requestedFor?.let { departure ->
+                Spacer(Modifier.height(Spacing.xxs))
+                Text(
+                    Calendars.dateTime(departure, strings.locale),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
             if (request.alreadyOffered) {
                 Spacer(Modifier.height(Spacing.xxs))
                 Text(

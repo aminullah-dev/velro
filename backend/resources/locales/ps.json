@@ -546,6 +546,13 @@
   "ride.ask.action": "د موټر غوښتنه",
   "ride.ask.passengers": "مسافر",
   "ride.ask.note": "هغه څه چې ډرایور یې باید پوه شي",
+  "ride.ask.when": "کله سفر کوئ؟",
+  "ride.when.now": "همدا اوس",
+  "ride.when.today": "نن",
+  "ride.when.tomorrow": "سبا",
+  "ride.when.day_after": "بل سبا",
+  "ride.when.at_hour": "په {hour} بجو",
+  "ride.when.departure": "حرکت",
   "ride.offers.title": "هغه ډرایوران چې ځواب یې ورکړ",
   "ride.offers.waiting": "د ډرایورانو د ځواب انتظار وکړئ.",
   "ride.offers.you_asked": "تاسو {amount} وړاندیز کړ",
@@ -727,5 +734,7 @@
   "driver.verify.boarded": "مسافر تایید شو. سپور شوی دی.",
   "driver.verify.boarded_named": "{name} سپور شوی دی.",
   "driver.trip.completed": "سفر بشپړ شو. {amount} مو ترلاسه کړل.",
-  "driver.trip.completed_plain": "سفر بشپړ شو."
+  "driver.trip.completed_plain": "سفر بشپړ شو.",
+  "error.ride_request_departure_past": "هغه وخت تېر شوی. وروسته وخت وټاکئ.",
+  "error.ride_request_departure_too_far": "تر {horizon_days} ورځو پورې مخکې موټر نیولی شئ."
 }

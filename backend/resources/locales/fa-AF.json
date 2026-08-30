@@ -546,6 +546,13 @@
   "ride.ask.action": "درخواست موتر",
   "ride.ask.passengers": "مسافران",
   "ride.ask.note": "چیزی که راننده باید بداند",
+  "ride.ask.when": "چه وقت سفر می‌کنید؟",
+  "ride.when.now": "همین حالا",
+  "ride.when.today": "امروز",
+  "ride.when.tomorrow": "فردا",
+  "ride.when.day_after": "پس‌فردا",
+  "ride.when.at_hour": "ساعت {hour}",
+  "ride.when.departure": "حرکت",
   "ride.offers.title": "رانندگانی که جواب دادند",
   "ride.offers.waiting": "منتظر جواب رانندگان باشید.",
   "ride.offers.you_asked": "شما {amount} پیشنهاد کردید",
@@ -727,5 +734,7 @@
   "driver.verify.boarded": "مسافر تأیید شد. سوار شده است.",
   "driver.verify.boarded_named": "{name} سوار شده است.",
   "driver.trip.completed": "سفر تکمیل شد. {amount} به دست آوردید.",
-  "driver.trip.completed_plain": "سفر تکمیل شد."
+  "driver.trip.completed_plain": "سفر تکمیل شد.",
+  "error.ride_request_departure_past": "آن وقت گذشته است. وقت دیرتری انتخاب کنید.",
+  "error.ride_request_departure_too_far": "تا {horizon_days} روز پیشتر می‌توانید موتر بگیرید."
 }

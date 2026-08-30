@@ -1,6 +1,7 @@
 package af.velro.feature.driver
 
 import af.velro.core.i18n.MoneyFormatter
+import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.EmptyState
 import af.velro.core.ui.component.ErrorState
@@ -162,6 +163,20 @@ private fun RequestCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
+            // When he is being asked to drive.
+            //
+            // Every request used to mean "now", so a board card had nothing to
+            // say about time and a driver bidding was only ever agreeing to
+            // leave immediately. Now that a passenger can ask for six tomorrow
+            // morning, a bid placed without seeing that is a bid placed blind.
+            request.requestedFor?.let { departure ->
+                Text(
+                    strings["ride.when.departure"] + ": " +
+                        Calendars.dateTime(departure, strings.locale),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

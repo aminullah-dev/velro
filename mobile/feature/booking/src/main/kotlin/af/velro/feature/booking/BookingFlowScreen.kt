@@ -35,6 +35,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -337,6 +338,80 @@ private fun DestinationGroupRow(
     }
 }
 
+/**
+ * When the journey is for.
+ *
+ * Every ride request VELRO has ever made meant "a car, right now" -- not by
+ * decision, but because the API dropped the departure time the database, the
+ * use case and the trip were all built to carry. That made a marketplace for
+ * arranging journeys into a hail-a-cab app, and the journeys this is for
+ * (Ghorband to Charikar, Ghorband to Kabul) are arranged the evening before,
+ * because the car leaves at six and nobody negotiates a fare at six.
+ *
+ * Days and hours as chips, not a date picker. A Hijri Shamsi calendar inside
+ * an RTL dialog is the wrong instrument for "tomorrow morning", and this is
+ * chosen at a roadside by somebody who may not read well: four taps, no
+ * keyboard, nothing to type.
+ */
+@Composable
+private fun DeparturePicker(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {
+    val strings = LocalVelroStrings.current
+
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        Text(
+            strings["ride.ask.when"],
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            val days = listOf(
+                null to "ride.when.now",
+                0 to "ride.when.today",
+                1 to "ride.when.tomorrow",
+                2 to "ride.when.day_after",
+            )
+            for ((day, key) in days) {
+                FilterChip(
+                    selected = state.departureDay == day,
+                    onClick = { onEvent(BookingEvent.DepartureChanged(day, state.departureHour)) },
+                    label = { Text(strings[key]) },
+                )
+            }
+        }
+
+        // Only once a day is chosen. "Now" has no hour, and showing a row of
+        // hours beside it would suggest otherwise.
+        if (state.departureDay != null) {
+            val hours = state.departureHours
+            if (hours.isEmpty()) {
+                // Today is spent. Say so rather than showing an empty row.
+                Text(
+                    strings["ride.when.tomorrow"],
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    items(hours, key = { it }) { hour ->
+                        FilterChip(
+                            selected = state.departureHour == hour,
+                            onClick = {
+                                onEvent(BookingEvent.DepartureChanged(state.departureDay, hour))
+                            },
+                            label = {
+                                Text(
+                                    Numerals.localise(
+                                        "%02d:00".format(hour), strings.locale
+                                    )
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun SeatCountPicker(selected: Int, onSelect: (Int) -> Unit) {
     val strings = LocalVelroStrings.current
@@ -514,6 +589,8 @@ private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) 
                 )
             }
         }
+
+        DeparturePicker(state, onEvent)
 
         OutlinedTextField(
             value = state.note,

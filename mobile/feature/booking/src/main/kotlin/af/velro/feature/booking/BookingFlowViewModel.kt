@@ -17,6 +17,10 @@ import af.velro.domain.Village
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import af.velro.core.i18n.Calendars
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +39,17 @@ import kotlinx.coroutines.launch
  * almost all of their data and threading it through five ViewModels would
  * mostly be plumbing.
  */
+/**
+ * Departure hours offered, and the one selected by default.
+ *
+ * Cars out of Ghorband leave early; nothing sensible departs at two in the
+ * morning, and offering twenty-four rows of hours to scroll is a worse
+ * instrument than offering the sixteen anyone would use.
+ */
+private const val EARLIEST_DEPARTURE_HOUR = 4
+private const val LATEST_DEPARTURE_HOUR = 20
+private const val DEFAULT_DEPARTURE_HOUR = 6
+
 data class BookingFlowUiState(
     val step: Step = Step.ORIGIN_DISTRICT,
 
@@ -66,6 +81,19 @@ data class BookingFlowUiState(
     /** What the passenger is willing to pay, as they typed it. */
     val offeredFare: String = "",
     val note: String = "",
+
+    /**
+     * Which day the journey is for: null for now, 0 today, 1 tomorrow, 2 the
+     * day after.
+     *
+     * Days rather than a date, and an hour rather than a time, because this is
+     * chosen at a roadside by somebody who may not read well. A calendar in
+     * Hijri Shamsi, in an RTL dialog, is the wrong instrument for "tomorrow
+     * morning" -- and "tomorrow morning" is how every one of these journeys is
+     * actually arranged.
+     */
+    val departureDay: Int? = null,
+    val departureHour: Int = DEFAULT_DEPARTURE_HOUR,
     val askedRequestId: String? = null,
 ) {
     enum class Step {
@@ -80,6 +108,44 @@ data class BookingFlowUiState(
     /** Whole afghani as typed; converted to minor units only when sent. */
     val fareMinor: Long? get() = offeredFare.toLongOrNull()?.takeIf { it > 0 }?.times(100)
 
+    /**
+     * The chosen day and hour as an instant, or null for "now".
+     *
+     * Built in Kabul time, not the handset's zone, and deliberately: "six
+     * tomorrow" means six in Ghorband. Calendars renders every departure in
+     * Asia/Kabul, so a picker working in the device zone would disagree with
+     * the screen that displays the result for anyone not in the country --
+     * which includes the person testing this from Canada. Afghanistan is
+     * UTC+04:30, and a half-hour offset is exactly the sort of thing that
+     * silently becomes an hour wrong when the arithmetic is done by hand, so
+     * it is not done by hand.
+     */
+    fun requestedFor(): Instant? {
+        val day = departureDay ?: return null
+        return LocalDate.now(Calendars.KABUL)
+            .plusDays(day.toLong())
+            .atTime(departureHour, 0)
+            .atZone(Calendars.KABUL)
+            .toInstant()
+    }
+
+    /**
+     * The hours still worth offering for the chosen day.
+     *
+     * Today's list starts after the current hour: showing four in the morning
+     * at six in the evening invites a choice the server will refuse, and being
+     * refused for picking something the app offered is worse than not being
+     * offered it.
+     */
+    val departureHours: List<Int>
+        get() {
+            val first =
+                if (departureDay == 0)
+                    maxOf(EARLIEST_DEPARTURE_HOUR, LocalTime.now(Calendars.KABUL).hour + 1)
+                else EARLIEST_DEPARTURE_HOUR
+            return (first..LATEST_DEPARTURE_HOUR).toList()
+        }
+
     val canAsk: Boolean get() = canSearch && fareMinor != null && !isSubmitting
 }
 
@@ -92,6 +158,7 @@ sealed interface BookingEvent {
     data class SeatCountChanged(val count: Int) : BookingEvent
     data class FareChanged(val text: String) : BookingEvent
     data class NoteChanged(val text: String) : BookingEvent
+    data class DepartureChanged(val day: Int?, val hour: Int) : BookingEvent
     data object AskForRide : BookingEvent
     data class TripChosen(val option: TripOption) : BookingEvent
     data object Search : BookingEvent
@@ -144,6 +211,10 @@ class BookingFlowViewModel @Inject constructor(
                 it.copy(offeredFare = Numerals.latin(event.text).filter(Char::isDigit))
             }
             is BookingEvent.NoteChanged -> _state.update { it.copy(note = event.text) }
+
+            is BookingEvent.DepartureChanged -> _state.update {
+                it.copy(departureDay = event.day, departureHour = event.hour)
+            }
             BookingEvent.AskForRide -> ask()
             BookingEvent.Search -> search()
             BookingEvent.Back -> goBack()
@@ -247,6 +318,7 @@ class BookingFlowViewModel @Inject constructor(
                 passengerCount = current.seatCount,
                 offeredFareMinor = minor,
                 note = current.note,
+                requestedFor = current.requestedFor(),
             )
             when (result) {
                 is ApiResult.Success -> _state.update {

@@ -7,6 +7,7 @@ means.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -40,6 +41,11 @@ class RequestRideIn(Schema):
     offered_fare_minor: int = Field(ge=1)
     vehicle_type_code: str | None = Field(default=None, max_length=24)
     note: str | None = Field(default=None, max_length=300)
+    # When the passenger wants to travel. Omitted means now, which is what
+    # every request meant before this field existed: the column, the command
+    # and the trip it becomes were all built for a departure time, and this
+    # layer was the one place it was dropped.
+    requested_for: datetime | None = None
 
 
 class OfferFareIn(Schema):
@@ -77,6 +83,10 @@ class RideRequestOut(Schema):
     offered_fare: MoneyOut
     agreed_fare: MoneyOut | None
     note: str | None
+    # When the journey is for. A driver deciding whether to bid needs to know
+    # whether he is being asked to leave now or at six tomorrow morning; it was
+    # the same question the request could not previously ask.
+    requested_for: str
     expires_at: str
     created_at: str
     trip_id: str | None
@@ -112,6 +122,7 @@ def request_ride(
             offered_fare_minor=body.offered_fare_minor,
             vehicle_type_code=body.vehicle_type_code,
             note=body.note,
+            requested_for=body.requested_for,
         )
     )
     return ok(_request_out(row, [], geo=geo).model_dump())
@@ -442,6 +453,7 @@ def _request_out(row, offers, *, geo) -> RideRequestOut:
             else None
         ),
         note=row.note,
+        requested_for=row.requested_for.isoformat(),
         expires_at=row.expires_at.isoformat(),
         created_at=row.created_at.isoformat() if row.created_at else "",
         trip_id=row.trip_id,

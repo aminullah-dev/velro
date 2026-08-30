@@ -55,6 +55,14 @@ data class RideRequest(
     val offeredFare: MoneyValue,
     val agreedFare: MoneyValue? = null,
     val note: String? = null,
+    /**
+     * When the passenger wants to travel.
+     *
+     * Null for a request made before the field existed, and for one that means
+     * "now" -- the two are the same thing to a reader, and neither should draw
+     * a departure time on a card.
+     */
+    val requestedFor: Instant? = null,
     val expiresAt: Instant? = null,
     val createdAt: Instant? = null,
     val tripId: String? = null,

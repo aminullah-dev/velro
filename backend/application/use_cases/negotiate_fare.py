@@ -27,6 +27,21 @@ log = get_logger(__name__)
 # offered a ride they gave up on an hour ago.
 DEFAULT_REQUEST_TTL_MINUTES = 45
 
+# How far ahead a journey may be arranged. Two weeks is well beyond how far
+# anyone in Ghorband plans a car and well short of a request sitting open for a
+# season; it is an app_settings key so it can be moved without a deploy.
+DEFAULT_REQUEST_HORIZON_DAYS = 14
+
+# Clocks on cheap handsets drift, and a passenger who taps "now" sends the
+# instant they tapped, not the instant the server reads it. This is slack for
+# that, not a licence to book the past.
+DEPARTURE_GRACE_MINUTES = 10
+
+# A scheduled request closes shortly before its departure rather than at it:
+# a driver who accepts ninety seconds before the car should leave has accepted
+# nothing anybody can act on.
+DEPARTURE_CLOSING_LEAD_MINUTES = 30
+
 
 @dataclass(frozen=True, slots=True)
 class RequestRideCommand:
@@ -71,6 +86,36 @@ class RequestRide:
             )
 
         now = self._clock.now()
+
+        # When the passenger wants to travel, which is not the same as when
+        # they are asking.
+        #
+        # The column has always been here and has always been filled with
+        # `now`, because nothing above the use case ever passed anything else.
+        # That silently made VELRO a hail-a-car app: every request meant "a
+        # car, immediately". Somebody arranging tomorrow's journey to Kabul the
+        # night before -- which is how most of these journeys are actually
+        # arranged -- had no way to say so.
+        requested_for = cmd.requested_for or now
+        grace = timedelta(minutes=DEPARTURE_GRACE_MINUTES)
+        if requested_for < now - grace:
+            # Not a validation nicety. A request in the past would sit on the
+            # board looking live, and the trip created from it would inherit a
+            # departure that has already been and gone.
+            raise ConflictError(
+                error_codes.RIDE_REQUEST_DEPARTURE_PAST,
+                requested_for=requested_for.isoformat(),
+            )
+        horizon_days = self._settings.get_int(
+            "ride_request.horizon_days", DEFAULT_REQUEST_HORIZON_DAYS
+        )
+        if requested_for > now + timedelta(days=horizon_days):
+            raise ConflictError(
+                error_codes.RIDE_REQUEST_DEPARTURE_TOO_FAR,
+                requested_for=requested_for.isoformat(),
+                horizon_days=horizon_days,
+            )
+
         # One open request at a time. A passenger with three live requests is
         # taking three drivers off the board for one journey.
         #
@@ -89,6 +134,17 @@ class RequestRide:
         ttl = self._settings.get_int(
             "ride_request.ttl_minutes", DEFAULT_REQUEST_TTL_MINUTES
         )
+        # A request stays open until shortly before the journey it is for.
+        #
+        # The deadline used to be `now + ttl` whatever the departure, which is
+        # right for "I am standing at the station" and useless for anything
+        # else: a request made tonight for tomorrow's six o'clock would have
+        # closed before midnight, with the passenger still waiting and no
+        # driver able to take it. Immediate requests are unaffected --
+        # `requested_for` is `now`, so the lead time lands in the past and the
+        # TTL wins.
+        closing_lead = timedelta(minutes=DEPARTURE_CLOSING_LEAD_MINUTES)
+        expires_at = max(now + timedelta(minutes=ttl), requested_for - closing_lead)
         row = self._requests.create(
             id=self._new_id(),
             passenger_id=cmd.passenger_id,
@@ -96,8 +152,8 @@ class RequestRide:
             destination_id=cmd.destination_id,
             passenger_count=cmd.passenger_count,
             vehicle_type_code=cmd.vehicle_type_code,
-            requested_for=cmd.requested_for or now,
-            expires_at=now + timedelta(minutes=ttl),
+            requested_for=requested_for,
+            expires_at=expires_at,
             status=RideRequestStatus.OPEN.value,
             offered_fare_minor=cmd.offered_fare_minor,
             offered_fare_currency=cmd.currency,

@@ -546,6 +546,13 @@
   "ride.ask.action": "Ask for a ride",
   "ride.ask.passengers": "Passengers",
   "ride.ask.note": "Anything the driver should know",
+  "ride.ask.when": "When do you travel?",
+  "ride.when.now": "Now",
+  "ride.when.today": "Today",
+  "ride.when.tomorrow": "Tomorrow",
+  "ride.when.day_after": "In two days",
+  "ride.when.at_hour": "At {hour}",
+  "ride.when.departure": "Departure",
   "ride.offers.title": "Drivers who answered",
   "ride.offers.waiting": "Waiting for drivers to answer.",
   "ride.offers.you_asked": "You asked for {amount}",
@@ -727,5 +734,7 @@
   "driver.verify.boarded": "Passenger verified. They are on board.",
   "driver.verify.boarded_named": "{name} is on board.",
   "driver.trip.completed": "Trip complete. You earned {amount}.",
-  "driver.trip.completed_plain": "Trip complete."
+  "driver.trip.completed_plain": "Trip complete.",
+  "error.ride_request_departure_past": "That time has already passed. Choose a later one.",
+  "error.ride_request_departure_too_far": "You can arrange a ride up to {horizon_days} days ahead."
 }

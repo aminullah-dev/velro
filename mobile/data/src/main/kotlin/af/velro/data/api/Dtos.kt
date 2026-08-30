@@ -556,6 +556,8 @@ data class RequestRideRequest(
     val offered_fare_minor: Long,
     val vehicle_type_code: String? = null,
     val note: String? = null,
+    /** ISO-8601. Omitted means now, which is what every request meant before. */
+    val requested_for: String? = null,
 )
 
 @Serializable
@@ -592,6 +594,8 @@ data class RideRequestDto(
     val offered_fare: MoneyDto,
     val agreed_fare: MoneyDto? = null,
     val note: String? = null,
+    /** When the journey is for, as opposed to when it was asked for. */
+    val requested_for: String = "",
     val expires_at: String = "",
     val created_at: String = "",
     val trip_id: String? = null,
