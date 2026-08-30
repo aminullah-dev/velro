@@ -28,6 +28,31 @@ MAX_MULTIPLE_OF_ASKING = 5
 MIN_FRACTION_OF_ASKING = 5      # i.e. not less than a fifth
 
 
+def total_fare(outbound: Money, ret: Money | None) -> Money:
+    """What the journey costs, both legs together.
+
+    The one place that adds them. Every rule about a price -- is it plausible,
+    does it match the currency, is it what was asked -- is a rule about the
+    total, because the total is what changes hands. Splitting the number let
+    two legs be argued separately; it must not let two legs be *checked*
+    separately, or a driver could put a sensible fare on the outbound and an
+    absurd one on the return and pass every guard on the way through.
+    """
+    if ret is None:
+        return outbound
+    if ret.currency != outbound.currency:
+        raise ValidationError(
+            error_codes.CURRENCY_MISMATCH,
+            expected=outbound.currency,
+            received=ret.currency,
+        )
+    if ret.amount_minor <= 0:
+        raise ValidationError(
+            error_codes.FARE_OFFER_AMOUNT_INVALID, amount_minor=ret.amount_minor
+        )
+    return Money(outbound.amount_minor + ret.amount_minor, outbound.currency)
+
+
 @dataclass(slots=True)
 class FareOffer:
     """One driver's price for one request."""
@@ -35,7 +60,10 @@ class FareOffer:
     id: str
     ride_request_id: str
     driver_id: str
+    # The outbound leg, or the whole fare on a one-way journey.
     amount: Money
+    # The way back, when the request asked for one. Null is "no return leg".
+    return_amount: Money | None = None
     status: FareOfferStatus = FareOfferStatus.OFFERED
     note: str | None = None
     created_at: datetime | None = None
@@ -50,6 +78,11 @@ class FareOffer:
                 offer_id=self.id,
                 amount_minor=self.amount.amount_minor,
             )
+
+    @property
+    def total(self) -> Money:
+        """What this offer costs the passenger, both legs together."""
+        return total_fare(self.amount, self.return_amount)
 
     @property
     def is_open(self) -> bool:

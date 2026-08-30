@@ -241,7 +241,10 @@ class RideRequestRow(Auditable, Base):
     status: Mapped[str] = mapped_column(String(24), nullable=False)
     # What the passenger proposed. Not a quote from the platform -- there is no
     # platform quote.
+    # The outbound leg for a round trip, the whole fare for a one-way one.
     offered_fare_minor: Mapped[int] = mapped_column(Integer, nullable=False)
+    # The return leg. Null is "no return", never "a return costing nothing".
+    return_fare_minor: Mapped[int | None] = mapped_column(Integer, nullable=True)
     offered_fare_currency: Mapped[str] = mapped_column(
         String(3), default="AFN", nullable=False
     )
@@ -258,6 +261,10 @@ class RideRequestRow(Auditable, Base):
         CheckConstraint("passenger_count > 0", name="ck_ride_requests_passenger_count_positive"),
         CheckConstraint(
             "offered_fare_minor > 0", name="ck_ride_requests_offer_positive"
+        ),
+        CheckConstraint(
+            "return_fare_minor IS NULL OR return_fare_minor > 0",
+            name="ck_ride_requests_return_fare_positive",
         ),
         enum_check("status", RideRequestStatus, name="ride_requests_status"),
     )
@@ -283,6 +290,7 @@ class FareOfferRow(Auditable, Base):
     )
     vehicle_id: Mapped[str | None] = mapped_column(String(36))
     amount_minor: Mapped[int] = mapped_column(Integer, nullable=False)
+    return_amount_minor: Mapped[int | None] = mapped_column(Integer, nullable=True)
     amount_currency: Mapped[str] = mapped_column(String(3), default="AFN", nullable=False)
     status: Mapped[str] = mapped_column(
         String(12), default=FareOfferStatus.OFFERED.value, nullable=False
@@ -300,6 +308,10 @@ class FareOfferRow(Auditable, Base):
             postgresql_where=text("status = 'OFFERED'"),
         ),
         CheckConstraint("amount_minor > 0", name="ck_fare_offers_amount_positive"),
+        CheckConstraint(
+            "return_amount_minor IS NULL OR return_amount_minor > 0",
+            name="ck_fare_offers_return_amount_positive",
+        ),
         enum_check("status", FareOfferStatus, name="fare_offers_status"),
     )
 

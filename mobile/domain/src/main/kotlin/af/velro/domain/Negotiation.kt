@@ -18,7 +18,10 @@ data class FareOffer(
     val id: String,
     val rideRequestId: String,
     val driverId: String,
+    /** The outbound leg, or the whole fare on a one-way journey. */
     val amount: MoneyValue,
+    /** The way back, when the request asked for one. */
+    val returnAmount: MoneyValue? = null,
     val status: FareOfferStatus,
     val note: String? = null,
     val createdAt: Instant? = null,
@@ -31,7 +34,7 @@ data class FareOffer(
     val isOpen: Boolean get() = status == FareOfferStatus.OFFERED
 
     /** Whether this driver simply agreed to the asking price. */
-    fun agreesWith(asking: MoneyValue): Boolean = amount.amountMinor == asking.amountMinor
+    fun agreesWith(asking: MoneyValue): Boolean = total.amountMinor == asking.amountMinor
 
     /**
      * How this price compares with what was asked, as a signed difference.
@@ -41,7 +44,20 @@ data class FareOffer(
      * asked of someone standing at a roadside.
      */
     fun differenceFrom(asking: MoneyValue): MoneyValue =
-        MoneyValue(amount.amountMinor - asking.amountMinor, amount.currency)
+        MoneyValue(total.amountMinor - asking.amountMinor, amount.currency)
+
+    /**
+     * What this offer costs, both legs together.
+     *
+     * Every comparison on the offers screen is against this, never against
+     * the outbound alone: a driver answering 350 out and 300 back has named
+     * 650, and a card that compared 350 with what was asked would tell the
+     * passenger the cheaper driver is the dearer one.
+     */
+    val total: MoneyValue
+        get() = returnAmount?.let {
+            MoneyValue(amount.amountMinor + it.amountMinor, amount.currency)
+        } ?: amount
 }
 
 data class RideRequest(
@@ -52,7 +68,10 @@ data class RideRequest(
     val destinationId: String,
     val destinationName: String? = null,
     val passengerCount: Int,
+    /** The outbound leg, or the whole fare on a one-way journey. */
     val offeredFare: MoneyValue,
+    /** The way back, when one was asked for. */
+    val returnFare: MoneyValue? = null,
     val agreedFare: MoneyValue? = null,
     val note: String? = null,
     /**
@@ -83,7 +102,23 @@ data class RideRequest(
 
     /** Offers still awaiting the passenger's answer, cheapest first. */
     val liveOffers: List<FareOffer>
-        get() = offers.filter { it.isOpen }.sortedBy { it.amount.amountMinor }
+        // By the total, not the outbound leg. Sorted on the outbound alone,
+        // a driver asking 300 out and 400 back would sit above one asking 350
+        // and 300, and the list labelled cheapest-first would be leading with
+        // the dearer journey.
+        get() = offers.filter { it.isOpen }.sortedBy { it.total.amountMinor }
+
+    /**
+     * What the passenger offered for the whole journey.
+     *
+     * The figure every offer is compared against. `offeredFare` alone is the
+     * outbound leg on a round trip, and comparing a driver's total with one
+     * leg of the ask would make every reply look expensive.
+     */
+    val askingTotal: MoneyValue
+        get() = returnFare?.let {
+            MoneyValue(offeredFare.amountMinor + it.amountMinor, offeredFare.currency)
+        } ?: offeredFare
 
     val isWaitingForOffers: Boolean get() = isOpen && liveOffers.isEmpty()
 }

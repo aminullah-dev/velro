@@ -368,7 +368,7 @@ private fun WaitingRequest(request: RideRequest, onOpen: () -> Unit) {
     VelroCard(Modifier.fillMaxWidth().clickable { onOpen() }) {
         Column {
             Text(
-                MoneyFormatter.format(request.offeredFare, strings),
+                MoneyFormatter.format(request.askingTotal, strings),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,

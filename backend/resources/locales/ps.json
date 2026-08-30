@@ -560,6 +560,11 @@
   "ride.return.in_days": "{days} ورځې وروسته",
   "ride.return.label": "بېرته",
   "ride.return.hint": "یو موټروان، یوه کرایه، تګ او راتګ.",
+  "ride.ask.fare_out": "د تګ کرایه",
+  "ride.ask.fare_back": "د راتګ کرایه",
+  "ride.ask.fare_total": "ټول {amount}",
+  "ride.offers.leg_out": "تګ",
+  "ride.offers.leg_back": "راتګ",
   "ride.offers.title": "هغه ډرایوران چې ځواب یې ورکړ",
   "ride.offers.waiting": "د ډرایورانو د ځواب انتظار وکړئ.",
   "ride.offers.you_asked": "تاسو {amount} وړاندیز کړ",
@@ -744,5 +749,7 @@
   "driver.trip.completed_plain": "سفر بشپړ شو.",
   "error.ride_request_departure_past": "هغه وخت تېر شوی. وروسته وخت وټاکئ.",
   "error.ride_request_departure_too_far": "تر {horizon_days} ورځو پورې مخکې موټر نیولی شئ.",
-  "error.ride_request_return_before_departure": "بېرته راتګ باید د تګ نه وروسته وي."
+  "error.ride_request_return_before_departure": "بېرته راتګ باید د تګ نه وروسته وي.",
+  "error.fare_offer_return_mismatch": "د بېرته راتګ لپاره هم بیه ورکړئ.",
+  "error.currency_mismatch": "دا بیې په بېلابېلو پیسو دي."
 }

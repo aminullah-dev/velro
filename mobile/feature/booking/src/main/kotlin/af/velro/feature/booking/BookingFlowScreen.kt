@@ -1,5 +1,8 @@
 package af.velro.feature.booking
 
+import af.velro.core.i18n.MoneyFormatter
+import af.velro.domain.DEFAULT_CURRENCY
+import af.velro.domain.MoneyValue
 import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.BoardingCode
 import af.velro.core.ui.component.EmptyState
@@ -479,6 +482,32 @@ private fun DeparturePicker(state: BookingFlowUiState, onEvent: (BookingEvent) -
                         )
                     }
                 }
+                // The second price. Two legs are argued as two numbers at a
+                // roadside -- so much to Kabul, so much back -- so the app
+                // asks for two, and adds them up itself rather than leaving
+                // the passenger to.
+                OutlinedTextField(
+                    value = state.returnFare,
+                    onValueChange = { onEvent(BookingEvent.ReturnFareChanged(it)) },
+                    label = { Text(strings["ride.ask.fare_back"]) },
+                    suffix = { Text(strings["common.label.currency_afn"]) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    textStyle = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                state.totalFareMinor?.let { total ->
+                    Text(
+                        strings[
+                            "ride.ask.fare_total",
+                            "amount" to MoneyFormatter.format(
+                                MoneyValue(total, DEFAULT_CURRENCY), strings
+                            ),
+                        ],
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
                 Text(
                     strings["ride.return.hint"],
                     style = MaterialTheme.typography.labelSmall,
@@ -649,7 +678,14 @@ private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) 
         OutlinedTextField(
             value = state.offeredFare,
             onValueChange = { onEvent(BookingEvent.FareChanged(it)) },
-            label = { Text(strings["ride.ask.title"]) },
+            // Named "fare there" once there is a way back to distinguish it
+            // from, and "how much will you pay?" when there is not.
+            label = {
+                Text(
+                    if (state.returnAfterDays != null) strings["ride.ask.fare_out"]
+                    else strings["ride.ask.title"]
+                )
+            },
             suffix = { Text(strings["common.label.currency_afn"]) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

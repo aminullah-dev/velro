@@ -142,7 +142,10 @@ fun OffersScreen(
                 items(offers, key = { it.id }) { offer ->
                     OfferCard(
                         offer = offer,
-                        asking = request.offeredFare,
+                        // The whole journey, not the outbound leg: on a
+                        // round trip `offeredFare` is half the ask, and
+                        // every reply would look expensive against it.
+                        asking = request.askingTotal,
                         accepting = state.acceptingOfferId == offer.id,
                         // One action in flight at a time: two taps on a slow
                         // connection must not agree two fares.
@@ -181,7 +184,10 @@ private fun Journey(request: RideRequest) {
             Text(
                 strings[
                     "ride.offers.you_asked",
-                    "amount" to MoneyFormatter.format(request.offeredFare, strings),
+                    // The whole journey. Showing the outbound leg here
+                    // told a passenger who had offered 300 out and 250
+                    // back that they had offered 300.
+                    "amount" to MoneyFormatter.format(request.askingTotal, strings),
                 ],
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -261,10 +267,24 @@ private fun OfferCard(
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        MoneyFormatter.format(offer.amount, strings),
+                        MoneyFormatter.format(offer.total, strings),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )
+                    // The two legs under the total, because the total is what
+                    // is being chosen between and the split is what was
+                    // argued. Only on a round trip: on a one-way journey the
+                    // total is the only number there is.
+                    offer.returnAmount?.let { back ->
+                        Text(
+                            strings["ride.offers.leg_out"] + " " +
+                                MoneyFormatter.format(offer.amount, strings) + "  ·  " +
+                                strings["ride.offers.leg_back"] + " " +
+                                MoneyFormatter.format(back, strings),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     // How it compares with what was asked, so nobody has to
                     // subtract one number from another at a roadside.
                     Text(

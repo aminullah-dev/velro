@@ -63,17 +63,26 @@ def journey(client: TestClient, rider: dict) -> dict:
     pytest.skip("the seed produced no station with a destination")
 
 
-def _ask(client: TestClient, rider: dict, journey: dict, minor: int = 50_000) -> dict:
-    r = client.post(
-        "/api/v1/ride-requests",
-        json={
-            "origin_station_id": journey["station_id"],
-            "destination_id": journey["destination_id"],
-            "passenger_count": 1,
-            "offered_fare_minor": minor,
-        },
-        headers=rider,
-    )
+def _ask(
+    client: TestClient,
+    rider: dict,
+    journey: dict,
+    minor: int = 50_000,
+    *,
+    return_minor: int | None = None,
+    return_for: str | None = None,
+) -> dict:
+    body = {
+        "origin_station_id": journey["station_id"],
+        "destination_id": journey["destination_id"],
+        "passenger_count": 1,
+        "offered_fare_minor": minor,
+    }
+    if return_minor is not None:
+        body["return_fare_minor"] = return_minor
+    if return_for is not None:
+        body["return_for"] = return_for
+    r = client.post("/api/v1/ride-requests", json=body, headers=rider)
     assert r.status_code == 201, r.text
     return r.json()["data"]
 
@@ -546,3 +555,135 @@ def test_the_refusal_has_a_sentence_with_no_placeholder_left_in_it(
         assert not re.search(r"\{\w+\}", sentence), (
             f"{locale}: the sentence expects a parameter the server does not send"
         )
+
+
+# -- the way back --------------------------------------------------------
+
+def _tomorrow(hour: int) -> str:
+    from datetime import datetime, timedelta, timezone
+
+    kabul = timezone(timedelta(hours=4, minutes=30))
+    when = (datetime.now(kabul) + timedelta(days=1)).replace(
+        hour=hour, minute=0, second=0, microsecond=0
+    )
+    return when.isoformat()
+
+
+def test_a_round_trip_is_agreed_at_the_price_of_both_legs(
+    client: TestClient, rider: dict, driver_a: dict, journey: dict
+) -> None:
+    """The rule that decides what the passenger actually pays.
+
+    A round trip is argued as two numbers and settled as one. Taking the
+    outbound alone would book the journey at half its price and leave the
+    driver's return fare with nobody -- and the trip, the commission, the
+    wallet and the receipt would all agree with each other and all be wrong.
+    """
+    _clear(client, rider)
+    asked = _ask(
+        client, rider, journey,
+        minor=30_000,
+        return_minor=25_000,
+        return_for=_tomorrow(14),
+    )
+    assert asked["offered_fare"]["amount_minor"] == 30_000
+    assert asked["return_fare"]["amount_minor"] == 25_000
+
+    offer = client.post(
+        f"/api/v1/driver/ride-requests/{asked['id']}/offer",
+        json={"amount_minor": 35_000, "return_amount_minor": 30_000},
+        headers=driver_a,
+    )
+    assert offer.status_code in (200, 201), offer.text
+    offer = offer.json()["data"]
+    assert offer["amount"]["amount_minor"] == 35_000
+    assert offer["return_amount"]["amount_minor"] == 30_000
+
+    # Read back the way the app reads it. The reply to the driver's POST is
+    # not what the passenger sees: she sees her own request with the offers
+    # attached, and that listing built the offer separately -- so it shipped
+    # the outbound leg alone while this test, checking only the POST, passed.
+    mine = client.get("/api/v1/ride-requests", headers=rider).json()["data"][0]
+    listed = mine["offers"][0]
+    assert listed["amount"]["amount_minor"] == 35_000
+    assert listed["return_amount"]["amount_minor"] == 30_000, (
+        "the offers a passenger chooses between must carry both legs"
+    )
+
+    taken = client.post(f"/api/v1/fare-offers/{offer['id']}/accept", headers=rider)
+    assert taken.status_code == 200, taken.text
+    result = taken.json()["data"]
+
+    # 350 out and 300 back is 650, not 350.
+    assert result["agreed_fare"]["amount_minor"] == 65_000
+
+    booking = client.get(
+        f"/api/v1/bookings/{result['booking_id']}", headers=rider
+    ).json()["data"]
+    assert booking["fare_total"]["amount_minor"] == 65_000
+
+
+def test_a_driver_sees_both_legs_in_his_own_offers(
+    client: TestClient, rider: dict, driver_a: dict, journey: dict
+) -> None:
+    """The list behind "you offered X" on the driver's board.
+
+    A third place that builds an offer for the wire, and the third place that
+    could quietly send the outbound leg alone -- telling a driver who had just
+    named 350 and 300 that he had offered 350.
+    """
+    _clear(client, rider)
+    asked = _ask(
+        client, rider, journey,
+        minor=30_000, return_minor=25_000, return_for=_tomorrow(14),
+    )
+    client.post(
+        f"/api/v1/driver/ride-requests/{asked['id']}/offer",
+        json={"amount_minor": 35_000, "return_amount_minor": 30_000},
+        headers=driver_a,
+    )
+    mine = client.get("/api/v1/driver/fare-offers", headers=driver_a).json()["data"]
+    row = next(o for o in mine if o["ride_request_id"] == asked["id"])
+    assert row["amount"]["amount_minor"] == 35_000
+    assert row["return_amount"]["amount_minor"] == 30_000
+
+
+def test_a_driver_must_price_the_return_that_was_asked_for(
+    client: TestClient, rider: dict, driver_a: dict, journey: dict
+) -> None:
+    """Answering only the outbound is answering a different question."""
+    _clear(client, rider)
+    asked = _ask(
+        client, rider, journey,
+        minor=30_000, return_minor=25_000, return_for=_tomorrow(14),
+    )
+    refused = client.post(
+        f"/api/v1/driver/ride-requests/{asked['id']}/offer",
+        json={"amount_minor": 35_000},
+        headers=driver_a,
+    )
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["error"]["code"] == "FARE_OFFER_RETURN_MISMATCH"
+
+
+def test_a_driver_may_not_price_a_return_nobody_asked_for(
+    client: TestClient, rider: dict, driver_a: dict, journey: dict
+) -> None:
+    _clear(client, rider)
+    asked = _ask(client, rider, journey, minor=30_000)
+    refused = client.post(
+        f"/api/v1/driver/ride-requests/{asked['id']}/offer",
+        json={"amount_minor": 35_000, "return_amount_minor": 20_000},
+        headers=driver_a,
+    )
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["error"]["code"] == "FARE_OFFER_RETURN_MISMATCH"
+
+
+def test_a_one_way_journey_carries_no_return_fare(
+    client: TestClient, rider: dict, journey: dict
+) -> None:
+    _clear(client, rider)
+    asked = _ask(client, rider, journey, minor=30_000)
+    assert asked["return_fare"] is None
+    assert asked["return_for"] is None

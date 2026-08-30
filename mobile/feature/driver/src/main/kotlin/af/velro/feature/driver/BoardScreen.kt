@@ -15,6 +15,8 @@ import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.MoneyValue
 import af.velro.domain.RideRequest
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -110,7 +112,10 @@ fun BoardScreen(
                 items(state.requests, key = { it.id }) { request ->
                     RequestCard(
                         request = request,
-                        myOffer = state.myOfferOn(request.id)?.amount,
+                        // His own price for the whole journey. Passing
+                        // the outbound alone told a driver who had just
+                        // offered 350 and 300 that he had offered 350.
+                        myOffer = state.myOfferOn(request.id)?.total,
                         busy = state.busyRequestId == request.id,
                         onOffer = { onEvent(BoardEvent.StartOffering(request.id)) },
                         onWithdraw = {
@@ -135,8 +140,8 @@ fun BoardScreen(
                 busy = state.busyRequestId == offering.id,
                 errorCode = state.errorCode,
                 errorContext = state.errorContext,
-                onSend = { amount, note ->
-                    onEvent(BoardEvent.Offer(offering.id, amount, note))
+                onSend = { amount, returnAmount, note ->
+                    onEvent(BoardEvent.Offer(offering.id, amount, returnAmount, note))
                 },
             )
         }
@@ -204,9 +209,21 @@ private fun RequestCard(
                 // The number the driver is deciding about, given the weight it
                 // deserves rather than buried in a line of detail.
                 Text(
-                    MoneyFormatter.format(request.offeredFare, strings),
+                    MoneyFormatter.format(request.askingTotal, strings),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
+                )
+            }
+            // What is being asked each way. The headline is the journey; this
+            // is the argument, and a driver answers it leg by leg.
+            request.returnFare?.let { back ->
+                Text(
+                    strings["ride.offers.leg_out"] + " " +
+                        MoneyFormatter.format(request.offeredFare, strings) +
+                        "  \u00b7  " + strings["ride.offers.leg_back"] + " " +
+                        MoneyFormatter.format(back, strings),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             request.note?.let {
@@ -254,19 +271,31 @@ private fun OfferSheet(
     busy: Boolean,
     errorCode: String?,
     errorContext: Map<String, Any?>,
-    onSend: (Long, String?) -> Unit,
+    onSend: (Long, Long?, String?) -> Unit,
 ) {
     val strings = LocalVelroStrings.current
     var amount by remember(request.id) { mutableStateOf("") }
+    var returnAmount by remember(request.id) { mutableStateOf("") }
     var note by remember(request.id) { mutableStateOf("") }
 
     val minor = amount.toLongOrNull()?.times(100)
-    val asking = request.offeredFare
+    val returnMinor = returnAmount.toLongOrNull()?.times(100)
+    // A return has to be priced when one was asked for. The server refuses an
+    // answer that covers only half the journey, and so does this sheet.
+    val wantsReturn = request.returnFare != null
+    val returnReady = !wantsReturn || (returnMinor != null && returnMinor > 0)
+    // Both legs together, which is what the passenger compares between drivers.
+    val asking = request.askingTotal
 
     Column(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.gutter)
+            // Scrolls, for the same reason the ask screen does: a sheet that
+            // happens to fit is not a sheet that fits. Adding the return leg's
+            // field and the total pushed "send my price" against the bottom
+            // edge, clipped to a sliver -- the driver's only way to answer.
+            .verticalScroll(rememberScrollState())
             // The keyboard must not cover the send button, and the sheet must
             // clear the gesture bar.
             .imePadding()
@@ -293,7 +322,15 @@ private fun OfferSheet(
                 "driver.offer.match",
                 "amount" to MoneyFormatter.format(asking, strings),
             ],
-            onClick = { onSend(asking.amountMinor, note.ifBlank { null }) },
+            // Matching the asking price means matching it leg for leg, so
+            // the split the passenger asked for survives the one-tap answer.
+            onClick = {
+                onSend(
+                    request.offeredFare.amountMinor,
+                    request.returnFare?.amountMinor,
+                    note.ifBlank { null },
+                )
+            },
             enabled = !busy,
             modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
         )
@@ -301,11 +338,40 @@ private fun OfferSheet(
         OutlinedTextField(
             value = amount,
             onValueChange = { amount = Numerals.latin(it).filter(Char::isDigit) },
-            label = { Text(strings["driver.offer.title"]) },
+            label = {
+                Text(
+                    if (wantsReturn) strings["ride.ask.fare_out"]
+                    else strings["driver.offer.title"]
+                )
+            },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
         )
+        if (wantsReturn) {
+            OutlinedTextField(
+                value = returnAmount,
+                onValueChange = {
+                    returnAmount = Numerals.latin(it).filter(Char::isDigit)
+                },
+                label = { Text(strings["ride.ask.fare_back"]) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (minor != null && returnMinor != null) {
+                Text(
+                    strings[
+                        "ride.ask.fare_total",
+                        "amount" to MoneyFormatter.format(
+                            MoneyValue(minor + returnMinor, asking.currency), strings
+                        ),
+                    ],
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
         OutlinedTextField(
             value = note,
             onValueChange = { note = it },
@@ -322,8 +388,10 @@ private fun OfferSheet(
 
         PrimaryAction(
             label = strings["driver.offer.send"],
-            onClick = { minor?.let { onSend(it, note.ifBlank { null }) } },
-            enabled = minor != null && minor > 0 && !busy,
+            onClick = {
+                minor?.let { onSend(it, if (wantsReturn) returnMinor else null, note.ifBlank { null }) }
+            },
+            enabled = minor != null && minor > 0 && returnReady && !busy,
             loading = busy,
             modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
         )

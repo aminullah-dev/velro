@@ -40,6 +40,8 @@ class NegotiationRepository @Inject constructor(
         requestedFor: Instant? = null,
         /** Null means one way. */
         returnFor: Instant? = null,
+        /** Null when there is no return leg to price. */
+        returnFareMinor: Long? = null,
     ): ApiResult<RideRequest> =
         mapper.call {
             api.requestRide(
@@ -51,6 +53,7 @@ class NegotiationRepository @Inject constructor(
                     note = note?.trim()?.ifBlank { null },
                     requested_for = requestedFor?.toString(),
                     return_for = returnFor?.toString(),
+                    return_fare_minor = returnFareMinor,
                 )
             )
         }.map(::toDomain)
@@ -80,12 +83,18 @@ class NegotiationRepository @Inject constructor(
     suspend fun offer(
         requestId: String,
         amountMinor: Long,
+        /** Required exactly when the request asked for a return. */
+        returnAmountMinor: Long? = null,
         note: String? = null,
     ): ApiResult<FareOffer> =
         mapper.call {
             api.offerFare(
                 requestId,
-                OfferFareRequest(amountMinor, note?.trim()?.ifBlank { null }),
+                OfferFareRequest(
+                    amount_minor = amountMinor,
+                    return_amount_minor = returnAmountMinor,
+                    note = note?.trim()?.ifBlank { null },
+                ),
             )
         }.map(::toDomain)
 
@@ -108,6 +117,7 @@ class NegotiationRepository @Inject constructor(
         rideRequestId = dto.ride_request_id,
         driverId = dto.driver_id,
         amount = MoneyValue(dto.amount.amount_minor, dto.amount.currency),
+        returnAmount = dto.return_amount?.let { MoneyValue(it.amount_minor, it.currency) },
         status = enumOrNull<FareOfferStatus>(dto.status) ?: FareOfferStatus.OFFERED,
         note = dto.note,
         createdAt = dto.created_at.toInstantOrNull(),
@@ -131,6 +141,7 @@ class NegotiationRepository @Inject constructor(
         note = dto.note,
         requestedFor = dto.requested_for.toInstantOrNull(),
         returnFor = dto.return_for?.toInstantOrNull(),
+        returnFare = dto.return_fare?.let { MoneyValue(it.amount_minor, it.currency) },
         expiresAt = dto.expires_at.toInstantOrNull(),
         createdAt = dto.created_at.toInstantOrNull(),
         tripId = dto.trip_id,

@@ -560,6 +560,11 @@
   "ride.return.in_days": "{days} days later",
   "ride.return.label": "Return",
   "ride.return.hint": "One driver, one fare, both ways.",
+  "ride.ask.fare_out": "Fare there",
+  "ride.ask.fare_back": "Fare back",
+  "ride.ask.fare_total": "Total {amount}",
+  "ride.offers.leg_out": "There",
+  "ride.offers.leg_back": "Back",
   "ride.offers.title": "Drivers who answered",
   "ride.offers.waiting": "Waiting for drivers to answer.",
   "ride.offers.you_asked": "You asked for {amount}",
@@ -744,5 +749,7 @@
   "driver.trip.completed_plain": "Trip complete.",
   "error.ride_request_departure_past": "That time has already passed. Choose a later one.",
   "error.ride_request_departure_too_far": "You can arrange a ride up to {horizon_days} days ahead.",
-  "error.ride_request_return_before_departure": "The return must be after you set out."
+  "error.ride_request_return_before_departure": "The return must be after you set out.",
+  "error.fare_offer_return_mismatch": "Please give a price for the return as well.",
+  "error.currency_mismatch": "Those prices are in different currencies."
 }

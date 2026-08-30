@@ -41,7 +41,13 @@ sealed interface BoardEvent {
     data object Refresh : BoardEvent
     data class StartOffering(val requestId: String) : BoardEvent
     data object StopOffering : BoardEvent
-    data class Offer(val requestId: String, val amountMinor: Long, val note: String?) : BoardEvent
+    data class Offer(
+        val requestId: String,
+        val amountMinor: Long,
+        /** Required exactly when the request asked for a return. */
+        val returnAmountMinor: Long?,
+        val note: String?,
+    ) : BoardEvent
     data class Withdraw(val offerId: String) : BoardEvent
     data object DismissError : BoardEvent
 }
@@ -66,7 +72,8 @@ class BoardViewModel @Inject constructor(
             BoardEvent.Refresh -> load(showSpinner = true)
             is BoardEvent.StartOffering -> _state.update { it.copy(offeringOn = event.requestId) }
             BoardEvent.StopOffering -> _state.update { it.copy(offeringOn = null) }
-            is BoardEvent.Offer -> offer(event.requestId, event.amountMinor, event.note)
+            is BoardEvent.Offer ->
+                offer(event.requestId, event.amountMinor, event.returnAmountMinor, event.note)
             is BoardEvent.Withdraw -> withdraw(event.offerId)
             BoardEvent.DismissError -> _state.update { it.copy(errorCode = null) }
         }
@@ -107,10 +114,18 @@ class BoardViewModel @Inject constructor(
         }
     }
 
-    private fun offer(requestId: String, amountMinor: Long, note: String?) {
+    private fun offer(
+        requestId: String,
+        amountMinor: Long,
+        returnAmountMinor: Long?,
+        note: String?,
+    ) {
         _state.update { it.copy(busyRequestId = requestId, errorCode = null) }
         viewModelScope.launch {
-            when (val result = negotiation.offer(requestId, amountMinor, note)) {
+            when (
+                val result =
+                    negotiation.offer(requestId, amountMinor, returnAmountMinor, note)
+            ) {
                 is ApiResult.Success -> {
                     _state.update { it.copy(busyRequestId = null, offeringOn = null) }
                     load(showSpinner = false)

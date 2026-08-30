@@ -83,6 +83,8 @@ data class BookingFlowUiState(
     /** What the passenger is willing to pay, as they typed it. */
     val offeredFare: String = "",
     val note: String = "",
+    /** The return leg's fare, as typed. Only meaningful with a return chosen. */
+    val returnFare: String = "",
 
     /**
      * Which day the journey is for: null for now, 0 today, 1 tomorrow, 2 the
@@ -121,6 +123,21 @@ data class BookingFlowUiState(
 
     /** Whole afghani as typed; converted to minor units only when sent. */
     val fareMinor: Long? get() = offeredFare.toLongOrNull()?.takeIf { it > 0 }?.times(100)
+
+    /** The return leg's fare, or null when there is no return to price. */
+    val returnFareMinor: Long?
+        get() =
+            if (returnAfterDays == null) null
+            else returnFare.toLongOrNull()?.takeIf { it > 0 }?.times(100)
+
+    /**
+     * What the journey costs altogether, for the line under the two fields.
+     *
+     * Shown because the passenger is naming a number they will hand over in
+     * cash, and two numbers on a screen are not the number in the hand.
+     */
+    val totalFareMinor: Long?
+        get() = fareMinor?.let { out -> out + (returnFareMinor ?: 0L) }
 
     /**
      * The chosen day and hour as an instant, or null for "now".
@@ -196,7 +213,12 @@ data class BookingFlowUiState(
             return (first..LATEST_DEPARTURE_HOUR).toList()
         }
 
-    val canAsk: Boolean get() = canSearch && fareMinor != null && !isSubmitting
+    val canAsk: Boolean
+        // A chosen return with no price on it is an unfinished ask, not a one
+        // way journey: sending it would put a request on the board that no
+        // driver can answer, because the server requires both legs or neither.
+        get() = canSearch && fareMinor != null && !isSubmitting &&
+            (returnAfterDays == null || returnFareMinor != null)
 }
 
 sealed interface BookingEvent {
@@ -208,6 +230,7 @@ sealed interface BookingEvent {
     data class SeatCountChanged(val count: Int) : BookingEvent
     data class FareChanged(val text: String) : BookingEvent
     data class NoteChanged(val text: String) : BookingEvent
+    data class ReturnFareChanged(val value: String) : BookingEvent
     data class DepartureChanged(val day: Int?, val hour: Int) : BookingEvent
     data class ReturnChanged(val afterDays: Int?, val hour: Int) : BookingEvent
     data object AskForRide : BookingEvent
@@ -272,6 +295,10 @@ class BookingFlowViewModel @Inject constructor(
                     departureHour = event.hour,
                     returnAfterDays = if (event.day == null) null else it.returnAfterDays,
                 )
+            }
+
+            is BookingEvent.ReturnFareChanged -> _state.update {
+                it.copy(returnFare = event.value, errorCode = null)
             }
 
             is BookingEvent.ReturnChanged -> _state.update {
@@ -382,6 +409,7 @@ class BookingFlowViewModel @Inject constructor(
                 note = current.note,
                 requestedFor = current.requestedFor(),
                 returnFor = current.returnFor(),
+                returnFareMinor = current.returnFareMinor,
             )
             when (result) {
                 is ApiResult.Success -> _state.update {

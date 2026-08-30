@@ -39,6 +39,9 @@ class RequestRideIn(Schema):
     # What the passenger is willing to pay, in minor units. There is no server
     # suggestion: VELRO does not know the distance or the state of the road.
     offered_fare_minor: int = Field(ge=1)
+    # The return leg's fare, when there is a return. The two legs are argued
+    # separately -- so much to Kabul, so much back -- and judged together.
+    return_fare_minor: int | None = Field(default=None, ge=1)
     vehicle_type_code: str | None = Field(default=None, max_length=24)
     note: str | None = Field(default=None, max_length=300)
     # When the passenger wants to travel. Omitted means now, which is what
@@ -54,6 +57,9 @@ class RequestRideIn(Schema):
 
 class OfferFareIn(Schema):
     amount_minor: int = Field(ge=1)
+    # Required exactly when the request asked for a return, refused when it
+    # did not -- a driver must answer the journey he was asked about.
+    return_amount_minor: int | None = Field(default=None, ge=1)
     note: str | None = Field(default=None, max_length=300)
 
 
@@ -62,6 +68,8 @@ class FareOfferOut(Schema):
     ride_request_id: str
     driver_id: str
     amount: MoneyOut
+    # The driver's price for the way back, when the request asked for one.
+    return_amount: MoneyOut | None = None
     status: str
     note: str | None
     created_at: str
@@ -85,6 +93,7 @@ class RideRequestOut(Schema):
     destination_name: str | None
     passenger_count: int
     offered_fare: MoneyOut
+    return_fare: MoneyOut | None = None
     agreed_fare: MoneyOut | None
     note: str | None
     # When the journey is for. A driver deciding whether to bid needs to know
@@ -125,6 +134,7 @@ def request_ride(
             destination_id=body.destination_id,
             passenger_count=body.passenger_count,
             offered_fare_minor=body.offered_fare_minor,
+            return_fare_minor=body.return_fare_minor,
             vehicle_type_code=body.vehicle_type_code,
             note=body.note,
             requested_for=body.requested_for,
@@ -294,6 +304,7 @@ def offer_fare(
             ride_request_id=request_id,
             driver_user_id=actor.user_id,
             amount_minor=body.amount_minor,
+            return_amount_minor=body.return_amount_minor,
             note=body.note,
         )
     )
@@ -301,6 +312,7 @@ def offer_fare(
         FareOfferOut(
             id=offer.id, ride_request_id=offer.ride_request_id,
             driver_id=offer.driver_id, amount=MoneyOut.of(offer.amount),
+            return_amount=MoneyOut.of(offer.return_amount),
             status=str(offer.status), note=offer.note,
             created_at=offer.created_at.isoformat() if offer.created_at else "",
         ).model_dump()
@@ -338,6 +350,11 @@ def my_offers(
             FareOfferOut(
                 id=o.id, ride_request_id=o.ride_request_id, driver_id=o.driver_id,
                 amount=MoneyOut.of(Money(o.amount_minor, o.amount_currency)),
+                return_amount=(
+                    MoneyOut.of(Money(o.return_amount_minor, o.amount_currency))
+                    if o.return_amount_minor
+                    else None
+                ),
                 status=o.status, note=o.note,
                 created_at=o.created_at.isoformat() if o.created_at else "",
             ).model_dump()
@@ -419,6 +436,13 @@ class _OfferEnricher:
                     ride_request_id=row.ride_request_id,
                     driver_id=row.driver_id,
                     amount=MoneyOut.of(Money(row.amount_minor, row.amount_currency)),
+                    return_amount=(
+                        MoneyOut.of(
+                            Money(row.return_amount_minor, row.amount_currency)
+                        )
+                        if row.return_amount_minor
+                        else None
+                    ),
                     status=row.status,
                     note=row.note,
                     created_at=row.created_at.isoformat() if row.created_at else "",
@@ -452,6 +476,11 @@ def _request_out(row, offers, *, geo) -> RideRequestOut:
         passenger_count=row.passenger_count,
         offered_fare=MoneyOut.of(
             Money(row.offered_fare_minor, row.offered_fare_currency)
+        ),
+        return_fare=(
+            MoneyOut.of(Money(row.return_fare_minor, row.offered_fare_currency))
+            if row.return_fare_minor
+            else None
         ),
         agreed_fare=(
             MoneyOut.of(Money(row.agreed_fare_minor, row.offered_fare_currency))

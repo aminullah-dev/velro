@@ -560,6 +560,11 @@
   "ride.return.in_days": "{days} روز بعد",
   "ride.return.label": "برگشت",
   "ride.return.hint": "یک راننده، یک کرایه، رفت و برگشت.",
+  "ride.ask.fare_out": "کرایه رفت",
+  "ride.ask.fare_back": "کرایه برگشت",
+  "ride.ask.fare_total": "مجموع {amount}",
+  "ride.offers.leg_out": "رفت",
+  "ride.offers.leg_back": "برگشت",
   "ride.offers.title": "رانندگانی که جواب دادند",
   "ride.offers.waiting": "منتظر جواب رانندگان باشید.",
   "ride.offers.you_asked": "شما {amount} پیشنهاد کردید",
@@ -744,5 +749,7 @@
   "driver.trip.completed_plain": "سفر تکمیل شد.",
   "error.ride_request_departure_past": "آن وقت گذشته است. وقت دیرتری انتخاب کنید.",
   "error.ride_request_departure_too_far": "تا {horizon_days} روز پیشتر می‌توانید موتر بگیرید.",
-  "error.ride_request_return_before_departure": "برگشت باید بعد از رفتن باشد."
+  "error.ride_request_return_before_departure": "برگشت باید بعد از رفتن باشد.",
+  "error.fare_offer_return_mismatch": "برای برگشت هم قیمت بدهید.",
+  "error.currency_mismatch": "این قیمت‌ها به پول‌های مختلف است."
 }

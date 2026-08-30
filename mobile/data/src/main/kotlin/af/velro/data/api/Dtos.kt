@@ -554,6 +554,8 @@ data class RequestRideRequest(
     val destination_id: String,
     val passenger_count: Int = 1,
     val offered_fare_minor: Long,
+    /** The return leg's fare. Null is one way. */
+    val return_fare_minor: Long? = null,
     val vehicle_type_code: String? = null,
     val note: String? = null,
     /** ISO-8601. Omitted means now, which is what every request meant before. */
@@ -565,6 +567,8 @@ data class RequestRideRequest(
 @Serializable
 data class OfferFareRequest(
     val amount_minor: Long,
+    /** Required exactly when the request asked for a return. */
+    val return_amount_minor: Long? = null,
     val note: String? = null,
 )
 
@@ -574,6 +578,7 @@ data class FareOfferDto(
     val ride_request_id: String,
     val driver_id: String,
     val amount: MoneyDto,
+    val return_amount: MoneyDto? = null,
     val status: String,
     val note: String? = null,
     val created_at: String = "",
@@ -594,6 +599,7 @@ data class RideRequestDto(
     val destination_name: String? = null,
     val passenger_count: Int,
     val offered_fare: MoneyDto,
+    val return_fare: MoneyDto? = null,
     val agreed_fare: MoneyDto? = null,
     val note: String? = null,
     /** When the journey is for, as opposed to when it was asked for. */

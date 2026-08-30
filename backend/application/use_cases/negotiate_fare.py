@@ -12,10 +12,15 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from domain.enums import ActorRole, FareOfferStatus, RideRequestStatus
-from domain.negotiation import FareOffer, assert_offer_allowed
+from domain.negotiation import FareOffer, assert_offer_allowed, total_fare
 from shared import error_codes
 from shared.clock import Clock
-from shared.errors import ConflictError, NotFoundError, PermissionError
+from shared.errors import (
+    ConflictError,
+    NotFoundError,
+    PermissionError,
+    ValidationError,
+)
 from shared.ids import IdGenerator
 from shared.logging import get_logger
 from shared.money import Money
@@ -50,6 +55,9 @@ class RequestRideCommand:
     destination_id: str
     passenger_count: int
     offered_fare_minor: int
+    # The return leg's fare, when there is a return. None means one way; it is
+    # never "a return costing nothing".
+    return_fare_minor: int | None = None
     currency: str = "AFN"
     vehicle_type_code: str | None = None
     note: str | None = None
@@ -76,6 +84,11 @@ class RequestRide:
             raise ConflictError(
                 error_codes.FARE_OFFER_AMOUNT_INVALID,
                 amount_minor=cmd.offered_fare_minor,
+            )
+        if cmd.return_fare_minor is not None and cmd.return_fare_minor <= 0:
+            raise ConflictError(
+                error_codes.FARE_OFFER_AMOUNT_INVALID,
+                amount_minor=cmd.return_fare_minor,
             )
         if self._geography.find_station(cmd.origin_station_id) is None:
             raise NotFoundError(
@@ -183,6 +196,7 @@ class RequestRide:
             expires_at=expires_at,
             status=RideRequestStatus.OPEN.value,
             offered_fare_minor=cmd.offered_fare_minor,
+            return_fare_minor=cmd.return_fare_minor if return_for else None,
             offered_fare_currency=cmd.currency,
             note=cmd.note,
         )
@@ -207,6 +221,9 @@ class OfferFareCommand:
     ride_request_id: str
     driver_user_id: str
     amount_minor: int
+    # The driver's price for the way back. Required exactly when the request
+    # asked for a return, and refused when it did not.
+    return_amount_minor: int | None = None
     note: str | None = None
     request_id: str | None = None
 
@@ -253,8 +270,26 @@ class OfferFare:
             self._requests.save(row)
             status = RideRequestStatus.EXPIRED
 
-        asking = Money(row.offered_fare_minor, row.offered_fare_currency)
-        offered = Money(cmd.amount_minor, row.offered_fare_currency)
+        # Both sides compared as totals. The legs are argued separately and
+        # checked together: a driver could otherwise put a sensible number on
+        # the outbound and an absurd one on the return and walk past every
+        # plausibility guard on the way.
+        currency = row.offered_fare_currency
+        asking = total_fare(
+            Money(row.offered_fare_minor, currency),
+            Money(row.return_fare_minor, currency) if row.return_fare_minor else None,
+        )
+        offered = total_fare(
+            Money(cmd.amount_minor, currency),
+            Money(cmd.return_amount_minor, currency) if cmd.return_amount_minor else None,
+        )
+        # A return leg may only be priced where a return was asked for, and one
+        # that was asked for may not be silently left out of the answer.
+        if bool(cmd.return_amount_minor) != bool(row.return_fare_minor):
+            raise ValidationError(
+                error_codes.FARE_OFFER_RETURN_MISMATCH,
+                ride_request_id=row.id,
+            )
         assert_offer_allowed(
             asking=asking,
             offered=offered,
@@ -269,7 +304,8 @@ class OfferFare:
             ride_request_id=row.id,
             driver_id=driver.id,
             vehicle_id=vehicle.id if vehicle else None,
-            amount_minor=offered.amount_minor,
+            amount_minor=cmd.amount_minor,
+            return_amount_minor=cmd.return_amount_minor,
             amount_currency=offered.currency,
             status=FareOfferStatus.OFFERED.value,
             note=cmd.note,
@@ -362,6 +398,11 @@ def _to_offer(row) -> FareOffer:
         ride_request_id=row.ride_request_id,
         driver_id=row.driver_id,
         amount=Money(row.amount_minor, row.amount_currency),
+        return_amount=(
+            Money(row.return_amount_minor, row.amount_currency)
+            if getattr(row, "return_amount_minor", None)
+            else None
+        ),
         status=row.status,
         note=row.note,
         created_at=row.created_at,
@@ -493,7 +534,18 @@ class AcceptOffer:
         # weakened later, and this is the mechanic the product rests on.
         taken = self._seats.lock_available(trip.id, request_row.passenger_count)
 
-        agreed = Money(offer_row.amount_minor, offer_row.amount_currency)
+        # What actually changes hands: both legs together.
+        #
+        # Taking `amount_minor` alone would book a round trip at the price of
+        # the outbound and quietly hand the driver's return fare to nobody --
+        # the commission, the wallet and the passenger's receipt would all
+        # agree with each other and all be wrong.
+        agreed = total_fare(
+            Money(offer_row.amount_minor, offer_row.amount_currency),
+            Money(offer_row.return_amount_minor, offer_row.amount_currency)
+            if offer_row.return_amount_minor
+            else None,
+        )
         # A quote of exactly one line, and that line says the price was agreed
         # rather than calculated. Going through FareQuote rather than building a
         # Booking by hand keeps one construction path, so the negotiated booking

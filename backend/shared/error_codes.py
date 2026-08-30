@@ -134,12 +134,20 @@ RIDE_REQUEST_DEPARTURE_PAST: Final = "RIDE_REQUEST_DEPARTURE_PAST"
 RIDE_REQUEST_DEPARTURE_TOO_FAR: Final = "RIDE_REQUEST_DEPARTURE_TOO_FAR"
 # A return that is not after the outbound, or beyond the same horizon.
 RIDE_REQUEST_RETURN_BEFORE_DEPARTURE: Final = "RIDE_REQUEST_RETURN_BEFORE_DEPARTURE"
+# A driver priced a return that was not asked for, or left out one that was.
+FARE_OFFER_RETURN_MISMATCH: Final = "FARE_OFFER_RETURN_MISMATCH"
 FARE_OFFER_NOT_FOUND: Final = "FARE_OFFER_NOT_FOUND"
 FARE_OFFER_NOT_OPEN: Final = "FARE_OFFER_NOT_OPEN"
 FARE_OFFER_SELF: Final = "FARE_OFFER_SELF"
 FARE_OFFER_ALREADY_MADE: Final = "FARE_OFFER_ALREADY_MADE"
 FARE_OFFER_AMOUNT_INVALID: Final = "FARE_OFFER_AMOUNT_INVALID"
 FARE_OFFER_IMPLAUSIBLE: Final = "FARE_OFFER_IMPLAUSIBLE"
+# Two amounts in different currencies where one journey was expected.
+# domain/negotiation.py has raised this since it was written and it was
+# never registered, so the currency guard would have died with an
+# AttributeError -- a 500 -- instead of refusing cleanly. Everything is
+# AFN today, which is the only reason nobody has hit it.
+CURRENCY_MISMATCH: Final = "CURRENCY_MISMATCH"
 
 # -- ratings / support ---------------------------------------------------
 RATING_OUT_OF_RANGE: Final = "RATING_OUT_OF_RANGE"
