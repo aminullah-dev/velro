@@ -9,6 +9,7 @@ import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
+import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.Earnings
@@ -46,15 +47,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun EarningsRoute(viewModel: EarningsViewModel = hiltViewModel()) {
+fun EarningsRoute(
+    onBack: () -> Unit = {},
+    viewModel: EarningsViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    EarningsScreen(state, viewModel::onEvent)
+    EarningsScreen(state, viewModel::onEvent, onBack = onBack)
 }
 
 @Composable
 fun EarningsScreen(
     state: EarningsUiState,
     onEvent: (EarningsEvent) -> Unit,
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -75,19 +80,12 @@ fun EarningsScreen(
         return
     }
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    VelroScreen(
+        title = strings["driver.earnings.title"],
+        onBack = onBack,
+        modifier = modifier,
     ) {
-        Text(
-            strings["driver.earnings.title"],
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
+        // The title lives in the app bar now, not twice on the screen.
 
         state.earnings?.let { Balance(it, state.payout) }
 

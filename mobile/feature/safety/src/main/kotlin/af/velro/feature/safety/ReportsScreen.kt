@@ -7,6 +7,7 @@ import af.velro.core.ui.component.InlineError
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.component.VelroCard
+import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.SupportTicket
@@ -46,15 +47,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
  * so a person who pressed Close had no way back to their own report.
  */
 @Composable
-fun ReportsRoute(viewModel: ReportsViewModel = hiltViewModel()) {
+fun ReportsRoute(
+    onBack: () -> Unit = {},
+    viewModel: ReportsViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    ReportsScreen(state, viewModel::onEvent)
+    ReportsScreen(state, viewModel::onEvent, onBack = onBack)
 }
 
 @Composable
 fun ReportsScreen(
     state: ReportsUiState,
     onEvent: (ReportsEvent) -> Unit,
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -73,24 +78,16 @@ fun ReportsScreen(
         return
     }
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .imePadding()
-            .padding(horizontal = Spacing.gutter, vertical = Spacing.lg),
+    VelroScreen(
+        title = strings["safety.my_reports"],
+        onBack = onBack,
+        modifier = modifier,
     ) {
-        Text(
-            strings["safety.my_reports"],
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
+        // The title lives in the app bar now, not twice on the screen.
         Spacer(Modifier.height(Spacing.md))
 
         if (state.reports.isEmpty()) {
             EmptyState(messageKey = "safety.no_reports")
-            return@Column
         }
 
         for (report in state.reports) {

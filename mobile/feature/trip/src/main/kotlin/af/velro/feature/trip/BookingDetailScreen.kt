@@ -13,6 +13,7 @@ import af.velro.core.ui.component.messageKey
 import af.velro.core.ui.component.tone
 import af.velro.feature.safety.HelpSheet
 import af.velro.feature.safety.RideFacts
+import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import androidx.compose.foundation.layout.Arrangement
@@ -52,15 +53,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun BookingDetailRoute(viewModel: BookingDetailViewModel = hiltViewModel()) {
+fun BookingDetailRoute(
+    onBack: () -> Unit = {},
+    viewModel: BookingDetailViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    BookingDetailScreen(state, viewModel::onEvent)
+    BookingDetailScreen(state, viewModel::onEvent, onBack = onBack)
 }
 
 @Composable
 fun BookingDetailScreen(
     state: BookingDetailUiState,
     onEvent: (BookingDetailEvent) -> Unit,
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -79,23 +84,15 @@ fun BookingDetailScreen(
         return
     }
 
-    Column(
-        modifier
-            .fillMaxSize()
-            // Pushed onto the stack with no app bar of its own, so the booking
-            // number would otherwise sit under the clock.
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.gutter, vertical = Spacing.lg)
+    VelroScreen(
+        title = booking.number,
+        onBack = onBack,
+        modifier = modifier,
     ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(booking.number, style = MaterialTheme.typography.titleMedium)
-            StatusChip(booking.status.messageKey(), booking.status.tone())
-        }
+        // The booking number is the app bar title now, so only the status
+        // stays here -- and it keeps the row it needs to sit on its own line
+        // rather than crowding the bar.
+        StatusChip(booking.status.messageKey(), booking.status.tone())
 
         // Get help, at the top and on the journey the passenger is actually
         // taking. Not at the foot of a scroll: the moment it is needed is the

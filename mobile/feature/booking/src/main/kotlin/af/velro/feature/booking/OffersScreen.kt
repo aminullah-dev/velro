@@ -9,6 +9,7 @@ import af.velro.core.ui.component.PrimaryAction
 import af.velro.domain.RideRequestStatus
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
+import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.FareOffer
@@ -92,11 +93,14 @@ fun OffersScreen(
         return
     }
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .padding(horizontal = Spacing.gutter),
+    VelroScreen(
+        title = strings["ride.offers.title"],
+        // Back leaves the request open on the server rather than
+        // cancelling it: a passenger who glances at the home screen has
+        // not withdrawn their ask, and drivers are still bidding on it.
+        onBack = onAskAgain,
+        scrollable = false,
+        modifier = modifier,
     ) {
         Spacer(Modifier.height(Spacing.md))
         Journey(request)

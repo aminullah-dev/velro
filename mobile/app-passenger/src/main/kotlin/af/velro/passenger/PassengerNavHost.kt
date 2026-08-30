@@ -119,7 +119,7 @@ fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rem
         }
 
         composable(Routes.REPORTS) {
-            ReportsRoute()
+            ReportsRoute(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.BOOK) {
@@ -139,7 +139,7 @@ fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rem
         }
 
         composable(Routes.BOOKING_DETAIL) {
-            BookingDetailRoute()
+            BookingDetailRoute(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.OFFERS) {
@@ -155,6 +155,7 @@ fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rem
 
         composable(Routes.HISTORY) {
             HistoryRoute(
+                onBack = { navController.popBackStack() },
                 onOpenBooking = { navController.navigate(Routes.bookingDetail(it)) },
                 onBook = { navController.navigate(Routes.BOOK) },
             )

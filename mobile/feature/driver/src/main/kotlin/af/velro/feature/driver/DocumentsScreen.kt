@@ -7,6 +7,7 @@ import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
+import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.DocumentChecklist
@@ -44,15 +45,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun DocumentsRoute(viewModel: DocumentsViewModel = hiltViewModel()) {
+fun DocumentsRoute(
+    onBack: () -> Unit = {},
+    viewModel: DocumentsViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    DocumentsScreen(state, viewModel::onEvent)
+    DocumentsScreen(state, viewModel::onEvent, onBack = onBack)
 }
 
 @Composable
 fun DocumentsScreen(
     state: DocumentsUiState,
     onEvent: (DocumentsEvent) -> Unit,
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -108,12 +113,12 @@ fun DocumentsScreen(
 
     val checklist = state.checklist
     if (checklist == null) {
-        // Not a driver yet: the screen offers the one action that makes sense.
-        Column(
-            modifier
-                .fillMaxSize()
-                .padding(horizontal = Spacing.gutter, vertical = Spacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        // Not a driver yet: the screen offers the one action that makes
+        // sense, and a way back, which this branch did not have at all.
+        VelroScreen(
+            title = strings["driver.documents.title"],
+            onBack = onBack,
+            modifier = modifier,
         ) {
             Text(
                 strings["driver.documents.not_a_driver"],
@@ -131,17 +136,12 @@ fun DocumentsScreen(
         return
     }
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.gutter, vertical = Spacing.lg)
+    VelroScreen(
+        title = strings["driver.documents.title"],
+        onBack = onBack,
+        modifier = modifier,
     ) {
-        Text(
-            strings["driver.documents.title"],
-            style = MaterialTheme.typography.titleLarge,
-        )
+        // The title moved into the bar, so it is not repeated here.
         Spacer(Modifier.height(Spacing.sm))
         Text(
             strings[statusHeadlineKey(checklist)],

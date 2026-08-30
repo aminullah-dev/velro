@@ -64,13 +64,16 @@ fun DriverNavHost(
                 onOpenReports = { navController.navigate(Routes.REPORTS) },
             )
         }
-        composable(Routes.DOCUMENTS) { DocumentsRoute() }
-        composable(Routes.VEHICLE) { VehicleRoute() }
-        composable(Routes.EARNINGS) { EarningsRoute() }
-        composable(Routes.REPORTS) {
-            ReportsRoute()
-        }
+        // Every pushed destination is given a way back. Until now none of
+        // them had one: no bar, no arrow, and BackHandler appeared nowhere in
+        // the codebase, so the only route out was a system gesture many people
+        // on a cheap handset do not use.
+        val back: () -> Unit = { navController.popBackStack() }
 
-        composable(Routes.BOARD) { BoardRoute() }
+        composable(Routes.DOCUMENTS) { DocumentsRoute(onBack = back) }
+        composable(Routes.VEHICLE) { VehicleRoute(onBack = back) }
+        composable(Routes.EARNINGS) { EarningsRoute(onBack = back) }
+        composable(Routes.REPORTS) { ReportsRoute(onBack = back) }
+        composable(Routes.BOARD) { BoardRoute(onBack = back) }
     }
 }

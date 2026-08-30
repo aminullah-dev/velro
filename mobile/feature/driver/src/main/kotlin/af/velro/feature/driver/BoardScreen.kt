@@ -9,6 +9,7 @@ import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
+import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.MoneyValue
@@ -48,9 +49,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun BoardRoute(viewModel: BoardViewModel = hiltViewModel()) {
+fun BoardRoute(
+    onBack: () -> Unit = {},
+    viewModel: BoardViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    BoardScreen(state, viewModel::onEvent)
+    BoardScreen(state, viewModel::onEvent, onBack = onBack)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +62,7 @@ fun BoardRoute(viewModel: BoardViewModel = hiltViewModel()) {
 fun BoardScreen(
     state: BoardUiState,
     onEvent: (BoardEvent) -> Unit,
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -76,15 +81,13 @@ fun BoardScreen(
         return
     }
 
-    Column(
-        modifier.fillMaxSize().statusBarsPadding().padding(horizontal = Spacing.gutter)
+    VelroScreen(
+        title = strings["driver.board.title"],
+        onBack = onBack,
+        modifier = modifier,
     ) {
         Spacer(Modifier.height(Spacing.md))
-        Text(
-            strings["driver.board.title"],
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
+        // The title lives in the app bar now, not twice on the screen.
         Spacer(Modifier.height(Spacing.sm))
 
         if (state.errorCode != null && state.offeringOn == null) {

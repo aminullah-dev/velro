@@ -692,5 +692,6 @@
   "safety.reply_placeholder": "Add something",
   "safety.reply": "Send",
   "safety.closed_note": "This report is closed. Raise a new one if you need to.",
-  "safety.awaiting_answer": "Nobody has answered yet."
+  "safety.awaiting_answer": "Nobody has answered yet.",
+  "driver.nav.home": "VELRO"
 }

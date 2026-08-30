@@ -692,5 +692,6 @@
   "safety.reply_placeholder": "څه ورزیات کړئ",
   "safety.reply": "لېږل",
   "safety.closed_note": "دا راپور تړل شوی. که اړتیا لرئ نوی راپور ورکړئ.",
-  "safety.awaiting_answer": "لا چا ځواب نه دی ورکړی."
+  "safety.awaiting_answer": "لا چا ځواب نه دی ورکړی.",
+  "driver.nav.home": "ولرو"
 }

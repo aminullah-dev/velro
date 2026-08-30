@@ -6,6 +6,7 @@ import af.velro.core.ui.component.EmptyState
 import af.velro.core.ui.component.ErrorState
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.SecondaryAction
+import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import androidx.compose.foundation.layout.Arrangement
@@ -28,12 +29,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun HistoryRoute(
+    onBack: () -> Unit = {},
     onOpenBooking: (String) -> Unit,
     onBook: () -> Unit,
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    HistoryScreen(state, viewModel::onEvent, onOpenBooking, onBook)
+    HistoryScreen(state, viewModel::onEvent, onOpenBooking, onBook, onBack = onBack)
 }
 
 @Composable
@@ -43,16 +45,16 @@ fun HistoryScreen(
     onOpenBooking: (String) -> Unit,
     onBook: () -> Unit,
     modifier: Modifier = Modifier,
+    onBack: () -> Unit = {},
 ) {
     val strings = LocalVelroStrings.current
 
-    Column(
-        modifier
-            .fillMaxSize()
-            // Without this the tabs sit under the clock: this screen is pushed
-            // onto the stack with no app bar of its own.
-            .statusBarsPadding()
-            .padding(horizontal = Spacing.gutter)
+    // This screen owns a LazyColumn, so the frame does not scroll for it.
+    VelroScreen(
+        title = strings["history.title"],
+        onBack = onBack,
+        scrollable = false,
+        modifier = modifier,
     ) {
         Row(
             Modifier.fillMaxWidth().padding(vertical = Spacing.md),

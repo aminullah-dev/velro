@@ -7,6 +7,7 @@ import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
+import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.core.i18n.Calendars
@@ -56,15 +57,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun VehicleRoute(viewModel: VehicleViewModel = hiltViewModel()) {
+fun VehicleRoute(
+    onBack: () -> Unit = {},
+    viewModel: VehicleViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    VehicleScreen(state, viewModel::onEvent)
+    VehicleScreen(state, viewModel::onEvent, onBack = onBack)
 }
 
 @Composable
 fun VehicleScreen(
     state: VehicleUiState,
     onEvent: (VehicleEvent) -> Unit,
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -84,19 +89,12 @@ fun VehicleScreen(
         return
     }
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    VelroScreen(
+        title = strings["driver.vehicle.title"],
+        onBack = onBack,
+        modifier = modifier,
     ) {
-        Text(
-            strings["driver.vehicle.title"],
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
+        // The title lives in the app bar now, not twice on the screen.
 
         state.vehicle?.let { VehicleSummary(it) }
 
