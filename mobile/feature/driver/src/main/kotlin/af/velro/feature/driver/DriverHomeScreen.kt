@@ -238,10 +238,51 @@ fun DriverHomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+            // Offline. This branch did not exist, so the screen fell through to
+            // earnings and said nothing -- a driver could sit on it while a
+            // passenger waited at a station, with no way to learn that the
+            // switch above was the only thing between them.
+            else -> OfflineNotice(state.waitingCount)
         }
 
         Spacer(Modifier.height(Spacing.xl))
         Earnings(state, onOpenEarnings)
+    }
+}
+
+/**
+ * What an offline driver is told.
+ *
+ * The count is the part that matters. "You are offline" is a status and
+ * invites nothing; "someone is waiting right now" is a reason, and it is true
+ * or it is absent -- never a decoration.
+ */
+@Composable
+private fun OfflineNotice(waitingCount: Int) {
+    val strings = LocalVelroStrings.current
+    VelroCard {
+        Column {
+            Text(
+                strings["driver.offline.title"],
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(Spacing.xs))
+            Text(
+                strings["driver.offline.body"],
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (waitingCount > 0) {
+                Spacer(Modifier.height(Spacing.sm))
+                Text(
+                    strings["driver.offline.waiting"],
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
 

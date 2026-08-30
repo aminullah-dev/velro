@@ -714,5 +714,8 @@
   "profile.hint.name_driver": "Passengers see this name when they choose your car.",
   "profile.hint.name_optional": "You can leave this empty, or ask someone to write it for you.",
   "admin.approvals.record_name": "Name on the tazkira",
-  "admin.approvals.name_hint": "Passengers see this name when they choose his car. Leave it empty to approve without changing it."
+  "admin.approvals.name_hint": "Passengers see this name when they choose his car. Leave it empty to approve without changing it.",
+  "driver.offline.title": "You are offline",
+  "driver.offline.body": "Passengers cannot see you, and you cannot see who is waiting. Turn the switch above on to start.",
+  "driver.offline.waiting": "Someone is waiting right now"
 }

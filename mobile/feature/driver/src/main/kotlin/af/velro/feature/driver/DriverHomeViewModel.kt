@@ -3,6 +3,7 @@ package af.velro.feature.driver
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
 import af.velro.data.repository.CurrentAssignment
+import af.velro.data.repository.NegotiationRepository
 import af.velro.data.repository.NotificationRepository
 import af.velro.data.repository.DriverRepository
 import af.velro.domain.DriverAvailability
@@ -41,6 +42,17 @@ data class DriverHomeUiState(
     val assignment: CurrentAssignment? = null,
     val offers: List<TripSummary> = emptyList(),
     val earnings: Earnings? = null,
+    /**
+     * How many passengers are waiting, whether or not he is online.
+     *
+     * Fetched off-shift on purpose. Everything else here is gated on being
+     * online, which is right for *doing* work and wrong for *knowing there is
+     * any*: an offline driver saw a switch and his earnings and nothing else,
+     * while somebody stood at a station with an open request thirty seconds
+     * old. He had no way to find out that turning the switch on would show
+     * him a fare.
+     */
+    val waitingCount: Int = 0,
 
     val isLoading: Boolean = true,
     val isBusy: Boolean = false,
@@ -120,6 +132,7 @@ private const val POLL_SECONDS = 10L
 class DriverHomeViewModel @Inject constructor(
     private val notifications: NotificationRepository,
     private val drivers: DriverRepository,
+    private val negotiation: NegotiationRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DriverHomeUiState())
@@ -152,8 +165,11 @@ class DriverHomeViewModel @Inject constructor(
             while (isActive) {
                 delay(POLL_SECONDS * 1000)
                 val current = _state.value
+                // An approved driver who is offline is still worth asking,
+                // because the answer is "somebody is waiting" and that is the
+                // one thing that would make him go online.
                 val worthAsking = current.assignment != null ||
-                    (current.profile?.canWork == true && current.isOnline)
+                    current.profile?.canWork == true
                 if (worthAsking) loadWork()
             }
         }
@@ -205,6 +221,13 @@ class DriverHomeViewModel @Inject constructor(
         if (_state.value.assignment == null && _state.value.isOnline) {
             (drivers.offers() as? ApiResult.Success)?.let { offers ->
                 _state.update { it.copy(offers = offers.value) }
+            }
+        }
+        // Not gated on being online. One small read, and it is the only thing
+        // that turns "you are offline" from a status into a reason to act.
+        if (_state.value.assignment == null) {
+            (negotiation.openRequests() as? ApiResult.Success)?.let { waiting ->
+                _state.update { it.copy(waitingCount = waiting.value.size) }
             }
         }
         (drivers.earnings() as? ApiResult.Success)?.let { earnings ->
