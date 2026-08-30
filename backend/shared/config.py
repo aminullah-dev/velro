@@ -41,6 +41,10 @@ class Settings:
     log_json: bool = True
     idempotency_ttl_seconds: int = 60 * 60 * 24
     otp_debug_echo: bool = False
+    # Numbers that skip the carrier during development. Per-number and
+    # explicit, unlike otp_debug_echo, which is refused in production because
+    # it opens every account at once.
+    otp_test_numbers: tuple[str, ...] = field(default_factory=tuple)
     sms_provider: str = "console"
     twilio_account_sid: str = ""
     # The API key's own SK... sid, when one is used. Empty means the account's
@@ -75,6 +79,7 @@ _DEFAULTS: dict[str, Any] = {
     "log_json": True,
     "idempotency_ttl_seconds": 60 * 60 * 24,
     "otp_debug_echo": False,
+    "otp_test_numbers": (),
     "sms_provider": "console",
     "twilio_account_sid": "",
     "twilio_api_key_sid": "",

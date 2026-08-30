@@ -50,6 +50,7 @@ def request_otp(
         users=users, otps=otps, codes=codes, sms=sms, settings=settings,
         clock=deps.clock(), new_id=deps.new_id,
         debug_echo=deps.settings().otp_debug_echo,
+        test_numbers=frozenset(deps.settings().otp_test_numbers),
     )
     result = use_case.execute(
         RequestOtpCommand(

@@ -29,6 +29,9 @@ from shared import error_codes
 from shared.clock import Clock
 from shared.errors import AuthenticationError, RateLimitError
 from shared.ids import IdGenerator
+from shared.logging import get_logger
+
+log = get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +63,7 @@ class RequestOtp:
         clock: Clock,
         new_id: IdGenerator,
         debug_echo: bool = False,
+        test_numbers: frozenset[str] = frozenset(),
     ) -> None:
         self._users = users
         self._otps = otps
@@ -69,6 +73,19 @@ class RequestOtp:
         self._clock = clock
         self._new_id = new_id
         self._debug_echo = debug_echo
+        # Numbers that skip the carrier and get their code in the response.
+        #
+        # Not the same thing as debug_echo, and deliberately so. debug_echo is
+        # a switch for the whole deployment: with it on, anybody who knows any
+        # phone number can ask this public API for that person's sign-in code.
+        # config.load refuses to start production with it, and that stays.
+        #
+        # This is per-number and explicit. A number nobody listed always takes
+        # the real path and always costs a real message, so listing the owner's
+        # own handsets makes development free without making anyone else's
+        # account reachable. Empty by default: absent configuration means
+        # nobody, never everybody.
+        self._test_numbers = test_numbers
 
     def execute(self, cmd: RequestOtpCommand) -> RequestOtpResult:
         phone = PhoneNumber.parse(cmd.phone, default_country_code=_country(self._settings))
@@ -98,18 +115,31 @@ class RequestOtp:
             max_attempts=self._settings.get_int("otp.max_attempts", 5),
             request_ip=cmd.request_ip,
         )
-        self._sms.send(
-            phone=phone,
-            message_key="auth.sms.otp",
-            payload={"code": code, "ttl_minutes": ttl // 60},
-            # The language they picked on the sign-in screen, before they have
-            # an account for it to be stored on.
-            locale=cmd.locale,
-        )
+        is_test_number = phone.value in self._test_numbers
+        if is_test_number:
+            # Logged at warning, every time, because a test number that
+            # outlives the testing is a permanently unlocked account and the
+            # only thing standing between it and being forgotten is this line
+            # being loud in a production log.
+            log.warning(
+                "auth.otp.test_number",
+                phone=phone.masked,
+                detail="no SMS sent; the code is returned in the response",
+            )
+        else:
+            self._sms.send(
+                phone=phone,
+                message_key="auth.sms.otp",
+                payload={"code": code, "ttl_minutes": ttl // 60},
+                # The language they picked on the sign-in screen, before they
+                # have an account for it to be stored on.
+                locale=cmd.locale,
+            )
+
         return RequestOtpResult(
             expires_in_seconds=ttl,
             resend_after_seconds=window,
-            debug_code=code if self._debug_echo else None,
+            debug_code=code if (self._debug_echo or is_test_number) else None,
         )
 
 

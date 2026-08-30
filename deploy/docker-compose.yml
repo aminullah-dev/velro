@@ -62,6 +62,16 @@ services:
       VELRO_TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       VELRO_TWILIO_SENDER_ID: ${TWILIO_SENDER_ID:-}
       VELRO_TWILIO_SENDER_NUMBER: ${TWILIO_SENDER_NUMBER:-}
+      # Numbers that skip the carrier, comma-separated E.164.
+      #
+      # Not the same thing as the debug echo above, which is refused in
+      # production because it opens every account at once. This is a named
+      # list: a number nobody put on it always takes the real path and always
+      # costs a real message. Empty means nobody.
+      #
+      # Remove the entries the day real people start signing in -- a test
+      # number that outlives the testing is a permanently unlocked account.
+      VELRO_OTP_TEST_NUMBERS: ${OTP_TEST_NUMBERS:-}
       VELRO_STORAGE_ROOT: /app/var/storage
       # otp_debug_echo is deliberately absent: config.load refuses to start a
       # production deployment with it set, so it must never appear here even
