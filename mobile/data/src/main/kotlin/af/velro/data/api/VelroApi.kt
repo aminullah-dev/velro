@@ -338,4 +338,27 @@ interface VelroApi {
     suspend fun raiseTicket(
         @Body body: RaiseTicketRequest,
     ): Response<Envelope<RaisedTicketDto>>
+
+    /**
+     * The reports this person has raised, and what VELRO said back.
+     *
+     * Without these the report is a one-way door: the backend has written the
+     * reply, tested it, and notified the inbox, and nothing on the handset can
+     * open it.
+     */
+    @GET("support/tickets")
+    suspend fun myTickets(
+        @Query("limit") limit: Int = 30,
+    ): Response<Envelope<List<TicketDto>>>
+
+    @GET("support/tickets/{ticketId}")
+    suspend fun ticket(
+        @Path("ticketId") ticketId: String,
+    ): Response<Envelope<TicketDto>>
+
+    @POST("support/tickets/{ticketId}/messages")
+    suspend fun replyToTicket(
+        @Path("ticketId") ticketId: String,
+        @Body body: TicketReplyRequest,
+    ): Response<Envelope<Map<String, String>>>
 }

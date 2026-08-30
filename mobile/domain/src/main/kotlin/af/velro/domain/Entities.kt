@@ -488,3 +488,35 @@ data class SafetyContacts(
         )
     }
 }
+
+
+/**
+ * A report the person raised, and the conversation on it.
+ *
+ * Internal notes never arrive here: the server filters them before they leave.
+ * The app could not enforce that even if it wanted to, which is the point --
+ * an operator's "this driver has three of these" must not be one client bug
+ * away from the driver's screen.
+ */
+data class SupportMessage(
+    val id: String,
+    val isFromReporter: Boolean,
+    val body: String,
+    val sentAt: java.time.Instant,
+)
+
+data class SupportTicket(
+    val id: String,
+    val reference: String,
+    val categoryCode: String,
+    val status: TicketStatus,
+    val isUrgent: Boolean = false,
+    val createdAt: java.time.Instant,
+    val messages: List<SupportMessage> = emptyList(),
+) {
+    /** Whether a reply from here would be accepted. Mirrors the server's rule. */
+    val canReply: Boolean get() = status != TicketStatus.CLOSED
+
+    /** VELRO has said something the person may not have read yet. */
+    val hasAnswer: Boolean get() = messages.any { !it.isFromReporter }
+}

@@ -56,6 +56,7 @@ dependencies {
     implementation(project(":core:i18n"))
     implementation(project(":feature:auth"))
     implementation(project(":feature:driver"))
+    implementation(project(":feature:safety"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

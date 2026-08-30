@@ -684,5 +684,13 @@
   "role.system": "ولرو",
   "admin.support.reporter": "هغه څوک چې راپور یې ورکړی",
   "admin.support.from_velro": "ولرو",
-  "safety.report_placeholder": "څه پیښ شول؟"
+  "safety.report_placeholder": "څه پیښ شول؟",
+  "safety.my_reports": "ستاسو راپورونه",
+  "safety.no_reports": "تاسو څه نه دي راپور کړي.",
+  "safety.from_velro": "ولرو",
+  "safety.from_you": "تاسو",
+  "safety.reply_placeholder": "څه ورزیات کړئ",
+  "safety.reply": "لېږل",
+  "safety.closed_note": "دا راپور تړل شوی. که اړتیا لرئ نوی راپور ورکړئ.",
+  "safety.awaiting_answer": "لا چا ځواب نه دی ورکړی."
 }

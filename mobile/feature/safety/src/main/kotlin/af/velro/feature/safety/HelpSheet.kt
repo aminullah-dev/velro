@@ -82,6 +82,8 @@ fun HelpSheet(
      * work, which is the point.
      */
     canReport: Boolean = true,
+    /** Opens the list of this person's reports and VELRO's answers. */
+    onOpenReports: (() -> Unit)? = null,
     /** Overrides the built-in form, for a caller that has its own screen. */
     onReport: (() -> Unit)? = null,
     viewModel: HelpViewModel = hiltViewModel(),
@@ -95,6 +97,9 @@ fun HelpSheet(
             HelpSheetContent(
                 contacts = state.contacts,
                 ride = ride,
+                // A reference with nowhere to go is a number somebody writes on
+                // their hand. Offered whenever the person has reported before.
+                onOpenReports = if (canReport) onOpenReports else null,
                 // The report door only appears when there is somewhere for it
                 // to go. A button wired to nothing is the thing this whole
                 // feature exists to avoid.
@@ -131,6 +136,7 @@ internal fun HelpSheetContent(
     contacts: af.velro.domain.SafetyContacts,
     ride: RideFacts?,
     onReport: (() -> Unit)?,
+    onOpenReports: (() -> Unit)? = null,
     context: Context = LocalContext.current,
 ) {
     val strings = LocalVelroStrings.current
@@ -210,6 +216,14 @@ internal fun HelpSheetContent(
                 ],
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (onOpenReports != null) {
+            SecondaryAction(
+                label = strings["safety.my_reports"],
+                onClick = onOpenReports,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

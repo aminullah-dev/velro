@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import af.velro.feature.safety.HelpSheet
+import af.velro.feature.safety.ReportsRoute
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +53,7 @@ private object Routes {
     const val BOOK = "book"
     const val BOOKING_DETAIL = "booking/{bookingId}"
     const val HISTORY = "history"
+    const val REPORTS = "reports"
     const val OFFERS = "offers"
 
     fun bookingDetail(id: String) = "booking/$id"
@@ -104,9 +106,20 @@ fun PassengerNavHost(isSignedIn: Boolean, navController: NavHostController = rem
                     onGetHelp = { helpOpen = true },
                 )
                 if (helpOpen) {
-                    HelpSheet(ride = null, onDismiss = { helpOpen = false })
+                    HelpSheet(
+                        ride = null,
+                        onOpenReports = {
+                            helpOpen = false
+                            navController.navigate(Routes.REPORTS)
+                        },
+                        onDismiss = { helpOpen = false },
+                    )
                 }
             }
+        }
+
+        composable(Routes.REPORTS) {
+            ReportsRoute()
         }
 
         composable(Routes.BOOK) {

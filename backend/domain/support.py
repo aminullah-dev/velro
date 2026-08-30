@@ -100,13 +100,25 @@ class SupportTicket:
         # A reply from the person who raised it pulls a resolved request back
         # open. An operator marking something fixed is a claim; this is the
         # only party who knows whether it was.
+        from_reporter = message.author_user_id == self.user_id
         if (
             self.status is TicketStatus.RESOLVED
-            and message.author_user_id == self.user_id
+            and from_reporter
             and not message.is_internal
         ):
             self.status = TicketStatus.IN_PROGRESS
             self.resolved_at = None
+
+        # And an answer from staff means somebody has looked. Without this the
+        # app showed VELRO's reply above the words "Not read yet", which reads
+        # as nobody having seen it -- on the screen of a person waiting to hear
+        # that somebody had.
+        if (
+            self.status is TicketStatus.OPEN
+            and not from_reporter
+            and not message.is_internal
+        ):
+            self.status = TicketStatus.IN_PROGRESS
 
         self.messages.append(message)
 

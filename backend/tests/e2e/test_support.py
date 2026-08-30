@@ -374,3 +374,53 @@ def test_the_two_support_gates_agree(client: TestClient) -> None:
         "is_support_staff"
     )
     assert "SUPPORT_STAFF_ROLES" in inspect.getsource(deps.is_support_staff)
+
+
+def test_an_answer_from_velro_stops_saying_nobody_has_read_it(
+    client: TestClient, rider: dict, admin_session: dict
+) -> None:
+    """A reply is proof somebody looked.
+
+    Found on a handset: the app rendered VELRO's answer directly beneath the
+    words "Not read yet", because a staff reply left the status at OPEN. To
+    somebody waiting to hear that a person had seen their report, that reads as
+    nobody having seen it.
+    """
+    mine = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "VEHICLE_CONDITION", "body": "بریک خراب است"},
+    ).json()["data"]
+    assert mine["status"] == "OPEN"
+
+    client.post(
+        f"/api/v1/support/tickets/{mine['id']}/messages", headers=admin_session,
+        json={"body": "we have taken the car off the road"},
+    )
+    after = client.get(
+        f"/api/v1/support/tickets/{mine['id']}", headers=rider
+    ).json()["data"]
+    assert after["status"] == "IN_PROGRESS", (
+        "VELRO answered and the report still says nobody has read it"
+    )
+
+
+def test_an_internal_note_alone_does_not_claim_somebody_answered(
+    client: TestClient, rider: dict, admin_session: dict
+) -> None:
+    """A note staff write to each other is not an answer to the reporter.
+
+    Moving the status on an internal note would tell somebody their report was
+    being looked at on the strength of a line they will never see.
+    """
+    mine = client.post(
+        "/api/v1/support/tickets", headers=rider,
+        json={"category_code": "OTHER", "body": "سوال"},
+    ).json()["data"]
+    client.post(
+        f"/api/v1/support/tickets/{mine['id']}/messages", headers=admin_session,
+        json={"body": "checking with the driver", "is_internal": True},
+    )
+    after = client.get(
+        f"/api/v1/support/tickets/{mine['id']}", headers=rider
+    ).json()["data"]
+    assert after["status"] == "OPEN"

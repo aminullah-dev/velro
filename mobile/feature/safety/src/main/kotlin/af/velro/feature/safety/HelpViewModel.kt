@@ -37,6 +37,14 @@ data class HelpUiState(
     val contacts: SafetyContacts = SafetyContacts.BUILT_IN,
     /** Null until the person presses the report door. */
     val report: ReportUiState? = null,
+    /**
+     * The reference of the last report sent from this screen.
+     *
+     * Held outside the form because the form's only button used to destroy it:
+     * a person read TKT-2026-000042, pressed Close, and it was gone. It is the
+     * one thing they keep, and the thing an operator asks for on the phone.
+     */
+    val lastReference: String? = null,
 )
 
 @HiltViewModel
@@ -80,12 +88,24 @@ class HelpViewModel @Inject constructor(
                     bookingId = bookingId,
                 )
             ) {
-                is ApiResult.Success -> _state.update {
-                    it.copy(report = report.copy(isSending = false, reference = result.value))
+                // `it.report`, never the `report` captured before the
+                // request. Copying the captured value discards anything typed
+                // while the request was in flight -- the same shape of mistake
+                // as reading rows before an UPDATE and using them after it.
+                is ApiResult.Success -> _state.update { current ->
+                    current.copy(
+                        report = (current.report ?: report).copy(
+                            isSending = false,
+                            reference = result.value,
+                        ),
+                        // Kept outside the form, so closing it cannot erase the
+                        // one thing the person has to hold on to.
+                        lastReference = result.value,
+                    )
                 }
-                is ApiResult.Failure -> _state.update {
-                    it.copy(
-                        report = report.copy(
+                is ApiResult.Failure -> _state.update { current ->
+                    current.copy(
+                        report = (current.report ?: report).copy(
                             isSending = false,
                             errorCode = result.error.code,
                             errorContext = result.error.context,

@@ -684,5 +684,13 @@
   "role.system": "VELRO",
   "admin.support.reporter": "The person who reported",
   "admin.support.from_velro": "VELRO",
-  "safety.report_placeholder": "What happened?"
+  "safety.report_placeholder": "What happened?",
+  "safety.my_reports": "Your reports",
+  "safety.no_reports": "You have not reported anything.",
+  "safety.from_velro": "VELRO",
+  "safety.from_you": "You",
+  "safety.reply_placeholder": "Add something",
+  "safety.reply": "Send",
+  "safety.closed_note": "This report is closed. Raise a new one if you need to.",
+  "safety.awaiting_answer": "Nobody has answered yet."
 }

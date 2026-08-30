@@ -684,5 +684,13 @@
   "role.system": "ولرو",
   "admin.support.reporter": "کسی که راپور داده",
   "admin.support.from_velro": "ولرو",
-  "safety.report_placeholder": "چه اتفاق افتاد؟"
+  "safety.report_placeholder": "چه اتفاق افتاد؟",
+  "safety.my_reports": "راپورهای شما",
+  "safety.no_reports": "شما چیزی راپور نداده‌اید.",
+  "safety.from_velro": "ولرو",
+  "safety.from_you": "شما",
+  "safety.reply_placeholder": "چیزی اضافه کنید",
+  "safety.reply": "فرستادن",
+  "safety.closed_note": "این راپور بسته است. اگر ضرورت دارید راپور نو بدهید.",
+  "safety.awaiting_answer": "هنوز کسی جواب نداده است."
 }

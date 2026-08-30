@@ -633,3 +633,32 @@ data class RaisedTicketDto(
     val status: String,
     val is_urgent: Boolean = false,
 )
+
+
+@Serializable
+data class TicketMessageDto(
+    val id: String,
+    val author_role: String,
+    val is_from_reporter: Boolean = false,
+    val body: String,
+    val is_internal: Boolean = false,
+    val sent_at: String,
+)
+
+@Serializable
+data class TicketDto(
+    val id: String,
+    val reference: String,
+    val category_code: String,
+    val subject: String = "",
+    val status: String,
+    val is_urgent: Boolean = false,
+    val trip_id: String? = null,
+    val booking_id: String? = null,
+    val created_at: String,
+    val resolved_at: String? = null,
+    val messages: List<TicketMessageDto> = emptyList(),
+)
+
+@Serializable
+data class TicketReplyRequest(val body: String)

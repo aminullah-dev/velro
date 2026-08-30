@@ -60,6 +60,7 @@ fun DriverHomeRoute(
     onOpenVehicle: () -> Unit,
     onOpenEarnings: () -> Unit,
     onOpenBoard: () -> Unit,
+    onOpenReports: () -> Unit,
     viewModel: DriverHomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -68,6 +69,7 @@ fun DriverHomeRoute(
         onOpenDocuments = onOpenDocuments,
         onOpenVehicle = onOpenVehicle,
         onOpenEarnings = onOpenEarnings,
+        onOpenReports = onOpenReports,
         onOpenBoard = onOpenBoard,
     )
 }
@@ -80,6 +82,7 @@ fun DriverHomeScreen(
     onOpenVehicle: () -> Unit = {},
     onOpenEarnings: () -> Unit = {},
     onOpenBoard: () -> Unit = {},
+    onOpenReports: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -108,6 +111,7 @@ fun DriverHomeScreen(
                 )
             },
             tripId = assignment?.trip?.id,
+            onOpenReports = onOpenReports,
             onDismiss = { helpOpen = false },
         )
     }

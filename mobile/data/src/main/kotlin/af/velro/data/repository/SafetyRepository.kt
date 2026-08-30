@@ -4,11 +4,17 @@ import af.velro.data.api.ApiResult
 import af.velro.data.api.RaiseTicketRequest
 import af.velro.data.api.ResponseMapper
 import af.velro.data.api.SafetyContactsDto
+import af.velro.data.api.TicketDto
+import af.velro.data.api.TicketReplyRequest
 import af.velro.data.api.VelroApi
 import af.velro.data.db.CacheKeys
 import af.velro.data.db.CacheMetadataEntity
 import af.velro.data.db.VelroDatabase
 import af.velro.domain.SafetyContacts
+import af.velro.domain.SupportMessage
+import af.velro.domain.SupportTicket
+import af.velro.domain.TicketStatus
+import af.velro.domain.enumOrNull
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -85,6 +91,34 @@ class SafetyRepository @Inject constructor(
             )
         }
     }
+
+    // -- reading back --------------------------------------------------
+
+    suspend fun myReports(limit: Int = 30): ApiResult<List<SupportTicket>> =
+        mapper.call { api.myTickets(limit) }.map { list -> list.map(::toTicket) }
+
+    suspend fun report(ticketId: String): ApiResult<SupportTicket> =
+        mapper.call { api.ticket(ticketId) }.map(::toTicket)
+
+    suspend fun reply(ticketId: String, body: String): ApiResult<Unit> =
+        mapper.call { api.replyToTicket(ticketId, TicketReplyRequest(body)) }.map { }
+
+    private fun toTicket(dto: TicketDto) = SupportTicket(
+        id = dto.id,
+        reference = dto.reference,
+        categoryCode = dto.category_code,
+        status = enumOrNull<TicketStatus>(dto.status) ?: TicketStatus.OPEN,
+        isUrgent = dto.is_urgent,
+        createdAt = runCatching { Instant.parse(dto.created_at) }.getOrDefault(Instant.EPOCH),
+        messages = dto.messages.map { m ->
+            SupportMessage(
+                id = m.id,
+                isFromReporter = m.is_from_reporter,
+                body = m.body,
+                sentAt = runCatching { Instant.parse(m.sent_at) }.getOrDefault(Instant.EPOCH),
+            )
+        },
+    )
 
     /** Needs a connection, and the screen says so before it is pressed. */
     suspend fun report(
