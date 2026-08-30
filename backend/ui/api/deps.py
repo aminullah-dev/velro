@@ -87,10 +87,12 @@ from infrastructure.services.codes import SecretsOtpGenerator, SecretsVerificati
 from infrastructure.services.messaging import ConsolePushChannel, ConsoleSmsSender
 from infrastructure.services.numbers import SqlNumberAllocator
 from infrastructure.services.settings import SqlSettingsProvider
+from infrastructure.services.sms import FallbackSmsSender, TwilioSmsSender
 from infrastructure.services.storage import LocalFileStorage
 from infrastructure.services.tokens import JwtTokenService
 from shared import config, error_codes
 from shared.clock import SystemClock
+from shared.config import ConfigurationError
 from shared.errors import AuthenticationError, PermissionError
 from shared.ids import new_id
 from ui.api.session_scope import current_session
@@ -340,8 +342,41 @@ def verification_codes(session: SessionDep) -> SecretsVerificationCodeGenerator:
     return SecretsVerificationCodeGenerator(length)
 
 
-def sms() -> ConsoleSmsSender:
-    return ConsoleSmsSender()
+@lru_cache(maxsize=1)
+def sms() -> ConsoleSmsSender | FallbackSmsSender:
+    """The sender the deployment configured.
+
+    Cached: the fallback chain holds an httpx client, and building one per
+    request would open a new connection pool for every sign-in.
+
+    `sms_provider` has existed as a setting since the beginning and nothing
+    read it, so every deployment used the console sender whatever it said --
+    including, in principle, a production one, which would have delivered
+    nothing and logged a success. config.load now refuses that outright, and
+    this is the other half: a real provider to refuse in favour of.
+    """
+    configured = settings()
+    if configured.sms_provider != "twilio":
+        return ConsoleSmsSender()
+
+    senders = [
+        TwilioSmsSender(
+            account_sid=configured.twilio_account_sid,
+            auth_token=configured.twilio_auth_token,
+            sender=sender,
+        )
+        # The sender ID first: it is what Ghorband's own networks -- Etisalat
+        # and MTN -- require. The number is the fallback, and the only route to
+        # AWCC.
+        for sender in (configured.twilio_sender_id, configured.twilio_sender_number)
+        if sender
+    ]
+    if not senders:
+        raise ConfigurationError(
+            "VELRO_SMS_PROVIDER is 'twilio' but neither VELRO_TWILIO_SENDER_ID "
+            "nor VELRO_TWILIO_SENDER_NUMBER is set: there is nothing to send from"
+        )
+    return FallbackSmsSender(senders)
 
 
 def push() -> ConsolePushChannel:

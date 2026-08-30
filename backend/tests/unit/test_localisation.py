@@ -310,3 +310,37 @@ def test_no_person_is_rendered_as_a_dash() -> None:
                 if pattern.search(line):
                     offenders.append(f"{path.relative_to(_REPO)}:{number}")
     assert not offenders, "a person rendered as a dash: " + ", ".join(sorted(offenders))
+
+
+# A GSM-7 message is 160 characters; anything outside that alphabet forces the
+# whole message into UCS-2, which is 70. Dari and Pashto are always UCS-2.
+_GSM7 = set(
+    "@£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?"
+    "¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà\n\r"
+)
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_the_sign_in_message_fits_one_sms(locale: str) -> None:
+    """Going one character over doubles the price of every sign-in.
+
+    A network charges per segment, not per message, and Perso-Arabic forces
+    UCS-2 -- so Dari and Pashto get 70 characters, not 160. The Pashto text is
+    currently 54. There is room, and there is not much room, and the person who
+    spends it will be editing a translation and thinking about wording.
+
+    At the rates quoted for Afghan operators a second segment is roughly a
+    third of a dollar per sign-in, which is the largest single running cost
+    VELRO has.
+    """
+    rendered = (
+        load(locale)["auth.sms.otp"]
+        # The longest realistic substitution: a 6-digit code and a 2-digit TTL.
+        .replace("{code}", "123456")
+        .replace("{ttl_minutes}", "10")
+    )
+    limit = 160 if all(character in _GSM7 for character in rendered) else 70
+    assert len(rendered) <= limit, (
+        f"{locale}: the sign-in SMS is {len(rendered)} characters and the limit "
+        f"is {limit}. A second segment doubles the cost of every sign-in."
+    )

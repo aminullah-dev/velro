@@ -24,11 +24,19 @@ class ConsoleSmsSender:
 
     name = "console"
 
-    def send(self, *, phone: PhoneNumber, message_key: str, payload: dict[str, Any]) -> bool:
+    def send(
+        self,
+        *,
+        phone: PhoneNumber,
+        message_key: str,
+        payload: dict[str, Any],
+        locale: str,
+    ) -> bool:
         log.info(
             "sms.sent",
             phone=phone.masked,
             message_key=message_key,
+            locale=locale,
             # payload deliberately omitted: it carries the OTP.
         )
         return True

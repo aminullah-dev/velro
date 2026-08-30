@@ -92,7 +92,23 @@ class NotificationChannel(Protocol):
 
 
 class SmsSender(Protocol):
-    def send(self, *, phone: PhoneNumber, message_key: str, payload: dict[str, Any]) -> bool: ...
+    """Delivery of one text message.
+
+    Unlike NotificationChannel, which hands a device a key and lets it render,
+    an SMS carries finished words -- so the sender is told which language to
+    write them in. Without that the only options are one hardcoded language for
+    a valley that reads two, or English, which for most of Ghorband is the same
+    as sending nothing.
+    """
+
+    def send(
+        self,
+        *,
+        phone: PhoneNumber,
+        message_key: str,
+        payload: dict[str, Any],
+        locale: str,
+    ) -> bool: ...
 
 
 class VerificationCodeGenerator(Protocol):

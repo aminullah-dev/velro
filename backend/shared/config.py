@@ -42,6 +42,14 @@ class Settings:
     idempotency_ttl_seconds: int = 60 * 60 * 24
     otp_debug_echo: bool = False
     sms_provider: str = "console"
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    # The registered alphanumeric sender ID -- what Etisalat, MTN, Roshan and
+    # Salaam require, and what AWCC refuses. Registration takes about a week.
+    twilio_sender_id: str = ""
+    # A number, for AWCC and for anywhere the sender ID is refused. Twilio sells
+    # no Afghan long code, so this is an international one.
+    twilio_sender_number: str = ""
     push_provider: str = "console"
     storage_root: str = "var/storage"
     cors_origins: tuple[str, ...] = field(default_factory=tuple)
@@ -63,6 +71,10 @@ _DEFAULTS: dict[str, Any] = {
     "idempotency_ttl_seconds": 60 * 60 * 24,
     "otp_debug_echo": False,
     "sms_provider": "console",
+    "twilio_account_sid": "",
+    "twilio_auth_token": "",
+    "twilio_sender_id": "",
+    "twilio_sender_number": "",
     "push_provider": "console",
     "storage_root": "var/storage",
 }

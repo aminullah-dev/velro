@@ -102,6 +102,9 @@ class RequestOtp:
             phone=phone,
             message_key="auth.sms.otp",
             payload={"code": code, "ttl_minutes": ttl // 60},
+            # The language they picked on the sign-in screen, before they have
+            # an account for it to be stored on.
+            locale=cmd.locale,
         )
         return RequestOtpResult(
             expires_in_seconds=ttl,
