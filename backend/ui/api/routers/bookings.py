@@ -13,6 +13,7 @@ from application.use_cases.cancel_booking import CancelBooking, CancelBookingCom
 from application.use_cases.rate_trip import RateTrip, RateTripCommand
 from application.use_cases.search_trips import SearchTrips, SearchTripsQuery
 from domain.enums import BookingStatus, PaymentMethod, RideKind
+from domain.lifecycles import BOOKING_LIFECYCLE
 from shared import error_codes
 from shared.errors import PermissionError
 from shared.money import Money
@@ -285,6 +286,7 @@ def _booking_out(
     reveal_code: bool,
     trip=None,
     driver_name: str | None = None,
+    driver_phone: str | None = None,
     vehicle=None,
     cancellation=None,
     pickup_name: str | None = None,
@@ -321,6 +323,13 @@ def _booking_out(
         payment_method=row.payment_method,
         scheduled_departure_at=trip.scheduled_departure_at if trip else None,
         driver_name=driver_name,
+        # Only while the journey is still ahead of her. BOOKING_LIFECYCLE knows
+        # which those are, so this cannot drift from the definition of "over".
+        driver_phone=(
+            driver_phone
+            if not BOOKING_LIFECYCLE.is_terminal(BookingStatus(row.status))
+            else None
+        ),
         vehicle_plate=vehicle.plate_number if vehicle else None,
         vehicle_description=_vehicle_description(vehicle),
         confirmed_at=row.confirmed_at,
@@ -406,6 +415,7 @@ class _Enricher:
             out[row.id] = {
                 "trip": trip,
                 "driver_name": user.full_name if user else None,
+                "driver_phone": user.phone if user else None,
                 "vehicle": vehicles.get(trip.vehicle_id) if trip and trip.vehicle_id else None,
                 "cancellation": cancellations.get(row.id),
                 "pickup_name": getattr(stations.get(row.pickup_station_id), "name", None),

@@ -45,4 +45,17 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // The driver's number, so a passenger standing at a station with no
+        // signal can still ring the man who is coming for her -- which is
+        // exactly when she cannot reach the server to ask for it.
+        //
+        // Nullable rather than defaulted: the server sends it only while the
+        // journey is ahead, and "we were never told" is a different fact from
+        // "there is no number", which is what an empty string would say.
+        db.execSQL("ALTER TABLE bookings ADD COLUMN driverPhone TEXT")
+    }
+}
+
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)

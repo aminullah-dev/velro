@@ -11,6 +11,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,6 +52,9 @@ sealed interface BookingDetailEvent {
     data object DismissError : BookingDetailEvent
 }
 
+/** Often enough to catch a driver arriving, cheap enough for a data bundle. */
+private const val POLL_SECONDS = 12L
+
 @HiltViewModel
 class BookingDetailViewModel @Inject constructor(
     private val bookings: BookingRepository,
@@ -65,6 +70,30 @@ class BookingDetailViewModel @Inject constructor(
     init {
         observeCache()
         refresh()
+        poll()
+    }
+
+    /**
+     * Keep the screen honest while she is looking at it.
+     *
+     * This is the screen a passenger holds open at a station, and everything on
+     * it changes without her: the driver is assigned, then arriving, then
+     * there; the trip can be cancelled out from under her. Loaded once in init,
+     * the boarding code stayed on screen for a journey that had been called off
+     * an hour earlier.
+     *
+     * Stops on a terminal booking. A receipt does not change, and polling one
+     * is a data bundle spent on nothing.
+     */
+    private fun poll() {
+        viewModelScope.launch {
+            while (isActive) {
+                delay(POLL_SECONDS * 1000)
+                val booking = _state.value.booking ?: continue
+                if (!booking.isActive) return@launch
+                refresh()
+            }
+        }
     }
 
     fun onEvent(event: BookingDetailEvent) {

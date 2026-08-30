@@ -17,6 +17,8 @@ import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import androidx.compose.foundation.layout.Arrangement
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -46,6 +48,7 @@ import androidx.compose.ui.Modifier
 import af.velro.domain.Booking
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
@@ -246,6 +249,7 @@ private fun Receipt(booking: Booking) {
 @Composable
 private fun Vehicle(booking: Booking) {
     val strings = LocalVelroStrings.current
+    val context = LocalContext.current
     Column {
         Text(strings["receipt.label.driver"], style = MaterialTheme.typography.labelSmall,
              color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -266,6 +270,25 @@ private fun Vehicle(booking: Booking) {
                 Text(it, style = MaterialTheme.typography.bodyMedium,
                      color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+
+        // Reach him. Only present while the journey is ahead: the server stops
+        // sending the number once the booking is over, and it is deliberately
+        // not cached, so a receipt read offline cannot resurrect it.
+        booking.driverPhone?.let { phone ->
+            Spacer(Modifier.height(Spacing.md))
+            SecondaryAction(
+                label = strings["booking.action.call_driver"],
+                onClick = {
+                    runCatching {
+                        context.startActivity(
+                            Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

@@ -703,5 +703,6 @@
   "home.open_request.expires_in": "{minutes} دقیقې پاتې دي",
   "home.open_request.expiring": "تر یوې دقیقې لږ پاتې دي",
   "home.open_request.open": "بیې وګورئ",
-  "driver.action.call_passenger": "مسافر ته زنګ ووهئ"
+  "driver.action.call_passenger": "مسافر ته زنګ ووهئ",
+  "booking.action.call_driver": "چلوونکي ته زنګ ووهئ"
 }

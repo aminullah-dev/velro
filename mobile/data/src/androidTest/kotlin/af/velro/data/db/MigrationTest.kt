@@ -5,6 +5,7 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -92,11 +93,46 @@ class MigrationTest {
     }
 
     @Test
+    fun migrating_from_3_to_4_keeps_the_booking_and_has_no_driver_number_yet() {
+        val db = helper.createDatabase(TEST_DB, 3)
+        db.execSQL(
+            """
+            INSERT INTO bookings (
+                id, number, tripId, status, rideKind, seatCount, seatNumbers,
+                pickupStationId, dropoffDestinationId, fareTotalMinor,
+                fareTotalCurrency, fareBreakdown, paymentMethod, verificationCode,
+                createdAt, syncState
+            ) VALUES (
+                'b1', 'BKG-2026-000001', 't1', 'DRIVER_ASSIGNED', 'PRIVATE', 1, '1',
+                's1', 'd1', 32000, 'AFN', '[]', 'CASH', 'VJEL', 0, 'SYNCED'
+            )
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 4, true, MIGRATION_3_4)
+
+        migrated.query("SELECT * FROM bookings WHERE id = 'b1'").use { cursor ->
+            assertEquals(1, cursor.count)
+            cursor.moveToFirst()
+            assertEquals(
+                "BKG-2026-000001",
+                cursor.getString(cursor.getColumnIndexOrThrow("number")),
+            )
+            // Null, not empty: a booking cached before the upgrade was never
+            // told the number, which is a different fact from there not being
+            // one. The screen renders no call button either way.
+            assertTrue(cursor.isNull(cursor.getColumnIndexOrThrow("driverPhone")))
+        }
+    }
+
+    @Test
     fun every_migration_runs_in_sequence_from_the_first_schema() {
-        // The path a real phone takes: installed at version 1, upgraded twice.
-        // Testing each step alone would miss an ordering mistake between them.
+        // The path a real phone takes: installed at version 1, upgraded three
+        // times. Testing each step alone would miss an ordering mistake
+        // between them.
         helper.createDatabase(TEST_DB, 1).close()
-        helper.runMigrationsAndValidate(TEST_DB, 3, true, *ALL_MIGRATIONS)
+        helper.runMigrationsAndValidate(TEST_DB, 4, true, *ALL_MIGRATIONS)
     }
 
     private companion object {

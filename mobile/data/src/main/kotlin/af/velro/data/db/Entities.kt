@@ -112,6 +112,16 @@ data class BookingEntity(
     val tripNumber: String? = null,
     val scheduledDepartureAt: Long? = null,
     val driverName: String? = null,
+    /**
+     * Cached on purpose, and read back conditionally.
+     *
+     * She is standing at a station with no signal exactly when she needs to
+     * ring him, so refusing to cache it fails her at the only moment it
+     * matters. The rule that stops it becoming a directory of every driver
+     * she has ridden with lives in toDomain instead, keyed on the booking
+     * lifecycle, so a stale row cannot outlive the journey.
+     */
+    val driverPhone: String? = null,
     val vehiclePlate: String? = null,
     val vehicleDescription: String? = null,
     val completedAt: Long? = null,

@@ -205,6 +205,7 @@ data class BookingDto(
     val payment_method: String,
     val scheduled_departure_at: String? = null,
     val driver_name: String? = null,
+    val driver_phone: String? = null,
     val vehicle_plate: String? = null,
     val vehicle_description: String? = null,
     val confirmed_at: String? = null,

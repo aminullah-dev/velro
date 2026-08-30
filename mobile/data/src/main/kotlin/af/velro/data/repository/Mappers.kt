@@ -23,6 +23,7 @@ import af.velro.data.db.TripEntity
 import af.velro.data.db.VillageEntity
 import af.velro.domain.Booking
 import af.velro.domain.BookingStatus
+import af.velro.domain.Lifecycles
 import af.velro.domain.Destination
 import af.velro.domain.DestinationGroup
 import af.velro.domain.District
@@ -168,6 +169,7 @@ fun BookingDto.toDomain() = Booking(
     tripNumber = trip_number,
     scheduledDepartureAt = scheduled_departure_at.toInstantOrNull(),
     driverName = driver_name,
+    driverPhone = driver_phone,
     vehiclePlate = vehicle_plate,
     vehicleDescription = vehicle_description,
     completedAt = completed_at.toInstantOrNull(),
@@ -201,6 +203,7 @@ fun BookingDto.toEntity(syncState: String = SyncState.SYNCED) = BookingEntity(
     tripNumber = trip_number,
     scheduledDepartureAt = scheduled_departure_at.toInstantOrNull()?.toEpochMilli(),
     driverName = driver_name,
+    driverPhone = driver_phone,
     vehiclePlate = vehicle_plate,
     vehicleDescription = vehicle_description,
     completedAt = completed_at.toInstantOrNull()?.toEpochMilli(),
@@ -255,6 +258,14 @@ fun BookingEntity.toDomain() = Booking(
     tripNumber = tripNumber,
     scheduledDepartureAt = scheduledDepartureAt?.let(Instant::ofEpochMilli),
     driverName = driverName,
+    // The number goes with the journey, whatever the cache still holds. The
+    // server already stops sending it; this is the same rule applied to a row
+    // that was written while the ride was live and read after it ended.
+    driverPhone = driverPhone.takeIf {
+        !Lifecycles.booking.isTerminal(
+            enumOrNull<BookingStatus>(status) ?: BookingStatus.PENDING
+        )
+    },
     vehiclePlate = vehiclePlate,
     vehicleDescription = vehicleDescription,
     completedAt = completedAt?.let(Instant::ofEpochMilli),

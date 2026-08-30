@@ -74,6 +74,13 @@ class BookingOut(Schema):
     # Present only once a driver is assigned, which is most of what a passenger
     # wants from a receipt: who drove, and in what.
     driver_name: str | None = None
+    #: How to reach the driver, while the journey is still ahead.
+    #:
+    #: Deliberately not on a finished booking. Two people meeting at a station
+    #: need to find each other; a receipt from last month does not, and leaving
+    #: it there turns a history screen into a directory of every driver she has
+    #: ridden with.
+    driver_phone: str | None = None
     vehicle_plate: str | None = None
     vehicle_description: str | None = None
     confirmed_at: datetime | None = None

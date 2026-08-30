@@ -126,6 +126,8 @@ data class Booking(
     val tripNumber: String? = null,
     val scheduledDepartureAt: Instant? = null,
     val driverName: String? = null,
+    /** Present only while the journey is still ahead. See BookingOut. */
+    val driverPhone: String? = null,
     val vehiclePlate: String? = null,
     val vehicleDescription: String? = null,
     val completedAt: Instant? = null,

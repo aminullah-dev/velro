@@ -703,5 +703,6 @@
   "home.open_request.expires_in": "{minutes} دقیقه باقی است",
   "home.open_request.expiring": "کمتر از یک دقیقه باقی است",
   "home.open_request.open": "دیدن قیمت‌ها",
-  "driver.action.call_passenger": "زنگ زدن به مسافر"
+  "driver.action.call_passenger": "زنگ زدن به مسافر",
+  "booking.action.call_driver": "زنگ زدن به راننده"
 }

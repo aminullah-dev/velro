@@ -271,3 +271,71 @@ def test_the_boarding_code_is_only_for_its_owner(
     staff = client.get(f"/api/v1/bookings/{mine['id']}", headers=admin_session)
     assert staff.status_code == 200
     assert staff.json()["data"]["verification_code"] is None
+
+
+def test_the_driver_is_reachable_while_the_ride_is_ahead_and_not_after(
+    client: TestClient, admin_session: dict
+) -> None:
+    """Two people meeting at a station need to find each other.
+
+    A receipt from last month does not, and leaving the number there turns the
+    history screen into a directory of every driver she has ever ridden with.
+    """
+    from tests.e2e.conftest import auth, road_ready_driver, sign_in
+
+    passenger = auth(sign_in(client, "+93700000195"))
+    driver, _ = road_ready_driver(client, admin_session, "+93700000196", "PRW-1961")
+    client.post("/api/v1/driver/status", headers=driver, json={"availability": "ONLINE"})
+
+    districts = client.get("/api/v1/geo/districts", headers=passenger).json()["data"]
+    journey = None
+    for district in districts:
+        for village in client.get(
+            f"/api/v1/geo/districts/{district['id']}/villages", headers=passenger
+        ).json()["data"]:
+            for station in client.get(
+                f"/api/v1/geo/villages/{village['id']}/stations", headers=passenger
+            ).json()["data"]:
+                destinations = client.get(
+                    f"/api/v1/geo/stations/{station['id']}/destinations", headers=passenger
+                ).json()["data"]
+                if destinations:
+                    journey = (station["id"], destinations[0]["id"])
+                    break
+            if journey:
+                break
+        if journey:
+            break
+    assert journey, "the seed produced no station with a destination"
+
+    asked = client.post(
+        "/api/v1/ride-requests", headers=passenger,
+        json={
+            "origin_station_id": journey[0], "destination_id": journey[1],
+            "passenger_count": 1, "offered_fare_minor": 30_000,
+        },
+    ).json()["data"]
+    offer = client.post(
+        f"/api/v1/driver/ride-requests/{asked['id']}/offer",
+        headers=driver, json={"amount_minor": 35_000},
+    ).json()["data"]
+    agreed = client.post(
+        f"/api/v1/fare-offers/{offer['id']}/accept", headers=passenger
+    ).json()["data"]
+
+    live = client.get(
+        f"/api/v1/bookings/{agreed['booking_id']}", headers=passenger
+    ).json()["data"]
+    assert live["driver_phone"], "she cannot reach the driver who is coming for her"
+
+    # Now end it, and the number goes with the journey.
+    client.post(
+        f"/api/v1/bookings/{agreed['booking_id']}/cancel", headers=passenger,
+        json={"reason_code": "PASSENGER_CANCELLED"},
+    )
+    finished = client.get(
+        f"/api/v1/bookings/{agreed['booking_id']}", headers=passenger
+    ).json()["data"]
+    assert finished["driver_phone"] is None, (
+        "a finished booking still carries the driver's number"
+    )
