@@ -17,7 +17,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The base URL is a build setting, not a constant in code, so a staging
         // build is a flag rather than an edit.
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/api/v1/\"")
+        //
+        // 10.0.2.2 is the emulator's alias for the host machine and means
+        // nothing on a real handset -- so a debug build installed on a phone
+        // could not reach the development API at all, which is most of what a
+        // phone is for at this stage. `-Pvelro.apiHost=<lan-ip>` points it at
+        // the machine running scripts/dev-api.sh instead. The default stays
+        // the emulator, because that is the common case.
+        val apiHost = (project.findProperty("velro.apiHost") as String?) ?: "10.0.2.2"
+        buildConfigField("String", "API_BASE_URL", "\"http://$apiHost:8000/api/v1/\"")
     }
     buildFeatures { buildConfig = true }
 
