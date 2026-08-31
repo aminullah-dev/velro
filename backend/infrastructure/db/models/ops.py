@@ -266,3 +266,21 @@ class ImportJobRow(Auditable, Base):
     committed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (enum_check("status", ImportStatus, name="import_jobs_status"),)
+
+
+class CrashReportRow(Base):
+    """A handset's dying words. Written by an unauthenticated endpoint, so
+    deliberately free of anything personal: no user id, no phone, no location
+    -- an app name, a version, a device model and the trace."""
+
+    __tablename__ = "crash_reports"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    app: Mapped[str] = mapped_column(String(20), nullable=False)
+    version_code: Mapped[int] = mapped_column(Integer, nullable=False)
+    version_name: Mapped[str] = mapped_column(String(40), nullable=False)
+    device: Mapped[str] = mapped_column(String(120), nullable=False)
+    sdk: Mapped[int] = mapped_column(Integer, nullable=False)
+    stack: Mapped[str] = mapped_column(Text, nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

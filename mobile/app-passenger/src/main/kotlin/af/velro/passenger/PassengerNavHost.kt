@@ -1,5 +1,6 @@
 package af.velro.passenger
 
+import androidx.compose.ui.platform.LocalContext
 import af.velro.data.db.OperationKind
 import af.velro.data.db.PendingOperationEntity
 import androidx.compose.material.icons.filled.AccountCircle
@@ -311,6 +312,10 @@ private fun HomeScreen(
             //
             // Home showed only bookings, so a woman who closed the app while
             // drivers were bidding had no route back to her own request — and
+            // A newer build on the server. One quiet card, tap to fetch --
+            // the only update channel a sideloaded app has.
+            state.updateUrl?.let { url -> UpdateCard(url) }
+
             // the server refuses a second one while the first is alive, so she
             // was locked out of the journey she had started, by her own app,
             // with no way to see why.
@@ -525,5 +530,31 @@ private fun SyncFailureCard(
                 onClick = onDismiss,
             )
         }
+    }
+}
+
+/** The sideload world's whole update mechanism: a card and a browser. */
+@Composable
+private fun UpdateCard(url: String) {
+    val strings = LocalVelroStrings.current
+    val context = LocalContext.current
+    VelroCard(
+        onClick = {
+            runCatching {
+                context.startActivity(
+                    android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse(url),
+                    )
+                )
+            }
+        },
+    ) {
+        Text(
+            strings["app.update.body"],
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }

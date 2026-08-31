@@ -231,6 +231,12 @@ interface VelroApi {
         @Path("bookingId") bookingId: String,
     ): Response<Envelope<VehicleLocationDto?>>
 
+    @GET("app/version")
+    suspend fun appVersion(): Response<Envelope<ReleaseDto>>
+
+    @POST("telemetry/crash")
+    suspend fun reportCrash(@Body body: CrashRequest): Response<Envelope<Map<String, Boolean>>>
+
     @POST("driver/location")
     suspend fun pingLocation(
         @Body body: LocationPingRequest,

@@ -2,6 +2,7 @@
   "app.name": "VELRO",
   "app.tagline": "Book a seat. Travel with confidence.",
   "app.tagline.driver": "Find passengers. Drive with confidence.",
+  "app.update.body": "A new VELRO version is ready — tap to download.",
   "error.validation_failed": "Please check the information you entered.",
   "error.phone_invalid": "That phone number does not look right.",
   "error.locale_unsupported": "That language is not available yet.",

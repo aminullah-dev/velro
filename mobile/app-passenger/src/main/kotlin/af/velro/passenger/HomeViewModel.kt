@@ -51,6 +51,8 @@ data class HomeUiState(
     val isRefreshing: Boolean = false,
     /** Saved actions still waiting for a connection. Zero almost always. */
     val pendingSync: Int = 0,
+    /** A newer APK on the server, as a download URL. Null is the usual day. */
+    val updateUrl: String? = null,
     /**
      * Queued operations the server has definitively refused.
      *
@@ -73,6 +75,8 @@ class HomeViewModel @Inject constructor(
     private val bookings: BookingRepository,
     private val negotiation: NegotiationRepository,
     private val queue: SyncQueue,
+    private val updates: af.velro.data.release.UpdateRepository,
+    private val appVersion: af.velro.data.release.AppVersion,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState())
@@ -95,6 +99,11 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { refreshBookings() }
         viewModelScope.launch { refreshOpenRequest() }
         poll()
+        viewModelScope.launch {
+            updates.availableUpdate("passenger", appVersion.code)?.let { url ->
+                _state.update { it.copy(updateUrl = url) }
+            }
+        }
     }
 
     fun dismissSyncFailure(id: String) {

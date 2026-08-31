@@ -2,6 +2,7 @@
   "app.name": "ولرو",
   "app.tagline": "چوکۍ ونیسئ. په ډاډ سره سفر وکړئ.",
   "app.tagline.driver": "مسافر ومومئ. په ډاډ سره موټر وچلوئ.",
+  "app.update.body": "د ولرو نوې بڼه چمتو ده — ښکته کولو ته يې کېکاږئ.",
   "error.validation_failed": "مهرباني وکړئ، ورکړل شوي معلومات وګورئ.",
   "error.phone_invalid": "دا د تلیفون شمېره سمه نه ښکاري.",
   "error.locale_unsupported": "دا ژبه لا نه ده چمتو.",

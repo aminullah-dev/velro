@@ -1260,6 +1260,40 @@ def update_setting(
     return ok({"key": key, "value": body.value})
 
 
+# -- crashes --------------------------------------------------------------
+
+
+@router.get("/crashes")
+def crashes(
+    actor: Annotated[deps.Actor, Depends(deps.require_operations)],
+    session: deps.SessionDep,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> dict:
+    """The handsets' dying words, newest first.
+
+    Read when a tester says "it closed by itself": the stack that reached
+    this table on the next launch is the whole story, and without this
+    surface it would be sitting in Postgres where nobody looks.
+    """
+    from infrastructure.db.models.ops import CrashReportRow
+
+    rows = session.scalars(
+        select(CrashReportRow)
+        .order_by(CrashReportRow.received_at.desc())
+        .limit(limit)
+    ).all()
+    return ok([
+        {
+            "id": r.id, "app": r.app,
+            "version_code": r.version_code, "version_name": r.version_name,
+            "device": r.device, "sdk": r.sdk,
+            "occurred_at": r.occurred_at, "received_at": r.received_at,
+            "stack": r.stack,
+        }
+        for r in rows
+    ], meta={"count": len(rows)})
+
+
 # -- audit ---------------------------------------------------------------
 
 class AuditOut(Schema):

@@ -774,3 +774,29 @@ data class VehicleLocationDto(
     val recorded_at: String,
     val age_seconds: Int,
 )
+
+
+@Serializable
+data class ReleaseChannelDto(
+    val version_name: String,
+    val version_code: Int,
+    val apk: String,
+)
+
+@Serializable
+data class ReleaseDto(
+    val available: Boolean? = null,
+    val passenger: ReleaseChannelDto? = null,
+    val driver: ReleaseChannelDto? = null,
+)
+
+@Serializable
+data class CrashRequest(
+    val app: String,
+    val version_code: Int,
+    val version_name: String,
+    val device: String,
+    val sdk: Int,
+    val stack: String,
+    val occurred_at: String,
+)

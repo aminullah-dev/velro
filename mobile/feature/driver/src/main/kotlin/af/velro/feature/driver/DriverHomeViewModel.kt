@@ -47,6 +47,8 @@ data class DriverHomeUiState(
     val tripMap: af.velro.data.repository.TripMapData? = null,
     /** A road advisory the driver is inside right now, or null. */
     val roadAlertKey: String? = null,
+    /** A newer APK on the server, as a download URL. Null is the usual day. */
+    val updateUrl: String? = null,
     val offers: List<TripSummary> = emptyList(),
     val earnings: Earnings? = null,
     /**
@@ -186,6 +188,8 @@ private const val POLL_SECONDS = 10L
 @HiltViewModel
 class DriverHomeViewModel @Inject constructor(
     private val location: af.velro.data.location.LocationProvider,
+    private val updates: af.velro.data.release.UpdateRepository,
+    private val appVersion: af.velro.data.release.AppVersion,
     private val notifications: NotificationRepository,
     private val drivers: DriverRepository,
     private val negotiation: NegotiationRepository,
@@ -202,6 +206,11 @@ class DriverHomeViewModel @Inject constructor(
     init {
         refresh()
         poll()
+        viewModelScope.launch {
+            updates.availableUpdate("driver", appVersion.code)?.let { url ->
+                _state.update { it.copy(updateUrl = url) }
+            }
+        }
     }
 
     /**

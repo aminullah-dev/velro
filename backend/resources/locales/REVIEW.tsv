@@ -787,3 +787,4 @@ road.alert.bazaar	Approaching a bazaar. Please take care.	به بازار نزد
 road.alert.caution	Extra caution on this stretch. Drive slowly.	در این منطقه احتیاط بیشتر کنید. آهسته برانید.	په دې سیمه کې ډېر پام وکړئ. ورو چلوئ.	new — please check the Pashto
 trip.vehicle_seen_now	Vehicle position: just now.	موقعیت موتر: همین حالا.	د موټر ځای: همدا اوس.	new — please check the Pashto
 trip.vehicle_seen	Vehicle last seen {minutes} min ago.	آخرین موقعیت موتر: {minutes} دقیقه پیش.	د موټر وروستی ځای: {minutes} دقیقې مخکې.	new — please check the Pashto
+app.update.body	A new VELRO version is ready — tap to download.	نسخهٔ نو ولرو آماده است — برای دانلود فشار دهید.	د ولرو نوې بڼه چمتو ده — ښکته کولو ته يې کېکاږئ.	new — please check the Pashto

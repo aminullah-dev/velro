@@ -345,6 +345,13 @@ fun DriverHomeScreen(
             // the one action that moves them past it.
             PendingApproval(state, onOpenDocuments, onOpenVehicle)
         } else {
+            // A newer build on the server -- the only update channel a
+            // sideloaded app has.
+            state.updateUrl?.let { url ->
+                UpdateCard(url)
+                Spacer(Modifier.height(Spacing.sm))
+            }
+
             OnlineToggle(state, onEvent)
         }
 
@@ -1245,4 +1252,30 @@ private fun RoadAlertBanner(messageKey: String) {
 /** ToneGenerator predates AutoCloseable; give it the shape `use` expects. */
 private inline fun android.media.ToneGenerator.use(block: (android.media.ToneGenerator) -> Unit) {
     try { block(this) } finally { release() }
+}
+
+/** The sideload world's whole update mechanism: a card and a browser. */
+@Composable
+private fun UpdateCard(url: String) {
+    val strings = LocalVelroStrings.current
+    val context = LocalContext.current
+    VelroCard(
+        onClick = {
+            runCatching {
+                context.startActivity(
+                    android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse(url),
+                    )
+                )
+            }
+        },
+    ) {
+        Text(
+            strings["app.update.body"],
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
 }
