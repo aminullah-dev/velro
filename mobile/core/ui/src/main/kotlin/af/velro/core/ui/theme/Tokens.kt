@@ -173,6 +173,14 @@ object Sizing {
      * screen.
      */
     val thumbnail: Dp = 96.dp
+
+    /**
+     * The driver's own photograph on his profile.
+     *
+     * Large enough to be a portrait rather than a list avatar -- this is the
+     * one screen where the point is that it is him.
+     */
+    val profilePhoto: Dp = 112.dp
 }
 
 /**

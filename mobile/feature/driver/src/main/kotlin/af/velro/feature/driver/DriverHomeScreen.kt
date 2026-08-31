@@ -1,5 +1,6 @@
 package af.velro.feature.driver
 
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.MoneyFormatter
@@ -86,6 +87,7 @@ fun DriverHomeRoute(
     onOpenBoard: () -> Unit,
     onOpenReports: () -> Unit,
     onSignOut: () -> Unit,
+    onOpenProfile: () -> Unit,
     viewModel: DriverHomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -141,6 +143,7 @@ fun DriverHomeRoute(
         onOpenEarnings = onOpenEarnings,
         onOpenReports = onOpenReports,
         onSignOut = onSignOut,
+        onOpenProfile = onOpenProfile,
         onOpenBoard = onOpenBoard,
     )
 }
@@ -155,6 +158,7 @@ fun DriverHomeScreen(
     onOpenBoard: () -> Unit = {},
     onOpenReports: () -> Unit = {},
     onSignOut: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
     snackbarHost: SnackbarHostState? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -273,6 +277,15 @@ fun DriverHomeScreen(
                             contentColor = VelroColors.OnBrandField,
                         ),
                     ) { Text(strings["safety.title"]) }
+                    // His own profile, where a passenger-facing product puts
+                    // it: in the header, reachable from anywhere he starts.
+                    IconButton(onClick = onOpenProfile) {
+                        Icon(
+                            Icons.Filled.AccountCircle,
+                            contentDescription = strings["driver.profile.title"],
+                            tint = VelroColors.OnBrandField,
+                        )
+                    }
                     IconButton(onClick = { signingOut = true }) {
                         Icon(
                             Icons.AutoMirrored.Filled.Logout,

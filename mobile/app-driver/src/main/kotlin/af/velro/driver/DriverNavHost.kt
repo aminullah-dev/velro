@@ -2,6 +2,7 @@ package af.velro.driver
 
 import af.velro.core.ui.theme.NavMotion
 import af.velro.core.ui.theme.LocalAnimationsEnabled
+import af.velro.feature.driver.ProfileRoute
 import af.velro.feature.auth.SignInRoute
 import af.velro.feature.driver.DocumentsRoute
 import af.velro.feature.safety.ReportsRoute
@@ -24,6 +25,7 @@ private object Routes {
     const val EARNINGS = "earnings"
     const val BOARD = "board"
     const val REPORTS = "reports"
+    const val PROFILE = "profile"
 }
 
 /**
@@ -75,6 +77,7 @@ fun DriverNavHost(
                 onOpenBoard = { navController.navigate(Routes.BOARD) },
                 onOpenReports = { navController.navigate(Routes.REPORTS) },
                 onSignOut = onSignOut,
+                onOpenProfile = { navController.navigate(Routes.PROFILE) },
             )
         }
         // Every pushed destination is given a way back. Until now none of
@@ -83,6 +86,13 @@ fun DriverNavHost(
         // on a cheap handset do not use.
         val back: () -> Unit = { navController.popBackStack() }
 
+        composable(Routes.PROFILE) {
+            ProfileRoute(
+                onBack = back,
+                onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
+                onOpenVehicle = { navController.navigate(Routes.VEHICLE) },
+            )
+        }
         composable(Routes.DOCUMENTS) { DocumentsRoute(onBack = back) }
         composable(Routes.VEHICLE) { VehicleRoute(onBack = back) }
         composable(Routes.EARNINGS) { EarningsRoute(onBack = back) }
