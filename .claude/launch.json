@@ -4,8 +4,19 @@
     {
       "name": "velro-admin",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "admin"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "admin"
+      ],
       "port": 5173
+    },
+    {
+      "name": "velro-api",
+      "runtimeExecutable": "backend/scripts/dev-api.sh",
+      "runtimeArgs": [],
+      "port": 8000
     }
   ]
 }
