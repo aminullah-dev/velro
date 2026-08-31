@@ -1,5 +1,6 @@
-package af.velro.feature.driver
+package af.velro.core.map
 
+import af.velro.data.repository.MapPlace
 import af.velro.data.repository.TripMapData
 import android.Manifest
 import android.content.Context
@@ -62,7 +63,12 @@ import org.maplibre.geojson.Point
  * mid-journey has no use for its apologies.
  */
 @Composable
-fun TripMap(data: TripMapData, modifier: Modifier = Modifier) {
+fun JourneyMap(
+    data: TripMapData,
+    /** The car, when the viewer is entitled to see it. Passenger side only. */
+    vehicle: MapPlace? = null,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     // Must run before the first MapView is constructed, once per process.
     remember { MapLibre.getInstance(context.applicationContext) }
@@ -95,12 +101,12 @@ fun TripMap(data: TripMapData, modifier: Modifier = Modifier) {
             .height(220.dp)
             .clip(RoundedCornerShape(Radius.card)),
         update = { view ->
-            view.getMapAsync { map -> map.render(context, data) }
+            view.getMapAsync { map -> map.render(context, data, vehicle) }
         },
     )
 }
 
-private fun MapLibreMap.render(context: Context, data: TripMapData) {
+private fun MapLibreMap.render(context: Context, data: TripMapData, vehicle: MapPlace?) {
     // A card, not a navigator: no rotation, no tilt, pinch and pan only.
     uiSettings.isRotateGesturesEnabled = false
     uiSettings.isTiltGesturesEnabled = false
@@ -153,6 +159,26 @@ private fun MapLibreMap.render(context: Context, data: TripMapData) {
                 circleStrokeWidth(2f),
             )
         )
+
+        // The car. Its source is replaced on every poll rather than the whole
+        // style, so the dot moves without the map flickering.
+        vehicle?.let { car ->
+            val point = Feature.fromGeometry(Point.fromLngLat(car.longitude, car.latitude))
+            val existing = style.getSourceAs<GeoJsonSource>("velro-vehicle")
+            if (existing != null) {
+                existing.setGeoJson(point)
+            } else {
+                style.addSource(GeoJsonSource("velro-vehicle", point))
+                style.addLayer(
+                    CircleLayer("velro-vehicle-dot", "velro-vehicle").withProperties(
+                        circleRadius(8f),
+                        circleColor("#1c1b16"),
+                        circleStrokeColor("#f5c400"),
+                        circleStrokeWidth(3f),
+                    )
+                )
+            }
+        }
 
         enableOwnPosition(context, style)
         frame(data)

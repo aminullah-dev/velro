@@ -45,6 +45,8 @@ data class DriverHomeUiState(
     val assignment: CurrentAssignment? = null,
     /** The drawn journey for the assignment, when the server can draw it. */
     val tripMap: af.velro.data.repository.TripMapData? = null,
+    /** A road advisory the driver is inside right now, or null. */
+    val roadAlertKey: String? = null,
     val offers: List<TripSummary> = emptyList(),
     val earnings: Earnings? = null,
     /**
@@ -183,6 +185,7 @@ private const val POLL_SECONDS = 10L
 
 @HiltViewModel
 class DriverHomeViewModel @Inject constructor(
+    private val location: af.velro.data.location.LocationProvider,
     private val notifications: NotificationRepository,
     private val drivers: DriverRepository,
     private val negotiation: NegotiationRepository,
@@ -347,6 +350,7 @@ class DriverHomeViewModel @Inject constructor(
         (record(drivers.currentTrip()) as? ApiResult.Success)?.let { current ->
             _state.update { it.copy(assignment = current.value) }
             refreshTripMap(current.value?.trip?.id)
+            steerRoadLoop(current.value != null)
         }
         // Offers are only worth fetching when there is no trip in flight.
         if (_state.value.assignment == null && _state.value.isOnline) {
@@ -535,6 +539,88 @@ class DriverHomeViewModel @Inject constructor(
                 _state.update { it.copy(tripMap = drawn.value) }
             }
         }
+    }
+
+
+    private var roadLoop: kotlinx.coroutines.Job? = null
+
+    /**
+     * The road speaking, and the office listening -- one loop, two duties.
+     *
+     * While a trip is in flight, every half-minute the handset takes one
+     * bounded GPS fix. The fix goes to the server as the ping the passenger's
+     * "where is my car" reads, and it is held against the advisory zones the
+     * trip map carried: enter a bend cluster, a bazaar, or a hand-marked
+     * caution stretch and the words appear (and chime) once -- not again for
+     * ten minutes, because a warning repeated every thirty seconds teaches a
+     * driver to stop hearing it, which is worse than no warning at all.
+     *
+     * Runs only while the app is open with a trip in flight. No permission,
+     * no fix, no signal: the loop just tries again next round. Nothing here
+     * may ever surface an error -- a safety feature that nags about itself
+     * is a distraction on a mountain road.
+     */
+    private fun steerRoadLoop(active: Boolean) {
+        if (!active) {
+            roadLoop?.cancel()
+            roadLoop = null
+            if (_state.value.roadAlertKey != null) {
+                _state.update { it.copy(roadAlertKey = null) }
+            }
+            return
+        }
+        if (roadLoop?.isActive == true) return
+        roadLoop = viewModelScope.launch {
+            val announced = HashMap<String, Long>()
+            while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                val standing = location.current()
+                if (standing != null) {
+                    drivers.pingLocation(
+                        latitude = standing.latitude.toDouble(),
+                        longitude = standing.longitude.toDouble(),
+                    )
+                    announceZone(standing, announced)
+                }
+                kotlinx.coroutines.delay(PING_SECONDS * 1000)
+            }
+        }
+    }
+
+    private fun announceZone(
+        standing: af.velro.data.location.LocationProvider.Coordinates,
+        announced: MutableMap<String, Long>,
+    ) {
+        val alerts = _state.value.tripMap?.alerts ?: return
+        val lat = standing.latitude.toDouble()
+        val lon = standing.longitude.toDouble()
+        val now = System.currentTimeMillis()
+        val hit = alerts.firstOrNull { zone ->
+            metres(lat, lon, zone.latitude, zone.longitude) <= zone.radiusM &&
+                now - (announced["${'$'}{zone.latitude}:${'$'}{zone.longitude}"] ?: 0L) >
+                ALERT_COOLDOWN_MS
+        } ?: run {
+            // Left every zone: clear the banner so the next one lands fresh.
+            if (_state.value.roadAlertKey != null &&
+                alerts.none { metres(lat, lon, it.latitude, it.longitude) <= it.radiusM }
+            ) {
+                _state.update { it.copy(roadAlertKey = null) }
+            }
+            return
+        }
+        announced["${'$'}{hit.latitude}:${'$'}{hit.longitude}"] = now
+        _state.update { it.copy(roadAlertKey = hit.messageKey) }
+    }
+
+    private fun metres(aLat: Double, aLon: Double, bLat: Double, bLon: Double): Double {
+        val dx = (aLon - bLon) * 111_320.0 *
+            kotlin.math.cos(Math.toRadians((aLat + bLat) / 2))
+        val dy = (aLat - bLat) * 110_574.0
+        return kotlin.math.hypot(dx, dy)
+    }
+
+    private companion object {
+        const val PING_SECONDS = 30L
+        const val ALERT_COOLDOWN_MS = 10L * 60 * 1000
     }
 
 }

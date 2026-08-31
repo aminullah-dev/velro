@@ -402,26 +402,8 @@ def trip_map(
         # exist. The same shape a wrong id gets.
         raise NotFoundError(trips.not_found_code, trip_id=trip_id)
 
-    def place(table: str, place_id: str | None):
-        if place_id is None:
-            return None, None
-        row = session.execute(
-            sql(f"SELECT name, latitude, longitude, code FROM {table} WHERE id = :id"),
-            {"id": place_id},
-        ).first()
-        if row is None:
-            return None, None
-        point = None
-        if row.latitude is not None and row.longitude is not None:
-            point = {
-                "name": row.name,
-                "latitude": float(row.latitude),
-                "longitude": float(row.longitude),
-            }
-        return point, row.code
-
-    origin, origin_code = place("stations", trip.origin_station_id)
-    destination, dest_code = place("destinations", trip.destination_id)
+    origin, origin_code = mapdata.place(session, "stations", trip.origin_station_id)
+    destination, dest_code = mapdata.place(session, "destinations", trip.destination_id)
 
     line = mapdata.journey_line(
         origin_code,
@@ -438,12 +420,28 @@ def trip_map(
         ))
     ]
 
+    # The road's advisories: bends found by the curvature scan, hand-placed
+    # caution stretches, and the bazaars -- which are simply the stations
+    # whose name says so. The handset announces each as he enters it; the
+    # server just knows where they are.
+    alerts = list(mapdata.road_alerts())
+    for name, lat, lon in session.execute(sql(
+        "SELECT name, latitude, longitude FROM stations "
+        "WHERE latitude IS NOT NULL AND deleted_at IS NULL "
+        "AND status = 'ACTIVE' AND name LIKE '%بازار%'"
+    )):
+        alerts.append({
+            "latitude": float(lat), "longitude": float(lon), "radius_m": 400,
+            "kind": "bazaar", "message_key": "road.alert.bazaar",
+        })
+
     return ok({
         "origin": origin,
         "destination": destination,
         # (lat, lon) pairs, the order every mobile mapping API speaks.
         "geometry": [[lat, lon] for lon, lat in line] if line else None,
         "stations": stations,
+        "alerts": alerts,
         "attribution": "© OpenStreetMap",
     })
 

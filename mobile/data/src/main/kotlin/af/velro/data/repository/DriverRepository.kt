@@ -4,7 +4,6 @@ import af.velro.data.api.AdvanceTripRequest
 import af.velro.data.api.ApiResult
 import af.velro.data.api.DriverStatusRequest
 import af.velro.data.api.IdempotencyKeys
-import af.velro.data.BuildConfig
 import af.velro.data.api.TripMapDto
 import af.velro.data.api.LocationPingRequest
 import af.velro.data.api.ResponseMapper
@@ -129,18 +128,7 @@ class DriverRepository @Inject constructor(
         }.map { }
 
     suspend fun tripMap(tripId: String): ApiResult<TripMapData> =
-        mapper.call { api.tripMap(tripId) }.map { dto ->
-            TripMapData(
-                origin = dto.origin?.toPlace(),
-                destination = dto.destination?.toPlace(),
-                geometry = dto.geometry
-                    ?.filter { it.size == 2 }
-                    ?.map { it[0] to it[1] },
-                stations = dto.stations.map { it.toPlace() },
-                attribution = dto.attribution,
-                styleUrl = BuildConfig.API_BASE_URL + "geo/map/style.json",
-            )
-        }
+        mapper.call { api.tripMap(tripId) }.map { it.toMapData() }
 }
 
 data class AdvanceOutcome(
@@ -173,15 +161,38 @@ data class MapPlace(
  * valley recognisable. Any part may be absent; the screen shows what there
  * is and no more.
  */
+data class RoadAlert(
+    val latitude: Double,
+    val longitude: Double,
+    val radiusM: Int,
+    val kind: String,
+    val messageKey: String,
+)
+
 data class TripMapData(
     val origin: MapPlace?,
     val destination: MapPlace?,
     /** (lat, lon) pairs along the road. Null when honestly unknown. */
     val geometry: List<Pair<Double, Double>>?,
     val stations: List<MapPlace>,
+    /** The road's advisories; empty on the passenger's previews. */
+    val alerts: List<RoadAlert> = emptyList(),
     val attribution: String,
     /** Where the base map's style lives -- this build's own API host. */
     val styleUrl: String,
+)
+
+/** One mapper for every screen that draws a journey. */
+fun af.velro.data.api.TripMapDto.toMapData(): TripMapData = TripMapData(
+    origin = origin?.toPlace(),
+    destination = destination?.toPlace(),
+    geometry = geometry?.filter { it.size == 2 }?.map { it[0] to it[1] },
+    stations = stations.map { it.toPlace() },
+    alerts = alerts.map {
+        RoadAlert(it.latitude, it.longitude, it.radius_m, it.kind, it.message_key)
+    },
+    attribution = attribution,
+    styleUrl = af.velro.data.BuildConfig.API_BASE_URL + "geo/map/style.json",
 )
 
 data class ManifestEntry(

@@ -1,5 +1,6 @@
 package af.velro.feature.booking
 
+import af.velro.core.map.JourneyMap
 import androidx.compose.ui.text.style.TextAlign
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.ChevronForward
@@ -678,6 +679,9 @@ private fun ResultList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Uni
         return
     }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        state.journeyMap?.let { drawn ->
+            item(key = "journey-map") { JourneyMap(drawn) }
+        }
         items(state.options, key = { it.tripId }) { option ->
             TripOptionCard(
                 option = option,
@@ -800,6 +804,11 @@ private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) 
                 )
             }
         }
+
+        // The road itself, when the server can draw it. Words above, the
+        // valley below; the fare field comes after the passenger has seen
+        // what the journey looks like.
+        state.journeyMap?.let { JourneyMap(it) }
 
         OutlinedTextField(
             value = state.offeredFare,

@@ -15,7 +15,7 @@ from application.use_cases.search_trips import SearchTrips, SearchTripsQuery
 from domain.enums import BookingStatus, PaymentMethod, RideKind
 from domain.lifecycles import BOOKING_LIFECYCLE
 from shared import error_codes
-from shared.errors import PermissionError
+from shared.errors import NotFoundError, PermissionError
 from shared.money import Money
 from ui.api import deps
 from ui.api.geofence import assert_inside
@@ -441,3 +441,48 @@ class _Enricher:
                 ),
             }
         return out
+
+#: A passenger may watch the car only while their booking is riding on it.
+_TRACKABLE_STATUSES = frozenset({"DRIVER_ASSIGNED", "READY", "ONBOARD"})
+
+
+@router.get("/bookings/{booking_id}/vehicle-location")
+def vehicle_location(
+    booking_id: str,
+    actor: deps.ActorDep,
+    bookings: Annotated[object, Depends(deps.bookings)],
+    trips: Annotated[object, Depends(deps.trips)],
+    drivers: Annotated[object, Depends(deps.drivers)],
+    locations: Annotated[object, Depends(deps.driver_locations)],
+) -> dict:
+    """Where the car is, for the person waiting at the station for it.
+
+    The same privacy shape as the driver's photograph: not a role, a live
+    connection. Only the booking's own passenger, only while the booking is
+    assigned to a car and not yet finished, and only a ping recorded during
+    THIS trip -- a stale ping from yesterday would draw the car at the
+    driver's house, which is a lie about the trip and a disclosure about the
+    driver. Null means "nothing honest to show", and the screen says nothing.
+    """
+    booking = bookings.get(booking_id)
+    if booking.passenger_id != actor.user_id:
+        raise NotFoundError(bookings.not_found_code, booking_id=booking_id)
+    if booking.status not in _TRACKABLE_STATUSES or booking.trip_id is None:
+        return ok(None)
+
+    trip = trips.find(booking.trip_id)
+    if trip is None or trip.driver_id is None:
+        return ok(None)
+    ping = locations.find(trip.driver_id)
+    if ping is None or ping.trip_id != trip.id:
+        return ok(None)
+
+    age_s = max(0, int((datetime.now(UTC) - ping.recorded_at).total_seconds()))
+    return ok({
+        "latitude": float(ping.latitude),
+        "longitude": float(ping.longitude),
+        "heading_degrees": ping.heading_degrees,
+        "recorded_at": ping.recorded_at.isoformat(),
+        "age_seconds": age_s,
+    })
+

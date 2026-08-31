@@ -3,6 +3,7 @@ package af.velro.feature.driver
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import af.velro.core.map.JourneyMap
 import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.MoneyFormatter
 import af.velro.core.i18n.Numerals
@@ -59,6 +60,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -723,9 +725,18 @@ private fun CurrentTrip(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> 
 
             // The journey, drawn. Below the where-to line and above the
             // manifest: orientation first, then the people.
+            // The road's word, when he is inside a zone that has one. Loud on
+            // purpose -- large text, warning colours, a chime on arrival --
+            // and quiet on schedule: the ViewModel clears it when he leaves
+            // the zone and holds a ten-minute cooldown per zone.
+            state.roadAlertKey?.let { alertKey ->
+                Spacer(Modifier.height(Spacing.md))
+                RoadAlertBanner(alertKey)
+            }
+
             state.tripMap?.let { drawn ->
                 Spacer(Modifier.height(Spacing.md))
-                TripMap(drawn)
+                JourneyMap(drawn)
             }
 
             Spacer(Modifier.height(Spacing.sm))
@@ -1194,4 +1205,44 @@ private fun PassengerStars(rated: Boolean, onRate: (Int) -> Unit) {
             }
         }
     }
+}
+
+/** A road advisory, styled to be read at arm's length on a dashboard. */
+@Composable
+private fun RoadAlertBanner(messageKey: String) {
+    val strings = LocalVelroStrings.current
+
+    // One chime per appearance of a zone's message, from the notification
+    // stream so it respects the ringer. The sound is the point: eyes belong
+    // on the road, and the chime is what makes him glance down once.
+    LaunchedEffect(messageKey) {
+        runCatching {
+            android.media.ToneGenerator(
+                android.media.AudioManager.STREAM_NOTIFICATION, 85,
+            ).use { tone ->
+                tone.startTone(android.media.ToneGenerator.TONE_PROP_BEEP2, 400)
+                kotlinx.coroutines.delay(500)
+            }
+        }
+    }
+
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            strings[messageKey],
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(Spacing.md),
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/** ToneGenerator predates AutoCloseable; give it the shape `use` expects. */
+private inline fun android.media.ToneGenerator.use(block: (android.media.ToneGenerator) -> Unit) {
+    try { block(this) } finally { release() }
 }

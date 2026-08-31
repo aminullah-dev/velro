@@ -746,11 +746,31 @@ data class MapPlaceDto(
 )
 
 @Serializable
+data class RoadAlertDto(
+    val latitude: Double,
+    val longitude: Double,
+    val radius_m: Int,
+    val kind: String,
+    val message_key: String,
+)
+
+@Serializable
 data class TripMapDto(
     val origin: MapPlaceDto? = null,
     val destination: MapPlaceDto? = null,
     /** (lat, lon) pairs along the road, or null when honestly unknown. */
     val geometry: List<List<Double>>? = null,
     val stations: List<MapPlaceDto> = emptyList(),
+    /** Advisory zones along the road. Only the driver's app announces them. */
+    val alerts: List<RoadAlertDto> = emptyList(),
     val attribution: String = "",
+)
+
+@Serializable
+data class VehicleLocationDto(
+    val latitude: Double,
+    val longitude: Double,
+    val heading_degrees: Int? = null,
+    val recorded_at: String,
+    val age_seconds: Int,
 )

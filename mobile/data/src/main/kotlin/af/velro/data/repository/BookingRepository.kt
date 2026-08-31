@@ -190,4 +190,22 @@ class BookingRepository @Inject constructor(
         mapper.call {
             api.rateTrip(tripId, RateTripRequest(score, comment, bookingId))
         }.map { }
+
+    /**
+     * Where the car is, while this booking rides on it. Null is the honest
+     * majority answer -- no driver yet, trip finished, or no ping from this
+     * trip -- and the screen simply shows no dot.
+     */
+    suspend fun vehicleLocation(bookingId: String): ApiResult<VehiclePing?> =
+        mapper.callNullable { api.vehicleLocation(bookingId) }.map { dto ->
+            dto?.let { VehiclePing(it.latitude, it.longitude, it.age_seconds) }
+        }
+
 }
+
+
+data class VehiclePing(
+    val latitude: Double,
+    val longitude: Double,
+    val ageSeconds: Int,
+)

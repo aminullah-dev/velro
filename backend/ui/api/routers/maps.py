@@ -9,9 +9,11 @@ months apart.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Depends, Request, Response
+from typing import Annotated
 
-from ui.api import mapdata
+from ui.api import deps, mapdata
+from ui.api.errors import ok
 
 router = APIRouter(prefix="/geo/map", tags=["map"])
 
@@ -123,3 +125,46 @@ def glyphs(fontstack: str, span: str) -> Response:
         media_type="application/x-protobuf",
         headers=_TILE_HEADERS,
     )
+
+
+@router.get("/journey")
+def journey(
+    actor: deps.ActorDep,
+    session: deps.SessionDep,
+    origin_station_id: str,
+    destination_id: str,
+) -> dict:
+    """The shape of a journey before anyone commits to it.
+
+    The passenger picking seats sees the same line the driver will later
+    drive, from the same corridor slice -- one geometry, two screens. Signed
+    in but otherwise unrestricted: the shape of a public road between two
+    public stations is not a secret, but it is also not worth serving to
+    anonymous crawlers.
+    """
+    origin, origin_code = mapdata.place(session, "stations", origin_station_id)
+    destination, dest_code = mapdata.place(session, "destinations", destination_id)
+
+    line = mapdata.journey_line(
+        origin_code,
+        dest_code,
+        (origin["longitude"], origin["latitude"]) if origin else None,
+        (destination["longitude"], destination["latitude"]) if destination else None,
+    )
+
+    from sqlalchemy import text as sql
+    stations = [
+        {"name": name, "latitude": float(lat), "longitude": float(lon)}
+        for name, lat, lon in session.execute(sql(
+            "SELECT name, latitude, longitude FROM stations "
+            "WHERE latitude IS NOT NULL AND deleted_at IS NULL AND status = 'ACTIVE'"
+        ))
+    ]
+
+    return ok({
+        "origin": origin,
+        "destination": destination,
+        "geometry": [[lat, lon] for lon, lat in line] if line else None,
+        "stations": stations,
+        "attribution": "© OpenStreetMap",
+    })

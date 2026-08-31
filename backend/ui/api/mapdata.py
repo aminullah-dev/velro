@@ -90,6 +90,131 @@ def _nearest(points: list[list[float]], target: tuple[float, float]) -> tuple[in
     return best_i, best_d
 
 
+#: Hand-placed caution stretches, over and above what the curvature scan
+#: finds. The first entry is the سیاه‌گرد bazaar-and-school stretch the
+#: operator pointed at on a map: river on one side, the institute and the
+#: teacher-training school on the other, children crossing. Grows by editing
+#: this list; each entry is announced by the driver app when he enters it.
+CAUTION_ZONES: list[dict] = [
+    {"latitude": 34.998, "longitude": 68.856, "radius_m": 800,
+     "kind": "caution", "message_key": "road.alert.caution"},
+]
+
+
+def _headings(points: list[list[float]]) -> list[float]:
+    out = []
+    for a, b in zip(points, points[1:]):
+        dx = (b[0] - a[0]) * math.cos(math.radians((a[1] + b[1]) / 2))
+        out.append(math.degrees(math.atan2(b[1] - a[1], dx)))
+    return out
+
+
+def curve_zones(
+    points: list[list[float]],
+    *,
+    window_m: float = 180.0,
+    min_turn_deg: float = 50.0,
+    merge_gap_m: float = 400.0,
+) -> list[dict]:
+    """Where the road bends hard enough to deserve a word.
+
+    Pure geometry over the committed polylines: total heading change inside a
+    sliding window. A gentle valley drift never fires; a switchback stack
+    fires once, as one zone, because neighbouring hot points merge. Tuned on
+    the Ghorband corridor by eye -- the thresholds are data, not physics.
+    """
+    if len(points) < 3:
+        return []
+    headings = _headings(points)
+    seg_len = [_metres(tuple(a), tuple(b)) for a, b in zip(points, points[1:])]
+
+    hot: list[int] = []
+    for i in range(len(headings)):
+        turn, span, j = 0.0, 0.0, i
+        while j + 1 < len(headings) and span < window_m:
+            delta = abs(headings[j + 1] - headings[j])
+            turn += min(delta, 360 - delta)
+            span += seg_len[j]
+            j += 1
+        if turn >= min_turn_deg:
+            hot.append(i)
+
+    zones: list[dict] = []
+    cluster: list[int] = []
+
+    def flush() -> None:
+        if not cluster:
+            return
+        lo, hi = cluster[0], cluster[-1]
+        mid = points[(lo + hi) // 2]
+        length = sum(seg_len[lo:hi + 1])
+        zones.append({
+            "latitude": round(mid[1], 5),
+            "longitude": round(mid[0], 5),
+            "radius_m": int(max(250, length / 2 + 150)),
+            "kind": "curve",
+            "message_key": "road.alert.curve",
+        })
+        cluster.clear()
+
+    for i in hot:
+        if cluster and sum(seg_len[cluster[-1]:i]) > merge_gap_m:
+            flush()
+        cluster.append(i)
+    flush()
+    return zones
+
+
+@lru_cache(maxsize=1)
+def road_alerts() -> list[dict]:
+    """Every advisory point on the roads the product drives.
+
+    Computed once from the corridor geometry, plus the hand-placed list.
+    Bazaar approaches come from the caller, which knows the stations table.
+    """
+    seen: list[dict] = list(CAUTION_ZONES)
+    for key, leg in _legs().items():
+        if not key.startswith(("corridor:", "leg:")):
+            continue
+        for zone in curve_zones(leg["points"]):
+            # The two corridors overlap near Kabul and Charikar; a zone within
+            # a kilometre of an already-kept one is the same bend seen twice.
+            a = (zone["longitude"], zone["latitude"])
+            if all(
+                _metres(a, (kept["longitude"], kept["latitude"])) > 1_000
+                for kept in seen
+            ):
+                seen.append(zone)
+    return seen
+
+
+def place(session, table: str, place_id: str | None):
+    """Name, coordinates and code of a station or destination row.
+
+    Shared by the driver's trip map and the passenger's journey preview so
+    the two views can never disagree about where a place is.
+    """
+    if place_id is None:
+        return None, None
+    from sqlalchemy import text as sql
+
+    assert table in ("stations", "destinations")
+    row = session.execute(
+        sql(f"SELECT name, latitude, longitude, code FROM {table} WHERE id = :id"),
+        {"id": place_id},
+    ).first()
+    if row is None:
+        return None, None
+    point = None
+    if row.latitude is not None and row.longitude is not None:
+        point = {
+            "name": row.name,
+            "latitude": float(row.latitude),
+            "longitude": float(row.longitude),
+        }
+    return point, row.code
+
+
 def journey_line(
     origin_code: str | None,
     dest_code: str | None,

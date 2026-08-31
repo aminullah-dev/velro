@@ -1,5 +1,7 @@
 package af.velro.feature.trip
 
+import af.velro.core.map.JourneyMap
+import af.velro.core.i18n.Numerals
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.i18n.Calendars
@@ -128,6 +130,27 @@ fun BookingDetailScreen(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
+        }
+
+        // The journey drawn, and the car on it while one is owed. The dot
+        // carries its age out loud: a passenger deciding whether to walk to
+        // the station deserves to know the difference between "the car is
+        // here" and "the car was here ten minutes ago".
+        state.journeyMap?.let { drawn ->
+            Spacer(Modifier.height(Spacing.md))
+            JourneyMap(drawn, vehicle = state.vehicle)
+            state.vehicleAgeSeconds?.let { age ->
+                Spacer(Modifier.height(Spacing.xxs))
+                Text(
+                    if (age < 90) strings["trip.vehicle_seen_now"]
+                    else strings[
+                        "trip.vehicle_seen",
+                        "minutes" to Numerals.localise((age / 60).toString(), strings.locale),
+                    ],
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         // Get help, at the top and on the journey the passenger is actually

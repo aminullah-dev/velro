@@ -35,6 +35,11 @@ data class BookingDetailUiState(
     /** A cancel or rating saved for the connection's return, not yet applied. */
     val queuedOffline: Boolean = false,
     val isStale: Boolean = false,
+    /** The road, drawn, when the server can draw it. */
+    val journeyMap: af.velro.data.repository.TripMapData? = null,
+    /** Where the car is right now, while a car is owed to this booking. */
+    val vehicle: af.velro.data.repository.MapPlace? = null,
+    val vehicleAgeSeconds: Int? = null,
     val isCancelling: Boolean = false,
     val ratingSubmitted: Boolean = false,
     val errorCode: String? = null,
@@ -96,7 +101,44 @@ class BookingDetailViewModel @Inject constructor(
                 val booking = _state.value.booking ?: continue
                 if (!booking.isActive) return@launch
                 refresh(clearError = false)
+                refreshVehicle(booking)
             }
+        }
+    }
+
+    /**
+     * The car's dot. Only asked for while a car is actually owed -- assigned
+     * and not yet finished -- and every empty or failed answer simply clears
+     * the dot. The server enforces the same rule; asking outside it would
+     * just be told null.
+     */
+    private suspend fun refreshVehicle(booking: Booking) {
+        if (booking.status !in TRACKABLE) {
+            if (_state.value.vehicle != null) {
+                _state.update { it.copy(vehicle = null, vehicleAgeSeconds = null) }
+            }
+            return
+        }
+        loadJourneyMap(booking)
+        val answer = bookings.vehicleLocation(booking.id)
+        val ping = (answer as? ApiResult.Success)?.value
+        _state.update {
+            it.copy(
+                vehicle = ping?.let { p ->
+                    af.velro.data.repository.MapPlace("", p.latitude, p.longitude)
+                },
+                vehicleAgeSeconds = ping?.ageSeconds,
+            )
+        }
+    }
+
+    /** Once per booking: the same preview the booking flow showed. */
+    private suspend fun loadJourneyMap(booking: Booking) {
+        if (_state.value.journeyMap != null) return
+        (geography.journeyMap(
+            booking.pickupStationId, booking.dropoffDestinationId,
+        ) as? ApiResult.Success)?.let { drawn ->
+            _state.update { it.copy(journeyMap = drawn.value) }
         }
     }
 
@@ -220,3 +262,8 @@ class BookingDetailViewModel @Inject constructor(
         errorContext = error.context,
     )
 }
+
+/** A car is owed: assigned, ready to board, or aboard. */
+private val TRACKABLE = setOf(
+    BookingStatus.DRIVER_ASSIGNED, BookingStatus.READY, BookingStatus.ONBOARD,
+)

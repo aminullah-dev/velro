@@ -220,6 +220,17 @@ interface VelroApi {
     @GET("driver/trips/{tripId}/map")
     suspend fun tripMap(@Path("tripId") tripId: String): Response<Envelope<TripMapDto>>
 
+    @GET("geo/map/journey")
+    suspend fun journeyMap(
+        @Query("origin_station_id") originStationId: String,
+        @Query("destination_id") destinationId: String,
+    ): Response<Envelope<TripMapDto>>
+
+    @GET("bookings/{bookingId}/vehicle-location")
+    suspend fun vehicleLocation(
+        @Path("bookingId") bookingId: String,
+    ): Response<Envelope<VehicleLocationDto?>>
+
     @POST("driver/location")
     suspend fun pingLocation(
         @Body body: LocationPingRequest,

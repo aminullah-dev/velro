@@ -67,6 +67,8 @@ data class BookingFlowUiState(
     val selectedVillage: Village? = null,
     val selectedStation: Station? = null,
     val selectedDestination: Destination? = null,
+    /** The road, drawn, once both ends are chosen. Absent is fine. */
+    val journeyMap: af.velro.data.repository.TripMapData? = null,
     val expandedGroupId: String? = null,
     val seatCount: Int = 1,
 
@@ -338,7 +340,7 @@ class BookingFlowViewModel @Inject constructor(
                     nowHour = LocalTime.now(Calendars.KABUL).hour,
                     errorCode = null,
                 ).withHoursInRange()
-            }
+            }.also { loadJourneyPreview() }
             is BookingEvent.SeatCountChanged -> _state.update {
                 it.copy(seatCount = event.count.coerceIn(1, 4))
             }
@@ -646,4 +648,20 @@ class BookingFlowViewModel @Inject constructor(
         errorCode = error.code,
         errorContext = error.context,
     )
+
+    /**
+     * The road between the chosen ends, for the preview card. Fetched once
+     * per pair; a failure leaves no card and no complaint -- the preview is
+     * a bonus on top of a flow that already works with words alone.
+     */
+    private fun loadJourneyPreview() {
+        val current = _state.value
+        val station = current.selectedStation ?: return
+        val destination = current.selectedDestination ?: return
+        viewModelScope.launch {
+            (geography.journeyMap(station.id, destination.id) as? ApiResult.Success)
+                ?.let { drawn -> _state.update { it.copy(journeyMap = drawn.value) } }
+        }
+    }
+
 }

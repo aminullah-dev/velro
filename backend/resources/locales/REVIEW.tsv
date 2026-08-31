@@ -782,3 +782,8 @@ error.currency_mismatch	Those prices are in different currencies.	این قیم�
 error.geofence_outside	VELRO serves Kabul, Parwan and Ghorband for now. It looks like you are outside the service area, so we cannot send your request to drivers.	ولرو فعلاً در کابل، پروان و غوربند خدمات می‌دهد. به نظر می‌رسد بیرون از ساحهٔ پوشش هستید، بنابراین درخواست شما به راننده‌ها فرستاده نمی‌شود.	ولرو اوس مهال په کابل، پروان او غوربند کې خدمت کوي. داسې ښکاري چې تاسو له پوښښ سیمې بهر یاست، نو ستاسو غوښتنه چلوونکو ته نه لېږل کېږي.	new — please check the Pashto
 error.user_already_suspended	That account is already suspended or closed.	آن حساب از قبل بند یا بسته است.	هغه حساب له مخکې بند یا تړل شوی دی.	new — please check the Pashto
 error.user_not_suspended	That account is not suspended.	آن حساب بند نیست.	هغه حساب بند نه دی.	new — please check the Pashto
+road.alert.curve	Sharp bends ahead. Slow down.	کجی جاده پیش رو است. آهسته برانید.	مخکې د سړک کوږوالی دی. ورو چلوئ.	new — please check the Pashto
+road.alert.bazaar	Approaching a bazaar. Please take care.	به بازار نزدیک می‌شوید. لطفاً احتیاط کنید.	بازار ته نږدې کېږئ. مهرباني وکړئ پام وکړئ.	new — please check the Pashto
+road.alert.caution	Extra caution on this stretch. Drive slowly.	در این منطقه احتیاط بیشتر کنید. آهسته برانید.	په دې سیمه کې ډېر پام وکړئ. ورو چلوئ.	new — please check the Pashto
+trip.vehicle_seen_now	Vehicle position: just now.	موقعیت موتر: همین حالا.	د موټر ځای: همدا اوس.	new — please check the Pashto
+trip.vehicle_seen	Vehicle last seen {minutes} min ago.	آخرین موقعیت موتر: {minutes} دقیقه پیش.	د موټر وروستی ځای: {minutes} دقیقې مخکې.	new — please check the Pashto

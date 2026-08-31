@@ -55,6 +55,45 @@ class TestBaseMap:
         assert sneaky.status_code in (404, 422)
 
 
+class TestJourneyPreview:
+    def test_a_passenger_sees_the_road_before_committing(
+        self, client: TestClient, admin_session: dict
+    ):
+        # Any journey the search can produce, previewed with the same shape
+        # the driver later gets. خیشکی→چاریکار is the pair with coordinates.
+        stations = client.get("/api/v1/admin/stations", headers=admin_session)
+        journey = client.get(
+            "/api/v1/geo/map/journey",
+            params={
+                "origin_station_id": _station_id(client, admin_session, "GRB-SYG-001-S1"),
+                "destination_id": _destination_id(client, admin_session, "EXT-CHK"),
+            },
+            headers=admin_session,
+        )
+        assert journey.status_code == 200, journey.text
+        body = journey.json()["data"]
+        assert body["origin"]["name"].startswith("ایستگاه")
+        assert body["geometry"], "the coordinate-bearing pair must draw a line"
+        assert body["attribution"] == "© OpenStreetMap"
+
+    def test_the_preview_needs_a_signed_in_user(self, client: TestClient):
+        refused = client.get(
+            "/api/v1/geo/map/journey",
+            params={"origin_station_id": "x", "destination_id": "y"},
+        )
+        assert refused.status_code == 401
+
+
+def _station_id(client, admin, code):
+    rows = client.get("/api/v1/admin/stations", headers=admin).json()["data"]
+    return next(r["id"] for r in rows if r.get("code") == code)
+
+
+def _destination_id(client, admin, code):
+    rows = client.get("/api/v1/admin/destinations", headers=admin).json()["data"]
+    return next(r["id"] for r in rows if r.get("code") == code)
+
+
 class TestJourneyLine:
     def test_a_drivers_trip_comes_back_with_its_shape(
         self, client: TestClient, driver_session: dict, admin_session: dict
@@ -75,6 +114,10 @@ class TestJourneyLine:
         assert isinstance(body["stations"], list) and body["stations"]
         for station in body["stations"]:
             assert set(station) == {"name", "latitude", "longitude"}
+        # The road speaks: every advisory carries a place and a message key.
+        assert isinstance(body["alerts"], list) and body["alerts"]
+        for alert in body["alerts"][:5]:
+            assert alert["message_key"].startswith("road.alert.")
         # geometry may honestly be null when an endpoint has no coordinates;
         # when present it is (lat, lon) pairs inside the region box.
         if body["geometry"] is not None:
@@ -97,3 +140,43 @@ class TestJourneyLine:
             f"/api/v1/driver/trips/{foreign['id']}/map", headers=driver_session
         )
         assert refused.status_code == 404, refused.text
+
+
+class TestVehiclePrivacy:
+    """Who may watch the car. Staging a full assigned-and-pinging trip is the
+    concurrency suite's business; what must hold everywhere is the refusals."""
+
+    def test_someone_elses_booking_does_not_even_exist(
+        self, client: TestClient, admin_session: dict, passenger_session: dict
+    ):
+        # Any booking that is not the caller's own. The admin surface lists
+        # everyone's; the passenger asks after one that is not theirs.
+        rows = client.get("/api/v1/admin/bookings", headers=admin_session).json()["data"]
+        mine = client.get("/api/v1/bookings", headers=passenger_session).json()["data"]
+        my_ids = {b["id"] for b in mine.get("bookings", [])}
+        foreign = next((r for r in rows if r["id"] not in my_ids), None)
+        if foreign is None:
+            return
+        refused = client.get(
+            f"/api/v1/bookings/{foreign['id']}/vehicle-location",
+            headers=passenger_session,
+        )
+        assert refused.status_code == 404, refused.text
+
+    def test_a_finished_booking_shows_no_car(
+        self, client: TestClient, passenger_session: dict
+    ):
+        mine = client.get("/api/v1/bookings", headers=passenger_session).json()["data"]
+        settled = next(
+            (b for b in mine.get("bookings", [])
+             if b["status"] in ("COMPLETED", "CANCELLED", "NO_SHOW")),
+            None,
+        )
+        if settled is None:
+            return
+        answer = client.get(
+            f"/api/v1/bookings/{settled['id']}/vehicle-location",
+            headers=passenger_session,
+        )
+        assert answer.status_code == 200, answer.text
+        assert answer.json()["data"] is None

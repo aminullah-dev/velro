@@ -186,6 +186,17 @@ class GeographyRepository @Inject constructor(
         }.map { list -> list.map { it.toDomain() } }
 
     suspend fun isCached(): Boolean = db.cacheMetadata().get(CacheKeys.GEO_VERSION) != null
+
+    /**
+     * The road between a station and a destination, previewed before anyone
+     * commits a seat to it. The same corridor slice the driver's map draws.
+     */
+    suspend fun journeyMap(
+        originStationId: String,
+        destinationId: String,
+    ): ApiResult<TripMapData> =
+        mapper.call { api.journeyMap(originStationId, destinationId) }
+            .map { it.toMapData() }
 }
 
 sealed interface SearchHit {

@@ -29,6 +29,7 @@ dependencies {
     implementation(project(":domain"))
     implementation(project(":data"))
     implementation(project(":core:ui"))
+    implementation(project(":core:map"))
     implementation(project(":core:i18n"))
     implementation(project(":feature:safety"))
 

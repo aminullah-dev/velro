@@ -28,6 +28,7 @@ rootProject.name = "velro"
 include(":domain")
 include(":data")
 include(":core:ui")
+include(":core:map")
 include(":core:i18n")
 include(":feature:auth")
 include(":feature:booking")
