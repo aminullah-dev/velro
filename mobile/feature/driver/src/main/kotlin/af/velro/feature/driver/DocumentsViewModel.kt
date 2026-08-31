@@ -33,6 +33,22 @@ data class DocumentsUiState(
      */
     val isRefreshing: Boolean = false,
     val uploadingType: String? = null,
+    /**
+     * Thumbnails of what he actually sent, by document id.
+     *
+     * The screen listed three documents by name and status and showed none of
+     * them. A driver who photographed the wrong page of his licence -- or his
+     * thumb -- had no way to discover it: the app said "sent, approved" about
+     * an image he could not see, and the only correction available was to send
+     * another and hope.
+     *
+     * A map rather than a field on the document, because these arrive one at a
+     * time and after the list does. An absent entry means "not fetched yet",
+     * which the screen draws as a placeholder rather than as an error -- a
+     * thumbnail that failed is not worth an error over, and the status beside
+     * it is the load-bearing information.
+     */
+    val thumbnails: Map<String, ByteArray> = emptyMap(),
     val errorCode: String? = null,
     val errorContext: Map<String, Any?> = emptyMap(),
     val justUploaded: String? = null,
@@ -101,6 +117,33 @@ class DocumentsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Fetch the images behind the list, after the list.
+     *
+     * Never awaited by the checklist load: the names and statuses are what the
+     * screen is for, and three image downloads on a Ghorband connection must
+     * not hold them back. Each lands on its own as it arrives.
+     *
+     * Only documents that are current, and only those not already held --
+     * re-fetching on every pull would spend a driver's data to redraw pictures
+     * he is already looking at.
+     */
+    private fun loadThumbnails(checklist: DocumentChecklist) {
+        val wanted = checklist.documents
+            .filter { it.isCurrent && it.id !in _state.value.thumbnails }
+        for (document in wanted) {
+            viewModelScope.launch {
+                (documents.file(document.id) as? ApiResult.Success)?.let { result ->
+                    _state.update { it.copy(thumbnails = it.thumbnails + (document.id to result.value)) }
+                }
+                // A failure is silent on purpose. The document's status is the
+                // thing this screen owes the driver; a missing picture beside
+                // a correct "approved" is a smaller problem than an error
+                // banner that makes him think his licence was refused.
+            }
+        }
+    }
+
     private fun refresh(pulled: Boolean = false) {
         _state.update {
             it.copy(
@@ -111,8 +154,10 @@ class DocumentsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             when (val result = documents.checklist()) {
-                is ApiResult.Success ->
+                is ApiResult.Success -> {
                     _state.update { it.copy(checklist = result.value, isLoading = false) }
+                    loadThumbnails(result.value)
+                }
                 is ApiResult.Failure -> _state.update {
                     // Not yet a driver is not an error to alarm anyone with --
                     // it is the state before applying.

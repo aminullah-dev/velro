@@ -11,6 +11,8 @@ import retrofit2.http.Part
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import okhttp3.ResponseBody
+import retrofit2.http.Streaming
 import retrofit2.http.Query
 
 /**
@@ -282,6 +284,17 @@ interface VelroApi {
     suspend fun registerAsDriver(
         @Body body: RegisterDriverRequest,
     ): Response<Envelope<Map<String, String>>>
+
+    /**
+     * The driver's own copy of a document he sent.
+     *
+     * Raw bytes rather than an envelope: this is the image itself. Streamed
+     * through the same authenticated client as everything else, so the token
+     * handling and refresh are not reimplemented for one screen.
+     */
+    @GET("driver/documents/{id}/file")
+    @Streaming
+    suspend fun documentFile(@Path("id") id: String): Response<ResponseBody>
 
     @GET("driver/documents")
     suspend fun documents(): Response<Envelope<DocumentChecklistDto>>

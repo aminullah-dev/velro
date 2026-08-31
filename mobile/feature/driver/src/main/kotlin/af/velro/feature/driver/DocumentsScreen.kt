@@ -1,5 +1,17 @@
 package af.velro.feature.driver
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.foundation.shape.RoundedCornerShape
+import af.velro.core.ui.theme.Radius
+import af.velro.core.ui.theme.Sizing
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.produceState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.ui.component.StatusTone
 import af.velro.core.ui.component.StatusChip
@@ -252,6 +264,7 @@ fun DocumentsScreen(
             DocumentRow(
                 typeCode = kind,
                 document = checklist.currentFor(kind),
+                thumbnail = checklist.currentFor(kind)?.let { state.thumbnails[it.id] },
                 uploading = state.uploadingType == kind,
                 enabled = !state.isUploading,
                 onPick = {
@@ -313,6 +326,7 @@ private fun DocumentRow(
     uploading: Boolean,
     enabled: Boolean,
     onPick: () -> Unit,
+    thumbnail: ByteArray? = null,
 ) {
     val strings = LocalVelroStrings.current
 
@@ -343,6 +357,8 @@ private fun DocumentRow(
             }
 
             if (document != null) {
+                Spacer(Modifier.height(Spacing.md))
+                DocumentThumbnail(bytes = thumbnail)
                 Spacer(Modifier.height(Spacing.xs))
                 // Said, not just shown.
                 //
@@ -510,3 +526,74 @@ internal fun expiryNotice(
 }
 
 internal const val WARN_WITHIN_DAYS = 30L
+
+
+/**
+ * What he actually sent.
+ *
+ * The screen named three documents and showed none of them, so a driver who
+ * had photographed the wrong page -- or a thumb over the lens -- could not
+ * find out. "Approved" is reassuring about an image nobody showed him.
+ *
+ * Decoded off the composition and bounded. This is a camera photograph, and
+ * turning a full-resolution one into a Bitmap is how a cheap handset runs out
+ * of memory; inSampleSize halves in powers of two and decodes at that size, so
+ * the large one never exists in memory at all. Same discipline the upload path
+ * in this file already applies in the other direction.
+ *
+ * A null is a placeholder, not an error. The thumbnail arrives after the list
+ * and may not arrive at all, and the status beside it is the fact that matters.
+ */
+@Composable
+private fun DocumentThumbnail(bytes: ByteArray?) {
+    val shape = RoundedCornerShape(Radius.md)
+    val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, bytes) {
+        val data = bytes
+        value = if (data == null) null else withContext(Dispatchers.Default) {
+            runCatching {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
+                var sample = 1
+                while (bounds.outHeight / sample > THUMBNAIL_PX ||
+                    bounds.outWidth / sample > THUMBNAIL_PX
+                ) {
+                    sample *= 2
+                }
+                BitmapFactory.decodeByteArray(
+                    data, 0, data.size,
+                    BitmapFactory.Options().apply { inSampleSize = sample },
+                )
+            }.getOrNull()
+        }
+    }
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(Sizing.thumbnail)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        val image = bitmap
+        if (image != null) {
+            Image(
+                bitmap = image.asImageBitmap(),
+                // The card's own heading names the document; repeating it here
+                // would have a screen reader say it twice.
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth().height(Sizing.thumbnail),
+            )
+        }
+    }
+}
+
+/**
+ * The tallest a thumbnail is decoded to.
+ *
+ * A bound on memory, not a layout size: the view is 96dp tall, and decoding
+ * beyond a few hundred pixels buys nothing a driver can see while costing what
+ * a cheap phone does not have.
+ */
+private const val THUMBNAIL_PX = 512

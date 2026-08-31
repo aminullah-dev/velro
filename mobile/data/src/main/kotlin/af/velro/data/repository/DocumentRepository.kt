@@ -1,5 +1,6 @@
 package af.velro.data.repository
 
+import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
 import af.velro.data.api.RegisterDriverRequest
 import af.velro.data.api.ResponseMapper
@@ -30,6 +31,30 @@ class DocumentRepository @Inject constructor(
         mapper.call {
             api.registerAsDriver(RegisterDriverRequest(homeDistrictId, fullName))
         }.map { }
+
+    /**
+     * The bytes of a document the driver already sent.
+     *
+     * Decoded by the caller, not here: the data layer has no business knowing
+     * what size the screen wants, and a full-resolution camera photograph
+     * turned into a Bitmap on this thread is how a cheap handset runs out of
+     * memory. The screen decodes bounded, the way the upload path already
+     * does in the other direction.
+     */
+    suspend fun file(documentId: String): ApiResult<ByteArray> =
+        try {
+            val response = api.documentFile(documentId)
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                ApiResult.Success(body.use { it.bytes() })
+            } else {
+                ApiResult.Failure(mapper.parseError(response))
+            }
+        } catch (e: java.io.IOException) {
+            ApiResult.Failure(ApiException.offline())
+        } catch (e: Exception) {
+            ApiResult.Failure(ApiException(ApiException.UNKNOWN, httpStatus = 0))
+        }
 
     suspend fun checklist(): ApiResult<DocumentChecklist> =
         mapper.call { api.documents() }.map { dto ->

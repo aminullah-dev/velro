@@ -163,6 +163,16 @@ object Sizing {
     val iconMd: Dp = 24.dp
     val iconLg: Dp = 32.dp
     val avatar: Dp = 44.dp
+
+    /**
+     * A document preview on the driver's papers screen.
+     *
+     * Tall enough to tell a licence from an identity card at a glance and to
+     * see whether a thumb covered the lens -- which is the whole reason it is
+     * there -- without pushing the status and the re-send button off a small
+     * screen.
+     */
+    val thumbnail: Dp = 96.dp
 }
 
 /**
