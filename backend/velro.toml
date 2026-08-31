@@ -4,5 +4,11 @@
 environment = "development"
 log_level = "INFO"
 log_json = false
-otp_debug_echo = true
+# Real SMS again. With this off the code is not returned in the API response,
+# so signing in needs a handset that can receive one -- which is the point.
+#
+# Turn it back on only on a machine where nobody but the developer can reach
+# the API. shared/config.py refuses it outright when environment = production,
+# so this line cannot follow a deployment out.
+otp_debug_echo = false
 cors_origins = ["http://localhost:5173"]

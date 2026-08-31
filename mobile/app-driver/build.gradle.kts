@@ -15,8 +15,9 @@ android {
         applicationId = "af.velro.driver"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // From gradle.properties, so the two apps cannot drift apart.
+        versionCode = (project.findProperty("velro.versionCode") as String).toInt()
+        versionName = project.findProperty("velro.versionName") as String
         // RTL is the default here, not an afterthought: Dari is the primary
         // language and English is the exception.
         resourceConfigurations += listOf("en", "fa", "ps")
