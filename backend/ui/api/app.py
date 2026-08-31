@@ -34,6 +34,7 @@ from ui.api.routers import (
     support,
     vehicle_documents,
     vehicles,
+    maps,
 )
 from ui.api.session_scope import DatabaseSessionMiddleware
 
@@ -99,6 +100,7 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
         settlements.driver_router, settlements.admin_router,
         negotiation.router, negotiation.driver_router, negotiation.admin_router,
         notifications.router,
+        maps.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
 

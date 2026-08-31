@@ -20,6 +20,9 @@ dependencies = [
     # install: it worked in every dev .venv because dev's own httpx, pulled
     # in below for TestClient, was on the same interpreter.
     "httpx>=0.27",
+    # Reads the committed OpenStreetMap region extract (resources/map) that
+    # the map endpoints serve. One file on disk, no tile service to run.
+    "pmtiles>=3.4",
 ]
 
 [project.optional-dependencies]

@@ -4,6 +4,8 @@ import af.velro.data.api.AdvanceTripRequest
 import af.velro.data.api.ApiResult
 import af.velro.data.api.DriverStatusRequest
 import af.velro.data.api.IdempotencyKeys
+import af.velro.data.BuildConfig
+import af.velro.data.api.TripMapDto
 import af.velro.data.api.LocationPingRequest
 import af.velro.data.api.ResponseMapper
 import af.velro.data.api.VelroApi
@@ -125,6 +127,20 @@ class DriverRepository @Inject constructor(
                 )
             )
         }.map { }
+
+    suspend fun tripMap(tripId: String): ApiResult<TripMapData> =
+        mapper.call { api.tripMap(tripId) }.map { dto ->
+            TripMapData(
+                origin = dto.origin?.toPlace(),
+                destination = dto.destination?.toPlace(),
+                geometry = dto.geometry
+                    ?.filter { it.size == 2 }
+                    ?.map { it[0] to it[1] },
+                stations = dto.stations.map { it.toPlace() },
+                attribution = dto.attribution,
+                styleUrl = BuildConfig.API_BASE_URL + "geo/map/style.json",
+            )
+        }
 }
 
 data class AdvanceOutcome(
@@ -145,6 +161,29 @@ data class CurrentAssignment(
     val manifest: List<ManifestEntry>,
 )
 
+data class MapPlace(
+    val name: String,
+    val latitude: Double,
+    val longitude: Double,
+)
+
+/**
+ * The drawn journey: the road between the trip's two ends, when both are
+ * known, plus every coordinate-bearing station -- the dots that make the
+ * valley recognisable. Any part may be absent; the screen shows what there
+ * is and no more.
+ */
+data class TripMapData(
+    val origin: MapPlace?,
+    val destination: MapPlace?,
+    /** (lat, lon) pairs along the road. Null when honestly unknown. */
+    val geometry: List<Pair<Double, Double>>?,
+    val stations: List<MapPlace>,
+    val attribution: String,
+    /** Where the base map's style lives -- this build's own API host. */
+    val styleUrl: String,
+)
+
 data class ManifestEntry(
     val bookingId: String,
     val number: String,
@@ -158,4 +197,9 @@ data class ManifestEntry(
     /** The fare he agreed, which he collects in cash. */
     val fareTotalMinor: Int? = null,
     val fareCurrency: String? = null,
+)
+
+
+private fun af.velro.data.api.MapPlaceDto.toPlace() = MapPlace(
+    name = name, latitude = latitude, longitude = longitude,
 )

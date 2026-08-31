@@ -367,9 +367,13 @@ def seed(session) -> None:
         stations[station_code] = row
         note("stations", made)
 
-    # Internal destinations: the four district centres.
+    # Internal destinations: the four district centres. The coordinates the
+    # DISTRICTS table already carried now travel with the destination too --
+    # the driver's map needs a point to draw the journey's far end at, and
+    # "the district" is a polygon nobody stored. The centre is close enough
+    # for a line on a map; the road itself is what the eye follows.
     destinations: dict[str, DestinationRow] = {}
-    for order, (code, name, _alt, _lat, _lon) in enumerate(DISTRICTS):
+    for order, (code, name, _alt, lat, lon) in enumerate(DISTRICTS):
         row, made = _get_or_create(
             session, DestinationRow,
             match={"code": f"INT-{code}"},
@@ -378,6 +382,7 @@ def seed(session) -> None:
                 "kind": DestinationKind.INTERNAL.value,
                 "district_id": districts[code].id,
                 "sort_order": order,
+                "latitude": lat, "longitude": lon,
             },
         )
         destinations[f"INT-{code}"] = row

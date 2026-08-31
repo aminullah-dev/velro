@@ -217,6 +217,9 @@ interface VelroApi {
     @GET("driver/trips/current")
     suspend fun currentTrip(): Response<Envelope<CurrentTripDto?>>
 
+    @GET("driver/trips/{tripId}/map")
+    suspend fun tripMap(@Path("tripId") tripId: String): Response<Envelope<TripMapDto>>
+
     @POST("driver/location")
     suspend fun pingLocation(
         @Body body: LocationPingRequest,

@@ -29,6 +29,7 @@ from shared import error_codes
 from shared.errors import ConflictError, NotFoundError
 from shared.money import Money
 from ui.api import deps
+from ui.api import mapdata
 from ui.api.errors import ok
 from ui.api.idempotency import idempotent
 from ui.api.schemas.common import MoneyOut
@@ -373,6 +374,78 @@ def earnings(
             completed_trips=row.completed_trips,
         ).model_dump()
     )
+
+
+@router.get("/trips/{trip_id}/map")
+def trip_map(
+    trip_id: str,
+    actor: Annotated[deps.Actor, Depends(deps.require_driver)],
+    drivers: Annotated[object, Depends(deps.drivers)],
+    trips: Annotated[object, Depends(deps.trips)],
+    session: deps.SessionDep,
+) -> dict:
+    """What the journey looks like drawn, for the screen he stares at en route.
+
+    Everything here degrades honestly. A station that has coordinates gets a
+    point; a journey whose two ends both have them gets the road between,
+    sliced from the corridor geometry; anything missing is null, and the
+    handset decides how much map is worth showing. The stations list is the
+    driver's whole coordinate-bearing world -- a handful of dots that make a
+    valley recognisable at a glance.
+    """
+    from sqlalchemy import text as sql
+
+    driver = _driver_of(drivers, actor.user_id)
+    trip = trips.get(trip_id)
+    if trip.driver_id != driver.id:
+        # Not "forbidden": another driver's trip should not even be shown to
+        # exist. The same shape a wrong id gets.
+        raise NotFoundError(trips.not_found_code, trip_id=trip_id)
+
+    def place(table: str, place_id: str | None):
+        if place_id is None:
+            return None, None
+        row = session.execute(
+            sql(f"SELECT name, latitude, longitude, code FROM {table} WHERE id = :id"),
+            {"id": place_id},
+        ).first()
+        if row is None:
+            return None, None
+        point = None
+        if row.latitude is not None and row.longitude is not None:
+            point = {
+                "name": row.name,
+                "latitude": float(row.latitude),
+                "longitude": float(row.longitude),
+            }
+        return point, row.code
+
+    origin, origin_code = place("stations", trip.origin_station_id)
+    destination, dest_code = place("destinations", trip.destination_id)
+
+    line = mapdata.journey_line(
+        origin_code,
+        dest_code,
+        (origin["longitude"], origin["latitude"]) if origin else None,
+        (destination["longitude"], destination["latitude"]) if destination else None,
+    )
+
+    stations = [
+        {"name": name, "latitude": float(lat), "longitude": float(lon)}
+        for name, lat, lon in session.execute(sql(
+            "SELECT name, latitude, longitude FROM stations "
+            "WHERE latitude IS NOT NULL AND deleted_at IS NULL AND status = 'ACTIVE'"
+        ))
+    ]
+
+    return ok({
+        "origin": origin,
+        "destination": destination,
+        # (lat, lon) pairs, the order every mobile mapping API speaks.
+        "geometry": [[lat, lon] for lon, lat in line] if line else None,
+        "stations": stations,
+        "attribution": "© OpenStreetMap",
+    })
 
 
 def _driver_of(drivers, user_id: str):

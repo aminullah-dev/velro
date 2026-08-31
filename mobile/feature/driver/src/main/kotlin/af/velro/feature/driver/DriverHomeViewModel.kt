@@ -43,6 +43,8 @@ data class DriverHomeUiState(
     /** What the server has told this driver. Currently the only way they learn. */
     val inbox: NotificationInbox? = null,
     val assignment: CurrentAssignment? = null,
+    /** The drawn journey for the assignment, when the server can draw it. */
+    val tripMap: af.velro.data.repository.TripMapData? = null,
     val offers: List<TripSummary> = emptyList(),
     val earnings: Earnings? = null,
     /**
@@ -344,6 +346,7 @@ class DriverHomeViewModel @Inject constructor(
         }
         (record(drivers.currentTrip()) as? ApiResult.Success)?.let { current ->
             _state.update { it.copy(assignment = current.value) }
+            refreshTripMap(current.value?.trip?.id)
         }
         // Offers are only worth fetching when there is no trip in flight.
         if (_state.value.assignment == null && _state.value.isOnline) {
@@ -514,4 +517,24 @@ class DriverHomeViewModel @Inject constructor(
         errorCode = error.code,
         errorContext = error.context,
     )
+
+    /**
+     * The map is a bonus: fetched once per trip, dropped with it, and a
+     * failure leaves the text card exactly as it was. Not counted by the
+     * screen's failure banner -- a driver must never be told to worry
+     * because a drawing did not arrive.
+     */
+    private fun refreshTripMap(tripId: String?) {
+        if (tripId == null) {
+            _state.update { it.copy(tripMap = null) }
+            return
+        }
+        if (_state.value.tripMap != null && _state.value.assignment?.trip?.id == tripId) return
+        viewModelScope.launch {
+            (drivers.tripMap(tripId) as? ApiResult.Success)?.let { drawn ->
+                _state.update { it.copy(tripMap = drawn.value) }
+            }
+        }
+    }
+
 }

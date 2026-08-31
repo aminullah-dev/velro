@@ -736,3 +736,21 @@ data class EarningsSummaryDto(
     val period: String,
     val buckets: List<EarningsBucketDto> = emptyList(),
 )
+
+
+@Serializable
+data class MapPlaceDto(
+    val name: String,
+    val latitude: Double,
+    val longitude: Double,
+)
+
+@Serializable
+data class TripMapDto(
+    val origin: MapPlaceDto? = null,
+    val destination: MapPlaceDto? = null,
+    /** (lat, lon) pairs along the road, or null when honestly unknown. */
+    val geometry: List<List<Double>>? = null,
+    val stations: List<MapPlaceDto> = emptyList(),
+    val attribution: String = "",
+)

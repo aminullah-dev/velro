@@ -721,6 +721,13 @@ private fun CurrentTrip(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> 
                 )
             }
 
+            // The journey, drawn. Below the where-to line and above the
+            // manifest: orientation first, then the people.
+            state.tripMap?.let { drawn ->
+                Spacer(Modifier.height(Spacing.md))
+                TripMap(drawn)
+            }
+
             Spacer(Modifier.height(Spacing.sm))
             for (rider in assignment.manifest) {
                 // Who to look for, and what to collect from them. The booking
