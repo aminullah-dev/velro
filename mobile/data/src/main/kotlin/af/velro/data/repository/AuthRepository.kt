@@ -9,6 +9,8 @@ import af.velro.data.api.UpdateProfileRequest
 import af.velro.data.api.VelroApi
 import af.velro.data.api.VerifyOtpRequest
 import af.velro.data.db.VelroDatabase
+import af.velro.domain.UserProfile
+import af.velro.data.api.ProfileDto
 import af.velro.domain.Locale
 import af.velro.domain.Session
 import javax.inject.Inject
@@ -29,6 +31,45 @@ class AuthRepository @Inject constructor(
     val isSignedIn: Flow<Boolean> = tokens.isSignedIn
     val roles: Flow<List<String>> = tokens.roles
     val locale: Flow<Locale> = tokens.locale.map(Locale::fromTag)
+
+    suspend fun profile(): ApiResult<UserProfile> =
+        mapper.call { api.profile() }.map(::toDomain)
+
+    /**
+     * Change the name the driver will see.
+     *
+     * The phone is not editable here: it is the account, not a field on it.
+     */
+    suspend fun updateName(fullName: String?): ApiResult<UserProfile> =
+        mapper.call { api.updateProfile(UpdateProfileRequest(full_name = fullName)) }
+            .map(::toDomain)
+
+    /**
+     * Change the language, after sign-in.
+     *
+     * The picker existed only on the sign-in screen, and the choice is stored
+     * and then drives the whole app -- so somebody who tapped the wrong one, or
+     * whose handset was set up by a relative, was locked into a language they
+     * could not read, with the way out labelled in it.
+     *
+     * Written locally first because that is what the app actually reads. The
+     * server is told so the next SMS arrives in the right language; if that
+     * call fails the app is already correct and the account catches up on the
+     * next successful write.
+     */
+    suspend fun changeLocale(locale: Locale) {
+        tokens.saveLocale(locale.tag)
+        runCatching { api.updateProfile(UpdateProfileRequest(locale = locale.tag)) }
+    }
+
+    private fun toDomain(dto: ProfileDto) = UserProfile(
+        id = dto.id,
+        phone = dto.phone,
+        fullName = dto.full_name,
+        locale = Locale.fromTag(dto.locale),
+        completedTrips = dto.completed_trips,
+        memberSince = dto.member_since,
+    )
 
     suspend fun requestOtp(phone: String, locale: Locale): ApiResult<RequestOtpResponse> =
         mapper.call { api.requestOtp(RequestOtpRequest(phone, locale.tag)) }

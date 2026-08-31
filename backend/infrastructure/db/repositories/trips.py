@@ -219,6 +219,23 @@ class BookingRepository(SqlRepository[BookingRow]):
         )
         return list(self.session.scalars(stmt).all())
 
+    def count_completed_for_passenger(self, passenger_id: str) -> int:
+        """Journeys taken, not journeys booked.
+
+        Cancellations and no-shows are excluded: a passenger's own profile
+        should not count a ride they never took, and a number that flatters is
+        worse than no number.
+        """
+        return self.session.scalar(
+            select(func.count())
+            .select_from(BookingRow)
+            .where(
+                BookingRow.passenger_id == passenger_id,
+                BookingRow.status == BookingStatus.COMPLETED.value,
+                BookingRow.deleted_at.is_(None),
+            )
+        ) or 0
+
     def count_active_for_passenger(self, passenger_id: str) -> int:
         stmt = (
             select(func.count())

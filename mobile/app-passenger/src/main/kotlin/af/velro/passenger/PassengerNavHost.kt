@@ -1,5 +1,6 @@
 package af.velro.passenger
 
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.ui.theme.NavMotion
 import af.velro.core.ui.theme.LocalAnimationsEnabled
@@ -74,6 +75,7 @@ private object Routes {
     const val HISTORY = "history"
     const val REPORTS = "reports"
     const val OFFERS = "offers"
+    const val ACCOUNT = "account"
 
     fun bookingDetail(id: String) = "booking/$id"
 }
@@ -136,6 +138,7 @@ fun PassengerNavHost(
                     onOpenBooking = { navController.navigate(Routes.bookingDetail(it)) },
                     onOpenHistory = { navController.navigate(Routes.HISTORY) },
                     onGetHelp = { helpOpen = true },
+                    onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
                     onOpenOffers = { navController.navigate(Routes.OFFERS) },
                     onSignOut = onSignOut,
                 )
@@ -187,6 +190,9 @@ fun PassengerNavHost(
             )
         }
 
+        composable(Routes.ACCOUNT) {
+            AccountRoute(onBack = { navController.popBackStack() })
+        }
         composable(Routes.HISTORY) {
             HistoryRoute(
                 onBack = { navController.popBackStack() },
@@ -211,6 +217,7 @@ private fun HomeScreen(
     onOpenBooking: (String) -> Unit,
     onOpenHistory: () -> Unit,
     onGetHelp: () -> Unit,
+    onOpenAccount: () -> Unit,
     onOpenOffers: () -> Unit,
     onSignOut: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
@@ -263,6 +270,17 @@ private fun HomeScreen(
                     // Icon rather than a second label: two words of Dari in a
                     // bar leaves nothing for the title. The description is what
                     // a screen reader announces.
+                    // Her own account, where the driver app puts its profile.
+                    // This is also the only way to change the language once
+                    // signed in, so it has to be reachable without reading
+                    // anything -- which is why it is an icon.
+                    IconButton(onClick = onOpenAccount) {
+                        Icon(
+                            Icons.Filled.AccountCircle,
+                            contentDescription = strings["passenger.profile.title"],
+                            tint = VelroColors.OnBrandField,
+                        )
+                    }
                     IconButton(onClick = { signingOut = true }) {
                         Icon(
                             Icons.AutoMirrored.Filled.Logout,

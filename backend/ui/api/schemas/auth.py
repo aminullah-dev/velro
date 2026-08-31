@@ -45,6 +45,13 @@ class ProfileOut(Schema):
     locale: str
     status: str
     roles: list[str]
+    #: When the account was opened. The passenger's own profile says how long
+    #: they have been travelling with VELRO, and there is nowhere else to get
+    #: it from -- the app never sees the users table.
+    member_since: str | None = None
+    #: Journeys actually taken, not booked. A count that includes cancellations
+    #: flatters the number and means nothing to the person reading it.
+    completed_trips: int = 0
 
 
 class UpdateProfileIn(Schema):

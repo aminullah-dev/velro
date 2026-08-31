@@ -135,12 +135,15 @@ def logout_all_devices(
 def me(
     actor: deps.ActorDep,
     users: Annotated[object, Depends(deps.users)],
+    bookings: Annotated[object, Depends(deps.bookings)],
 ) -> dict:
     row = users.get(actor.user_id)
     return ok(
         ProfileOut(
             id=row.id, phone=row.phone, full_name=row.full_name,
             locale=row.locale, status=row.status, roles=actor.roles,
+            member_since=row.created_at.isoformat() if row.created_at else None,
+            completed_trips=bookings.count_completed_for_passenger(row.id),
         ).model_dump()
     )
 

@@ -580,3 +580,20 @@ data class EarningsSummary(
     val totalNetMinor: Long get() = buckets.sumOf { it.net.amountMinor }
     val totalTrips: Int get() = buckets.sumOf { it.trips }
 }
+
+/**
+ * A passenger, as their own account.
+ *
+ * Distinct from [DriverProfile], which is about a person's standing as a
+ * supplier. This is about the account: who it belongs to, what language it
+ * speaks, and how long it has been open.
+ */
+data class UserProfile(
+    val id: String,
+    val phone: String,
+    val fullName: String?,
+    val locale: Locale,
+    val completedTrips: Int,
+    /** ISO instant the account was opened, or null on an older record. */
+    val memberSince: String?,
+)

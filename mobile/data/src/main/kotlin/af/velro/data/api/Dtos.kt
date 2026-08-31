@@ -58,6 +58,8 @@ data class ProfileDto(
     val locale: String,
     val status: String,
     val roles: List<String>,
+    val member_since: String? = null,
+    val completed_trips: Int = 0,
 )
 
 @Serializable
