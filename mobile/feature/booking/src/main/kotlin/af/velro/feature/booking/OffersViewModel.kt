@@ -90,7 +90,17 @@ class OffersViewModel @Inject constructor(
                         // The newest request is the one being waited on.
                         request = result.value.firstOrNull(),
                         isLoading = false,
-                        errorCode = null,
+                        // Cleared only when the reload was asked for, never by
+                        // a background one.
+                        //
+                        // accept()'s failure sets the error and then reloads so
+                        // the list matches what just happened -- and this line
+                        // wiped the message a few hundred milliseconds later.
+                        // "Somebody already took that price" appeared and
+                        // vanished, so a passenger whose tap had failed saw a
+                        // tap that did nothing, and pressed the same driver
+                        // again.
+                        errorCode = if (showSpinner) null else it.errorCode,
                     )
                 }
                 is ApiResult.Failure -> _state.update {

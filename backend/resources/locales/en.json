@@ -473,6 +473,7 @@
   "driver.earnings.trips": "Trips completed",
   "driver.earnings.ledger": "Every entry",
   "driver.earnings.ledger_empty": "Nothing yet. Your first completed trip appears here.",
+  "driver.earnings.ledger_failed": "Could not load your ledger. Tap to try again.",
   "driver.earnings.balance_after": "Balance {amount}",
   "driver.earnings.load_more": "Show older",
   "driver.earnings.request": "Request a payout",

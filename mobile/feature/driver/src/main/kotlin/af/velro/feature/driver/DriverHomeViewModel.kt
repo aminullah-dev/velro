@@ -57,6 +57,12 @@ data class DriverHomeUiState(
 
     val isLoading: Boolean = true,
     val isBusy: Boolean = false,
+    /**
+     * The last work read did not fully succeed, so what is on screen is older
+     * than it looks. Not an error page -- the board is still usable -- but the
+     * difference between "nobody is waiting" and "I could not ask".
+     */
+    val isStale: Boolean = false,
     val errorCode: String? = null,
     val errorContext: Map<String, Any?> = emptyMap(),
 
@@ -180,8 +186,26 @@ class DriverHomeViewModel @Inject constructor(
                 // one thing that would make him go online.
                 val worthAsking = current.assignment != null ||
                     current.profile?.canWork == true
-                if (worthAsking) loadWork()
+                if (worthAsking) {
+                    loadWork()
+                } else if (current.profile != null) {
+                    // A driver waiting to be approved is waiting for exactly
+                    // one thing, and it arrives on his profile. Without this
+                    // the loop spun doing nothing and approval never reached
+                    // his screen: the only Refresh event is on the failed-load
+                    // branch, which an applied-but-unapproved driver is not on,
+                    // so he had to force-quit the app to find out he could
+                    // work. Just the profile -- there is no board for him yet.
+                    refreshProfileOnly()
+                }
             }
+        }
+    }
+
+    /** The one call an unapproved driver is waiting on. */
+    private suspend fun refreshProfileOnly() {
+        (drivers.profile() as? ApiResult.Success<DriverProfile>)?.let { profile ->
+            _state.update { it.copy(profile = profile.value) }
         }
     }
 
@@ -219,24 +243,38 @@ class DriverHomeViewModel @Inject constructor(
     }
 
     private suspend fun loadWork() {
+        // Failures are counted, not discarded.
+        //
+        // All five reads below used `as? ApiResult.Success`, so a driver on a
+        // weak connection kept the board he had: no error, no marker, nothing
+        // to refresh. He would sit looking at "nobody is waiting" that had
+        // stopped being true twenty minutes earlier, and decide there was no
+        // work today. The screen says so now, the way the booking detail
+        // already does.
+        var failed = false
+        fun <T> record(result: ApiResult<T>): ApiResult<T> {
+            if (result !is ApiResult.Success) failed = true
+            return result
+        }
+
         // The inbox first: it is the only thing that says a bid was accepted,
         // and it is one small read.
-        (notifications.inbox(limit = 20) as? ApiResult.Success)?.let { inbox ->
+        (record(notifications.inbox(limit = 20)) as? ApiResult.Success)?.let { inbox ->
             _state.update { it.copy(inbox = inbox.value) }
         }
-        (drivers.currentTrip() as? ApiResult.Success)?.let { current ->
+        (record(drivers.currentTrip()) as? ApiResult.Success)?.let { current ->
             _state.update { it.copy(assignment = current.value) }
         }
         // Offers are only worth fetching when there is no trip in flight.
         if (_state.value.assignment == null && _state.value.isOnline) {
-            (drivers.offers() as? ApiResult.Success)?.let { offers ->
+            (record(drivers.offers()) as? ApiResult.Success)?.let { offers ->
                 _state.update { it.copy(offers = offers.value) }
             }
         }
         // Not gated on being online. One small read, and it is the only thing
         // that turns "you are offline" from a status into a reason to act.
         if (_state.value.assignment == null) {
-            (negotiation.openRequests() as? ApiResult.Success)?.let { fetched ->
+            (record(negotiation.openRequests()) as? ApiResult.Success)?.let { fetched ->
                 val previous = _state.value.waiting.map { it.id }.toSet()
                 val arrived = fetched.value.filter { it.id !in previous }
                 _state.update { it.copy(waiting = fetched.value) }
@@ -248,9 +286,10 @@ class DriverHomeViewModel @Inject constructor(
                 }
             }
         }
-        (drivers.earnings() as? ApiResult.Success)?.let { earnings ->
+        (record(drivers.earnings()) as? ApiResult.Success)?.let { earnings ->
             _state.update { it.copy(earnings = earnings.value) }
         }
+        _state.update { it.copy(isStale = failed) }
     }
 
     /**

@@ -19,6 +19,7 @@ import af.velro.domain.MoneyValue
 import af.velro.domain.PayoutOptions
 import af.velro.domain.Settlement
 import af.velro.domain.SettlementStatus
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -331,9 +332,16 @@ private fun Ledger(state: EarningsUiState, onEvent: (EarningsEvent) -> Unit) {
 
     if (state.entries.isEmpty()) {
         Text(
-            strings["driver.earnings.ledger_empty"],
+            // Two different sentences, because they are two different facts.
+            if (state.ledgerFailed) strings["driver.earnings.ledger_failed"]
+            else strings["driver.earnings.ledger_empty"],
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color =
+                if (state.ledgerFailed) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                if (state.ledgerFailed) Modifier.clickable { onEvent(EarningsEvent.Refresh) }
+                else Modifier,
         )
         return
     }

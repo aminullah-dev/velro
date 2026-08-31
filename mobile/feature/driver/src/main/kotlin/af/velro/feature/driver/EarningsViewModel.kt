@@ -34,6 +34,8 @@ data class EarningsUiState(
     val isRequesting: Boolean = false,
     val hasMore: Boolean = false,
     val nextOffset: Int = 0,
+    /** The ledger call failed. Distinct from a ledger that is genuinely empty. */
+    val ledgerFailed: Boolean = false,
     val requestedReference: String? = null,
     val errorCode: String? = null,
     val errorContext: Map<String, Any?> = emptyMap(),
@@ -93,6 +95,14 @@ class EarningsViewModel @Inject constructor(
                             // the ledger failed, show the balance and an empty
                             // list rather than an error over the whole screen.
                             entries = (ledger as? ApiResult.Success)?.value?.entries.orEmpty(),
+                            // "I could not read it" is not "there is nothing".
+                            //
+                            // The ledger failure was folded into an empty list
+                            // and the screen printed "Nothing yet. Your first
+                            // trip will show here" -- a money screen asserting
+                            // an empty history it never actually read, to a
+                            // driver who has been working all week.
+                            ledgerFailed = ledger !is ApiResult.Success,
                             hasMore = (ledger as? ApiResult.Success)?.value?.hasMore ?: false,
                             nextOffset = (ledger as? ApiResult.Success)?.value?.nextOffset ?: 0,
                             payout = (payout as? ApiResult.Success)?.value,

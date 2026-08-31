@@ -3,6 +3,7 @@ package af.velro.core.ui.component
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Radius
 import af.velro.core.ui.theme.Sizing
+import af.velro.core.ui.theme.LocalVelroDarkTheme
 import af.velro.core.ui.theme.VelroColors
 import af.velro.core.ui.theme.Spacing
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -58,7 +60,18 @@ fun PrimaryAction(
         // on a slow connection is the most common way to send a request twice.
         enabled = enabled && !loading,
         shape = RoundedCornerShape(Radius.lg),
-        colors = ButtonDefaults.buttonColors(),
+        // Disabled, but still there.
+        //
+        // Material's default is onSurface at 38% over onSurface at 12%: a
+        // 2.31:1 label on a container 1.23:1 from the page. In a room that is
+        // a greyed button; in Ghorband sunlight it is nothing at all, and a
+        // person who cannot see the button cannot tell whether the app is
+        // broken or their own form is unfinished. Quieter than a live button,
+        // never absent.
+        colors = ButtonDefaults.buttonColors(
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContentColor = disabledLabel(),
+        ),
     ) {
         if (loading) {
             CircularProgressIndicator(
@@ -87,11 +100,33 @@ fun SecondaryAction(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().height(Sizing.buttonHeight),
         enabled = enabled,
-        shape = RoundedCornerShape(Radius.md),
+        shape = RoundedCornerShape(Radius.lg),
+        colors = ButtonDefaults.outlinedButtonColors(
+            disabledContentColor = disabledLabel(),
+        ),
+        // An outlined button disabled by Material loses its border along with
+        // its label, so nothing is left on the screen at all. The edge stays,
+        // at the same weight a text field's does.
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (enabled) MaterialTheme.colorScheme.outline
+            else MaterialTheme.colorScheme.outlineVariant,
+        ),
     ) {
         Text(label, style = MaterialTheme.typography.labelLarge)
     }
 }
+
+/**
+ * The label colour of a control that is present but cannot be used.
+ *
+ * One place, because both button shapes need it and because the number is
+ * measured: 4.70:1 in light and 4.82:1 in dark, against Material's own 2.31:1.
+ */
+@Composable
+private fun disabledLabel(): Color =
+    if (LocalVelroDarkTheme.current) VelroColors.Neutral350
+    else VelroColors.Neutral550
 
 @Composable
 fun VelroCard(

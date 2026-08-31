@@ -43,6 +43,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -283,7 +284,11 @@ private fun VehiclePapers(
 ) {
     val strings = LocalVelroStrings.current
     val context = LocalContext.current
-    var pendingType by remember { mutableStateOf<String?>(null) }
+    // Saveable: the photo picker is another app, and this one can be destroyed
+    // behind it. Held in `remember` the type came back null and the callback
+    // returned silently, so a driver picked his vehicle permit and nothing at
+    // all happened.
+    var pendingType by rememberSaveable { mutableStateOf<String?>(null) }
 
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()

@@ -284,6 +284,18 @@ fun DriverHomeScreen(
         },
         modifier = modifier,
     ) {
+        // Cached data, honestly labelled -- the same line the booking detail
+        // shows, for the same reason. A board that failed to refresh looks
+        // exactly like a board with no work on it.
+        if (state.isStale) {
+            Text(
+                strings["common.state.offline"],
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(Spacing.xs))
+        }
+
         // The greeting moved into the header, so this is the vehicle alone.
         DriverSummary(state.profile!!)
 

@@ -473,6 +473,7 @@
   "driver.earnings.trips": "سفرهای تکمیل‌شده",
   "driver.earnings.ledger": "تمام موارد",
   "driver.earnings.ledger_empty": "هنوز چیزی نیست. اولین سفر تکمیل‌شده شما اینجا نمایان می‌شود.",
+  "driver.earnings.ledger_failed": "دفتر حساب باز نشد. برای کوشش دوباره بزنید.",
   "driver.earnings.balance_after": "بیلانس {amount}",
   "driver.earnings.load_more": "نمایش قدیمی‌ترها",
   "driver.earnings.request": "درخواست پرداخت",

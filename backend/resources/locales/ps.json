@@ -473,6 +473,7 @@
   "driver.earnings.trips": "بشپړ شوي سفرونه",
   "driver.earnings.ledger": "ټول توکي",
   "driver.earnings.ledger_empty": "لا هیڅ نشته. ستاسو لومړی بشپړ شوی سفر به دلته ښکاره شي.",
+  "driver.earnings.ledger_failed": "ستاسو حساب ونه لوستل شو. بیا کوښښ لپاره ټک ووهئ.",
   "driver.earnings.balance_after": "بیلانس {amount}",
   "driver.earnings.load_more": "زاړه وښایاست",
   "driver.earnings.request": "د تادیې غوښتنه",

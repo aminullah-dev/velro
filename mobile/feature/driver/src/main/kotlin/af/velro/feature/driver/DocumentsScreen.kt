@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,7 +67,15 @@ fun DocumentsScreen(
 ) {
     val strings = LocalVelroStrings.current
     val context = LocalContext.current
-    var pendingType by remember { mutableStateOf<String?>(null) }
+    // Saveable, not remembered.
+    //
+    // The camera is another app, and Android is free to destroy this one
+    // behind it -- which on the cheap handsets VELRO is built for is the
+    // ordinary case, not the edge. Held in `remember`, both of these came back
+    // null, and both callbacks bail out silently when they do: the driver
+    // photographed his licence, watched the app return, and found nothing had
+    // happened and nothing said why.
+    var pendingType by rememberSaveable { mutableStateOf<String?>(null) }
     // A problem the app found by itself, which has no server error code.
     var localProblem by remember { mutableStateOf<String?>(null) }
 
@@ -98,14 +107,17 @@ fun DocumentsScreen(
     // TakePicture, not TakePicturePreview: the preview contract returns a
     // thumbnail of a couple of hundred pixels, which nobody can compare against
     // a tazkira. This writes the full image to a file the app owns.
-    var captureTarget by remember { mutableStateOf<Capture?>(null) }
+    // The path, not the File: a String survives being written to a Bundle and
+    // the File and content URI are rebuilt from it.
+    var capturePath by rememberSaveable { mutableStateOf<String?>(null) }
+    val captureTarget = capturePath?.let { captureFrom(context, java.io.File(it)) }
     val camera = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { taken: Boolean ->
         val kind = pendingType
         val target = captureTarget
         pendingType = null
-        captureTarget = null
+        capturePath = null
         if (!taken || kind == null || target == null) return@rememberLauncherForActivityResult
         val read = readImage(context, target.uri)
         if (read != null) {
@@ -124,6 +136,28 @@ fun DocumentsScreen(
     }
 
     val checklist = state.checklist
+    // A failure is not an answer.
+    //
+    // Only DRIVER_NOT_FOUND and PERMISSION_DENIED mean "not a driver yet";
+    // every other failure leaves `checklist` null too, and this branched on
+    // the null alone. So an approved driver opening his papers on a weak
+    // connection was told he was not registered as a driver and offered the
+    // application form again -- with no error, no retry, and nothing to
+    // suggest the app had simply failed to ask.
+    if (checklist == null && state.errorCode != null) {
+        VelroScreen(
+            title = strings["driver.documents.title"],
+            onBack = onBack,
+            modifier = modifier,
+        ) {
+            ErrorState(
+                errorCode = state.errorCode!!,
+                context = state.errorContext,
+                onRetry = { onEvent(DocumentsEvent.Refresh) },
+            )
+        }
+        return
+    }
     if (checklist == null) {
         // Not a driver yet: the screen offers the one action that makes
         // sense, and a way back, which this branch did not have at all.
@@ -207,7 +241,7 @@ fun DocumentsScreen(
                     pendingType = kind
                     if (kind == SELFIE) {
                         val target = newCapture(context)
-                        captureTarget = target
+                        capturePath = target.file.absolutePath
                         camera.launch(target.uri)
                     } else {
                         picker.launch(
@@ -234,6 +268,10 @@ private const val SELFIE = "SELFIE"
  * is showing someone their pictures.
  */
 private data class Capture(val file: java.io.File, val uri: Uri)
+
+/** The content URI for a capture file the app already owns. */
+private fun captureFrom(context: Context, file: java.io.File): Capture =
+    Capture(file, FileProvider.getUriForFile(context, "${'$'}{context.packageName}.captures", file))
 
 private fun newCapture(context: Context): Capture {
     val dir = java.io.File(context.cacheDir, "captures").apply { mkdirs() }

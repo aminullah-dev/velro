@@ -91,7 +91,7 @@ class BookingDetailViewModel @Inject constructor(
                 delay(POLL_SECONDS * 1000)
                 val booking = _state.value.booking ?: continue
                 if (!booking.isActive) return@launch
-                refresh()
+                refresh(clearError = false)
             }
         }
     }
@@ -128,8 +128,20 @@ class BookingDetailViewModel @Inject constructor(
         }
     }
 
-    private fun refresh() {
-        _state.update { it.copy(isRefreshing = true, errorCode = null) }
+    /**
+     * @param clearError only when the person asked for this.
+     *
+     * The twelve-second poll calls straight through here, and clearing the
+     * error unconditionally meant a failed cancellation's message survived
+     * about as long as it took to read half of it. A passenger who tapped
+     * "cancel my seat", saw a red line flash and then a screen that looked
+     * exactly as before could not tell whether her seat was cancelled or not
+     * -- on a booking she may be about to stop waiting for.
+     */
+    private fun refresh(clearError: Boolean = true) {
+        _state.update {
+            it.copy(isRefreshing = true, errorCode = if (clearError) null else it.errorCode)
+        }
         viewModelScope.launch {
             when (val result = bookings.refreshBooking(bookingId)) {
                 is ApiResult.Success ->

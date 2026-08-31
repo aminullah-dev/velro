@@ -112,6 +112,42 @@ class ContrastTest {
     }
 
     @Test
+    fun `an error sentence is readable in both themes`() {
+        // The pair the dark test skipped. `error` is the colour of the line
+        // that explains why something just failed -- a weak connection, a
+        // refused fare, a code that did not match -- and Red500 measured
+        // 3.69:1 on the dark card.
+        assertContrast("error text, light", VelroColors.Red700, VelroColors.White, TEXT)
+        assertContrast(
+            "error text, dark", VelroColors.Red200, VelroColors.DarkSurface, TEXT
+        )
+    }
+
+    @Test
+    fun `a disabled control is quieter than a live one, never invisible`() {
+        // Material's disabled treatment is onSurface at 38% over onSurface at
+        // 12%: a 2.31:1 label on a container 1.23:1 from the page. In a room
+        // that reads as greyed out; in Ghorband sunlight it is nothing at all,
+        // and somebody who cannot see the button cannot tell whether the app
+        // is broken or their own form is unfinished.
+        assertContrast(
+            "disabled label, light",
+            VelroColors.Neutral550, VelroColors.Neutral100, TEXT,
+        )
+        assertContrast(
+            "disabled label, dark",
+            VelroColors.Neutral350, VelroColors.DarkSurfaceRaised, TEXT,
+        )
+        // And quieter than a live one, or "disabled" says nothing.
+        val live = ratio(VelroColors.White, VelroColors.Green700)
+        val off = ratio(VelroColors.Neutral550, VelroColors.Neutral100)
+        assertTrue(
+            "a disabled control must read as quieter than a live one",
+            off < live,
+        )
+    }
+
+    @Test
     fun `dark mode control boundaries are visible`() {
         assertContrast(
             "outline on dark", VelroColors.Neutral500, VelroColors.DarkSurface, NON_TEXT

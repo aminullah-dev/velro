@@ -132,7 +132,23 @@ class VehicleViewModel @Inject constructor(
             // failure there is a failure of the whole screen.
             when (val types = vehicles.types()) {
                 is ApiResult.Success -> {
-                    val vehicle = (vehicles.current() as? ApiResult.Success)?.value
+                    // "I could not ask" is not "you have no car".
+                    //
+                    // A dropped read was folded into null, and null puts this
+                    // screen into register-a-vehicle mode with every field
+                    // blank and the error cleared -- so a driver on a weak
+                    // connection was shown an empty registration form for the
+                    // car he has been driving all week, with nothing saying
+                    // why. The two cases are kept apart now.
+                    val read = vehicles.current()
+                    if (read is ApiResult.Failure) {
+                        _state.update {
+                            it.copy(types = types.value, isLoading = false)
+                                .withError(read.error)
+                        }
+                        return@launch
+                    }
+                    val vehicle = (read as ApiResult.Success).value
                     // The papers hang off the car, so there is nothing to ask
                     // for until one exists.
                     val papers = vehicle?.id?.let {

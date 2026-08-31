@@ -81,8 +81,10 @@ private val DarkScheme = darkColorScheme(
     // dark. outlineVariant is the border of every card in both apps.
     secondaryContainer = VelroColors.DarkAmberContainer,
     onSecondaryContainer = VelroColors.Amber200,
-    error = VelroColors.Red500,
-    onError = VelroColors.White,
+    // Red200, not Red500: an error *sentence* is text on the dark card, and
+    // Red500 measures 3.69:1 there. Red500 stays the container's own colour.
+    error = VelroColors.Red200,
+    onError = VelroColors.Neutral900,
     errorContainer = VelroColors.DarkRedContainer,
     onErrorContainer = VelroColors.Red200,
     // Same relationship after dark, where a shadow is invisible and lightness

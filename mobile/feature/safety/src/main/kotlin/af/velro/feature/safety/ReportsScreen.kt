@@ -120,9 +120,21 @@ private fun ReportCard(
     val strings = LocalVelroStrings.current
 
     VelroCard {
-        Column(Modifier.fillMaxWidth().clickable { onToggle() }) {
+        Column(Modifier.fillMaxWidth()) {
+            // The header toggles, not the whole card.
+            //
+            // The clickable was on this Column, which is full width and wraps
+            // everything -- including the reply field and its send button. So
+            // the empty space beside any short line was a live collapse
+            // target, and collapsing throws the typed reply away: somebody
+            // writing an account of what happened on a journey lost it by
+            // tapping a blank inch of the card. An expanded report is a form,
+            // not a button.
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggle() }
+                    .padding(vertical = Spacing.xs),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {

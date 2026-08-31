@@ -80,7 +80,16 @@ object VelroColors {
     // close enough to pass, on the label that tells somebody their trip is
     // over. 4.82:1, still visibly dimmer than the live tones beside it.
     val Neutral350 = Color(0xFF828EA0)
+    // The label on a disabled control. Material's own disabled treatment is
+    // onSurface at 38% over onSurface at 12%, which measures 2.31:1 -- a
+    // button that is simply not there in Ghorband sunlight, so a person cannot
+    // tell whether the app is broken or their form is unfinished. 4.70:1,
+    // still visibly quieter than the 7.58:1 of a live one.
+    val Neutral550 = Color(0xFF5B6675)
     val Amber200 = Color(0xFFFCCF7A)
+    // The error sentence after dark. Red500 is 3.69:1 on the dark card -- the
+    // one pair the dark contrast test did not measure, on the line that
+    // explains why something just failed. 9.18:1.
     val Red200 = Color(0xFFFDA29B)
     val DarkSurfaceRaised = Color(0xFF1B222C)
     val DarkOnSurface = Color(0xFFE7EBF0)
