@@ -126,6 +126,35 @@ EXTERNAL = [
     ("EXT-KBL-JAD", "جاده", "EXT-KBL", 32, Decimal("34.5150"), Decimal("69.1750")),
 ]
 
+# The way back.
+#
+# Every route in this file ran out of Ghorband, so the app could sell a seat
+# from a village to Kabul and had no way to sell the seat home. That is not
+# half the product missing -- it is more than half, because the journey people
+# actually make is out and back, and the return is the leg they are stranded
+# on: standing in Khairkhana at dusk with no booking.
+#
+# It needs no schema change and no new screen. A district carries a province,
+# a station hangs off a village, and the four Ghorband district centres are
+# already destinations -- so Kabul is simply another origin, and the booking
+# flow that asks district → village → station → destination works unchanged.
+# What was missing was the data.
+#
+# (province_code, province_name, district_code, district_name, alt, lat, lon,
+#  village_name, station_name)
+RETURN_ORIGINS = [
+    (
+        "AF-KAB", "کابل", "KBL-KHM", "خیرخانه مینه", "Khair Khana",
+        Decimal("34.5700"), Decimal("69.1600"),
+        "خیرخانه مینه", "ایستگاه خیرخانه",
+    ),
+    (
+        "AF-KAB", "کابل", "KBL-JAD", "جاده", "Jada",
+        Decimal("34.5150"), Decimal("69.1750"),
+        "جاده", "ایستگاه جاده",
+    ),
+]
+
 VEHICLE_TYPES = [
     ("SEDAN", "vehicle_type.sedan", 4, 10),
     ("SUV", "vehicle_type.suv", 6, 20),
@@ -360,6 +389,58 @@ def seed(session) -> None:
         destinations[code] = row
         note("destinations", made)
 
+    # -- the way back ---------------------------------------------------
+    #
+    # Kabul as an origin, so a passenger standing in Khairkhana can buy a seat
+    # home. Its own province and districts rather than a special case: the
+    # geography is already province → district → village → station, and
+    # nothing in it was ever Ghorband-specific except the rows.
+    return_districts: dict[str, DistrictRow] = {}
+    for (
+        prov_code, prov_name, dist_code, dist_name, dist_alt, lat, lon,
+        village_name, station_name,
+    ) in RETURN_ORIGINS:
+        prov, made = _get_or_create(
+            session, ProvinceRow,
+            match={"code": prov_code}, defaults={"name": prov_name},
+        )
+        note("provinces", made)
+
+        district, made = _get_or_create(
+            session, DistrictRow,
+            match={"code": dist_code},
+            defaults={
+                "name": dist_name, "alternative_name": dist_alt,
+                "province_id": prov.id, "region_id": None,
+                "latitude": lat, "longitude": lon,
+            },
+        )
+        return_districts[dist_code] = district
+        note("districts", made)
+
+        village, made = _get_or_create(
+            session, VillageRow,
+            match={"code": f"{dist_code}-001"},
+            defaults={
+                "name": village_name, "name_key": comparison_key(village_name),
+                "district_id": district.id,
+                "latitude": lat, "longitude": lon,
+                "source_note": "development seed - not master data",
+            },
+        )
+        note("villages", made)
+
+        _, made = _get_or_create(
+            session, StationRow,
+            match={"code": f"{dist_code}-001-S1"},
+            defaults={
+                "name": station_name, "name_key": comparison_key(station_name),
+                "village_id": village.id, "district_id": district.id,
+                "latitude": lat, "longitude": lon, "is_primary": True,
+            },
+        )
+        note("stations", made)
+
     session.flush()
 
     # -- route templates ------------------------------------------------
@@ -372,6 +453,39 @@ def seed(session) -> None:
         ("KBL-KHM", "EXT-KBL-KHM", RouteType.CITY, 110_000, 165, 120_000, ["EXT-CHK"]),
         ("KBL-JAD", "EXT-KBL-JAD", RouteType.CITY, 118_000, 180, 130_000, ["EXT-CHK"]),
     ]
+    # Kabul → Ghorband, the mirror of the plan above.
+    #
+    # The fare is the outbound fare, not a discount and not a premium: it is
+    # the same road and the same hours, and a driver who charges more for the
+    # empty-looking direction is the thing this product exists to replace.
+    #
+    # Charikar is a waypoint on the way out and a waypoint on the way back, so
+    # somebody travelling only that far can be picked up in either direction.
+    for dist_code, origin_district in return_districts.items():
+        for grb_code, grb in districts.items():
+            code = f"T-{dist_code}-{grb_code}"
+            row, made = _get_or_create(
+                session, RouteTemplateRow,
+                match={"code": code},
+                defaults={
+                    "name": f"{origin_district.name} → {grb.name}",
+                    "origin_scope": "DISTRICT",
+                    "origin_ref_id": origin_district.id,
+                    "destination_id": destinations[f"INT-{grb_code}"].id,
+                    "route_type": RouteType.CITY.value,
+                    "vehicle_type_code": "SEDAN",
+                    "default_seat_capacity": 4,
+                    "intermediate_destination_ids": [destinations["EXT-CHK"].id],
+                    "distance_m": 110_000,
+                    "duration_minutes": 165,
+                    "base_fare_minor": 120_000,
+                    "base_fare_currency": "AFN",
+                    "status": RouteStatus.ACTIVE.value,
+                },
+            )
+            templates.append(row)
+            note("route_templates", made)
+
     for district_code, district in districts.items():
         for suffix, destination_code, route_type, distance, minutes, fare, waypoints in plan:
             code = f"T-{district_code}-{suffix}"
