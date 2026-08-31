@@ -26,14 +26,16 @@ class PendingPayloadTest {
             setOf(
                 "trip_id", "seat_count", "pickup_station_id",
                 "dropoff_destination_id", "note", "latitude", "longitude",
+                "location_is_mock",
             ),
-            keys(PendingPayloads.booking("t", 2, "s", "d", "note", "34.9", "68.7")),
+            keys(PendingPayloads.booking("t", 2, "s", "d", "note", "34.9", "68.7", true)),
         )
         // Optional fields are absent when null, not null-valued: the reader
         // uses jsonPrimitive.content, which would render the STRING "null".
+        // An honest (non-mock) fix omits the brand the same way.
         assertEquals(
             setOf("trip_id", "seat_count", "pickup_station_id", "dropoff_destination_id"),
-            keys(PendingPayloads.booking("t", 2, "s", "d", null, null, null)),
+            keys(PendingPayloads.booking("t", 2, "s", "d", null, null, null, false)),
         )
     }
 

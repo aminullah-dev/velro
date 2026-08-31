@@ -123,6 +123,7 @@ def create_booking(
         phone=deps.users(trips.session).get(actor.user_id).phone,
         latitude=body.latitude,
         longitude=body.longitude,
+        is_mock=body.location_is_mock,
     )
 
     use_case = BookSeats(

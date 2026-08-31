@@ -81,6 +81,7 @@ class BookingRepository @Inject constructor(
         /** Null means the handset could not say. The server's fence decides. */
         latitude: String? = null,
         longitude: String? = null,
+        locationIsMock: Boolean = false,
     ): ApiResult<Booking> {
         val result = mapper.call {
             api.book(
@@ -93,6 +94,7 @@ class BookingRepository @Inject constructor(
                     passenger_note = note,
                     latitude = latitude,
                     longitude = longitude,
+                    location_is_mock = locationIsMock,
                 ),
             )
         }

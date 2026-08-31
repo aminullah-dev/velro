@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
+import android.os.Build
 import android.os.CancellationSignal
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
@@ -39,7 +40,17 @@ class LocationProvider @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
 
-    data class Coordinates(val latitude: String, val longitude: String)
+    data class Coordinates(
+        val latitude: String,
+        val longitude: String,
+        /**
+         * True when Android brands the fix as coming from a mock-location
+         * app. Reported to the server as-is: the app neither blocks on it
+         * nor hides it, because the policy for invented coordinates lives in
+         * exactly one place and that place is not here.
+         */
+        val isMock: Boolean,
+    )
 
     suspend fun current(): Coordinates? {
         if (!hasPermission()) return null
@@ -95,6 +106,12 @@ class LocationProvider @Inject constructor(
         // enough not to pretend precision a cell fix does not have.
         latitude = String.format(Locale.US, "%.5f", latitude),
         longitude = String.format(Locale.US, "%.5f", longitude),
+        isMock = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            isMock
+        } else {
+            @Suppress("DEPRECATION")
+            isFromMockProvider
+        },
     )
 
     private companion object {

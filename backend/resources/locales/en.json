@@ -15,6 +15,8 @@
   "error.refresh_token_revoked": "You have been signed out. Please sign in again.",
   "error.user_not_found": "No account found for that number.",
   "error.user_suspended": "This account is suspended. Contact support.",
+  "error.user_already_suspended": "That account is already suspended or closed.",
+  "error.user_not_suspended": "That account is not suspended.",
   "error.permission_denied": "You do not have permission to do that.",
   "error.province_not_found": "That province was not found.",
   "error.district_not_found": "That district was not found.",

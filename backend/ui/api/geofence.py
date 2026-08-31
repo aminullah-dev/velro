@@ -41,6 +41,7 @@ def assert_inside(
     phone: str,
     latitude: Decimal | None,
     longitude: Decimal | None,
+    is_mock: bool = False,
 ) -> None:
     """Refuse a summons from outside the service area.
 
@@ -55,6 +56,18 @@ def assert_inside(
     radius = app_settings.get_int(SETTING_RADIUS_M, DEFAULT_RADIUS_M)
     if radius <= 0:
         return
+
+    if is_mock:
+        # Android itself brands a fix produced by a mock-location app, and an
+        # unmodified client passes the brand along. This catches the person
+        # who installed Fake GPS from an app store -- the realistic bulk of
+        # coordinate liars -- and openly cannot catch a patched client or a
+        # raw API call, which is why the SIM cost and the suspend switch stand
+        # behind it. Same sentence to the caller as any other refusal: telling
+        # a cheater precisely which check caught him is a tutorial.
+        raise ValidationError(
+            error_codes.GEOFENCE_OUTSIDE, reason="mock_location"
+        )
 
     if latitude is None or longitude is None:
         raise ValidationError(

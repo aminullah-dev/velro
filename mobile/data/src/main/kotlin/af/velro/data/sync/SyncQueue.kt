@@ -51,10 +51,11 @@ class SyncQueue @Inject constructor(
         note: String? = null,
         latitude: String? = null,
         longitude: String? = null,
+        locationIsMock: Boolean = false,
     ) = enqueue(OperationKind.BOOK_SEATS, idempotencyKey,
         PendingPayloads.booking(
             tripId, seatCount, pickupStationId, dropoffDestinationId, note,
-            latitude, longitude,
+            latitude, longitude, locationIsMock,
         ))
 
     suspend fun enqueueCancel(bookingId: String, reasonCode: String) =
@@ -119,7 +120,7 @@ object PendingPayloads {
     fun booking(
         tripId: String, seatCount: Int,
         pickupStationId: String, dropoffDestinationId: String, note: String?,
-        latitude: String?, longitude: String?,
+        latitude: String?, longitude: String?, locationIsMock: Boolean,
     ): String = buildJsonObject {
         put("trip_id", tripId)
         put("seat_count", seatCount)
@@ -129,6 +130,7 @@ object PendingPayloads {
         // Where they stood when they tried, not where the worker later runs.
         if (latitude != null) put("latitude", latitude)
         if (longitude != null) put("longitude", longitude)
+        if (locationIsMock) put("location_is_mock", true)
     }.toString()
 
     fun cancel(bookingId: String, reasonCode: String): String = buildJsonObject {

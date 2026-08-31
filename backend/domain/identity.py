@@ -13,7 +13,7 @@ from datetime import datetime
 
 from domain.enums import ActorRole, Locale, UserStatus
 from shared import error_codes
-from shared.errors import AuthenticationError, ConflictError, ValidationError
+from shared.errors import AuthenticationError, ConflictError, ValidationError, PermissionError as DomainPermissionError
 
 # The eight roles of section 58. Roles are fixed; the permissions attached to
 # them are rows, so an operator can retune a role without a deploy.
@@ -98,6 +98,40 @@ class User:
             raise AuthenticationError(
                 error_codes.USER_SUSPENDED, user_id=self.id, status=str(self.status)
             )
+
+    def suspend(self) -> None:
+        """The operator's off switch for one account.
+
+        Staff are refused here, not out of courtesy to staff: an administrator
+        who can suspend another administrator -- or himself -- can lock the
+        door of the whole office from inside. Staff misconduct is a role
+        revocation, which a different administrator performs.
+
+        Only an ACTIVE account can move to SUSPENDED. A DEACTIVATED account is
+        already off in a different way, and layering the two states silently
+        would leave nobody sure which switch turned it off.
+        """
+        if self.is_staff:
+            raise DomainPermissionError(
+                error_codes.PERMISSION_DENIED, user_id=self.id, reason="staff_account"
+            )
+        if self.status is not UserStatus.ACTIVE:
+            raise ConflictError(
+                error_codes.USER_ALREADY_SUSPENDED, user_id=self.id, status=str(self.status)
+            )
+        self.status = UserStatus.SUSPENDED
+
+    def reinstate(self) -> None:
+        """Strictly the reverse of suspend, and only that.
+
+        Reinstating a DEACTIVATED account through this door would resurrect an
+        account its owner closed, on an administrator's tap.
+        """
+        if self.status is not UserStatus.SUSPENDED:
+            raise ConflictError(
+                error_codes.USER_NOT_SUSPENDED, user_id=self.id, status=str(self.status)
+            )
+        self.status = UserStatus.ACTIVE
 
     def has_role(self, role: str) -> bool:
         return role in self.roles

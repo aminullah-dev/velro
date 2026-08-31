@@ -42,6 +42,9 @@ class BookSeatsIn(Schema):
     #: numbers may omit them.
     latitude: Decimal | None = None
     longitude: Decimal | None = None
+    #: True when Android marked the fix as coming from a mock-location app.
+    #: An unmodified client reports it honestly; its absence proves nothing.
+    location_is_mock: bool = False
 
 
 class FareComponentOut(Schema):

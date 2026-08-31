@@ -477,6 +477,7 @@ class BookingFlowViewModel @Inject constructor(
                 returnFareMinor = current.returnFareMinor,
                 latitude = standing?.latitude,
                 longitude = standing?.longitude,
+                locationIsMock = standing?.isMock ?: false,
             )
             when (result) {
                 is ApiResult.Success -> _state.update {
@@ -537,6 +538,7 @@ class BookingFlowViewModel @Inject constructor(
                 ),
                 latitude = standing?.latitude,
                 longitude = standing?.longitude,
+                locationIsMock = standing?.isMock ?: false,
             )
             when (result) {
                 is ApiResult.Success -> {
@@ -571,6 +573,7 @@ class BookingFlowViewModel @Inject constructor(
                             // and that is not where the booking was made.
                             latitude = standing?.latitude,
                             longitude = standing?.longitude,
+                            locationIsMock = standing?.isMock ?: false,
                         )
                         _state.update {
                             it.copy(isSubmitting = false, queuedOffline = true)

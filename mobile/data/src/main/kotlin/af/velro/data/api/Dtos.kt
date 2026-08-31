@@ -185,6 +185,8 @@ data class BookSeatsRequest(
     /** Where the passenger is standing, for the geofence. Decimal-as-string. */
     val latitude: String? = null,
     val longitude: String? = null,
+    /** True when Android branded the fix as mocked. Reported honestly. */
+    val location_is_mock: Boolean = false,
 )
 
 @Serializable
@@ -591,6 +593,8 @@ data class RequestRideRequest(
     /** Where the passenger is standing, for the geofence. Decimal-as-string. */
     val latitude: String? = null,
     val longitude: String? = null,
+    /** True when Android branded the fix as mocked. Reported honestly. */
+    val location_is_mock: Boolean = false,
 )
 
 @Serializable

@@ -45,6 +45,7 @@ class NegotiationRepository @Inject constructor(
         /** Null means the handset could not say. The server's fence decides. */
         latitude: String? = null,
         longitude: String? = null,
+        locationIsMock: Boolean = false,
     ): ApiResult<RideRequest> =
         mapper.call {
             api.requestRide(
@@ -59,6 +60,7 @@ class NegotiationRepository @Inject constructor(
                     return_fare_minor = returnFareMinor,
                     latitude = latitude,
                     longitude = longitude,
+                    location_is_mock = locationIsMock,
                 )
             )
         }.map(::toDomain)

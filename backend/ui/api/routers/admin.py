@@ -26,9 +26,14 @@ from application.use_cases.generate_routes import (
     GenerateRoutesCommand,
 )
 from application.use_cases.record_name import RecordName, RecordNameCommand
+from domain.identity import DRIVER as DRIVER_ROLE
+from domain.identity import PhoneNumber
+from domain.identity import User as DomainUser
 from domain.enums import (
     DriverApprovalStatus,
+    Locale,
     TripStatus,
+    UserStatus,
     VehicleStatus,
 )
 from infrastructure.db.models.geography import (
@@ -772,6 +777,164 @@ def suspend_driver(
         after={"approval_status": row.approval_status, "reason": row.suspended_reason},
     )
     return ok({"driver_id": driver_id, "approval_status": row.approval_status})
+
+
+
+# -- users ---------------------------------------------------------------
+
+
+class UserAdminOut(Schema):
+    id: str
+    phone: str
+    full_name: str | None
+    status: str
+    locale: str
+    roles: list[str]
+    rating_average: float | None
+    rating_count: int
+    created_at: datetime | None
+    last_seen_at: datetime | None
+
+
+class UserDecisionIn(Schema):
+    reason: str | None = Field(default=None, max_length=300)
+
+
+def _user_admin_out(row, roles: list[str]) -> dict:
+    return UserAdminOut(
+        id=row.id,
+        phone=row.phone,
+        full_name=row.full_name,
+        status=row.status,
+        locale=row.locale,
+        roles=roles,
+        rating_average=(row.rating_sum / row.rating_count) if row.rating_count else None,
+        rating_count=row.rating_count,
+        created_at=row.created_at,
+        last_seen_at=row.last_seen_at,
+    ).model_dump()
+
+
+@router.get("/users")
+def users_list(
+    actor: Annotated[deps.Actor, Depends(deps.require_operations)],
+    session: deps.SessionDep,
+    phone: Annotated[str | None, Query(max_length=20)] = None,
+    status: Annotated[str | None, Query(pattern=r"^(ACTIVE|SUSPENDED|DEACTIVATED)$")] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> dict:
+    """Find an account, usually by the phone number in a driver's complaint.
+
+    A contains-match on digits, because the complaint arrives as 0793..., the
+    row holds +93793..., and the operator should not have to know which form
+    the database speaks.
+    """
+    stmt = select(UserRow).where(UserRow.deleted_at.is_(None))
+    if phone:
+        digits = "".join(ch for ch in phone if ch.isdigit())
+        stmt = stmt.where(UserRow.phone.contains(digits.lstrip("0") or digits))
+    if status:
+        stmt = stmt.where(UserRow.status == status)
+    rows = session.scalars(
+        stmt.order_by(UserRow.created_at.desc()).limit(limit)
+    ).all()
+    users_repo = deps.users(session)
+    return ok(
+        [_user_admin_out(row, users_repo.roles_of(row.id)) for row in rows],
+        meta={"count": len(rows)},
+    )
+
+
+def _load_user(users_repo, user_id: str) -> DomainUser:
+    row = users_repo.get(user_id)
+    return DomainUser(
+        id=row.id,
+        phone=PhoneNumber(row.phone),
+        full_name=row.full_name,
+        locale=Locale(row.locale),
+        status=UserStatus(row.status),
+        roles=set(users_repo.roles_of(row.id)),
+    ), row
+
+
+@router.post("/users/{user_id}/suspend")
+def suspend_user(
+    user_id: str,
+    body: UserDecisionIn,
+    actor: Annotated[deps.Actor, Depends(deps.require_operations)],
+    session: deps.SessionDep,
+    trips: Annotated[object, Depends(deps.trips)],
+    audit: Annotated[object, Depends(deps.audit)],
+) -> dict:
+    """The account-level off switch.
+
+    This is what a confirmed troll gets: sign-in refuses him, and every
+    request his surviving tokens make is refused on arrival, because the
+    actor is re-read from this row each time. His next account costs him a
+    new SIM.
+
+    Suspending a user who also drives is allowed -- it is the stronger of the
+    two levers, for conduct worse than paperwork -- but not while he has
+    passengers aboard, for the same reason the driver-level suspend refuses:
+    stranding them roadside is worse than whatever prompted this. A suspended
+    passenger's existing bookings are left to play out through the no-show
+    machinery; the switch stops new summonses, it does not tear up receipts.
+    """
+    users_repo = deps.users(session)
+    user, row = _load_user(users_repo, user_id)
+
+    if DRIVER_ROLE in user.roles:
+        driver_row = deps.drivers(session).find_by_user(user_id)
+        in_flight = trips.active_for_driver(driver_row.id) if driver_row else None
+        if in_flight is not None:
+            raise ConflictError(
+                error_codes.DRIVER_ALREADY_ON_TRIP,
+                driver_id=driver_row.id, trip_id=in_flight.id,
+            )
+
+    before = row.status
+    user.suspend()
+    row.status = user.status.value
+    users_repo.save(row)
+
+    audit.write(
+        "user.suspended",
+        actor_id=actor.user_id,
+        actor_role=actor.role,
+        entity_type="user",
+        entity_id=user_id,
+        before={"status": before},
+        after={"status": row.status, "reason": body.reason},
+    )
+    return ok({"user_id": user_id, "status": row.status})
+
+
+@router.post("/users/{user_id}/reinstate")
+def reinstate_user(
+    user_id: str,
+    body: UserDecisionIn,
+    actor: Annotated[deps.Actor, Depends(deps.require_operations)],
+    session: deps.SessionDep,
+    audit: Annotated[object, Depends(deps.audit)],
+) -> dict:
+    users_repo = deps.users(session)
+    user, row = _load_user(users_repo, user_id)
+
+    before = row.status
+    user.reinstate()
+    row.status = user.status.value
+    users_repo.save(row)
+
+    audit.write(
+        "user.reinstated",
+        actor_id=actor.user_id,
+        actor_role=actor.role,
+        entity_type="user",
+        entity_id=user_id,
+        before={"status": before},
+        after={"status": row.status, "reason": body.reason},
+    )
+    return ok({"user_id": user_id, "status": row.status})
 
 
 class VehicleAdminOut(Schema):

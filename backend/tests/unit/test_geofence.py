@@ -42,7 +42,7 @@ class FakeAppSettings:
 
 
 def check(*, geo=None, radius=DEFAULT_RADIUS_M, exempt=(), phone="+93700000000",
-          lat=KABUL_ISH[0], lon=KABUL_ISH[1]):
+          lat=KABUL_ISH[0], lon=KABUL_ISH[1], is_mock=False):
     assert_inside(
         geo=geo if geo is not None else FakeGeo(stations=[object()]),
         app_settings=FakeAppSettings(radius=radius),
@@ -50,6 +50,7 @@ def check(*, geo=None, radius=DEFAULT_RADIUS_M, exempt=(), phone="+93700000000",
         phone=phone,
         latitude=lat,
         longitude=lon,
+        is_mock=is_mock,
     )
 
 
@@ -81,6 +82,17 @@ class TestOutside:
         # only evidence when someone insists the fence is wrong.
         assert caught.value.context == {"latitude": "34.35", "longitude": "62.20"}
 
+    def test_a_branded_mock_fix_is_refused_even_from_inside(self):
+        # Standing (allegedly) right at the station, but Android says the fix
+        # came from a mock-location app. The geography is not even consulted:
+        # coordinates known to be invented have no geography.
+        geo = FakeGeo(stations=[object()])
+        with pytest.raises(ValidationError) as caught:
+            check(geo=geo, is_mock=True)
+        assert caught.value.code == error_codes.GEOFENCE_OUTSIDE
+        assert caught.value.context == {"reason": "mock_location"}
+        assert geo.calls == []
+
     @pytest.mark.parametrize("lat,lon", [(None, None), (KABUL_ISH[0], None), (None, KABUL_ISH[1])])
     def test_missing_coordinates_are_refused_not_waved_through(self, lat, lon):
         geo = FakeGeo(stations=[object()])
@@ -97,6 +109,13 @@ class TestExits:
         check(geo=geo, exempt=("+93793817977",), phone="+93793817977",
               lat=None, lon=None)
         assert geo.calls == []
+
+    def test_an_exempt_phone_may_even_mock_its_location(self):
+        # The tester drives the emulator, and the emulator's location IS a
+        # mock. Exemption must mean all of it, or his handset works while his
+        # development setup does not.
+        check(geo=FakeGeo(stations=[]), exempt=("+93793817977",),
+              phone="+93793817977", is_mock=True)
 
     def test_a_non_positive_radius_is_the_off_switch(self):
         geo = FakeGeo(stations=[])

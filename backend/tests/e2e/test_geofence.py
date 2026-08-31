@@ -81,6 +81,16 @@ class TestAskFence:
         assert refused.status_code == 422, refused.text
         assert refused.json()["error"]["code"] == "GEOFENCE_OUTSIDE"
 
+    def test_a_mock_branded_fix_is_refused_even_at_the_station(
+        self, client: TestClient, fenced_rider: dict
+    ):
+        refused = _ask(
+            client, fenced_rider, _first_journey(client, fenced_rider),
+            **INSIDE, location_is_mock=True,
+        )
+        assert refused.status_code == 422, refused.text
+        assert refused.json()["error"]["code"] == "GEOFENCE_OUTSIDE"
+
     def test_standing_at_the_station_is_let_through(self, client: TestClient, fenced_rider: dict):
         rider = fenced_rider
         allowed = _ask(client, rider, _first_journey(client, rider), **INSIDE)

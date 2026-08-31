@@ -15,6 +15,8 @@
   "error.refresh_token_revoked": "له حسابه وتلي یاست. بیا ننوځئ.",
   "error.user_not_found": "د دې شمېرې لپاره حساب ونه موندل شو.",
   "error.user_suspended": "دا حساب بند دی. له ملاتړ سره اړیکه ونیسئ.",
+  "error.user_already_suspended": "هغه حساب له مخکې بند یا تړل شوی دی.",
+  "error.user_not_suspended": "هغه حساب بند نه دی.",
   "error.permission_denied": "تاسو د دې کار اجازه نه لرئ.",
   "error.province_not_found": "دا ولایت ونه موندل شو.",
   "error.district_not_found": "دا ولسوالي ونه موندل شوه.",

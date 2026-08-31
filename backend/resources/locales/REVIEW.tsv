@@ -780,3 +780,5 @@ error.ride_request_return_before_departure	The return must be after you set out.
 error.fare_offer_return_mismatch	Please give a price for the return as well.	برای برگشت هم قیمت بدهید.	د بېرته راتګ لپاره هم بیه ورکړئ.	
 error.currency_mismatch	Those prices are in different currencies.	این قیمت‌ها به پول‌های مختلف است.	دا بیې په بېلابېلو پیسو دي.	
 error.geofence_outside	VELRO serves Kabul, Parwan and Ghorband for now. It looks like you are outside the service area, so we cannot send your request to drivers.	ولرو فعلاً در کابل، پروان و غوربند خدمات می‌دهد. به نظر می‌رسد بیرون از ساحهٔ پوشش هستید، بنابراین درخواست شما به راننده‌ها فرستاده نمی‌شود.	ولرو اوس مهال په کابل، پروان او غوربند کې خدمت کوي. داسې ښکاري چې تاسو له پوښښ سیمې بهر یاست، نو ستاسو غوښتنه چلوونکو ته نه لېږل کېږي.	new — please check the Pashto
+error.user_already_suspended	That account is already suspended or closed.	آن حساب از قبل بند یا بسته است.	هغه حساب له مخکې بند یا تړل شوی دی.	new — please check the Pashto
+error.user_not_suspended	That account is not suspended.	آن حساب بند نیست.	هغه حساب بند نه دی.	new — please check the Pashto

@@ -15,6 +15,8 @@
   "error.refresh_token_revoked": "از حساب برآمده‌اید. لطفاً دوباره داخل شوید.",
   "error.user_not_found": "برای این شماره حسابی یافت نشد.",
   "error.user_suspended": "این حساب بند است. با پشتیبانی تماس بگیرید.",
+  "error.user_already_suspended": "آن حساب از قبل بند یا بسته است.",
+  "error.user_not_suspended": "آن حساب بند نیست.",
   "error.permission_denied": "شما اجازه این کار را ندارید.",
   "error.province_not_found": "این ولایت یافت نشد.",
   "error.district_not_found": "این ولسوالی یافت نشد.",

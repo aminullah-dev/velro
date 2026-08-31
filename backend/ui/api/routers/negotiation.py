@@ -51,6 +51,9 @@ class RequestRideIn(Schema):
     #: numbers may omit them.
     latitude: Decimal | None = None
     longitude: Decimal | None = None
+    #: True when Android marked the fix as coming from a mock-location app.
+    #: An unmodified client reports it honestly; its absence proves nothing.
+    location_is_mock: bool = False
     # When the passenger wants to travel. Omitted means now, which is what
     # every request meant before this field existed: the column, the command
     # and the trip it becomes were all built for a departure time, and this
@@ -139,6 +142,7 @@ def request_ride(
         phone=users_repo.get(actor.user_id).phone,
         latitude=body.latitude,
         longitude=body.longitude,
+        is_mock=body.location_is_mock,
     )
 
     """Ask to be driven, at a price you name."""

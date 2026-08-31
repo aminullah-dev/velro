@@ -38,6 +38,7 @@ object QueuedOperation {
                 note = stringOrNull("note"),
                 latitude = stringOrNull("latitude"),
                 longitude = stringOrNull("longitude"),
+                locationIsMock = body["location_is_mock"]?.jsonPrimitive?.content == "true",
             )
 
             OperationKind.CANCEL_BOOKING -> bookings.cancel(
