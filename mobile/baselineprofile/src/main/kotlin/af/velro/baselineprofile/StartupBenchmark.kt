@@ -27,6 +27,33 @@ import org.junit.Test
  * closes is exactly the gap a slow processor makes wide. An emulator number is
  * a proof that the benchmark runs, not a measurement of the product.
  *
+ * MEASURED, on a Samsung SM-A226B (Galaxy A22 5G, Dimensity 700, Android 13) --
+ * a budget MediaTek handset of the class this product is built for:
+ *
+ *     without profile   median 439.9 ms   (387 - 522)
+ *     with profile      median 433.2 ms   (400 - 623)
+ *
+ * 6.7 ms, or 1.5%. The ranges overlap almost entirely, so the honest reading is
+ * that the profile is not measurably helping this app on this device. The 20-30%
+ * figure quoted for baseline profiles is not what VELRO gets, and it should not
+ * be repeated in anything describing this product.
+ *
+ * That is a fact about where this app's startup time goes, not a fault in the
+ * profile. 440 ms of cold start on a phone like this is dominated by process
+ * setup, resource loading and reading the locale JSON off disk -- work that
+ * ahead-of-time compilation does not touch. Interpretation of app methods, the
+ * only thing a profile removes, is evidently a small share of it.
+ *
+ * Two things worth knowing before acting on this. Clocks were not locked (the
+ * run suppresses UNLOCKED, because the device is not rooted), which widens the
+ * noise band and is most of why the maxima disagree. And the profile itself was
+ * recorded on an emulator; regenerating it on a device of this class would
+ * target it better and is the first thing to try if this is worth chasing.
+ *
+ * The profile costs about 6.6 KB in the APK, so it stays: it is not earning its
+ * headline, but it is not costing anything either, and older or slower devices
+ * than this one may still see more.
+ *
  *   ./gradlew :baselineprofile:connectedBenchmarkAndroidTest
  *
  * Locked clocks matter on a physical device -- a phone that thermally throttles
