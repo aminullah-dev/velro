@@ -144,6 +144,11 @@ def me(
             locale=row.locale, status=row.status, roles=actor.roles,
             member_since=row.created_at.isoformat() if row.created_at else None,
             completed_trips=bookings.count_completed_for_passenger(row.id),
+            rating_average=(
+                round(row.rating_sum / row.rating_count, 2)
+                if row.rating_count else None
+            ),
+            rating_count=row.rating_count,
         ).model_dump()
     )
 

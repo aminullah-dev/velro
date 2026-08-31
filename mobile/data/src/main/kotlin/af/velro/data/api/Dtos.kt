@@ -60,6 +60,8 @@ data class ProfileDto(
     val roles: List<String>,
     val member_since: String? = null,
     val completed_trips: Int = 0,
+    val rating_average: Double? = null,
+    val rating_count: Int = 0,
 )
 
 @Serializable

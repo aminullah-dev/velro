@@ -17,6 +17,10 @@ class UserRow(Auditable, Base):
     locale: Mapped[str] = mapped_column(String(8), default=Locale.DARI.value, nullable=False)
     photo_key: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(20), default=UserStatus.ACTIVE.value, nullable=False)
+    #: A passenger's standing, as sum and count rather than an average, so it
+    #: can be corrected exactly rather than drifting. Mirrors the driver row.
+    rating_sum: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rating_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (

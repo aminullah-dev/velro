@@ -88,6 +88,7 @@ fun DriverNavHost(
 
         composable(Routes.PROFILE) {
             ProfileRoute(
+                onSignOut = onSignOut,
                 onBack = back,
                 onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
                 onOpenVehicle = { navController.navigate(Routes.VEHICLE) },

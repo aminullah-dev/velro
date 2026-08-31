@@ -596,4 +596,7 @@ data class UserProfile(
     val completedTrips: Int,
     /** ISO instant the account was opened, or null on an older record. */
     val memberSince: String?,
+    /** What drivers have scored them, or null before anybody has. */
+    val ratingAverage: Double? = null,
+    val ratingCount: Int = 0,
 )

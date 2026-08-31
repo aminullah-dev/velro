@@ -1,5 +1,10 @@
 package af.velro.feature.driver
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import af.velro.core.ui.component.SecondaryAction
+import af.velro.core.ui.component.ConfirmDialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.getValue
@@ -59,6 +64,7 @@ import androidx.compose.ui.text.style.TextAlign
  */
 @Composable
 fun ProfileRoute(
+    onSignOut: () -> Unit,
     onBack: () -> Unit,
     onOpenDocuments: () -> Unit,
     onOpenVehicle: () -> Unit,
@@ -71,6 +77,7 @@ fun ProfileRoute(
         profile != null -> ProfileScreen(
             profile = profile,
             photo = state.photo,
+            onSignOut = onSignOut,
             onBack = onBack,
             onOpenDocuments = onOpenDocuments,
             onOpenVehicle = onOpenVehicle,
@@ -91,12 +98,25 @@ fun ProfileRoute(
 fun ProfileScreen(
     profile: DriverProfile,
     photo: ByteArray?,
+    onSignOut: () -> Unit,
     onBack: () -> Unit,
     onOpenDocuments: () -> Unit,
     onOpenVehicle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
+    var confirming by rememberSaveable { mutableStateOf(false) }
+
+    if (confirming) {
+        // Same warning it always carried; it moved with the button.
+        ConfirmDialog(
+            titleKey = "auth.action.sign_out",
+            bodyKey = "auth.sign_out_warning",
+            confirmKey = "auth.action.sign_out",
+            onConfirm = { confirming = false; onSignOut() },
+            onDismiss = { confirming = false },
+        )
+    }
 
     VelroScreen(
         title = strings["driver.profile.title"],
@@ -208,6 +228,15 @@ fun ProfileScreen(
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
+
+        // Last, and here rather than in the header. It sat one tap from every
+        // screen beside the help button -- a bad neighbour for a control that
+        // wipes the local cache and needs a connection to undo.
+        Spacer(Modifier.height(Spacing.xl))
+        SecondaryAction(
+            label = strings["auth.action.sign_out"],
+            onClick = { confirming = true },
+        )
 
         Spacer(Modifier.height(Spacing.xl))
     }

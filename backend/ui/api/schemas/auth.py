@@ -52,6 +52,10 @@ class ProfileOut(Schema):
     #: Journeys actually taken, not booked. A count that includes cancellations
     #: flatters the number and means nothing to the person reading it.
     completed_trips: int = 0
+    #: What drivers have scored this passenger, or null before anybody has.
+    #: Null rather than 0.0, which reads as a bad score rather than no score.
+    rating_average: float | None = None
+    rating_count: int = 0
 
 
 class UpdateProfileIn(Schema):

@@ -74,10 +74,17 @@ class RateTrip:
             comment=cmd.comment,
         )
 
-        # A driver's running average lives on the driver row as sum and count,
-        # so it can be corrected exactly rather than drifting.
+        # Running averages live as sum and count on the row of whoever was
+        # rated, so they can be corrected exactly rather than drifting.
+        #
+        # Both directions are recorded now. The rating row for a driver rating
+        # a passenger has been written since this file existed -- rater_role
+        # says which way it went -- but nothing added it up, so the score a
+        # driver gave was stored and never became anything.
         if rater_role is ActorRole.PASSENGER and trip.driver_id:
             self._drivers.record_rating(trip.driver_id, cmd.score)
+        elif rater_role is ActorRole.DRIVER:
+            self._users.record_rating(ratee_id, cmd.score)
 
         self._audit.write(
             "rating.submitted",

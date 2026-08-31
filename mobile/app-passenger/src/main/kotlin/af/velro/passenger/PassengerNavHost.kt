@@ -191,7 +191,10 @@ fun PassengerNavHost(
         }
 
         composable(Routes.ACCOUNT) {
-            AccountRoute(onBack = { navController.popBackStack() })
+            AccountRoute(
+                onSignOut = onSignOut,
+                onBack = { navController.popBackStack() },
+            )
         }
         composable(Routes.HISTORY) {
             HistoryRoute(
@@ -224,20 +227,10 @@ private fun HomeScreen(
 ) {
     val strings = LocalVelroStrings.current
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var signingOut by remember { mutableStateOf(false) }
 
     // Confirmed, because it wipes the local cache: on a handset shared between
     // a household this is the right behaviour, and it is also unrecoverable
     // without a working connection to sign back in.
-    if (signingOut) {
-        ConfirmDialog(
-            titleKey = "auth.action.sign_out",
-            bodyKey = "auth.sign_out_warning",
-            confirmKey = "auth.action.sign_out",
-            onConfirm = { signingOut = false; onSignOut() },
-            onDismiss = { signingOut = false },
-        )
-    }
 
     Scaffold { padding ->
         Column(
@@ -278,13 +271,6 @@ private fun HomeScreen(
                         Icon(
                             Icons.Filled.AccountCircle,
                             contentDescription = strings["passenger.profile.title"],
-                            tint = VelroColors.OnBrandField,
-                        )
-                    }
-                    IconButton(onClick = { signingOut = true }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = strings["auth.action.sign_out"],
                             tint = VelroColors.OnBrandField,
                         )
                     }

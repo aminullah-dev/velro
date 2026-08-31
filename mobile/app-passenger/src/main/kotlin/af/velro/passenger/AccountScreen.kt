@@ -1,5 +1,10 @@
 package af.velro.passenger
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import af.velro.core.ui.component.ConfirmDialog
+import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.InlineError
@@ -36,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun AccountRoute(
+    onSignOut: () -> Unit,
     onBack: () -> Unit,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
@@ -56,6 +62,7 @@ fun AccountRoute(
         onNameChanged = viewModel::onNameChanged,
         onSaveName = viewModel::saveName,
         onLocaleChanged = viewModel::changeLocale,
+        onSignOut = onSignOut,
         onBack = onBack,
     )
 }
@@ -91,10 +98,27 @@ fun AccountScreen(
     onNameChanged: (String) -> Unit,
     onSaveName: () -> Unit,
     onLocaleChanged: (Locale) -> Unit,
+    onSignOut: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
+    var confirming by rememberSaveable { mutableStateOf(false) }
+
+    if (confirming) {
+        // Confirmed because it wipes the local cache. On a handset shared in a
+        // household that is right, and it is also unrecoverable without a
+        // connection to sign back in. The dialog moved here with the button
+        // rather than being left behind on the home screen with nothing able
+        // to open it.
+        ConfirmDialog(
+            titleKey = "auth.action.sign_out",
+            bodyKey = "auth.sign_out_warning",
+            confirmKey = "auth.action.sign_out",
+            onConfirm = { confirming = false; onSignOut() },
+            onDismiss = { confirming = false },
+        )
+    }
 
     VelroScreen(
         title = strings["passenger.profile.title"],
@@ -129,6 +153,20 @@ fun AccountScreen(
             Figure(
                 value = Numerals.localise(profile.completedTrips.toString(), strings.locale),
                 label = strings["passenger.profile.trips"],
+                modifier = Modifier.weight(1f),
+            )
+            Figure(
+                // Null until a driver has scored her, and shown as a dash
+                // rather than 0.0 -- which would read as a bad passenger
+                // rather than as a new one.
+                value = profile.ratingAverage
+                    ?.takeIf { profile.ratingCount > 0 }
+                    ?.let {
+                        Numerals.localise(
+                            String.format(java.util.Locale.US, "%.1f", it), strings.locale,
+                        )
+                    } ?: "—",
+                label = strings["driver.profile.rating"],
                 modifier = Modifier.weight(1f),
             )
             Figure(
@@ -231,6 +269,19 @@ fun AccountScreen(
         if (errorCode != null) {
             InlineError(errorCode, context = errorContext)
         }
+
+        // Last, and on this screen rather than in the header.
+        //
+        // It used to sit beside the brand as an icon, one tap from every
+        // screen, next to the help button -- which is a bad neighbour for a
+        // control that wipes the local cache and needs a connection to undo.
+        // Down here it is where somebody goes deliberately, after the things
+        // they came for.
+        Spacer(Modifier.height(Spacing.xl))
+        SecondaryAction(
+            label = strings["auth.action.sign_out"],
+            onClick = { confirming = true },
+        )
 
         Spacer(Modifier.height(Spacing.xl))
     }

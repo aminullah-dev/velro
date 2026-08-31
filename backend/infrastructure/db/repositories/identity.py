@@ -86,6 +86,19 @@ class UserRepository(SqlRepository[UserRow]):
         if existing is None:
             self.session.add(UserRoleRow(id=new_id(), user_id=user_id, role_id=role.id))
 
+    def record_rating(self, user_id: str, score: int) -> None:
+        """Add one score a driver gave this passenger.
+
+        The same shape as DriverRepository.record_rating, and deliberately so:
+        two ways of keeping the same kind of average is two places for it to be
+        wrong differently.
+        """
+        row = self.get(user_id)
+        row.rating_sum += score
+        row.rating_count += 1
+        row.version += 1
+        self.session.add(row)
+
 
 class OtpRepository(SqlRepository[OtpChallengeRow]):
     model = OtpChallengeRow

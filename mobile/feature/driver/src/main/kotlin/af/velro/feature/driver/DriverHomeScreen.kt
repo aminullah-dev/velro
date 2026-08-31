@@ -1,5 +1,6 @@
 package af.velro.feature.driver
 
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.i18n.Calendars
@@ -175,19 +176,6 @@ fun DriverHomeScreen(
     // The sheet needs nothing from the profile: the numbers are compiled in
     // and `ride` is already null-safe.
     var helpOpen by remember { mutableStateOf(false) }
-    var signingOut by remember { mutableStateOf(false) }
-    if (signingOut) {
-        // Confirmed because it wipes the local cache. On a handset shared
-        // in a household that is right, and it is also unrecoverable
-        // without a connection to sign back in.
-        ConfirmDialog(
-            titleKey = "auth.action.sign_out",
-            bodyKey = "auth.sign_out_warning",
-            confirmKey = "auth.action.sign_out",
-            onConfirm = { signingOut = false; onSignOut() },
-            onDismiss = { signingOut = false },
-        )
-    }
     if (helpOpen) {
         val assignment = state.assignment
         HelpSheet(
@@ -283,13 +271,6 @@ fun DriverHomeScreen(
                         Icon(
                             Icons.Filled.AccountCircle,
                             contentDescription = strings["driver.profile.title"],
-                            tint = VelroColors.OnBrandField,
-                        )
-                    }
-                    IconButton(onClick = { signingOut = true }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = strings["auth.action.sign_out"],
                             tint = VelroColors.OnBrandField,
                         )
                     }
@@ -763,6 +744,19 @@ private fun CurrentTrip(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> 
                         fontWeight = FontWeight.Bold,
                     )
                 }
+                // Score her as she gets out, while the trip is still on his
+                // screen. Only once she has actually travelled -- ONBOARD or
+                // finished -- because a rating before the journey is a rating
+                // of nothing.
+                if (rider.status == "ONBOARD" || rider.status == "COMPLETED") {
+                    Spacer(Modifier.height(Spacing.xs))
+                    PassengerStars(
+                        rated = rider.bookingId in state.ratedBookings,
+                        onRate = { score ->
+                            onEvent(DriverHomeEvent.RatePassenger(rider.bookingId, score))
+                        },
+                    )
+                }
                 rider.passengerPhone?.let { phone ->
                     SecondaryAction(
                         label = strings["driver.action.call_passenger"],
@@ -1146,5 +1140,51 @@ private fun ringOnce(context: Context) {
         vibrator.vibrate(
             VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE)
         )
+    }
+}
+
+
+/**
+ * Five stars, for the passenger who has just travelled.
+ *
+ * The score a driver gives has been accepted by the server since the rating
+ * endpoint was written -- it takes a booking id and resolves the direction
+ * itself -- and nothing in this app had ever sent one, so every passenger's
+ * standing was empty because nobody could fill it.
+ *
+ * Collapses to a line of thanks once given. A row of stars that stays tappable
+ * after a rating invites a second one the server will refuse, and the refusal
+ * would read as the first attempt having failed.
+ */
+@Composable
+private fun PassengerStars(rated: Boolean, onRate: (Int) -> Unit) {
+    val strings = LocalVelroStrings.current
+    if (rated) {
+        Text(
+            strings["rating.thanks"],
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        return
+    }
+    Column {
+        Text(
+            strings["rating.hint"],
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row {
+            for (star in 1..5) {
+                IconButton(onClick = { onRate(star) }) {
+                    Icon(
+                        Icons.Filled.StarBorder,
+                        // Labelled, not decoration: a screen reader user needs
+                        // to know which star they are on.
+                        contentDescription = "$star",
+                        tint = MaterialTheme.colorScheme.outline,
+                    )
+                }
+            }
+        }
     }
 }

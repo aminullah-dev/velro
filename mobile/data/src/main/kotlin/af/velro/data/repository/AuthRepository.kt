@@ -69,6 +69,8 @@ class AuthRepository @Inject constructor(
         locale = Locale.fromTag(dto.locale),
         completedTrips = dto.completed_trips,
         memberSince = dto.member_since,
+        ratingAverage = dto.rating_average,
+        ratingCount = dto.rating_count,
     )
 
     suspend fun requestOtp(phone: String, locale: Locale): ApiResult<RequestOtpResponse> =

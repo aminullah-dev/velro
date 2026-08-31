@@ -1,5 +1,6 @@
 package af.velro.feature.driver
 
+import af.velro.data.repository.BookingRepository
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
 import af.velro.data.repository.CurrentAssignment
@@ -64,6 +65,15 @@ data class DriverHomeUiState(
      * work must keep the board he is reading while it updates.
      */
     val isRefreshing: Boolean = false,
+    /**
+     * Bookings this driver has already scored, so the stars do not invite a
+     * second attempt the server will refuse.
+     *
+     * Kept in memory only. It is a guard against a double tap, not a record --
+     * the record is the rating row, and the server is the thing that enforces
+     * one per trip.
+     */
+    val ratedBookings: Set<String> = emptySet(),
     val isBusy: Boolean = false,
     /**
      * The last work read did not fully succeed, so what is on screen is older
@@ -138,6 +148,14 @@ sealed interface DriverHomeEvent {
     data object AdvanceTrip : DriverHomeEvent
     data class CancelTrip(val reasonCode: String, val note: String?) : DriverHomeEvent
     data class VerifyCodeChanged(val value: String) : DriverHomeEvent
+
+    /**
+     * Score the passenger who has just travelled.
+     *
+     * Carries the booking rather than the person: a car holds three riders and
+     * the server needs to know which of them is being rated.
+     */
+    data class RatePassenger(val bookingId: String, val score: Int) : DriverHomeEvent
     data object VerifyPassenger : DriverHomeEvent
     data object DismissError : DriverHomeEvent
     data object MarkNotificationsRead : DriverHomeEvent
@@ -165,6 +183,7 @@ class DriverHomeViewModel @Inject constructor(
     private val notifications: NotificationRepository,
     private val drivers: DriverRepository,
     private val negotiation: NegotiationRepository,
+    private val bookings: BookingRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DriverHomeUiState())
@@ -229,6 +248,7 @@ class DriverHomeViewModel @Inject constructor(
         when (event) {
             DriverHomeEvent.Refresh -> refresh()
             DriverHomeEvent.PullToRefresh -> refresh(pulled = true)
+            is DriverHomeEvent.RatePassenger -> ratePassenger(event.bookingId, event.score)
             DriverHomeEvent.ToggleOnline -> toggleOnline()
             is DriverHomeEvent.AcceptOffer -> accept(event.tripId)
             DriverHomeEvent.AdvanceTrip -> advance()
@@ -242,6 +262,23 @@ class DriverHomeViewModel @Inject constructor(
                 (notifications.inbox(limit = 20) as? ApiResult.Success)?.let { inbox ->
                     _state.update { it.copy(inbox = inbox.value) }
                 }
+            }
+        }
+    }
+
+    private fun ratePassenger(bookingId: String, score: Int) {
+        val tripId = _state.value.assignment?.trip?.id ?: return
+        if (bookingId in _state.value.ratedBookings) return
+        // Marked before the call, not after: the stars are a tap target and a
+        // second tap while the first is in flight would be refused by the
+        // server as a duplicate, which would surface as an error for something
+        // the driver did successfully.
+        _state.update { it.copy(ratedBookings = it.ratedBookings + bookingId) }
+        viewModelScope.launch {
+            if (bookings.rate(tripId, score, bookingId = bookingId) !is ApiResult.Success) {
+                // Let him try again. A score that did not land is worse than
+                // no score, because he believes he gave it.
+                _state.update { it.copy(ratedBookings = it.ratedBookings - bookingId) }
             }
         }
     }
