@@ -160,6 +160,12 @@ interface PendingOperationDao {
     @Query("SELECT COUNT(*) FROM pending_operations")
     fun count(): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM pending_operations WHERE lastError IS NULL")
+    fun pendingCount(): Flow<Int>
+
+    @Query("SELECT * FROM pending_operations WHERE lastError IS NOT NULL ORDER BY createdAt")
+    fun failures(): Flow<List<PendingOperationEntity>>
+
     @Upsert suspend fun upsert(operation: PendingOperationEntity)
 
     @Query("DELETE FROM pending_operations WHERE id = :id")

@@ -1,5 +1,7 @@
 package af.velro.passenger
 
+import af.velro.data.db.OperationKind
+import af.velro.data.db.PendingOperationEntity
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.ui.theme.NavMotion
@@ -312,6 +314,24 @@ private fun HomeScreen(
             // the server refuses a second one while the first is alive, so she
             // was locked out of the journey she had started, by her own app,
             // with no way to see why.
+            // The offline queue, made visible. A refused operation is a card
+            // she must dismiss herself; work still waiting is one quiet line.
+            for (failure in state.syncFailures) {
+                SyncFailureCard(
+                    failure = failure,
+                    onDismiss = { viewModel.dismissSyncFailure(failure.id) },
+                )
+                Spacer(Modifier.height(Spacing.sm))
+            }
+            if (state.pendingSync > 0) {
+                Text(
+                    strings["sync.pending.count", "count" to state.pendingSync],
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+            }
+
             state.openRequest?.let { request ->
                 OpenRequestCard(request = request, onOpen = onOpenOffers)
                 Spacer(Modifier.height(Spacing.lg))
@@ -456,6 +476,53 @@ private fun OpenRequestCard(request: RideRequest, onOpen: () -> Unit) {
                 label = strings["home.open_request.open"],
                 onClick = onOpen,
                 modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+
+/**
+ * A queued operation the server refused, in the person's own words.
+ *
+ * The kind line says what it was; the second line is the server's actual
+ * reason rendered through the same translations every error uses, so a seat
+ * that ran out while she was offline reads as exactly that.
+ */
+@Composable
+private fun SyncFailureCard(
+    failure: PendingOperationEntity,
+    onDismiss: () -> Unit,
+) {
+    val strings = LocalVelroStrings.current
+    VelroCard {
+        Column {
+            // A literal key per kind, not a concatenation: the localisation
+            // guard test reads these files for every key the apps ask for,
+            // and a key assembled at runtime is invisible to it -- which is
+            // exactly how a missing translation would ship unnoticed.
+            val kindKey = when (failure.kind) {
+                OperationKind.BOOK_SEATS -> "sync.kind.book_seats"
+                OperationKind.CANCEL_BOOKING -> "sync.kind.cancel_booking"
+                else -> "sync.kind.rate_trip"
+            }
+            Text(
+                strings["sync.failed.title"] + " — " + strings[kindKey],
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.error,
+            )
+            failure.lastError?.let { code ->
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    strings.forErrorCode(code, emptyMap()),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            Spacer(Modifier.height(Spacing.md))
+            SecondaryAction(
+                label = strings["common.action.close"],
+                onClick = onDismiss,
             )
         }
     }

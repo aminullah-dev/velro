@@ -1,5 +1,6 @@
 package af.velro.feature.driver
 
+import af.velro.data.sync.SyncQueue
 import af.velro.data.repository.BookingRepository
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
@@ -184,6 +185,7 @@ class DriverHomeViewModel @Inject constructor(
     private val drivers: DriverRepository,
     private val negotiation: NegotiationRepository,
     private val bookings: BookingRepository,
+    private val queue: SyncQueue,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DriverHomeUiState())
@@ -275,10 +277,19 @@ class DriverHomeViewModel @Inject constructor(
         // the driver did successfully.
         _state.update { it.copy(ratedBookings = it.ratedBookings + bookingId) }
         viewModelScope.launch {
-            if (bookings.rate(tripId, score, bookingId = bookingId) !is ApiResult.Success) {
-                // Let him try again. A score that did not land is worse than
-                // no score, because he believes he gave it.
-                _state.update { it.copy(ratedBookings = it.ratedBookings - bookingId) }
+            when (val result = bookings.rate(tripId, score, bookingId = bookingId)) {
+                is ApiResult.Success -> Unit
+                is ApiResult.Failure ->
+                    if (result.error.code == ApiException.OFFLINE) {
+                        // Queued instead of un-marked: he did give the score,
+                        // and it will land with the connection. The mark stays
+                        // so the stars do not invite a second attempt.
+                        queue.enqueueRating(tripId, score, comment = null, bookingId = bookingId)
+                    } else {
+                        // Let him try again. A score that did not land is worse
+                        // than no score, because he believes he gave it.
+                        _state.update { it.copy(ratedBookings = it.ratedBookings - bookingId) }
+                    }
             }
         }
     }

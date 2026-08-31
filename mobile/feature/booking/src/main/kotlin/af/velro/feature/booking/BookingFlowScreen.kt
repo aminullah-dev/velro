@@ -1,5 +1,7 @@
 package af.velro.feature.booking
 
+import androidx.compose.ui.text.style.TextAlign
+import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.ChevronForward
 import af.velro.core.ui.component.StepProgress
 import androidx.compose.ui.unit.IntOffset
@@ -133,6 +135,11 @@ fun BookingFlowScreen(
         Column(Modifier.fillMaxSize()) {
             when {
                 state.isLoading -> LoadingState()
+                // Saved-for-later is its own screen, and it must not resemble
+                // CONFIRMED in any way: no boarding code, no green, and the
+                // sentence that matters spelled out -- she does not have a
+                // seat yet, and should not walk to the station on this alone.
+                state.queuedOffline -> QueuedOfflineNotice(onDone = onExit)
                 state.errorCode != null && state.isEmptyForStep() ->
                     ErrorState(
                         errorCode = state.errorCode!!,
@@ -816,6 +823,40 @@ private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) 
             enabled = state.canAsk,
             loading = state.isSubmitting,
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+
+/**
+ * The request is in the queue, and the passenger is told exactly what that is
+ * worth. The body text carries the one instruction the whole offline-booking
+ * decision hinged on: do not travel on the strength of a saved request.
+ */
+@Composable
+private fun QueuedOfflineNotice(onDone: () -> Unit) {
+    val strings = LocalVelroStrings.current
+    Column(
+        Modifier.fillMaxSize().padding(top = Spacing.xxl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            strings["sync.queued.booking_title"],
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(Spacing.md))
+        Text(
+            strings["sync.queued.booking_body"],
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(Spacing.xl))
+        SecondaryAction(
+            label = strings["common.action.close"],
+            onClick = onDone,
         )
     }
 }

@@ -65,6 +65,11 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.hilt.work)
     ksp(libs.hilt.compiler)
+    // The second processor is not a duplicate: dagger's compiler ignores
+    // @HiltWorker entirely, and a worker without its generated assisted
+    // factory dies at instantiation -- silently FAILED in WorkManager's
+    // ledger, which is why the sync worker never ran once since it was built.
+    ksp(libs.androidx.hilt.compiler)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

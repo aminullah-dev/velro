@@ -118,6 +118,17 @@ fun BookingDetailScreen(
         // stays here -- and it keeps the row it needs to sit on its own line
         // rather than crowding the bar.
         StatusChip(booking.status.messageKey(), booking.status.tone())
+        if (state.queuedOffline) {
+            // The action was saved, and the status above deliberately has not
+            // moved: the server has not agreed yet, and a screen that shows
+            // "cancelled" before it is would be lying in the other direction.
+            Spacer(Modifier.height(Spacing.xs))
+            Text(
+                strings["sync.queued.generic"],
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
 
         // Get help, at the top and on the journey the passenger is actually
         // taking. Not at the foot of a scroll: the moment it is needed is the

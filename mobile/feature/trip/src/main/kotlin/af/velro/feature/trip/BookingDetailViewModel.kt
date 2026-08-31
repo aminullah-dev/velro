@@ -1,5 +1,6 @@
 package af.velro.feature.trip
 
+import af.velro.data.sync.SyncQueue
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
 import af.velro.data.repository.BookingRepository
@@ -31,6 +32,8 @@ data class BookingDetailUiState(
     val originName: String? = null,
     val destinationName: String? = null,
     val isRefreshing: Boolean = false,
+    /** A cancel or rating saved for the connection's return, not yet applied. */
+    val queuedOffline: Boolean = false,
     val isStale: Boolean = false,
     val isCancelling: Boolean = false,
     val ratingSubmitted: Boolean = false,
@@ -60,6 +63,7 @@ class BookingDetailViewModel @Inject constructor(
     private val bookings: BookingRepository,
     private val geography: GeographyRepository,
     savedState: SavedStateHandle,
+    private val queue: SyncQueue,
 ) : ViewModel() {
 
     private val bookingId: String = checkNotNull(savedState["bookingId"])
@@ -165,7 +169,19 @@ class BookingDetailViewModel @Inject constructor(
             when (val result = bookings.cancel(bookingId, reasonCode)) {
                 is ApiResult.Success -> _state.update { it.copy(isCancelling = false) }
                 is ApiResult.Failure ->
-                    _state.update { it.copy(isCancelling = false).failed(result.error) }
+                    if (result.error.code == ApiException.OFFLINE) {
+                        // A cancel spoken in a dead valley used to be simply
+                        // lost -- the seat stayed held and the passenger was a
+                        // no-show on a trip she had renounced. Queued now; the
+                        // status on screen stays honest (still booked) until
+                        // the server confirms.
+                        queue.enqueueCancel(bookingId, reasonCode)
+                        _state.update {
+                            it.copy(isCancelling = false, queuedOffline = true)
+                        }
+                    } else {
+                        _state.update { it.copy(isCancelling = false).failed(result.error) }
+                    }
             }
         }
     }
@@ -177,12 +193,21 @@ class BookingDetailViewModel @Inject constructor(
                 val result = bookings.rate(tripId, score, comment, bookingId)
             ) {
                 is ApiResult.Success -> _state.update { it.copy(ratingSubmitted = true) }
-                is ApiResult.Failure -> _state.update {
-                    // Already rated is not a failure worth alarming anyone over.
-                    if (result.error.code == "RATING_ALREADY_SUBMITTED") {
-                        it.copy(ratingSubmitted = true)
-                    } else {
-                        it.failed(result.error)
+                is ApiResult.Failure -> if (
+                    result.error.code == ApiException.OFFLINE
+                ) {
+                    queue.enqueueRating(tripId, score, comment, bookingId)
+                    _state.update {
+                        it.copy(ratingSubmitted = true, queuedOffline = true)
+                    }
+                } else {
+                    _state.update {
+                        // Already rated is not a failure worth alarming anyone over.
+                        if (result.error.code == "RATING_ALREADY_SUBMITTED") {
+                            it.copy(ratingSubmitted = true)
+                        } else {
+                            it.failed(result.error)
+                        }
                     }
                 }
             }

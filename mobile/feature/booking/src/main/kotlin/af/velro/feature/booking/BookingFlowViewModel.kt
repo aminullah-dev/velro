@@ -1,5 +1,6 @@
 package af.velro.feature.booking
 
+import af.velro.data.sync.SyncQueue
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
 import af.velro.data.api.IdempotencyKeys
@@ -80,6 +81,14 @@ data class BookingFlowUiState(
      * the same idempotency key and cannot produce a second booking.
      */
     val attemptId: String = IdempotencyKeys.newAttemptId(),
+    /**
+     * The request was saved for later, not sent.
+     *
+     * Its own flag rather than a step: CONFIRMED means a seat exists, and this
+     * means precisely that one does not yet. The two must be impossible to
+     * mistake for each other on screen.
+     */
+    val queuedOffline: Boolean = false,
     /** What the passenger is willing to pay, as they typed it. */
     val offeredFare: String = "",
     val note: String = "",
@@ -295,6 +304,7 @@ class BookingFlowViewModel @Inject constructor(
     private val geography: GeographyRepository,
     private val bookings: BookingRepository,
     private val negotiation: NegotiationRepository,
+    private val queue: SyncQueue,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BookingFlowUiState())
@@ -530,6 +540,28 @@ class BookingFlowViewModel @Inject constructor(
                     _effects.send(BookingEffect.Booked(result.value.id))
                 }
                 is ApiResult.Failure -> {
+                    if (result.error.code == ApiException.OFFLINE) {
+                        // Saved, honestly. The same deterministic key goes into
+                        // the queue, so if the request in fact reached the
+                        // server before the connection died, the replay gets
+                        // the original answer instead of a second seat.
+                        queue.enqueueBooking(
+                            tripId = option.tripId,
+                            seatCount = current.seatCount,
+                            pickupStationId = station.id,
+                            dropoffDestinationId = destination.id,
+                            idempotencyKey = IdempotencyKeys.forBooking(
+                                tripId = option.tripId,
+                                seatCount = current.seatCount,
+                                stationId = station.id,
+                                attemptId = current.attemptId,
+                            ),
+                        )
+                        _state.update {
+                            it.copy(isSubmitting = false, queuedOffline = true)
+                        }
+                        return@launch
+                    }
                     _state.update { it.copy(isSubmitting = false).failed(result.error) }
                     // Someone took the last seat between the search and the tap.
                     // Re-run the search so the list reflects reality rather than

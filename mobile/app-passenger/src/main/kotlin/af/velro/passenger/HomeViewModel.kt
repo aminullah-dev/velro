@@ -1,5 +1,7 @@
 package af.velro.passenger
 
+import af.velro.data.db.PendingOperationEntity
+import af.velro.data.sync.SyncQueue
 import af.velro.data.api.ApiResult
 import af.velro.data.repository.BookingRepository
 import af.velro.data.repository.NegotiationRepository
@@ -47,6 +49,17 @@ data class HomeUiState(
      * already reading stays on screen and legible while it updates.
      */
     val isRefreshing: Boolean = false,
+    /** Saved actions still waiting for a connection. Zero almost always. */
+    val pendingSync: Int = 0,
+    /**
+     * Queued operations the server has definitively refused.
+     *
+     * This is the loud half of the offline-booking bargain: a request that was
+     * queued with a promise of "it will be sent" and then failed must surface
+     * where she will look next, in her own language, with the server's real
+     * reason -- not sit invisibly in a table.
+     */
+    val syncFailures: List<PendingOperationEntity> = emptyList(),
     val errorCode: String? = null,
     val errorContext: Map<String, Any?> = emptyMap(),
 )
@@ -59,6 +72,7 @@ private const val POLL_SECONDS = 10L
 class HomeViewModel @Inject constructor(
     private val bookings: BookingRepository,
     private val negotiation: NegotiationRepository,
+    private val queue: SyncQueue,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState())
@@ -72,9 +86,19 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(bookings = cached, isLoading = false) }
             }
         }
+        viewModelScope.launch {
+            queue.pendingCount().collect { n -> _state.update { it.copy(pendingSync = n) } }
+        }
+        viewModelScope.launch {
+            queue.failures().collect { rows -> _state.update { it.copy(syncFailures = rows) } }
+        }
         viewModelScope.launch { refreshBookings() }
         viewModelScope.launch { refreshOpenRequest() }
         poll()
+    }
+
+    fun dismissSyncFailure(id: String) {
+        viewModelScope.launch { queue.dismiss(id) }
     }
 
     fun refresh() {

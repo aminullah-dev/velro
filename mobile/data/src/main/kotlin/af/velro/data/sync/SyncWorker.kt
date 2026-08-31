@@ -45,7 +45,8 @@ class SyncWorker @AssistedInject constructor(
         var retryNeeded = false
 
         for (operation in db.pendingOperations().pending()) {
-            when (val outcome = replay(operation)) {
+            val (outcome, refusalCode) = replay(operation)
+            when (outcome) {
                 Outcome.DONE -> db.pendingOperations().delete(operation.id)
                 Outcome.RETRY -> retryNeeded = true
                 Outcome.REJECTED -> {
@@ -55,7 +56,12 @@ class SyncWorker @AssistedInject constructor(
                     // the next line, which kept neither the retry nor the
                     // evidence. Replay reads only unfailed rows, so a dead
                     // operation cannot churn the worker every fifteen minutes.
-                    db.pendingOperations().recordFailure(operation.id, outcome.name)
+                    // The server's own error code, not the enum's name: the
+                    // home screen renders this through the same translations
+                    // every other error uses, so "چوکی تمام شده" rather than
+                    // "REJECTED".
+                    db.pendingOperations()
+                        .recordFailure(operation.id, refusalCode ?: outcome.name)
                 }
             }
         }
@@ -70,14 +76,18 @@ class SyncWorker @AssistedInject constructor(
         return if (retryNeeded) Result.retry() else Result.success()
     }
 
-    private suspend fun replay(operation: PendingOperationEntity): Outcome {
-        val result = runCatching { dispatch(operation) }.getOrElse { return Outcome.RETRY }
+    private suspend fun replay(
+        operation: PendingOperationEntity
+    ): Pair<Outcome, String?> {
+        val result = runCatching { dispatch(operation) }
+            .getOrElse { return Outcome.RETRY to null }
         return when (result) {
-            is ApiResult.Success -> Outcome.DONE
+            is ApiResult.Success -> Outcome.DONE to null
             is ApiResult.Failure -> when {
-                result.error.code == af.velro.data.api.ApiException.OFFLINE -> Outcome.RETRY
-                result.error.isTransient -> Outcome.RETRY
-                else -> Outcome.REJECTED
+                result.error.code == af.velro.data.api.ApiException.OFFLINE ->
+                    Outcome.RETRY to null
+                result.error.isTransient -> Outcome.RETRY to null
+                else -> Outcome.REJECTED to result.error.code
             }
         }
     }
