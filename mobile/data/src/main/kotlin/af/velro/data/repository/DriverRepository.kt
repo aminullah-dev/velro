@@ -83,7 +83,7 @@ class DriverRepository @Inject constructor(
             }
 
     suspend fun currentTrip(): ApiResult<CurrentAssignment?> =
-        mapper.call { api.currentTrip() }.map { dto ->
+        mapper.callNullable { api.currentTrip() }.map { dto ->
             dto?.let {
                 CurrentAssignment(
                     trip = it.trip.toDomain(),

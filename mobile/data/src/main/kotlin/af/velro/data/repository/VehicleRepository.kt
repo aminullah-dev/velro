@@ -27,7 +27,7 @@ class VehicleRepository @Inject constructor(
         }
 
     suspend fun current(): ApiResult<Vehicle?> =
-        mapper.call { api.currentVehicle() }.map { dto -> dto?.toDomain() }
+        mapper.callNullable { api.currentVehicle() }.map { dto -> dto?.toDomain() }
 
     suspend fun register(
         vehicleTypeCode: String,

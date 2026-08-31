@@ -37,6 +37,48 @@ class ResponseMapper(private val json: Json) {
             ApiResult.Failure(ApiException(ApiException.UNKNOWN, httpStatus = 0))
         }
 
+    /**
+     * The same call, for the endpoints where an empty payload is an answer.
+     *
+     * `data: null` means "there is no current trip" and "no vehicle is
+     * registered" -- not that the read failed. [call] cannot tell the two
+     * apart, because a null is a null once the type is erased, so it takes the
+     * safe reading and fails.
+     *
+     * That reading was wrong in the one case it mattered most. A driver with
+     * no assignment is a driver who is free to work, and
+     * `driver/trips/current` answers him with a legitimate null. The failure
+     * counted against the home screen's five reads, which set isStale, which
+     * drew "You are offline. Showing saved data." So the app told a driver he
+     * had no connection at the exact moment he was available -- with the board
+     * behind that line loading perfectly, over the connection he was told he
+     * did not have.
+     *
+     * Opt-in rather than a relaxation of [call]: an endpoint that returns null
+     * when it should have returned an object is still a fault, and only the
+     * two endpoints that document null as an answer should be exempt.
+     */
+    suspend fun <T> callNullable(
+        block: suspend () -> Response<Envelope<T>>,
+    ): ApiResult<T?> =
+        try {
+            val response = block()
+            if (response.isSuccessful) ApiResult.Success(response.body()?.data)
+            else ApiResult.Failure(parseError(response))
+        } catch (e: IOException) {
+            ApiResult.Failure(ApiException.offline())
+        } catch (e: SerializationException) {
+            ApiResult.Failure(
+                ApiException(
+                    code = ApiException.UNKNOWN,
+                    httpStatus = 0,
+                    context = mapOf("reason" to "response_unreadable"),
+                )
+            )
+        } catch (e: Exception) {
+            ApiResult.Failure(ApiException(ApiException.UNKNOWN, httpStatus = 0))
+        }
+
     fun <T> unwrap(response: Response<Envelope<T>>): ApiResult<T> {
         if (response.isSuccessful) {
             val body = response.body()
