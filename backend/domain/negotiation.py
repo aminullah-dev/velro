@@ -131,6 +131,16 @@ def assert_offer_allowed(
         # Bidding on your own request would let one person manufacture a
         # completed trip, and with it a commission record and a rating.
         raise ConflictError(error_codes.FARE_OFFER_SELF)
+    if request_status is RideRequestStatus.EXPIRED:
+        # Its own code, because it is its own fact and the driver's next move
+        # differs. Collapsed into NOT_OPEN, a request that simply ran out of
+        # time was reported as "this ride has already been taken" -- so a
+        # driver who was first to it, and lost it to nothing but the clock, was
+        # told another driver had won. The code and all three sentences already
+        # existed.
+        raise ConflictError(
+            error_codes.RIDE_REQUEST_EXPIRED, current=str(request_status)
+        )
     if request_status is not RideRequestStatus.OPEN:
         raise ConflictError(
             error_codes.RIDE_REQUEST_NOT_OPEN, current=str(request_status)

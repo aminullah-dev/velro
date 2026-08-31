@@ -33,10 +33,41 @@ class Strings private constructor(
     operator fun get(key: String, params: Map<String, Any?> = emptyMap()): String {
         val template = translations[key] ?: fallback[key] ?: return key
         if (params.isEmpty()) return template
+        val resolved = withMoney(params)
         return PLACEHOLDER.replace(template) { match ->
             val name = match.groupValues[1]
-            params[name]?.let { format(it) } ?: match.value
+            resolved[name]?.let { format(it) } ?: match.value
         }
+    }
+
+    /**
+     * Minor units in, money out.
+     *
+     * The server's error contexts and notification payloads carry amounts the
+     * only way a machine should: `<name>_minor` plus a `currency`, locale-free
+     * and exact. Three sentences spliced those raw integers straight into
+     * prose -- "You need at least 5000 to request a payout" for a fifty-afghani
+     * minimum, and no currency anywhere -- because substitution has no idea
+     * what a number means.
+     *
+     * So the pairs are rendered here, in the locale actually being read, and
+     * both `{amount}` and `{<name>}` become real money. A sentence that
+     * genuinely wants the integer can still ask for `{<name>_minor}`.
+     */
+    private fun withMoney(params: Map<String, Any?>): Map<String, Any?> {
+        val currency = params["currency"] as? String ?: return params
+        val minors = params.keys.filter { it.endsWith(MINOR_SUFFIX) }
+        if (minors.isEmpty()) return params
+        val out = params.toMutableMap()
+        for (key in minors) {
+            val minor = (params[key] as? Number)?.toLong() ?: continue
+            val money = MoneyFormatter.format(minor, currency, this)
+            out[key.removeSuffix(MINOR_SUFFIX)] = money
+            // The commonest shape: one amount in the sentence, called `amount`
+            // whatever the context calls it.
+            if (minors.size == 1) out.putIfAbsent("amount", money)
+        }
+        return out
     }
 
     operator fun get(key: String, vararg params: Pair<String, Any?>): String =
@@ -65,11 +96,24 @@ class Strings private constructor(
         // Both braces escaped. An unescaped closing brace is accepted by the
         // JVM's regex engine and rejected by Android's ICU one, so the
         // difference only shows up on a device -- never in a JVM unit test.
+        private const val MINOR_SUFFIX = "_minor"
         private val PLACEHOLDER = Regex("""\{(\w+)\}""")
         private val json = Json { ignoreUnknownKeys = true }
 
         /** English is the fallback because it is the only file guaranteed complete. */
         private const val FALLBACK_TAG = "en"
+
+        /**
+         * A Strings built from a literal map, for tests.
+         *
+         * The real one reads JSON out of the APK's assets, which needs a
+         * Context and therefore an instrumented test. The substitution rules
+         * -- money rendering, numerals, missing keys -- are pure, and should be
+         * provable without a device.
+         */
+        @JvmStatic
+        fun of(locale: Locale, translations: Map<String, String>): Strings =
+            Strings(translations, translations, locale)
 
         fun load(context: Context, locale: Locale): Strings {
             val fallback = read(context, FALLBACK_TAG)

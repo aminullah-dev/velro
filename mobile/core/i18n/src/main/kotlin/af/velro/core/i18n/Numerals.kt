@@ -53,6 +53,16 @@ object MoneyFormatter {
      * The amount is derived from integer minor units; no float touches this
      * path, so a fare never renders as 449.99999.
      */
+    /**
+     * The same rendering, from the parts a server sends.
+     *
+     * Error contexts and notification payloads carry `<name>_minor` plus a
+     * `currency` rather than a MoneyValue, and Strings needs to turn those into
+     * a sentence without the caller building a domain object first.
+     */
+    fun format(amountMinor: Long, currency: String, strings: Strings): String =
+        format(MoneyValue(amountMinor, currency), strings)
+
     fun format(money: MoneyValue, strings: Strings): String {
         val digits = minorDigits(money.currency)
         val major = BigDecimal(money.amountMinor).movePointLeft(digits)

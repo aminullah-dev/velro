@@ -25,7 +25,7 @@ from application.use_cases.negotiate_fare import (
 )
 from domain.enums import RideRequestStatus
 from shared import error_codes
-from shared.errors import NotFoundError
+from shared.errors import ConflictError, NotFoundError
 from shared.money import Money
 from ui.api import deps
 from ui.api.errors import ok
@@ -225,6 +225,19 @@ def cancel_ride_request(
     if row is None or row.passenger_id != actor.user_id:
         raise NotFoundError(error_codes.RIDE_REQUEST_NOT_FOUND, ride_request_id=request_id)
     now = deps.clock().now()
+    # Only a request that is still open can be withdrawn.
+    #
+    # This wrote CANCELLED over whatever the status was, including MATCHED --
+    # and a matched request has a trip, a booking, seats and a driver already
+    # on his way. Cancelling it here marked the request dead and left every one
+    # of those running: the passenger's screen said the ride was cancelled, the
+    # driver's said he had a passenger, and the seats stayed held. Cancelling
+    # an agreed journey goes through the booking, which releases all of it.
+    status = RideRequestStatus(row.status)
+    if status is not RideRequestStatus.OPEN:
+        raise ConflictError(
+            error_codes.RIDE_REQUEST_NOT_OPEN, current=str(status)
+        )
     row.status = RideRequestStatus.CANCELLED.value
     row.version += 1
     requests.save(row)

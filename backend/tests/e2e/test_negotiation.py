@@ -694,6 +694,43 @@ def test_a_round_trip_is_agreed_at_the_price_of_both_legs(
     assert booking["fare_total"]["amount_minor"] == 65_000
 
 
+def test_a_matched_request_cannot_be_cancelled_out_from_under_its_trip(
+    client: TestClient, rider: dict, driver_a: dict, journey: dict
+) -> None:
+    """Cancelling the ask must not orphan the journey.
+
+    This wrote CANCELLED over whatever the status was. A matched request has a
+    trip, a booking, held seats and a driver already on his way; marking it
+    dead here left every one of those running. The passenger's screen said the
+    ride was cancelled, the driver's said he had a passenger, and the seats
+    stayed held for a journey nobody was taking.
+    """
+    _clear(client, rider)
+    asked = _ask(client, rider, journey, 30_000)
+    offer = client.post(
+        f"/api/v1/driver/ride-requests/{asked['id']}/offer",
+        json={"amount_minor": 30_000}, headers=driver_a,
+    ).json()["data"]
+    client.post(f"/api/v1/fare-offers/{offer['id']}/accept", headers=rider)
+
+    refused = client.post(
+        f"/api/v1/ride-requests/{asked['id']}/cancel", headers=rider
+    )
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["error"]["code"] == "RIDE_REQUEST_NOT_OPEN"
+
+
+def test_an_open_request_can_still_be_withdrawn(
+    client: TestClient, rider: dict, journey: dict
+) -> None:
+    """The ordinary case, unchanged."""
+    _clear(client, rider)
+    asked = _ask(client, rider, journey, 30_000)
+    done = client.post(f"/api/v1/ride-requests/{asked['id']}/cancel", headers=rider)
+    assert done.status_code == 200, done.text
+    assert done.json()["data"]["status"] == "CANCELLED"
+
+
 def test_a_driver_who_may_not_work_cannot_bid(
     client: TestClient, rider: dict, admin_session: dict, journey: dict
 ) -> None:
