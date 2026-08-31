@@ -242,6 +242,8 @@
   "driver.profile.trips": "بشپړ شوي سفرونه",
   "driver.profile.since": "په ولرو کې چلوونکی",
   "driver.profile.no_photo": "تر اوسه مو عکس نه دی لېږلی",
+  "driver.profile.public": "هغه څه چې مسافران يې ګوري",
+  "driver.profile.public_hint": "کله چې مسافر د وړاندیزونو ترمنځ ټاکنه کوي، تاسو داسې ویني.",
   "common.state.offline": "آفلاین یاست. زېرمه شوي معلومات ښودل کېږي.",
   "common.label.currency_afn": "افغانۍ",
   "admin.title": "د ولرو مدیریت پنل",

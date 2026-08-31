@@ -134,17 +134,36 @@ fun ProfileScreen(
 
         Spacer(Modifier.height(Spacing.xl))
 
-        VelroCard {
-            Column {
-                Rating(profile)
-                Spacer(Modifier.height(Spacing.md))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Spacer(Modifier.height(Spacing.md))
-                Figure(
-                    label = strings["driver.profile.trips"],
-                    value = Numerals.localise(profile.completedTrips.toString(), strings.locale),
-                )
-            }
+        // Two figures, two cards, the number first.
+        //
+        // These were label-and-value rows, which is the shape for a list of
+        // details -- and a driver's rating is not a detail. It is the thing he
+        // is building by working and the thing a passenger reads before
+        // choosing him, so it gets the size that says so.
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            StatCard(
+                value = profile.ratingAverage
+                    ?.takeIf { profile.ratingCount > 0 }
+                    ?.let {
+                        Numerals.localise(
+                            String.format(java.util.Locale.US, "%.2f", it), strings.locale,
+                        )
+                    },
+                fallback = strings["driver.profile.no_rating"],
+                label = strings["driver.profile.rating"],
+                icon = Icons.Filled.Star,
+                modifier = Modifier.weight(1f),
+            )
+            StatCard(
+                value = Numerals.localise(profile.completedTrips.toString(), strings.locale),
+                fallback = null,
+                label = strings["driver.profile.trips"],
+                icon = null,
+                modifier = Modifier.weight(1f),
+            )
         }
 
         Spacer(Modifier.height(Spacing.lg))
@@ -195,80 +214,58 @@ fun ProfileScreen(
 }
 
 /**
- * The rating, and what it is out of.
+ * One figure, at the size the figure deserves.
  *
- * The count is shown beside the average because one five-star trip and forty
- * of them are not the same standing, and a bare "5.0" on a driver's first week
- * would be flattering him with a number that means nothing yet.
+ * The number leads and the label follows it, because a driver opening this
+ * screen is looking for the number -- he already knows what it is called.
+ *
+ * A rating with no ratings behind it falls back to a sentence rather than
+ * showing 0.00, which would read as a bad score rather than as no score. The
+ * count is deliberately not shown beside it here: one five-star trip and forty
+ * are different standings, and that distinction belongs in the passenger's
+ * view of him, not in the headline of his own.
  */
 @Composable
-private fun Rating(profile: DriverProfile) {
-    val strings = LocalVelroStrings.current
-    val average = profile.ratingAverage
-
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            strings["driver.profile.rating"],
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (average == null || profile.ratingCount == 0) {
-            Text(
-                strings["driver.profile.no_rating"],
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Filled.Star,
-                    contentDescription = null,
-                    modifier = Modifier.size(Sizing.iconSm),
-                    tint = MaterialTheme.colorScheme.secondary,
-                )
-                Spacer(Modifier.size(Spacing.xs))
+private fun StatCard(
+    value: String?,
+    fallback: String?,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    modifier: Modifier = Modifier,
+) {
+    VelroCard(modifier = modifier) {
+        Column {
+            if (value != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        value,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (icon != null) {
+                        Spacer(Modifier.size(Spacing.xs))
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(Sizing.iconMd),
+                            tint = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                }
+            } else if (fallback != null) {
                 Text(
-                    Numerals.localise(
-                        String.format(java.util.Locale.US, "%.1f", average),
-                        strings.locale,
-                    ),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(Modifier.size(Spacing.xs))
-                Text(
-                    "(" + Numerals.localise(
-                        profile.ratingCount.toString(), strings.locale,
-                    ) + ")",
-                    style = MaterialTheme.typography.labelSmall,
+                    fallback,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Spacer(Modifier.height(Spacing.xs))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-    }
-}
-
-@Composable
-private fun Figure(label: String, value: String) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
     }
 }
 

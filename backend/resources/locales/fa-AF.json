@@ -242,6 +242,8 @@
   "driver.profile.trips": "سفرهای تکمیل‌شده",
   "driver.profile.since": "راننده در ولرو",
   "driver.profile.no_photo": "هنوز عکسی نفرستاده‌اید",
+  "driver.profile.public": "آنچه مسافران می‌بینند",
+  "driver.profile.public_hint": "وقتی مسافر بین پیشنهادها انتخاب می‌کند، شما را این‌طور می‌بیند.",
   "common.state.offline": "آفلاین هستید. معلومات ذخیره‌شده نشان داده می‌شود.",
   "common.label.currency_afn": "افغانی",
   "admin.title": "پنل مدیریت ولرو",

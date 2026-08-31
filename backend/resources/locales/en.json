@@ -242,6 +242,8 @@
   "driver.profile.trips": "Completed trips",
   "driver.profile.since": "Driving with VELRO",
   "driver.profile.no_photo": "No photo yet",
+  "driver.profile.public": "What passengers see",
+  "driver.profile.public_hint": "This is how you appear when a passenger is choosing between offers.",
   "common.state.offline": "You are offline. Showing saved information.",
   "common.label.currency_afn": "AFN",
   "admin.title": "VELRO Admin",
