@@ -1,5 +1,7 @@
 package af.velro.core.ui.component
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Radius
 import af.velro.core.ui.theme.Sizing
@@ -34,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -52,6 +55,16 @@ fun PrimaryAction(
     enabled: Boolean = true,
     loading: Boolean = false,
     icon: ImageVector? = null,
+    /**
+     * The corner radius.
+     *
+     * Defaults to the shape every screen already uses. Sign-in passes
+     * [Radius.pill], which is the shape the product is moving toward -- when
+     * the rest of the screens follow, this default changes and the argument
+     * goes away. A parameter rather than a straight edit so the two shapes can
+     * be seen side by side before the whole product commits to one.
+     */
+    radius: Dp = Radius.lg,
 ) {
     Button(
         onClick = onClick,
@@ -59,7 +72,7 @@ fun PrimaryAction(
         // A button mid-request is disabled, not merely spinning: a double tap
         // on a slow connection is the most common way to send a request twice.
         enabled = enabled && !loading,
-        shape = RoundedCornerShape(Radius.lg),
+        shape = RoundedCornerShape(radius),
         // Disabled, but still there.
         //
         // Material's default is onSurface at 38% over onSurface at 12%: a
@@ -413,4 +426,28 @@ fun InlineMessage(
             color = MaterialTheme.colorScheme.error,
         )
     }
+}
+
+/**
+ * The "this row goes somewhere" mark.
+ *
+ * A card carrying a village name and nothing else does not look like a
+ * control. It is one -- tapping it is the whole of the booking flow -- but the
+ * only thing saying so was the ripple, which a person sees after they have
+ * already guessed right. Three steps of the flow were lists of that card.
+ *
+ * AutoMirrored: the chevron points left in Dari and Pashto. A forward arrow
+ * pointing back into the text is worse than no arrow, because it is a
+ * statement rather than an absence.
+ */
+@Composable
+fun ChevronForward(modifier: Modifier = Modifier) {
+    Icon(
+        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+        // Decorative: the row's own label already says where it goes, and a
+        // screen reader announcing "chevron" after every village is noise.
+        contentDescription = null,
+        modifier = modifier.size(Sizing.iconMd),
+        tint = MaterialTheme.colorScheme.outline,
+    )
 }

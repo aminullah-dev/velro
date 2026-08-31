@@ -1,5 +1,14 @@
 package af.velro.feature.auth
 
+import af.velro.core.ui.component.BrandHero
+import af.velro.core.ui.theme.Radius
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
 import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.InlineError
 import af.velro.core.ui.component.SecondaryAction
@@ -34,7 +43,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -53,6 +61,15 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun SignInRoute(
     onSignedIn: (isDriver: Boolean, isNewUser: Boolean) -> Unit,
+    /**
+     * Which app is asking.
+     *
+     * Both apps share this screen, so the hero carried one line -- "book a
+     * seat, travel with confidence" -- and showed it to drivers, who do not
+     * book seats. No default on purpose: a default here is how the two apps
+     * end up saying the same thing again.
+     */
+    taglineKey: String,
     viewModel: SignInViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -65,70 +82,108 @@ fun SignInRoute(
         }
     }
 
-    SignInScreen(state = state, onEvent = viewModel::onEvent)
+    SignInScreen(state = state, onEvent = viewModel::onEvent, taglineKey = taglineKey)
 }
 
 @Composable
 fun SignInScreen(
     state: SignInUiState,
     onEvent: (SignInEvent) -> Unit,
+    taglineKey: String = "app.tagline",
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
+
+    // The hero is sized from the display rather than in fixed dp, so the same
+    // proportion holds on a 5" handset and a tablet.
+    val heroHeight = LocalConfiguration.current.screenHeightDp.dp * 0.42f
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .imePadding()
-            .padding(horizontal = Spacing.gutter, vertical = Spacing.xxl),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .imePadding(),
     ) {
-        Text(
-            strings["app.name"],
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
+        // The brand takes the top two fifths rather than a single line of it.
+        //
+        // This screen is six controls on a 2400px display. Centred in a plain
+        // column they filled the top 45% and left a thousand pixels of empty
+        // page below -- which is what made a screen with measured contrast and
+        // a bundled Pashto face still read as unfinished. Giving the surplus to
+        // the brand is what closes it; the alternative was stretching the form,
+        // and a phone field 200px tall is not a better screen.
+        BrandHero(
+            title = strings["app.name"],
+            subtitle = strings[taglineKey],
+            minHeight = heroHeight,
         )
 
-        Spacer(Modifier.height(Spacing.xxxl))
+        // Everything below rides up over the hero's lower edge, so the card
+        // reads as lying on the green rather than starting after it.
+        Column(
+            Modifier
+                .offset(y = -Spacing.xl)
+                .padding(horizontal = Spacing.gutter),
+        ) {
+            Card(
+                shape = RoundedCornerShape(Radius.card),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+                // A hairline rather than a shadow. After dark a shadow is
+                // invisible and the card is lifted by its own lightness
+                // instead; the border is what keeps the edge legible in both.
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(Spacing.lg)) {
+                    // Language stays first, inside the card and above the
+                    // form: a passenger who cannot read the form cannot fill
+                    // it in.
+                    LanguagePicker(state.locale) { onEvent(SignInEvent.LocaleChanged(it)) }
 
-        LanguagePicker(state.locale) { onEvent(SignInEvent.LocaleChanged(it)) }
+                    Spacer(Modifier.height(Spacing.xl))
 
-        Spacer(Modifier.height(Spacing.xxl))
+                    when (state.step) {
+                        SignInUiState.Step.PHONE -> PhoneStep(state, onEvent)
+                        SignInUiState.Step.CODE -> CodeStep(state, onEvent)
+                    }
 
-        when (state.step) {
-            SignInUiState.Step.PHONE -> PhoneStep(state, onEvent)
-            SignInUiState.Step.CODE -> CodeStep(state, onEvent)
-        }
+                    if (state.errorCode != null) {
+                        InlineError(state.errorCode!!, context = state.errorContext)
+                    }
+                }
+            }
 
-        // Get help, from the one screen a signed-out person can reach.
-        //
-        // Every other screen sits behind the sign-in gate: PassengerNavHost
-        // sends isSignedIn=false straight to SIGN_IN with popUpTo(0), and
-        // MainActivity collects that flow with initialValue=false, so a cold
-        // start lands here too. Without this the emergency numbers were
-        // unreachable in exactly the case they were built for -- a session
-        // that expired in a valley with no data to renew it.
-        //
-        // The report door is not offered: it needs a token. The two doors that
-        // need nothing still work.
-        Spacer(Modifier.height(Spacing.xl))
-        var helpOpen by remember { mutableStateOf(false) }
-        SecondaryAction(
-            label = strings["safety.title"],
-            onClick = { helpOpen = true },
-        )
-        if (helpOpen) {
-            HelpSheet(
-                ride = null,
-                canReport = false,
-                onDismiss = { helpOpen = false },
+            // Get help, from the one screen a signed-out person can reach.
+            //
+            // Every other screen sits behind the sign-in gate: PassengerNavHost
+            // sends isSignedIn=false straight to SIGN_IN with popUpTo(0), and
+            // MainActivity collects that flow with initialValue=false, so a cold
+            // start lands here too. Without this the emergency numbers were
+            // unreachable in exactly the case they were built for -- a session
+            // that expired in a valley with no data to renew it.
+            //
+            // Outside the card on purpose: it is a door out of the screen, not
+            // a step in the form.
+            //
+            // The report door is not offered: it needs a token. The two doors that
+            // need nothing still work.
+            Spacer(Modifier.height(Spacing.lg))
+            var helpOpen by remember { mutableStateOf(false) }
+            SecondaryAction(
+                label = strings["safety.title"],
+                onClick = { helpOpen = true },
             )
-        }
+            if (helpOpen) {
+                HelpSheet(
+                    ride = null,
+                    canReport = false,
+                    onDismiss = { helpOpen = false },
+                )
+            }
 
-        if (state.errorCode != null) {
-            InlineError(state.errorCode!!, context = state.errorContext)
+            Spacer(Modifier.height(Spacing.xl))
         }
     }
 }
@@ -164,6 +219,7 @@ private fun PhoneStep(state: SignInUiState, onEvent: (SignInEvent) -> Unit) {
         onClick = { onEvent(SignInEvent.RequestCode) },
         enabled = state.canSubmitPhone,
         loading = state.isSubmitting,
+        radius = Radius.pill,
     )
 }
 
@@ -207,6 +263,7 @@ private fun CodeStep(state: SignInUiState, onEvent: (SignInEvent) -> Unit) {
         onClick = { onEvent(SignInEvent.SubmitCode) },
         enabled = state.canSubmitCode,
         loading = state.isSubmitting,
+        radius = Radius.pill,
     )
 
     Spacer(Modifier.height(Spacing.md))
