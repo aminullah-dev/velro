@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.baselineprofile)
 }
 
 android {
@@ -95,4 +96,18 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
+
+    // Without this the profile ships in the APK and nothing reads it. It is
+    // the piece that installs the compiled trace on devices where Play did not
+    // already do it -- which is most of them here, since sideloaded and
+    // third-party-store installs are common in this market.
+    implementation(libs.androidx.profileinstaller)
+
+    // The generator that records this app's profile.
+    //
+    // A profile is per-APK: it is a list of methods baked into this artifact,
+    // not something shared between the two apps even though they share most of
+    // their code. The driver app therefore needs its own generator module
+    // pointed at it -- see :baselineprofile-driver.
+    baselineProfile(project(":baselineprofile"))
 }

@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.baselineprofile)
 }
 
 android {
@@ -94,4 +95,12 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
+
+    // Applies the profile at install on devices Play did not reach -- which
+    // here is most of them, since sideloading is common in this market.
+    implementation(libs.androidx.profileinstaller)
+
+    // Its own generator: a profile is per-APK, not shared between the two
+    // apps even though they share nearly all their code.
+    baselineProfile(project(":baselineprofile-driver"))
 }
