@@ -229,6 +229,18 @@ interface VelroApi {
         @Query("offset") offset: Int = 0,
     ): Response<Envelope<LedgerPageDto>>
 
+    /**
+     * Earnings grouped into days, weeks or months.
+     *
+     * Separate from `earnings`, which is lifetime totals. A number that only
+     * grows cannot answer "was this week better than last".
+     */
+    @GET("driver/earnings/summary")
+    suspend fun earningsSummary(
+        @Query("period") period: String,
+        @Query("buckets") buckets: Int,
+    ): Response<Envelope<EarningsSummaryDto>>
+
     @GET("driver/settlements")
     suspend fun payoutOptions(): Response<Envelope<PayoutOptionsDto>>
 

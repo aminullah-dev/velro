@@ -65,14 +65,51 @@ object MoneyFormatter {
 
     fun format(money: MoneyValue, strings: Strings): String {
         val digits = minorDigits(money.currency)
-        val major = BigDecimal(money.amountMinor).movePointLeft(digits)
+        val negative = money.amountMinor < 0
+        // The sign is applied here, not left to BigDecimal, so that the digits
+        // are grouped and localised without it and the sign can be attached to
+        // an isolated run -- see [signed].
+        val magnitude = if (negative) -money.amountMinor else money.amountMinor
+        val major = BigDecimal(magnitude).movePointLeft(digits)
         val plain =
             if (major.stripTrailingZeros().scale() <= 0) major.toBigInteger().toString()
             else major.stripTrailingZeros().toPlainString()
 
         val grouped = group(plain)
         val symbol = strings["common.label.currency_afn"]
-        return "${Numerals.localise(grouped, strings.locale)} $symbol"
+        val number = Numerals.localise(grouped, strings.locale)
+        return "${signed(number, negative = negative)} $symbol"
+    }
+
+    /**
+     * A number with a sign that stays on the correct side of it.
+     *
+     * A leading "-" in front of Arabic-Indic digits inside a right-to-left
+     * paragraph does not stay put. The digits are bidi class AN and the sign
+     * is neutral against them, so the algorithm resolves it to the paragraph
+     * direction and moves it to the other end: the driver's ledger rendered
+     * `-۵۵ افغانی` as `۵۵- افغانی`, with the sign sitting between the number
+     * and the currency. On a screen that exists to tell a driver what he owes,
+     * a minus that has drifted off its number is not a typographic complaint.
+     *
+     * The isolate is what pins it. LRI..PDI makes the sign and the digits one
+     * left-to-right run, which is how a signed number is read in Dari and
+     * Pashto as well -- numbers are read left to right in both.
+     *
+     * Only signed numbers are wrapped. A positive amount has nothing that can
+     * drift, and wrapping it would put two invisible characters into every
+     * fare in the product for no gain.
+     *
+     * U+2212 rather than the ASCII hyphen: this is a minus, and the two were
+     * already being used interchangeably on the same row of the same screen.
+     */
+    fun signed(number: String, negative: Boolean, showPlus: Boolean = false): String {
+        val sign = when {
+            negative -> "\u2212"
+            showPlus -> "+"
+            else -> return number
+        }
+        return "\u2066" + sign + number + "\u2069"
     }
 
     /** Thousands separators, applied to the integer part only. */

@@ -7,6 +7,7 @@ way to be sure the money that leaves one bucket arrives in the other.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -22,7 +23,7 @@ from application.use_cases.settlements import (
     read_balance,
     read_entry,
 )
-from domain.enums import SettlementStatus
+from domain.enums import SettlementStatus, WalletEntryKind
 from shared import error_codes
 from shared.errors import NotFoundError, ValidationError
 from shared.money import Money
@@ -41,6 +42,29 @@ class LedgerEntryOut(Schema):
     trip_id: str | None
     settlement_id: str | None
     note: str | None
+
+
+class EarningsBucketOut(Schema):
+    """One day, week or month of a driver's money."""
+
+    #: ISO date of the bucket's first day. The client formats it -- the server
+    #: has no idea whether this driver reads Gregorian or Shamsi.
+    starts_on: str
+    earned: MoneyOut
+    commission: MoneyOut
+    #: What the driver actually keeps: earned minus commission. Sent rather
+    #: than left to the client, so the app and the office can never disagree
+    #: about a number the driver will compare against cash in his pocket.
+    net: MoneyOut
+    trips: int
+
+
+class EarningsSummaryOut(Schema):
+    period: str
+    #: Oldest first, and gaps are filled with zero buckets. A chart that simply
+    #: omits a day the driver did not work draws his quiet Friday as if it were
+    #: the same width as a busy Monday.
+    buckets: list[EarningsBucketOut]
 
 
 class SettlementOut(Schema):
@@ -133,6 +157,103 @@ def ledger(
             "next_offset": offset + len(page),
         }
     )
+
+
+@driver_router.get("/earnings/summary")
+def earnings_summary(
+    actor: Annotated[deps.Actor, Depends(deps.require_driver)],
+    drivers: Annotated[object, Depends(deps.drivers)],
+    wallets: Annotated[object, Depends(deps.wallets)],
+    period: Annotated[str, Query(pattern="^(DAY|WEEK|MONTH)$")] = "DAY",
+    buckets: Annotated[int, Query(ge=1, le=53)] = 7,
+) -> dict:
+    """Earnings grouped into days, weeks or months.
+
+    The ledger answers "why is my balance this?"; this answers "how did last
+    week go?". Lifetime totals cannot: a driver comparing this week against
+    last has nothing to compare, and a number that only ever grows tells him
+    nothing about whether today was worth the fuel.
+
+    Buckets are bounded at 53 -- a year of weeks -- so a request cannot walk
+    the whole table.
+    """
+    driver = _driver_of(drivers, actor.user_id)
+    wallet = wallets.get_or_create(driver.id, "AFN")
+
+    starts = _bucket_starts(period, buckets)
+    rows = wallets.entries_since(wallet.id, since=starts[0])
+
+    earned = {s: 0 for s in starts}
+    commission = {s: 0 for s in starts}
+    trips = {s: 0 for s in starts}
+    for row in rows:
+        entry = read_entry(row)
+        start = _bucket_for(entry.created_at, period, starts)
+        if start is None:
+            continue
+        minor = entry.amount.amount_minor
+        if entry.kind == WalletEntryKind.TRIP_EARNING:
+            earned[start] += minor
+            trips[start] += 1
+        elif entry.kind == WalletEntryKind.COMMISSION:
+            # Stored negative. Commission is reported as the positive amount
+            # deducted, because "commission: -125" reads to a driver as money
+            # he was given.
+            commission[start] += abs(minor)
+
+    currency = wallet.currency
+    return ok(
+        EarningsSummaryOut(
+            period=period,
+            buckets=[
+                EarningsBucketOut(
+                    starts_on=s.date().isoformat(),
+                    earned=MoneyOut.of(Money(earned[s], currency)),
+                    commission=MoneyOut.of(Money(commission[s], currency)),
+                    net=MoneyOut.of(Money(earned[s] - commission[s], currency)),
+                    trips=trips[s],
+                )
+                for s in starts
+            ],
+        ).model_dump()
+    )
+
+
+def _bucket_starts(period: str, count: int) -> list[datetime]:
+    """The first instant of each bucket, oldest first, ending with the one now.
+
+    Weeks start on Saturday: the Afghan week runs Saturday to Friday, and a
+    Monday-based week would cut every driver's weekend in half and report it
+    as two quiet weeks.
+    """
+    now = datetime.now(UTC)
+    today = datetime(now.year, now.month, now.day, tzinfo=UTC)
+    if period == "DAY":
+        return [today - timedelta(days=i) for i in range(count - 1, -1, -1)]
+    if period == "WEEK":
+        # Saturday = 5 in Python's Monday-is-0 numbering.
+        this_week = today - timedelta(days=(today.weekday() - 5) % 7)
+        return [this_week - timedelta(weeks=i) for i in range(count - 1, -1, -1)]
+    starts = []
+    year, month = today.year, today.month
+    for _ in range(count):
+        starts.append(datetime(year, month, 1, tzinfo=UTC))
+        month -= 1
+        if month == 0:
+            year, month = year - 1, 12
+    return list(reversed(starts))
+
+
+def _bucket_for(when: datetime, period: str, starts: list[datetime]) -> datetime | None:
+    """The bucket an entry belongs to, or None if it predates the window.
+
+    Walks backwards so the newest bucket -- the one most entries land in --
+    is found first.
+    """
+    for start in reversed(starts):
+        if when >= start:
+            return start
+    return None
 
 
 @driver_router.get("/settlements")

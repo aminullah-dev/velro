@@ -1,5 +1,10 @@
 package af.velro.feature.driver
 
+import androidx.compose.material3.FilterChip
+import af.velro.domain.EarningsSummary
+import af.velro.domain.EarningsPeriod
+import af.velro.domain.EarningsBucket
+import af.velro.core.ui.component.EarningsChart
 import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.MoneyFormatter
 import af.velro.core.i18n.Numerals
@@ -95,6 +100,11 @@ fun EarningsScreen(
         Spacer(Modifier.height(Spacing.md))
 
         state.earnings?.let { Balance(it, state.payout) }
+
+        state.summary?.let {
+            Spacer(Modifier.height(Spacing.lg))
+            EarningsTrend(it, state.period, onEvent)
+        }
 
         if (state.errorCode != null) {
             Spacer(Modifier.height(Spacing.lg))
@@ -393,10 +403,22 @@ private fun LedgerRow(entry: LedgerEntry) {
             Text(
                 // The sign is the point of the row, so it is never dropped: a
                 // deduction that reads like a credit is a support call.
-                (if (entry.isCredit) "+" else "−") +
-                    MoneyFormatter.format(entry.amount.copy(
-                        amountMinor = kotlin.math.abs(entry.amount.amountMinor)
-                    ), strings),
+                //
+                // Through MoneyFormatter.signed rather than a "+"/"−" glued on
+                // here: a sign concatenated onto an already-formatted string
+                // sits outside any isolate, and the bidi algorithm then moves
+                // it to the far side of the digits. That is exactly what this
+                // row was doing.
+                MoneyFormatter.signed(
+                    MoneyFormatter.format(
+                        entry.amount.copy(
+                            amountMinor = kotlin.math.abs(entry.amount.amountMinor)
+                        ),
+                        strings,
+                    ),
+                    negative = !entry.isCredit,
+                    showPlus = entry.isCredit,
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = if (entry.isCredit) MaterialTheme.colorScheme.primary
@@ -463,4 +485,87 @@ private fun StatusLabel(status: SettlementStatus) {
             else -> MaterialTheme.colorScheme.onSurfaceVariant
         },
     )
+}
+
+/**
+ * How the week went, as opposed to what is owed right now.
+ *
+ * The balance card above answers "what do I have"; every figure on it is a
+ * lifetime total or a current state. Neither tells a driver whether today was
+ * worth the fuel, which is the question that decides whether he drives
+ * tomorrow.
+ */
+@Composable
+private fun EarningsTrend(
+    summary: EarningsSummary,
+    period: EarningsPeriod,
+    onEvent: (EarningsEvent) -> Unit,
+) {
+    val strings = LocalVelroStrings.current
+    VelroCard {
+        Column {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                for (option in EarningsPeriod.entries) {
+                    FilterChip(
+                        selected = option == period,
+                        onClick = { onEvent(EarningsEvent.PeriodChanged(option)) },
+                        label = { Text(strings[option.labelKey()]) },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(Spacing.lg))
+
+            Text(
+                MoneyFormatter.format(MoneyValue(summary.totalNetMinor), strings),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                // Trips only. `chart_summary` carries the money as well
+                // because it is what the screen reader announces for the
+                // whole chart; printing it here too put the same figure on
+                // two consecutive lines.
+                strings[
+                    "driver.earnings.period_trips",
+                    "trips" to Numerals.localise(
+                        summary.totalTrips.toString(), strings.locale,
+                    ),
+                ],
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(Spacing.lg))
+
+            EarningsChart(summary = summary, labelFor = { bucket ->
+                Numerals.localise(bucket.axisLabel(period), strings.locale)
+            })
+        }
+    }
+}
+
+private fun EarningsPeriod.labelKey(): String = when (this) {
+    EarningsPeriod.DAY -> "driver.earnings.period.day"
+    EarningsPeriod.WEEK -> "driver.earnings.period.week"
+    EarningsPeriod.MONTH -> "driver.earnings.period.month"
+}
+
+/**
+ * The tick under one bar.
+ *
+ * Deliberately terse -- fourteen bars share the screen width, so this is the
+ * day of the month, not a date. The chart's own description carries the
+ * totals for anyone who needs them read out.
+ */
+private fun EarningsBucket.axisLabel(period: EarningsPeriod): String {
+    val parts = startsOn.split("-")
+    if (parts.size != 3) return startsOn
+    return when (period) {
+        EarningsPeriod.DAY, EarningsPeriod.WEEK -> parts[2].trimStart('0').ifEmpty { "1" }
+        EarningsPeriod.MONTH -> parts[1].trimStart('0').ifEmpty { "1" }
+    }
 }

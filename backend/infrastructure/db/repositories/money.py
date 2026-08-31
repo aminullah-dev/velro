@@ -254,6 +254,34 @@ class WalletRepository(SqlRepository[WalletRow]):
         )
         return list(self.session.scalars(stmt).all())
 
+    def entries_since(self, wallet_id: str, *, since):
+        """Every entry from `since` to now, oldest first.
+
+        Bucketing happens in Python rather than in SQL. `date_trunc` is
+        Postgres-only and this codebase still carries SQLite branches
+        (see seats.py), so a SQL aggregate would need two implementations and
+        a way to keep them agreeing about what a week is. The volume makes it
+        a non-question: this is one driver's own transactions over a bounded
+        window -- tens of rows, not thousands -- and the alternative costs a
+        dialect fork on money, which is the last place to want one.
+
+        Bounded by date rather than by count, unlike `ledger`: a page of 30
+        says nothing about how many days it covers, and a monthly total built
+        from a page is a wrong number rather than a missing one.
+        """
+        stmt = (
+            select(WalletTransactionRow)
+            .where(
+                WalletTransactionRow.wallet_id == wallet_id,
+                WalletTransactionRow.deleted_at.is_(None),
+                WalletTransactionRow.created_at >= since,
+            )
+            .order_by(
+                WalletTransactionRow.created_at.asc(), WalletTransactionRow.id.asc()
+            )
+        )
+        return list(self.session.scalars(stmt).all())
+
 
 class SettlementRepository(SqlRepository[SettlementRow]):
     model = SettlementRow

@@ -707,3 +707,18 @@ data class TicketDto(
 
 @Serializable
 data class TicketReplyRequest(val body: String)
+
+@Serializable
+data class EarningsBucketDto(
+    val starts_on: String,
+    val earned: MoneyDto,
+    val commission: MoneyDto,
+    val net: MoneyDto,
+    val trips: Int = 0,
+)
+
+@Serializable
+data class EarningsSummaryDto(
+    val period: String,
+    val buckets: List<EarningsBucketDto> = emptyList(),
+)

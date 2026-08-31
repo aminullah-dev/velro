@@ -6,6 +6,9 @@ import af.velro.data.api.RequestSettlementRequest
 import af.velro.data.api.ResponseMapper
 import af.velro.data.api.SettlementDto
 import af.velro.data.api.VelroApi
+import af.velro.domain.EarningsBucket
+import af.velro.domain.EarningsPeriod
+import af.velro.domain.EarningsSummary
 import af.velro.domain.LedgerEntry
 import af.velro.domain.LedgerKind
 import af.velro.domain.MoneyValue
@@ -43,6 +46,30 @@ class WalletRepository @Inject constructor(
                 entries = dto.entries.map(::toDomain),
                 hasMore = dto.has_more,
                 nextOffset = dto.next_offset,
+            )
+        }
+
+    suspend fun earningsSummary(
+        period: EarningsPeriod,
+        buckets: Int,
+    ): ApiResult<EarningsSummary> =
+        mapper.call { api.earningsSummary(period.name, buckets) }.map { dto ->
+            EarningsSummary(
+                // The server echoes what it grouped by. Trusting the request
+                // instead would show "weekly" over daily bars if the two ever
+                // disagreed.
+                period = enumOrNull<EarningsPeriod>(dto.period) ?: period,
+                buckets = dto.buckets.map { b ->
+                    EarningsBucket(
+                        startsOn = b.starts_on,
+                        earned = MoneyValue(b.earned.amount_minor, b.earned.currency),
+                        commission = MoneyValue(
+                            b.commission.amount_minor, b.commission.currency
+                        ),
+                        net = MoneyValue(b.net.amount_minor, b.net.currency),
+                        trips = b.trips,
+                    )
+                },
             )
         }
 

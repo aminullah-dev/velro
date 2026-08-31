@@ -550,3 +550,33 @@ data class SupportTicket(
     /** VELRO has said something the person may not have read yet. */
     val hasAnswer: Boolean get() = messages.any { !it.isFromReporter }
 }
+
+/**
+ * How a driver's money moved over one day, week or month.
+ *
+ * [net] arrives from the server rather than being computed here. The app and
+ * the office must never disagree about a figure a driver checks against the
+ * cash in his pocket, and two subtractions in two languages is how they start
+ * to.
+ */
+data class EarningsBucket(
+    /** First day of the bucket. Formatted by the UI, which knows the calendar. */
+    val startsOn: String,
+    val earned: MoneyValue,
+    val commission: MoneyValue,
+    val net: MoneyValue,
+    val trips: Int,
+)
+
+enum class EarningsPeriod { DAY, WEEK, MONTH }
+
+data class EarningsSummary(
+    val period: EarningsPeriod,
+    /** Oldest first, gaps filled with zeroes so a chart keeps even spacing. */
+    val buckets: List<EarningsBucket>,
+) {
+    /** The tallest bar, for scaling. Zero when nothing was earned at all. */
+    val peakNetMinor: Long get() = buckets.maxOfOrNull { it.net.amountMinor } ?: 0L
+    val totalNetMinor: Long get() = buckets.sumOf { it.net.amountMinor }
+    val totalTrips: Int get() = buckets.sumOf { it.trips }
+}
