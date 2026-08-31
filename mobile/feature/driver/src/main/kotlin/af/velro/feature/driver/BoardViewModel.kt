@@ -28,6 +28,14 @@ data class BoardUiState(
     val requests: List<RideRequest> = emptyList(),
     val myOffers: List<FareOffer> = emptyList(),
     val isLoading: Boolean = true,
+    /**
+     * A refresh the driver pulled for.
+     *
+     * Separate from [isLoading]: that one blanks the board behind a spinner,
+     * which is right on first open and wrong when a driver is reading the
+     * list and wants to know it is current.
+     */
+    val isRefreshing: Boolean = false,
     val offeringOn: String? = null,
     val busyRequestId: String? = null,
     val errorCode: String? = null,
@@ -39,6 +47,14 @@ data class BoardUiState(
 
 sealed interface BoardEvent {
     data object Refresh : BoardEvent
+
+    /**
+     * The same fetch, keeping the list on screen.
+     *
+     * Its own event rather than a flag on [Refresh] so the screen cannot
+     * accidentally blank the board it is showing.
+     */
+    data object PullToRefresh : BoardEvent
     data class StartOffering(val requestId: String) : BoardEvent
     data object StopOffering : BoardEvent
     data class Offer(
@@ -69,7 +85,10 @@ class BoardViewModel @Inject constructor(
 
     fun onEvent(event: BoardEvent) {
         when (event) {
+            // The error state still wants the full spinner -- there is nothing
+            // on screen to keep. A pull has a list to preserve.
             BoardEvent.Refresh -> load(showSpinner = true)
+            BoardEvent.PullToRefresh -> load(showSpinner = false, pulled = true)
             is BoardEvent.StartOffering -> _state.update { it.copy(offeringOn = event.requestId) }
             BoardEvent.StopOffering -> _state.update { it.copy(offeringOn = null) }
             is BoardEvent.Offer ->
@@ -92,8 +111,9 @@ class BoardViewModel @Inject constructor(
         }
     }
 
-    private fun load(showSpinner: Boolean) {
+    private fun load(showSpinner: Boolean, pulled: Boolean = false) {
         if (showSpinner) _state.update { it.copy(isLoading = true, errorCode = null) }
+        if (pulled) _state.update { it.copy(isRefreshing = true, errorCode = null) }
         viewModelScope.launch {
             val board = negotiation.openRequests()
             val mine = negotiation.myOffers()
@@ -111,6 +131,9 @@ class BoardViewModel @Inject constructor(
                     else it.copy(isLoading = false).withError(board.error)
                 }
             }
+            // Cleared on both paths. A driver in a valley with no signal must
+            // not be left with an indicator that never stops.
+            if (pulled) _state.update { it.copy(isRefreshing = false) }
         }
     }
 

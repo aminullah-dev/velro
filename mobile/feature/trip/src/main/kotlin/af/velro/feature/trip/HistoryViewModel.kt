@@ -50,6 +50,15 @@ data class HistoryUiState(
     val hasMore: Boolean = false,
     val nextOffset: Int = 0,
     val isStale: Boolean = false,
+    /**
+     * A refresh the passenger pulled for, not a tab change.
+     *
+     * Distinct from [isLoading] because the two want opposite things on
+     * screen: switching tabs must clear the list, or finished journeys sit
+     * under "upcoming"; pulling to refresh must keep it, or the receipt she
+     * was reading vanishes under a spinner she asked for.
+     */
+    val isRefreshing: Boolean = false,
     val errorCode: String? = null,
     val errorContext: Map<String, Any?> = emptyMap(),
 )
@@ -74,10 +83,45 @@ class HistoryViewModel @Inject constructor(
 
     fun onEvent(event: HistoryEvent) {
         when (event) {
-            HistoryEvent.Refresh -> load(_state.value.scope)
+            HistoryEvent.Refresh -> refresh()
             HistoryEvent.LoadMore -> loadMore()
             is HistoryEvent.ScopeChanged ->
                 if (event.scope != _state.value.scope) load(event.scope)
+        }
+    }
+
+    /**
+     * Re-fetch the current tab without emptying it.
+     *
+     * Shares [load]'s network path deliberately -- two ways of asking the
+     * server for the same page would drift -- but not its opening `update`,
+     * which is the part that clears the list.
+     */
+    private fun refresh() {
+        val scope = _state.value.scope
+        _state.update { it.copy(isRefreshing = true, errorCode = null) }
+        viewModelScope.launch {
+            when (val page = bookings.history(limit = PAGE, offset = 0, scope = scope.wire)) {
+                is ApiResult.Success -> _state.update {
+                    if (it.scope != scope) return@update it
+                    it.copy(
+                        bookings = page.value.bookings,
+                        hasMore = page.value.hasMore,
+                        nextOffset = page.value.nextOffset,
+                        isStale = false,
+                        errorCode = null,
+                    )
+                }
+                // The cached list stays. A failed refresh has not deleted her
+                // journeys, and withError marks the list stale so the screen
+                // says so.
+                is ApiResult.Failure -> _state.update {
+                    if (it.scope != scope) it else it.withError(page.error)
+                }
+            }
+            // Cleared whatever happened, or the indicator spins forever on a
+            // phone with no signal -- the case this app is built for.
+            _state.update { it.copy(isRefreshing = false) }
         }
     }
 

@@ -1,5 +1,7 @@
 package af.velro.feature.driver
 
+import af.velro.core.ui.component.StatusTone
+import af.velro.core.ui.component.StatusChip
 import af.velro.core.i18n.Calendars
 import af.velro.core.ui.component.ErrorState
 import af.velro.core.ui.component.InlineMessage
@@ -386,15 +388,24 @@ private fun DocumentRow(
 
 @Composable
 private fun DocumentStatusLabel(document: DriverDocument?) {
-    val strings = LocalVelroStrings.current
-    val (key, colour) = when (document?.status) {
-        null -> "driver.documents.not_sent" to MaterialTheme.colorScheme.onSurfaceVariant
-        DocumentStatus.VERIFIED -> "document.status.verified" to MaterialTheme.colorScheme.primary
-        DocumentStatus.PENDING -> "document.status.pending" to MaterialTheme.colorScheme.secondary
-        DocumentStatus.REJECTED -> "document.status.rejected" to MaterialTheme.colorScheme.error
-        DocumentStatus.EXPIRED -> "document.status.expired" to MaterialTheme.colorScheme.error
+    // The shared chip, not a coloured line of text.
+    //
+    // This screen drew its own status out of `colorScheme.primary`,
+    // `.secondary` and `.error` -- so the state of a driver's licence looked
+    // nothing like the state of a booking two screens away, and, more to the
+    // point, it went around the one place the dark palette is decided. The
+    // chip's ten pairs are measured against the card they sit on and held by
+    // ContrastTest; `colorScheme.secondary` on a dark surface is measured by
+    // nothing, and this screen is read at night by a driver deciding whether
+    // he is allowed to work.
+    val (key, tone) = when (document?.status) {
+        null -> "driver.documents.not_sent" to StatusTone.NEUTRAL
+        DocumentStatus.VERIFIED -> "document.status.verified" to StatusTone.ACTIVE
+        DocumentStatus.PENDING -> "document.status.pending" to StatusTone.ATTENTION
+        DocumentStatus.REJECTED -> "document.status.rejected" to StatusTone.FAILED
+        DocumentStatus.EXPIRED -> "document.status.expired" to StatusTone.FAILED
     }
-    Text(strings[key], style = MaterialTheme.typography.labelSmall, color = colour)
+    StatusChip(statusKey = key, tone = tone)
 }
 
 /**

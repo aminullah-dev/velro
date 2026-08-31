@@ -1,5 +1,8 @@
 package af.velro.passenger
 
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import af.velro.core.ui.theme.NavMotion
+import af.velro.core.ui.theme.LocalAnimationsEnabled
 import af.velro.core.i18n.Calendars
 import af.velro.domain.RideRequest
 import af.velro.core.ui.component.VelroCard
@@ -9,6 +12,7 @@ import af.velro.core.ui.component.BrandHeader
 import af.velro.core.ui.theme.VelroColors
 import af.velro.core.ui.component.OnBrandAction
 import af.velro.core.ui.component.EmptyState
+import af.velro.core.ui.component.ErrorState
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.component.SecondaryAction
@@ -91,12 +95,21 @@ fun PassengerNavHost(
         }
     }
 
+    // One motion spec for both apps, and honoured only when the person has
+    // left system animation on -- see LocalAnimationsEnabled.
+    val animate = LocalAnimationsEnabled.current
+
     NavHost(
         navController = navController,
         startDestination = if (isSignedIn) Routes.HOME else Routes.SIGN_IN,
+        enterTransition = { NavMotion.enter(this, animate) },
+        exitTransition = { NavMotion.exit(this, animate) },
+        popEnterTransition = { NavMotion.popEnter(this, animate) },
+        popExitTransition = { NavMotion.popExit(this, animate) },
     ) {
         composable(Routes.SIGN_IN) {
             SignInRoute(
+                taglineKey = "app.tagline",
                 onSignedIn = { _, _ ->
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.SIGN_IN) { inclusive = true }
@@ -315,8 +328,42 @@ private fun HomeScreen(
             }
             Spacer(Modifier.height(Spacing.sm))
 
+            // Cached data, honestly labelled -- the same line every other
+            // screen that caches uses.
+            if (state.isStale && state.bookings.isNotEmpty()) {
+                Text(
+                    strings["common.state.offline"],
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+            }
+
+            // Pull to refresh.
+            //
+            // `refresh()` existed and was reachable from exactly one place: the
+            // retry button on the error state. So a passenger looking at the
+            // "showing saved data" line -- the offline case this app is built
+            // around -- could read that her list was old and do nothing about
+            // it but leave the screen and come back.
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.fillMaxSize(),
+            ) {
             when {
                 state.isLoading -> LoadingState()
+                // A failure is not an empty list.
+                //
+                // With nothing cached, this branch used to fall through to
+                // "No bookings yet" -- an assertion about her own journeys
+                // that the app had never managed to check, with nothing to
+                // retry and no hint that anything had gone wrong.
+                state.errorCode != null && state.bookings.isEmpty() -> ErrorState(
+                    errorCode = state.errorCode!!,
+                    context = state.errorContext,
+                    onRetry = { viewModel.refresh() },
+                )
                 // No action here on purpose. "Search for a car" is already the
                 // screen's primary button, forty pixels up -- repeating it in
                 // the empty state gives one screen two primary actions and
@@ -325,11 +372,23 @@ private fun HomeScreen(
                     messageKey = "empty.bookings",
                     icon = Icons.Filled.ReceiptLong,
                 )
-                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                else -> LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
                     items(state.bookings, key = { it.id }) { booking ->
-                        BookingCard(booking = booking, onClick = { onOpenBooking(booking.id) })
+                        BookingCard(
+                            booking = booking,
+                            onClick = { onOpenBooking(booking.id) },
+                            // A booking whose status changes while she is
+                            // looking at it -- a driver assigned, a trip
+                            // finished -- moves in the list rather than
+                            // teleporting.
+                            modifier = Modifier.animateItem(),
+                        )
                     }
                 }
+            }
             }
             }
         }

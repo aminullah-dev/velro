@@ -1,5 +1,6 @@
 package af.velro.feature.driver
 
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.i18n.MoneyFormatter
 import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.Numerals
@@ -106,12 +107,31 @@ fun BoardScreen(
             InlineError(state.errorCode!!, context = state.errorContext)
         }
 
+        // Pull to refresh. The board polls, but a driver who has just gone
+        // online wants to know the list in front of him is this second's, not
+        // up to ten seconds old, and `Refresh` was reachable only from the
+        // error state.
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = { onEvent(BoardEvent.PullToRefresh) },
+            modifier = Modifier.fillMaxSize(),
+        ) {
         if (state.requests.isEmpty()) {
             EmptyState(messageKey = "driver.board.empty")
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                modifier = Modifier.fillMaxSize(),
+            ) {
                 items(state.requests, key = { it.id }) { request ->
                     RequestCard(
+                        // This board moves on its own, in both directions:
+                        // requests arrive, and they leave when another driver
+                        // wins them or they expire. Without an animation the
+                        // card a driver is reaching for is simply replaced by
+                        // a different journey at the same coordinates, and he
+                        // bids on a route he never chose.
+                        modifier = Modifier.animateItem(),
                         request = request,
                         // His own price for the whole journey. Passing
                         // the outbound alone told a driver who had just
@@ -127,6 +147,7 @@ fun BoardScreen(
                     )
                 }
             }
+        }
         }
     }
 
@@ -156,9 +177,10 @@ private fun RequestCard(
     busy: Boolean,
     onOffer: () -> Unit,
     onWithdraw: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
-    VelroCard {
+    VelroCard(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Text(
                 strings[

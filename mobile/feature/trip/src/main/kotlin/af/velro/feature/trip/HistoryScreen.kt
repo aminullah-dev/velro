@@ -1,5 +1,7 @@
 package af.velro.feature.trip
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.i18n.Calendars
 import af.velro.core.ui.component.BookingCard
 import af.velro.core.ui.component.EmptyState
@@ -38,6 +40,7 @@ fun HistoryRoute(
     HistoryScreen(state, viewModel::onEvent, onOpenBooking, onBook, onBack = onBack)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
     state: HistoryUiState,
@@ -79,6 +82,14 @@ fun HistoryScreen(
                 modifier = Modifier.padding(bottom = Spacing.sm),
             )
         }
+
+        // Same gap home had: a Refresh event existed and only the
+        // error state could send it.
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = { onEvent(HistoryEvent.Refresh) },
+            modifier = Modifier.fillMaxSize(),
+        ) {
 
         when {
             state.isLoading -> LoadingState()
@@ -128,6 +139,7 @@ fun HistoryScreen(
                     }
                 }
             }
+        }
         }
     }
 }
