@@ -3,6 +3,7 @@ package af.velro.core.ui.component
 import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.MoneyFormatter
 import af.velro.core.i18n.Numerals
+import af.velro.core.ui.theme.LocalVelroDarkTheme
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Radius
 import af.velro.core.ui.theme.Sizing
@@ -252,7 +253,11 @@ fun SeatAvailability(available: Int, capacity: Int, modifier: Modifier = Modifie
     Text(
         strings["ride.label.seats_available", "count" to available, "capacity" to capacity],
         style = MaterialTheme.typography.bodyMedium,
-        color = if (scarce) VelroColors.Amber600 else MaterialTheme.colorScheme.onSurfaceVariant,
+        // The scheme's accent, not the light palette's. Amber600 is 3.55:1 on
+        // the dark card -- below the 4.5:1 a sentence owes -- and this is the
+        // one line written to make somebody book before the seat is gone.
+        color = if (scarce) MaterialTheme.colorScheme.secondary
+        else MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = if (scarce) FontWeight.Medium else FontWeight.Normal,
         modifier = modifier,
     )
@@ -277,12 +282,30 @@ fun RideKindChip(kind: RideKind, modifier: Modifier = Modifier) {
 @Composable
 fun StatusChip(statusKey: String, tone: StatusTone, modifier: Modifier = Modifier) {
     val strings = LocalVelroStrings.current
+    // One pair per tone per theme.
+    //
+    // These were five hardcoded light pairs, so after dark every status chip
+    // was a near-white pill glowing off a dark card at 16:1 against it -- the
+    // brightest thing on a screen a driver reads at night. Each dark pair is
+    // measured against the dark card rather than picked to look right on a
+    // laptop; ContrastTest holds all ten.
+    val dark = LocalVelroDarkTheme.current
     val (background, foreground) = when (tone) {
-        StatusTone.NEUTRAL -> VelroColors.Neutral100 to VelroColors.Neutral700
-        StatusTone.ACTIVE -> VelroColors.Green50 to VelroColors.Green700
-        StatusTone.ATTENTION -> VelroColors.Amber100 to VelroColors.Amber600
-        StatusTone.ENDED -> VelroColors.Neutral100 to VelroColors.Neutral500
-        StatusTone.FAILED -> VelroColors.Red100 to VelroColors.Red700
+        StatusTone.NEUTRAL ->
+            if (dark) VelroColors.DarkSurfaceRaised to VelroColors.Neutral300
+            else VelroColors.Neutral100 to VelroColors.Neutral700
+        StatusTone.ACTIVE ->
+            if (dark) VelroColors.DarkGreenContainer to VelroColors.Green200
+            else VelroColors.Green50 to VelroColors.Green700
+        StatusTone.ATTENTION ->
+            if (dark) VelroColors.DarkAmberContainer to VelroColors.Amber200
+            else VelroColors.Amber100 to VelroColors.Amber600
+        StatusTone.ENDED ->
+            if (dark) VelroColors.DarkSurfaceRaised to VelroColors.Neutral350
+            else VelroColors.Neutral100 to VelroColors.Neutral500
+        StatusTone.FAILED ->
+            if (dark) VelroColors.DarkRedContainer to VelroColors.Red200
+            else VelroColors.Red100 to VelroColors.Red700
     }
     Chip(strings[statusKey], background, foreground, modifier)
 }
@@ -292,8 +315,10 @@ enum class StatusTone { NEUTRAL, ACTIVE, ATTENTION, ENDED, FAILED }
 @Composable
 private fun Chip(
     text: String,
-    background: Color = VelroColors.Neutral100,
-    foreground: Color = VelroColors.Neutral700,
+    // Defaults follow the theme rather than the light palette: a plain Chip
+    // (the ride-kind label) had the same near-white problem as the status ones.
+    background: Color = MaterialTheme.colorScheme.surfaceVariant,
+    foreground: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     modifier: Modifier = Modifier,
 ) {
     Box(

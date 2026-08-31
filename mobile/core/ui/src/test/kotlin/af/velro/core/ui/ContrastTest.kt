@@ -119,6 +119,95 @@ class ContrastTest {
     }
 
     @Test
+    fun `every status chip is legible in both themes`() {
+        // Ten pairs, one per tone per theme. These were five light pairs used
+        // in both, so after dark a booking card carried near-white pills at
+        // 16:1 against it -- and the scarce-seat line sat at 3.55:1, under the
+        // threshold, on the one sentence written to make somebody act.
+        val light = listOf(
+            Triple("neutral", VelroColors.Neutral700, VelroColors.Neutral100),
+            Triple("active", VelroColors.Green700, VelroColors.Green50),
+            Triple("attention", VelroColors.Amber600, VelroColors.Amber100),
+            Triple("ended", VelroColors.Neutral500, VelroColors.Neutral100),
+            Triple("failed", VelroColors.Red700, VelroColors.Red100),
+        )
+        val dark = listOf(
+            Triple("neutral", VelroColors.Neutral300, VelroColors.DarkSurfaceRaised),
+            Triple("active", VelroColors.Green200, VelroColors.DarkGreenContainer),
+            Triple("attention", VelroColors.Amber200, VelroColors.DarkAmberContainer),
+            Triple("ended", VelroColors.Neutral350, VelroColors.DarkSurfaceRaised),
+            Triple("failed", VelroColors.Red200, VelroColors.DarkRedContainer),
+        )
+        for ((name, fg, bg) in light) {
+            assertContrast("light $name chip", fg, bg, TEXT)
+        }
+        for ((name, fg, bg) in dark) {
+            assertContrast("dark $name chip", fg, bg, TEXT)
+        }
+    }
+
+    @Test
+    fun `the brand field is legible and stays constant across themes`() {
+        // The header ran on colorScheme.primary, which is the deep green in
+        // light mode and pale mint in dark -- so after dark the top of both
+        // home screens became the brightest block on the display, and the
+        // light status-bar icons the header forces sat on it at 1.64:1. A
+        // brand field is identity: the same green on a white page and a black
+        // one.
+        assertContrast(
+            "header text on the brand field",
+            VelroColors.OnBrandField, VelroColors.BrandField, TEXT,
+        )
+        // The action inside it inverts the same two colours and no others.
+        assertContrast(
+            "the header's action label",
+            VelroColors.BrandField, VelroColors.OnBrandField, TEXT,
+        )
+        // Status-bar icons are forced light while the header is on screen, so
+        // the field owes them non-text contrast too.
+        assertContrast(
+            "status-bar icons on the brand field",
+            VelroColors.OnBrandField, VelroColors.BrandField, NON_TEXT,
+        )
+        assertTrue(
+            "the brand field must not follow the scheme's primary, which inverts",
+            VelroColors.BrandField != VelroColors.Green200,
+        )
+    }
+
+    @Test
+    fun `a chip does not glare off the card it sits on`() {
+        // Not a legibility rule -- a chip is a label, not a control boundary.
+        // It is a "does this belong to the same product" rule: a container
+        // sixteen times brighter than its own card is a lamp, not a status.
+        val dark = listOf(
+            VelroColors.DarkSurfaceRaised,
+            VelroColors.DarkGreenContainer,
+            VelroColors.DarkAmberContainer,
+            VelroColors.DarkRedContainer,
+        )
+        for (container in dark) {
+            val measured = ratio(container, VelroColors.DarkSurface)
+            assertTrue(
+                "a dark chip container is ${"%.2f".format(measured)}:1 against " +
+                    "its card and must stay under 3:1",
+                measured < 3.0,
+            )
+        }
+    }
+
+    @Test
+    fun `the scarce-seat warning is readable in both themes`() {
+        // Amber600 direct from the palette was 3.55:1 on the dark card. The
+        // scheme's secondary is Amber600 in light and Amber500 in dark, which
+        // is the whole reason the scheme has the role.
+        assertContrast("scarce seats, light", VelroColors.Amber600, VelroColors.White, TEXT)
+        assertContrast(
+            "scarce seats, dark", VelroColors.Amber500, VelroColors.DarkSurface, TEXT
+        )
+    }
+
+    @Test
     fun `the amber accent is never used as light-mode text at its brightest`() {
         """
         Amber500 is 3.19:1 on white -- fine on the dark surface, not fine as

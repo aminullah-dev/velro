@@ -6,10 +6,12 @@ import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.ConfirmDialog
 import af.velro.core.ui.component.BookingCard
 import af.velro.core.ui.component.BrandHeader
+import af.velro.core.ui.theme.VelroColors
 import af.velro.core.ui.component.OnBrandAction
 import af.velro.core.ui.component.EmptyState
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
+import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.feature.auth.SignInRoute
@@ -27,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -234,7 +237,12 @@ private fun HomeScreen(
                     TextButton(
                         onClick = onGetHelp,
                         colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            // The field these sit on is constant, so
+                            // its foreground is too. onPrimary is the
+                            // near-black Green900 after dark: 1.91:1
+                            // on the header, which is a help button
+                            // nobody can find in the dark.
+                            contentColor = VelroColors.OnBrandField,
                         ),
                     ) {
                         Text(strings["safety.title"])
@@ -246,17 +254,35 @@ private fun HomeScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.Logout,
                             contentDescription = strings["auth.action.sign_out"],
-                            tint = MaterialTheme.colorScheme.onPrimary,
+                            tint = VelroColors.OnBrandField,
                         )
                     }
                 },
             ) {
                 Spacer(Modifier.height(Spacing.lg))
-                OnBrandAction(
-                    label = strings["home.action.search"],
-                    onClick = onBook,
-                    icon = Icons.Filled.DirectionsCar,
-                )
+                // While a request is live the header points at it, not at a
+                // new search.
+                //
+                // The server allows one open request at a time, so the hero
+                // slot -- the white-on-green button the header exists to
+                // spotlight -- was aimed at the one action it would refuse,
+                // while the way back to her own negotiation sat lower down the
+                // page in a card. She would tap the big button, be told no,
+                // and have learnt nothing about where her drivers went.
+                val open = state.openRequest
+                if (open != null) {
+                    OnBrandAction(
+                        label = strings["home.open_request.open"],
+                        onClick = onOpenOffers,
+                        icon = Icons.Filled.Groups,
+                    )
+                } else {
+                    OnBrandAction(
+                        label = strings["home.action.search"],
+                        onClick = onBook,
+                        icon = Icons.Filled.DirectionsCar,
+                    )
+                }
             }
 
             Column(Modifier.fillMaxSize().padding(horizontal = Spacing.gutter)) {
@@ -359,7 +385,11 @@ private fun OpenRequestCard(request: RideRequest, onOpen: () -> Unit) {
             }
 
             Spacer(Modifier.height(Spacing.md))
-            PrimaryAction(
+            // Secondary, because the header above now carries this same
+            // destination as the screen's one primary action. Two full-width
+            // green buttons opening the same screen is not emphasis, it is a
+            // question about whether they do different things.
+            SecondaryAction(
                 label = strings["home.open_request.open"],
                 onClick = onOpen,
                 modifier = Modifier.fillMaxWidth(),

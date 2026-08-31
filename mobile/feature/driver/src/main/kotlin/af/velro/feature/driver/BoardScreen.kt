@@ -97,9 +97,10 @@ fun BoardScreen(
         scrollable = false,
         modifier = modifier,
     ) {
+        // One spacer, matching the offers and reports screens it sits beside.
+        // Two were left behind when the in-content heading was deleted, so the
+        // board started its content 8dp lower than its siblings.
         Spacer(Modifier.height(Spacing.md))
-        // The title lives in the app bar now, not twice on the screen.
-        Spacer(Modifier.height(Spacing.sm))
 
         if (state.errorCode != null && state.offeringOn == null) {
             InlineError(state.errorCode!!, context = state.errorContext)
@@ -258,7 +259,7 @@ private fun RequestCard(
                     label = strings["driver.board.offer"],
                     onClick = onOffer,
                     enabled = !busy,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -332,7 +333,7 @@ private fun OfferSheet(
                 )
             },
             enabled = !busy,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            modifier = Modifier.fillMaxWidth(),
         )
 
         OutlinedTextField(
@@ -393,7 +394,7 @@ private fun OfferSheet(
             },
             enabled = minor != null && minor > 0 && returnReady && !busy,
             loading = busy,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

@@ -5,6 +5,7 @@ import af.velro.core.i18n.MoneyFormatter
 import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.DriverSummary
 import af.velro.core.ui.component.BrandHeader
+import af.velro.core.ui.theme.VelroColors
 import af.velro.core.ui.component.ErrorState
 import af.velro.core.ui.component.ConfirmDialog
 import af.velro.core.ui.component.VelroScreen
@@ -41,7 +42,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -203,15 +203,24 @@ fun DriverHomeScreen(
         )
     }
 
+    // Both of these go through the frame, like every other screen.
+    //
+    // They used to be bare Columns on a 16dp pad with no bar and no gutter, so
+    // a driver's very first screen -- the apply form, before he is a driver at
+    // all -- sat on a different grid from everything he would see afterwards,
+    // and the loading state jumped sideways the moment the profile arrived.
+    // The big help button stays here rather than moving to the bar: there is
+    // nothing on these screens for it to compete with, and it is the case it
+    // was written for.
     if (state.isLoading) {
-        Column(modifier.fillMaxSize().statusBarsPadding().padding(Spacing.lg)) {
+        VelroScreen(title = strings["driver.nav.home"], modifier = modifier) {
             HelpButton { helpOpen = true }
             LoadingState()
         }
         return
     }
     if (state.profile == null) {
-        Column(modifier.fillMaxSize().statusBarsPadding().padding(Spacing.lg)) {
+        VelroScreen(title = strings["driver.nav.home"], modifier = modifier) {
             HelpButton { helpOpen = true }
             if (state.errorCode == "PERMISSION_DENIED") {
                 // Not a failure: this is everybody's first minute in the app.
@@ -255,14 +264,19 @@ fun DriverHomeScreen(
                     TextButton(
                         onClick = { helpOpen = true },
                         colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            // The field these sit on is constant, so
+                            // its foreground is too. onPrimary is the
+                            // near-black Green900 after dark: 1.91:1
+                            // on the header, which is a help button
+                            // nobody can find in the dark.
+                            contentColor = VelroColors.OnBrandField,
                         ),
                     ) { Text(strings["safety.title"]) }
                     IconButton(onClick = { signingOut = true }) {
                         Icon(
                             Icons.AutoMirrored.Filled.Logout,
                             contentDescription = strings["auth.action.sign_out"],
-                            tint = MaterialTheme.colorScheme.onPrimary,
+                            tint = VelroColors.OnBrandField,
                         )
                     }
                 },

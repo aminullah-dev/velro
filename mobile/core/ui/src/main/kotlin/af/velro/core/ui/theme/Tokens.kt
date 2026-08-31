@@ -63,11 +63,53 @@ object VelroColors {
     // finished app. A card should be a surface lying on a ground.
     val DarkBackground = Color(0xFF0B0F14)
     val DarkSurface = Color(0xFF13181F)
+
+    // Containers for after dark.
+    //
+    // The status chips carried one hardcoded light pair each -- Neutral100,
+    // Green50, Amber100, Red100 -- so on a dark card they were near-white
+    // pills at 16:1 against their own background. A driver checking a trip at
+    // night got a row of glowing tablets where the light theme has a quiet
+    // label. These are their counterparts, each measured against the dark
+    // card, not chosen by eye.
+    val DarkGreenContainer = Color(0xFF0A4A30)
+    val DarkAmberContainer = Color(0xFF4A2B06)
+    val DarkRedContainer = Color(0xFF4C1512)
+    // The muted foreground for a finished or cancelled status after dark.
+    // Neutral400 measured 4.46:1 here -- close enough to pass by eye and not
+    // close enough to pass, on the label that tells somebody their trip is
+    // over. 4.82:1, still visibly dimmer than the live tones beside it.
+    val Neutral350 = Color(0xFF828EA0)
+    val Amber200 = Color(0xFFFCCF7A)
+    val Red200 = Color(0xFFFDA29B)
     val DarkSurfaceRaised = Color(0xFF1B222C)
     val DarkOnSurface = Color(0xFFE7EBF0)
+
+    /**
+     * The brand field, and what sits on it.
+     *
+     * Deliberately constant across themes, unlike every other colour here.
+     * The header used `colorScheme.primary`, which is the deep green in light
+     * mode and the pale mint Green200 in dark -- so after dark the top of both
+     * home screens inverted into the brightest block on the display, and the
+     * status-bar icons the header forces light sat on it at 1.64:1. A brand
+     * field is identity, not semantics: it is the same green on a white page
+     * and a black one, the way a signboard is the same colour at noon and at
+     * night. White on it measures 7.58:1 either way.
+     */
+    val BrandField = Green700
+    val OnBrandField = White
 }
 
-/** A 4dp grid. Every gap in the product is a multiple of it. */
+/**
+ * A 4dp grid, with one deliberate half-step.
+ *
+ * `xxs` is 2dp: the gap between a label and the value directly under it, where
+ * a full step reads as a separation rather than a pairing. Everything else is
+ * a multiple of 4, and SizingTest holds that -- the previous version of this
+ * comment claimed every gap was, which was not true of the token immediately
+ * below it.
+ */
 object Spacing {
     val xxs: Dp = 2.dp
     val xs: Dp = 4.dp
@@ -123,6 +165,11 @@ object Sizing {
  */
 object TypeScale {
     val displaySize = 32.sp
+    // Between display and title. Every fare on every screen is drawn at this
+    // size, and until the theme defined it they were all drawn by the system
+    // font instead of the bundled one.
+    val headlineSize = 28.sp
+    val subheadlineSize = 24.sp
     val titleSize = 22.sp
     val headingSize = 18.sp
     val bodySize = 16.sp

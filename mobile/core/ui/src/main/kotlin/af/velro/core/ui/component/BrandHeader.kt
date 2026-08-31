@@ -1,6 +1,7 @@
 package af.velro.core.ui.component
 
 import af.velro.core.ui.theme.Radius
+import af.velro.core.ui.theme.VelroColors
 import af.velro.core.ui.theme.Spacing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -75,8 +76,12 @@ fun BrandHeader(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+        // The brand field, not the scheme's primary: primary inverts to pale
+        // mint after dark, which turned the top of the screen into a lamp and
+        // left the light status-bar icons this header forces sitting on it at
+        // 1.64:1. See VelroColors.BrandField.
+        color = VelroColors.BrandField,
+        contentColor = VelroColors.OnBrandField,
         shape = RoundedCornerShape(
             bottomStart = Radius.xl,
             bottomEnd = Radius.xl,

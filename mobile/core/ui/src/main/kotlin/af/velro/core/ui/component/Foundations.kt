@@ -3,6 +3,7 @@ package af.velro.core.ui.component
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Radius
 import af.velro.core.ui.theme.Sizing
+import af.velro.core.ui.theme.VelroColors
 import af.velro.core.ui.theme.Spacing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -167,16 +168,20 @@ fun OnBrandAction(
         modifier = modifier.fillMaxWidth().height(Sizing.buttonHeight),
         enabled = enabled && !loading,
         shape = RoundedCornerShape(Radius.lg),
+        // Constant with the field it sits on. Taken from the scheme these
+        // became a near-black button carrying mint text on a mint header
+        // after dark -- three brand colours in one control, none of them the
+        // brand.
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary,
+            containerColor = VelroColors.OnBrandField,
+            contentColor = VelroColors.BrandField,
         ),
     ) {
         if (loading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(Sizing.iconSm),
                 strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.primary,
+                color = VelroColors.BrandField,
             )
         } else {
             if (icon != null) {

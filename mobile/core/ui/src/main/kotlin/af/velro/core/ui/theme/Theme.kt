@@ -27,6 +27,18 @@ val LocalVelroStrings = staticCompositionLocalOf<Strings> {
 
 val LocalVelroLocale = staticCompositionLocalOf { Locale.DARI }
 
+/**
+ * Whether the dark scheme is the one in force.
+ *
+ * Read rather than recomputed: `isSystemInDarkTheme()` is what VelroTheme
+ * *defaults* to, not necessarily what it was given, and a component that asked
+ * the system directly would disagree with the theme around it the moment a
+ * caller overrode it. Components that must pick a colour pair themselves --
+ * the status chips, which have five tones and no matching set of scheme roles
+ * -- ask this.
+ */
+val LocalVelroDarkTheme = staticCompositionLocalOf { false }
+
 private val LightScheme = lightColorScheme(
     primary = VelroColors.Green700,
     onPrimary = VelroColors.White,
@@ -62,8 +74,17 @@ private val DarkScheme = darkColorScheme(
     onPrimaryContainer = VelroColors.Green100,
     secondary = VelroColors.Amber500,
     onSecondary = VelroColors.Neutral900,
+    // Five roles used to be left to Material here, and Material's dark
+    // defaults are purple. secondaryContainer is what a selected FilterChip
+    // fills itself with, and there are nine of them -- every day, hour,
+    // passenger-count and language chip in the product turned lilac after
+    // dark. outlineVariant is the border of every card in both apps.
+    secondaryContainer = VelroColors.DarkAmberContainer,
+    onSecondaryContainer = VelroColors.Amber200,
     error = VelroColors.Red500,
     onError = VelroColors.White,
+    errorContainer = VelroColors.DarkRedContainer,
+    onErrorContainer = VelroColors.Red200,
     // Same relationship after dark, where a shadow is invisible and lightness
     // is the only thing that can lift a card off its page.
     background = VelroColors.DarkBackground,
@@ -75,6 +96,7 @@ private val DarkScheme = darkColorScheme(
     // Neutral700 was 1.70:1 on the dark surface -- the same invisible-border
     // problem as light mode, and worse at night with headlights behind you.
     outline = VelroColors.Neutral500,
+    outlineVariant = VelroColors.DarkSurfaceRaised,
 )
 
 /**
@@ -104,13 +126,34 @@ fun velroTypography(locale: Locale): Typography {
         ),
     )
 
+    // Every slot, not the seven that happened to be reached for first.
+    //
+    // Material fills an unset slot with its own default: FontFamily.Default
+    // and a Latin line height. That is not a neutral fallback here -- it is
+    // the system font instead of the bundled Vazirmatn, and 1.35 leading
+    // instead of the 1.60 Perso-Arabic needs. Five slots were never defined
+    // and were in use 31 times: every fare figure in the product
+    // (headlineSmall), the driver's balance (headlineMedium), and six lines of
+    // the emergency help sheet. A Pashto driver reading 119 at night was
+    // reading it in whatever face the handset happened to substitute, with the
+    // descenders of ټ ډ ړ ږ ښ ګ ڼ clipped by Latin leading.
+    //
+    // TypographyCoverageTest fails if a slot is ever left to Material again.
     return Typography(
+        displayLarge = style(TypeScale.displaySize, FontWeight.Bold),
+        displayMedium = style(TypeScale.displaySize, FontWeight.SemiBold),
         displaySmall = style(TypeScale.displaySize, FontWeight.SemiBold),
+        headlineLarge = style(TypeScale.headlineSize, FontWeight.Bold),
+        headlineMedium = style(TypeScale.headlineSize, FontWeight.SemiBold),
+        headlineSmall = style(TypeScale.subheadlineSize, FontWeight.SemiBold),
         titleLarge = style(TypeScale.titleSize, FontWeight.SemiBold),
         titleMedium = style(TypeScale.headingSize, FontWeight.Medium),
+        titleSmall = style(TypeScale.labelSize, FontWeight.Medium),
         bodyLarge = style(TypeScale.bodySize, FontWeight.Normal),
         bodyMedium = style(TypeScale.labelSize, FontWeight.Normal),
+        bodySmall = style(TypeScale.captionSize, FontWeight.Normal),
         labelLarge = style(TypeScale.labelSize, FontWeight.Medium),
+        labelMedium = style(TypeScale.captionSize, FontWeight.Medium),
         labelSmall = style(TypeScale.captionSize, FontWeight.Normal),
     )
 }
@@ -164,6 +207,7 @@ fun VelroTheme(
         LocalLayoutDirection provides direction,
         LocalVelroStrings provides strings,
         LocalVelroLocale provides locale,
+        LocalVelroDarkTheme provides darkTheme,
     ) {
         MaterialTheme(
             colorScheme = if (darkTheme) DarkScheme else LightScheme,

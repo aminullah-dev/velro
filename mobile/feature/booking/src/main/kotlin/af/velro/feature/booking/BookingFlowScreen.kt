@@ -729,7 +729,7 @@ private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) 
             onClick = { onEvent(BookingEvent.AskForRide) },
             enabled = state.canAsk,
             loading = state.isSubmitting,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

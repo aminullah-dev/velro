@@ -11,6 +11,7 @@ import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
+import af.velro.core.ui.theme.Sizing
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.FareOffer
 import af.velro.domain.MoneyValue
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -130,11 +132,9 @@ fun OffersScreen(
             Waiting()
             Spacer(Modifier.weight(1f))
         } else {
-            Text(
-                strings["ride.offers.title"],
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(Spacing.sm))
+            // No heading here: the app bar already says "drivers who answered",
+            // and the screen's decisive moment should open with the answers
+            // rather than with its own title said twice.
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 modifier = Modifier.weight(1f),
@@ -156,13 +156,22 @@ fun OffersScreen(
             }
         }
 
-        Spacer(Modifier.height(Spacing.sm))
-        SecondaryAction(
-            label = strings["ride.action.cancel"],
-            onClick = { onEvent(OffersEvent.Cancel) },
-            enabled = !state.isCancelling && state.acceptingOfferId == null,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        // Only while there is something to cancel.
+        //
+        // This rendered after every branch, so a passenger whose ask had
+        // expired -- the common ending -- was shown "ask again" and "cancel
+        // the request" together: two opposite exits from the same dead end,
+        // and the one carrying the word she was looking for pointed at a
+        // request the server had already closed.
+        if (request.isOpen) {
+            Spacer(Modifier.height(Spacing.sm))
+            SecondaryAction(
+                label = strings["ride.action.cancel"],
+                onClick = { onEvent(OffersEvent.Cancel) },
+                enabled = !state.isCancelling && state.acceptingOfferId == null,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         Spacer(Modifier.height(Spacing.lg))
     }
 }
@@ -250,7 +259,7 @@ private fun OfferCard(
                                 // The rating is written beside it, so the star
                                 // is decoration and is hidden from a reader.
                                 contentDescription = null,
-                                modifier = Modifier.height(14.dp),
+                                modifier = Modifier.size(Sizing.iconSm),
                                 tint = MaterialTheme.colorScheme.secondary,
                             )
                             Text(
@@ -347,7 +356,7 @@ private fun OfferCard(
                 loading = accepting,
                 // Comfortably above the 48dp Android minimum: this is the one
                 // tap on the screen that costs money.
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

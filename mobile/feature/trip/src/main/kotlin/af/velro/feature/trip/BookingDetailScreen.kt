@@ -1,6 +1,7 @@
 package af.velro.feature.trip
 
 import af.velro.core.i18n.Calendars
+import af.velro.core.ui.component.JourneyLine
 import af.velro.core.ui.component.BoardingCode
 import af.velro.core.ui.component.ErrorState
 import af.velro.core.ui.component.FareRow
@@ -298,27 +299,18 @@ private fun Vehicle(booking: Booking) {
     }
 }
 
+/**
+ * Where the journey goes, drawn the way the card that led here draws it.
+ *
+ * This was two labelled rows -- "pick-up", then the name, then "destination",
+ * then the name. Correct, and a different picture from the dot-line-square
+ * rail on the booking card the passenger tapped to arrive. The rail exists
+ * because it reads without words at all, which matters most on the screen
+ * somebody opens to check where the car is actually taking them.
+ */
 @Composable
 private fun Journey(origin: String?, destination: String?) {
-    val strings = LocalVelroStrings.current
-    Column {
-        Text(
-            strings["driver.label.pickup"],
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(origin ?: strings["common.value.unknown"], style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(Spacing.sm))
-        Text(
-            strings["location.label.destination"],
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            destination ?: strings["common.value.unknown"],
-            style = MaterialTheme.typography.bodyLarge,
-        )
-    }
+    JourneyLine(origin = origin, destination = destination)
 }
 
 @Composable
