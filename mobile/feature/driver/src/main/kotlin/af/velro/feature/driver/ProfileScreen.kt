@@ -52,6 +52,10 @@ import androidx.compose.ui.text.style.TextAlign
  * The photograph is the selfie he already sent for approval, not a second one
  * he has to find. It was uploaded, checked by the office, and then only ever
  * looked at by the office.
+ *
+ * Driven on a device: the avatar decodes, the approval chip carries the amber
+ * tone of a pending driver, a driver with no ratings gets the sentence rather
+ * than a zero, and both cards navigate. RTL throughout.
  */
 @Composable
 fun ProfileRoute(
