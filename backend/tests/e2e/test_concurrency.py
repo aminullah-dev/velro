@@ -211,3 +211,53 @@ class TestDoubleAccept:
             headers=driver,
         )
         assert undone.status_code == 200, undone.text
+
+
+class TestSameKeyReplay:
+    """Two requests, one idempotency key, fired through one barrier.
+
+    The other races prove the loser is refused. This one proves the opposite
+    contract: a retry of the SAME action must not lose -- it must receive the
+    winner's answer, because on these connections the request that timed out
+    at the handset very often succeeded at the server, and the passenger's
+    next tap is the same booking, not a second one.
+    """
+
+    def test_both_callers_get_one_booking(self, client, rider):
+        origin = destination = trip_id = None
+        for o, d in _journeys(client, rider):
+            for option in _search(client, rider, o, d, 1):
+                if option["seats_available"] >= 1:
+                    origin, destination, trip_id = o, d, option["trip_id"]
+                    break
+            if trip_id:
+                break
+        assert trip_id, "no seat anywhere in the seed"
+
+        key = str(uuid.uuid4())
+
+        def book():
+            return client.post(
+                "/api/v1/bookings",
+                json={
+                    "trip_id": trip_id,
+                    "seat_count": 1,
+                    "pickup_station_id": origin,
+                    "dropoff_destination_id": destination,
+                },
+                headers={**rider, "Idempotency-Key": key},
+            )
+
+        first, second = _race(book, book)
+        assert first.status_code == second.status_code == 200, (
+            first.text, second.text,
+        )
+        a, b = first.json()["data"], second.json()["data"]
+        assert a["id"] == b["id"], "one key produced two bookings"
+        assert a["number"] == b["number"]
+
+        client.post(
+            f"/api/v1/bookings/{a['id']}/cancel",
+            json={"reason_code": "PASSENGER_CANCELLED"},
+            headers=rider,
+        )

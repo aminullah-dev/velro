@@ -18,6 +18,8 @@ from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
+
 from shared import error_codes
 from shared.errors import ConflictError
 
@@ -74,6 +76,26 @@ def idempotent(endpoint: str) -> Callable:
                 response_body=storable,
                 expires_at=SystemClock().now() + timedelta(hours=24),
             )
+            try:
+                # Flushed here rather than left to the request-end commit. Two
+                # retries of one key can both miss the store and both run the
+                # handler -- the handset's transport retry racing the person's
+                # own tap is the ordinary way, not the exotic one. The unique
+                # constraint kills the second INSERT either way; flushing pulls
+                # that violation forward to where it can be handled, instead of
+                # letting it surface after this wrapper has returned, as a 500
+                # on a request whose work the winner had already done.
+                store.session.flush()
+            except IntegrityError:
+                # The loser's whole transaction goes -- including its duplicate
+                # handler work, which is exactly the discard we want -- and the
+                # caller gets the winner's stored answer, as if the retry had
+                # simply arrived a moment later.
+                store.session.rollback()
+                winner = store.find(key, endpoint)
+                if winner is not None and winner.request_hash == digest:
+                    return winner.response_body
+                raise
             return result
 
         return wrapper

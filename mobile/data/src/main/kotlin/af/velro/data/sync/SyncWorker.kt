@@ -44,17 +44,18 @@ class SyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         var retryNeeded = false
 
-        for (operation in db.pendingOperations().all()) {
+        for (operation in db.pendingOperations().pending()) {
             when (val outcome = replay(operation)) {
                 Outcome.DONE -> db.pendingOperations().delete(operation.id)
                 Outcome.RETRY -> retryNeeded = true
                 Outcome.REJECTED -> {
-                    // The server refused on the merits. Keeping it queued would
-                    // retry forever; the row stays with its error recorded so a
-                    // person can see what happened.
-                    db.pendingOperations()
-                        .recordFailure(operation.id, outcome.name)
-                    db.pendingOperations().delete(operation.id)
+                    // The server refused on the merits. The row stays, with the
+                    // error on it, so what happened is inspectable -- this
+                    // used to record the failure and then delete the row in
+                    // the next line, which kept neither the retry nor the
+                    // evidence. Replay reads only unfailed rows, so a dead
+                    // operation cannot churn the worker every fifteen minutes.
+                    db.pendingOperations().recordFailure(operation.id, outcome.name)
                 }
             }
         }

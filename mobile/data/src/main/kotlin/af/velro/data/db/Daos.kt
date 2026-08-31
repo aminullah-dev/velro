@@ -153,6 +153,10 @@ interface PendingOperationDao {
     @Query("SELECT * FROM pending_operations ORDER BY createdAt")
     suspend fun all(): List<PendingOperationEntity>
 
+    /** What replay works through: rows the server has not already refused. */
+    @Query("SELECT * FROM pending_operations WHERE lastError IS NULL ORDER BY createdAt")
+    suspend fun pending(): List<PendingOperationEntity>
+
     @Query("SELECT COUNT(*) FROM pending_operations")
     fun count(): Flow<Int>
 
