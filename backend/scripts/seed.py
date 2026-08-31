@@ -140,18 +140,27 @@ EXTERNAL = [
 # flow that asks district → village → station → destination works unchanged.
 # What was missing was the data.
 #
+# Both Kabul stations are called "ایستگاه غوربند" -- the Ghorband station.
+#
+# Named for where the cars go, not for where they stand, which is how these
+# yards are actually known: a passenger in Kabul asks for the Ghorband station
+# and everyone knows the one they mean. Naming them after their own
+# neighbourhood -- "ایستگاه خیرخانه" -- is what an outsider would guess and is
+# not what anybody calls them. The neighbourhood is already the district above
+# it in the picker, so it is not lost by being left out of the name.
+#
 # (province_code, province_name, district_code, district_name, alt, lat, lon,
 #  village_name, station_name)
 RETURN_ORIGINS = [
     (
         "AF-KAB", "کابل", "KBL-KHM", "خیرخانه مینه", "Khair Khana",
         Decimal("34.5700"), Decimal("69.1600"),
-        "خیرخانه مینه", "ایستگاه خیرخانه",
+        "خیرخانه مینه", "ایستگاه غوربند",
     ),
     (
         "AF-KAB", "کابل", "KBL-JAD", "جاده", "Jada",
         Decimal("34.5150"), Decimal("69.1750"),
-        "جاده", "ایستگاه جاده",
+        "جاده", "ایستگاه غوربند",
     ),
 ]
 
