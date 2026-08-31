@@ -1,5 +1,6 @@
 package af.velro.feature.driver
 
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.ui.component.StatusTone
 import af.velro.core.ui.component.StatusChip
 import af.velro.core.i18n.Calendars
@@ -217,7 +218,21 @@ fun DocumentsScreen(
         title = strings["driver.documents.title"],
         onBack = onBack,
         modifier = modifier,
+        scrollable = false,
     ) {
+        // The screen a driver comes back to while the office decides whether
+        // he may work. Checking again is the whole reason to open it, and
+        // Refresh reached only the error state's retry.
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = { onEvent(DocumentsEvent.PullToRefresh) },
+            modifier = Modifier.fillMaxSize(),
+        ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        ) {
         // The title moved into the bar, so it is not repeated here.
         Spacer(Modifier.height(Spacing.sm))
         localProblem?.let { InlineMessage(it) }
@@ -255,6 +270,8 @@ fun DocumentsScreen(
                 },
             )
             Spacer(Modifier.height(Spacing.sm))
+        }
+        }
         }
     }
 }

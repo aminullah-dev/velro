@@ -56,6 +56,14 @@ data class DriverHomeUiState(
     val waiting: List<RideRequest> = emptyList(),
 
     val isLoading: Boolean = true,
+    /**
+     * A refresh the driver pulled for.
+     *
+     * Distinct from [isLoading], which only covers the case where there is no
+     * profile yet and the screen is genuinely blank. A driver watching for
+     * work must keep the board he is reading while it updates.
+     */
+    val isRefreshing: Boolean = false,
     val isBusy: Boolean = false,
     /**
      * The last work read did not fully succeed, so what is on screen is older
@@ -117,6 +125,14 @@ data class DriverHomeUiState(
 
 sealed interface DriverHomeEvent {
     data object Refresh : DriverHomeEvent
+
+    /**
+     * The same reload, keeping the screen on show.
+     *
+     * Its own event rather than a flag, so the error state's retry -- which
+     * has nothing to preserve and should blank -- cannot be confused with it.
+     */
+    data object PullToRefresh : DriverHomeEvent
     data object ToggleOnline : DriverHomeEvent
     data class AcceptOffer(val tripId: String) : DriverHomeEvent
     data object AdvanceTrip : DriverHomeEvent
@@ -212,6 +228,7 @@ class DriverHomeViewModel @Inject constructor(
     fun onEvent(event: DriverHomeEvent) {
         when (event) {
             DriverHomeEvent.Refresh -> refresh()
+            DriverHomeEvent.PullToRefresh -> refresh(pulled = true)
             DriverHomeEvent.ToggleOnline -> toggleOnline()
             is DriverHomeEvent.AcceptOffer -> accept(event.tripId)
             DriverHomeEvent.AdvanceTrip -> advance()
@@ -229,16 +246,31 @@ class DriverHomeViewModel @Inject constructor(
         }
     }
 
-    private fun refresh() {
-        _state.update { it.copy(isLoading = _state.value.profile == null, errorCode = null) }
+    private fun refresh(pulled: Boolean = false) {
+        _state.update {
+            it.copy(
+                // A pull never blanks the screen, even on a cold profile: the
+                // indicator is already saying something is happening.
+                isLoading = !pulled && _state.value.profile == null,
+                isRefreshing = pulled,
+                errorCode = null,
+            )
+        }
         viewModelScope.launch {
             when (val profile = drivers.profile()) {
                 is ApiResult.Success -> {
                     _state.update { it.copy(profile = profile.value, isLoading = false) }
+                    // loadWork is the rest of the screen -- the board, the
+                    // assignment, the wallet. Awaited before the indicator
+                    // stops, or it disappears while most of what the driver
+                    // pulled for is still in flight.
                     loadWork()
                 }
                 is ApiResult.Failure -> _state.update { it.failed(profile.error) }
             }
+            // Both paths, or a driver with no signal keeps a spinning
+            // indicator for as long as he stays on the screen.
+            _state.update { it.copy(isRefreshing = false) }
         }
     }
 

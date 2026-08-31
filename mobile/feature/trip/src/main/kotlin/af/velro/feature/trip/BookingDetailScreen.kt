@@ -1,5 +1,7 @@
 package af.velro.feature.trip
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.i18n.Calendars
 import af.velro.core.ui.component.JourneyLine
 import af.velro.core.ui.component.BoardingCode
@@ -65,6 +67,7 @@ fun BookingDetailRoute(
     BookingDetailScreen(state, viewModel::onEvent, onBack = onBack)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookingDetailScreen(
     state: BookingDetailUiState,
@@ -91,8 +94,26 @@ fun BookingDetailScreen(
     VelroScreen(
         title = booking.number,
         onBack = onBack,
+        // PullToRefreshBox scrolls its own content, and two nested scrolls
+        // fight each other for the gesture.
+        scrollable = false,
         modifier = modifier,
     ) {
+        // The view model already tracked isRefreshing and already cleared it on
+        // both paths; nothing on screen could start it. This is the receipt a
+        // passenger opens to see whether a driver has been assigned yet -- the
+        // one screen where "has anything changed" is the entire reason for
+        // being on it.
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = { onEvent(BookingDetailEvent.Refresh) },
+            modifier = Modifier.fillMaxSize(),
+        ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        ) {
         // The booking number is the app bar title now, so only the status
         // stays here -- and it keeps the row it needs to sit on its own line
         // rather than crowding the bar.
@@ -198,6 +219,8 @@ fun BookingDetailScreen(
             )
         }
     }
+        }
+        }
 }
 
 @Composable

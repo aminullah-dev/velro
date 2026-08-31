@@ -24,6 +24,14 @@ import kotlinx.coroutines.launch
 data class DocumentsUiState(
     val checklist: DocumentChecklist? = null,
     val isLoading: Boolean = true,
+    /**
+     * A refresh the driver pulled for.
+     *
+     * This screen is the one he returns to while waiting for the office to
+     * approve his licence, and approval is what lets him work at all -- so
+     * "check again" is the reason to be here, and it had no control.
+     */
+    val isRefreshing: Boolean = false,
     val uploadingType: String? = null,
     val errorCode: String? = null,
     val errorContext: Map<String, Any?> = emptyMap(),
@@ -43,6 +51,9 @@ data class DocumentsUiState(
 
 sealed interface DocumentsEvent {
     data object Refresh : DocumentsEvent
+
+    /** The same read, without blanking the list behind a spinner. */
+    data object PullToRefresh : DocumentsEvent
     data object RegisterAsDriver : DocumentsEvent
     data class NameChanged(val value: String) : DocumentsEvent
     data class Upload(
@@ -80,6 +91,7 @@ class DocumentsViewModel @Inject constructor(
     fun onEvent(event: DocumentsEvent) {
         when (event) {
             DocumentsEvent.Refresh -> refresh()
+            DocumentsEvent.PullToRefresh -> refresh(pulled = true)
             DocumentsEvent.RegisterAsDriver -> register()
             is DocumentsEvent.NameChanged ->
                 // 160 is the column, so the field cannot outgrow the row.
@@ -89,8 +101,14 @@ class DocumentsViewModel @Inject constructor(
         }
     }
 
-    private fun refresh() {
-        _state.update { it.copy(isLoading = it.checklist == null, errorCode = null) }
+    private fun refresh(pulled: Boolean = false) {
+        _state.update {
+            it.copy(
+                isLoading = !pulled && it.checklist == null,
+                isRefreshing = pulled,
+                errorCode = null,
+            )
+        }
         viewModelScope.launch {
             when (val result = documents.checklist()) {
                 is ApiResult.Success ->
@@ -114,6 +132,9 @@ class DocumentsViewModel @Inject constructor(
                     }
                 }
             }
+            // Cleared whichever way the read went, or a driver with no
+            // signal keeps a spinning indicator until he leaves the screen.
+            _state.update { it.copy(isRefreshing = false) }
         }
     }
 

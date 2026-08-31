@@ -1,5 +1,6 @@
 package af.velro.feature.driver
 
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.MoneyFormatter
 import af.velro.core.i18n.Numerals
@@ -283,7 +284,23 @@ fun DriverHomeScreen(
             )
         },
         modifier = modifier,
+        // PullToRefreshBox brings its own scroll; two nested ones fight for
+        // the gesture.
+        scrollable = false,
     ) {
+        // The screen already told the driver his board was old. It had no way
+        // for him to do anything about it -- Refresh reached only the error
+        // state's retry, which this screen never shows while it has a profile.
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = { onEvent(DriverHomeEvent.PullToRefresh) },
+            modifier = Modifier.fillMaxSize(),
+        ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        ) {
         // Cached data, honestly labelled -- the same line the booking detail
         // shows, for the same reason. A board that failed to refresh looks
         // exactly like a board with no work on it.
@@ -404,6 +421,8 @@ fun DriverHomeScreen(
 
         Spacer(Modifier.height(Spacing.xl))
         Earnings(state, onOpenEarnings)
+        }
+        }
     }
 }
 
