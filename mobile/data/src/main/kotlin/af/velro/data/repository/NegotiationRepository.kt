@@ -42,6 +42,9 @@ class NegotiationRepository @Inject constructor(
         returnFor: Instant? = null,
         /** Null when there is no return leg to price. */
         returnFareMinor: Long? = null,
+        /** Null means the handset could not say. The server's fence decides. */
+        latitude: String? = null,
+        longitude: String? = null,
     ): ApiResult<RideRequest> =
         mapper.call {
             api.requestRide(
@@ -54,6 +57,8 @@ class NegotiationRepository @Inject constructor(
                     requested_for = requestedFor?.toString(),
                     return_for = returnFor?.toString(),
                     return_fare_minor = returnFareMinor,
+                    latitude = latitude,
+                    longitude = longitude,
                 )
             )
         }.map(::toDomain)

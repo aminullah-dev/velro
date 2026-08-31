@@ -53,6 +53,7 @@
   "error.trip_seats_unavailable": "Only {available} seats are left on this trip.",
   "error.trip_capacity_exceeded": "This vehicle does not have that many seats.",
   "error.trip_departed": "This trip has already left.",
+  "error.geofence_outside": "VELRO serves Kabul, Parwan and Ghorband for now. It looks like you are outside the service area, so we cannot send your request to drivers.",
   "error.trip_cancelled": "This trip was cancelled.",
   "error.trip_no_driver_available": "No driver is available right now. Please try again shortly.",
   "error.trip_driver_already_assigned": "Another driver has already taken this trip.",

@@ -45,6 +45,12 @@ class Settings:
     # explicit, unlike otp_debug_echo, which is refused in production because
     # it opens every account at once.
     otp_test_numbers: tuple[str, ...] = field(default_factory=tuple)
+    # Numbers the geofence never applies to -- the tester's own handset,
+    # wherever in the world it happens to be. Per-number and explicit, and
+    # deliberately NOT the otp_test_numbers list: that list also skips the
+    # carrier, and a tester's real phone should keep receiving real codes
+    # while being allowed to ask for a ride from Ottawa.
+    geofence_exempt_phones: tuple[str, ...] = field(default_factory=tuple)
     sms_provider: str = "console"
     twilio_account_sid: str = ""
     # The API key's own SK... sid, when one is used. Empty means the account's
@@ -80,6 +86,7 @@ _DEFAULTS: dict[str, Any] = {
     "idempotency_ttl_seconds": 60 * 60 * 24,
     "otp_debug_echo": False,
     "otp_test_numbers": (),
+    "geofence_exempt_phones": (),
     "sms_provider": "console",
     "twilio_account_sid": "",
     "twilio_api_key_sid": "",

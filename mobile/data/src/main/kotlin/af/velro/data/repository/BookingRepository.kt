@@ -78,6 +78,9 @@ class BookingRepository @Inject constructor(
         dropoffDestinationId: String,
         idempotencyKey: String,
         note: String? = null,
+        /** Null means the handset could not say. The server's fence decides. */
+        latitude: String? = null,
+        longitude: String? = null,
     ): ApiResult<Booking> {
         val result = mapper.call {
             api.book(
@@ -88,6 +91,8 @@ class BookingRepository @Inject constructor(
                     pickup_station_id = pickupStationId,
                     dropoff_destination_id = dropoffDestinationId,
                     passenger_note = note,
+                    latitude = latitude,
+                    longitude = longitude,
                 ),
             )
         }

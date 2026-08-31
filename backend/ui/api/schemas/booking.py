@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from datetime import datetime
 
 from pydantic import Field
@@ -36,6 +38,10 @@ class BookSeatsIn(Schema):
     dropoff_destination_id: str
     payment_method: str = Field(default="CASH", pattern=r"^(CASH|MOBILE_WALLET|CARD|CORPORATE)$")
     passenger_note: str | None = Field(default=None, max_length=500)
+    #: Where the passenger is standing. The geofence reads these; exempt test
+    #: numbers may omit them.
+    latitude: Decimal | None = None
+    longitude: Decimal | None = None
 
 
 class FareComponentOut(Schema):

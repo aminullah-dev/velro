@@ -18,6 +18,7 @@ from shared import error_codes
 from shared.errors import PermissionError
 from shared.money import Money
 from ui.api import deps
+from ui.api.geofence import assert_inside
 from ui.api.errors import ok
 from ui.api.idempotency import idempotent
 from ui.api.schemas.booking import (
@@ -102,6 +103,7 @@ def create_booking(
     seats: Annotated[object, Depends(deps.seats)],
     bookings: Annotated[object, Depends(deps.bookings)],
     routes: Annotated[object, Depends(deps.routes)],
+    geo: Annotated[object, Depends(deps.geography)],
     fare_strategy: Annotated[object, Depends(deps.fare_strategy)],
     numbers: Annotated[object, Depends(deps.numbers)],
     codes: Annotated[object, Depends(deps.verification_codes)],
@@ -110,6 +112,19 @@ def create_booking(
     idem: Annotated[object, Depends(deps.idempotency)] = None,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> dict:
+    # A booking summons a driver to a station just as surely as an ask does,
+    # so it passes the same fence. A refusal raises before store.remember runs,
+    # so it is never cached against the key -- the same attempt, retried after
+    # walking into the service area, gets a fresh verdict.
+    assert_inside(
+        geo=geo,
+        app_settings=settings,
+        exempt_phones=deps.settings().geofence_exempt_phones,
+        phone=deps.users(trips.session).get(actor.user_id).phone,
+        latitude=body.latitude,
+        longitude=body.longitude,
+    )
+
     use_case = BookSeats(
         trips=trips, seats=seats, bookings=bookings, routes=routes,
         fare_strategy=fare_strategy, numbers=numbers, codes=codes,

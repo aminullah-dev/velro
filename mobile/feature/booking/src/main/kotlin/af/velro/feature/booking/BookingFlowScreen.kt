@@ -78,6 +78,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun BookingFlowRoute(
@@ -87,9 +93,36 @@ fun BookingFlowRoute(
     viewModel: BookingFlowViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // The two events that summon drivers carry the passenger's position, so
+    // the first of them asks for the location permission if it is missing.
+    // Denial is not a wall: the event goes through regardless, without
+    // coordinates, and the server's geofence answers in the passenger's own
+    // language. Deciding here would duplicate the server's policy.
+    val context = LocalContext.current
+    var awaitingPermission by remember { mutableStateOf<BookingEvent?>(null) }
+    val permission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {
+        awaitingPermission?.let(viewModel::onEvent)
+        awaitingPermission = null
+    }
+    val onEvent: (BookingEvent) -> Unit = { event ->
+        val summons = event is BookingEvent.AskForRide || event is BookingEvent.TripChosen
+        val granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_COARSE_LOCATION,
+        ) == PackageManager.PERMISSION_GRANTED
+        if (summons && !granted && awaitingPermission == null) {
+            awaitingPermission = event
+            permission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+        } else {
+            viewModel.onEvent(event)
+        }
+    }
+
     BookingFlowScreen(
         state = state,
-        onEvent = viewModel::onEvent,
+        onEvent = onEvent,
         onExit = onExit,
         onFinished = onFinished,
         onAsked = onAsked,

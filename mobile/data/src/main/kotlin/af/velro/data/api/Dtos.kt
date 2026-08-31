@@ -182,6 +182,9 @@ data class BookSeatsRequest(
     val dropoff_destination_id: String,
     val payment_method: String = "CASH",
     val passenger_note: String? = null,
+    /** Where the passenger is standing, for the geofence. Decimal-as-string. */
+    val latitude: String? = null,
+    val longitude: String? = null,
 )
 
 @Serializable
@@ -585,6 +588,9 @@ data class RequestRideRequest(
     val requested_for: String? = null,
     /** ISO-8601. Omitted means one way, which is most journeys. */
     val return_for: String? = null,
+    /** Where the passenger is standing, for the geofence. Decimal-as-string. */
+    val latitude: String? = null,
+    val longitude: String? = null,
 )
 
 @Serializable

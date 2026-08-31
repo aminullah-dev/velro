@@ -53,6 +53,7 @@
   "error.trip_seats_unavailable": "تنها {available} چوکی در این سفر باقی است.",
   "error.trip_capacity_exceeded": "این موتر این تعداد چوکی ندارد.",
   "error.trip_departed": "این سفر قبلاً حرکت کرده است.",
+  "error.geofence_outside": "ولرو فعلاً در کابل، پروان و غوربند خدمات می‌دهد. به نظر می‌رسد بیرون از ساحهٔ پوشش هستید، بنابراین درخواست شما به راننده‌ها فرستاده نمی‌شود.",
   "error.trip_cancelled": "این سفر لغو شده است.",
   "error.trip_no_driver_available": "فعلاً راننده موجود نیست. کمی بعد دوباره کوشش کنید.",
   "error.trip_driver_already_assigned": "راننده دیگری این سفر را گرفته است.",

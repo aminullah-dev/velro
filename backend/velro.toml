@@ -12,3 +12,9 @@ log_json = false
 # so this line cannot follow a deployment out.
 otp_debug_echo = false
 cors_origins = ["http://localhost:5173"]
+
+# The geofence: asks and bookings must come from within reach of a known
+# station (radius in app_settings, geofence.radius_m). The tester's own
+# handset is exempted by environment variable, never by this file --
+#   export VELRO_GEOFENCE_EXEMPT_PHONES="+93793817977"
+# -- so the exemption cannot ride a config file into production.

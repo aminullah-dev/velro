@@ -36,6 +36,10 @@ DEFAULTS: dict[str, Any] = {
     # intermittent connection, so a short window means offers expire before a
     # driver ever sees them.
     "dispatch.offer_ttl_seconds": 180,
+    # How far from the nearest station a caller may stand and still summon
+    # drivers. Generous, because a village sits off the road its station is
+    # on; zero turns the fence off entirely. ui/api/geofence.py is the reader.
+    "geofence.radius_m": 20_000,
     "dispatch.max_offers_per_trip": 10,
     # SELFIE sits beside NATIONAL_ID deliberately. A tazkira proves a document
     # exists; it does not prove the person holding the account is the person on

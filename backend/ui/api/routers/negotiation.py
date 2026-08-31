@@ -7,6 +7,8 @@ means.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from datetime import datetime
 from typing import Annotated
 
@@ -28,6 +30,7 @@ from shared import error_codes
 from shared.errors import ConflictError, NotFoundError
 from shared.money import Money
 from ui.api import deps
+from ui.api.geofence import assert_inside
 from ui.api.errors import ok
 from ui.api.schemas.common import MoneyOut, Schema
 
@@ -44,6 +47,10 @@ class RequestRideIn(Schema):
     return_fare_minor: int | None = Field(default=None, ge=1)
     vehicle_type_code: str | None = Field(default=None, max_length=24)
     note: str | None = Field(default=None, max_length=300)
+    #: Where the passenger is standing. The geofence reads these; exempt test
+    #: numbers may omit them.
+    latitude: Decimal | None = None
+    longitude: Decimal | None = None
     # When the passenger wants to travel. Omitted means now, which is what
     # every request meant before this field existed: the column, the command
     # and the trip it becomes were all built for a departure time, and this
@@ -122,6 +129,18 @@ def request_ride(
     app_settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
 ) -> dict:
+    # The ask is the loud mutation -- it rings every online driver. It does not
+    # leave this function unless it comes from inside the service area.
+    users_repo = deps.users(requests.session)
+    assert_inside(
+        geo=geo,
+        app_settings=app_settings,
+        exempt_phones=deps.settings().geofence_exempt_phones,
+        phone=users_repo.get(actor.user_id).phone,
+        latitude=body.latitude,
+        longitude=body.longitude,
+    )
+
     """Ask to be driven, at a price you name."""
     use_case = RequestRide(
         requests=requests, geography=geo, settings=app_settings, audit=audit,

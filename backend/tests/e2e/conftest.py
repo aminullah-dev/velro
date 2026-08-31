@@ -26,6 +26,16 @@ def client():
     os.environ["VELRO_DATABASE_URL"] = DATABASE_URL
     os.environ.setdefault("VELRO_JWT_SECRET", "test-secret-key-at-least-32-characters")
     os.environ["VELRO_OTP_DEBUG_ECHO"] = "true"
+    # The whole test fleet is exempt from the geofence, exactly as the
+    # tester's own handset will be in production -- the fence is not what
+    # these modules are proving, and none of them carries coordinates. The
+    # range covers every +9370000xxNN persona so a future test number works
+    # without ceremony. One number is deliberately left out: test_geofence
+    # signs it in to walk into the fence from both sides.
+    os.environ["VELRO_GEOFENCE_EXEMPT_PHONES"] = ",".join(
+        [f"+93700000{n:03d}" for n in range(1000) if n != 555]
+        + ["+93700123456"]
+    )
 
     import infrastructure.db.models  # noqa: F401
     from infrastructure.db.base import Base

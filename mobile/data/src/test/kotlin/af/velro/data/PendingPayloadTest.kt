@@ -23,14 +23,17 @@ class PendingPayloadTest {
     @Test
     fun `booking payload carries exactly what the replayer reads`() {
         assertEquals(
-            setOf("trip_id", "seat_count", "pickup_station_id", "dropoff_destination_id", "note"),
-            keys(PendingPayloads.booking("t", 2, "s", "d", "note")),
+            setOf(
+                "trip_id", "seat_count", "pickup_station_id",
+                "dropoff_destination_id", "note", "latitude", "longitude",
+            ),
+            keys(PendingPayloads.booking("t", 2, "s", "d", "note", "34.9", "68.7")),
         )
-        // note is optional and absent when null, not null-valued: the reader
+        // Optional fields are absent when null, not null-valued: the reader
         // uses jsonPrimitive.content, which would render the STRING "null".
         assertEquals(
             setOf("trip_id", "seat_count", "pickup_station_id", "dropoff_destination_id"),
-            keys(PendingPayloads.booking("t", 2, "s", "d", null)),
+            keys(PendingPayloads.booking("t", 2, "s", "d", null, null, null)),
         )
     }
 

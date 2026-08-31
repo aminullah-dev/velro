@@ -1,5 +1,6 @@
 package af.velro.feature.booking
 
+import af.velro.data.location.LocationProvider
 import af.velro.data.sync.SyncQueue
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
@@ -305,6 +306,7 @@ class BookingFlowViewModel @Inject constructor(
     private val bookings: BookingRepository,
     private val negotiation: NegotiationRepository,
     private val queue: SyncQueue,
+    private val location: LocationProvider,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BookingFlowUiState())
@@ -461,6 +463,9 @@ class BookingFlowViewModel @Inject constructor(
 
         _state.update { it.copy(isSubmitting = true, errorCode = null) }
         viewModelScope.launch {
+            // One fix, bounded, possibly null -- the server's fence is the
+            // judge of what a missing location means, not the app.
+            val standing = location.current()
             val result = negotiation.ask(
                 originStationId = station.id,
                 destinationId = destination.id,
@@ -470,6 +475,8 @@ class BookingFlowViewModel @Inject constructor(
                 requestedFor = current.requestedFor(),
                 returnFor = current.returnFor(),
                 returnFareMinor = current.returnFareMinor,
+                latitude = standing?.latitude,
+                longitude = standing?.longitude,
             )
             when (result) {
                 is ApiResult.Success -> _state.update {
@@ -516,6 +523,7 @@ class BookingFlowViewModel @Inject constructor(
 
         _state.update { it.copy(isSubmitting = true, errorCode = null) }
         viewModelScope.launch {
+            val standing = location.current()
             val result = bookings.book(
                 tripId = option.tripId,
                 seatCount = current.seatCount,
@@ -527,6 +535,8 @@ class BookingFlowViewModel @Inject constructor(
                     stationId = station.id,
                     attemptId = current.attemptId,
                 ),
+                latitude = standing?.latitude,
+                longitude = standing?.longitude,
             )
             when (result) {
                 is ApiResult.Success -> {
@@ -556,6 +566,11 @@ class BookingFlowViewModel @Inject constructor(
                                 stationId = station.id,
                                 attemptId = current.attemptId,
                             ),
+                            // The fix from when they tried, replayed as-is:
+                            // the worker runs wherever the phone is later,
+                            // and that is not where the booking was made.
+                            latitude = standing?.latitude,
+                            longitude = standing?.longitude,
                         )
                         _state.update {
                             it.copy(isSubmitting = false, queuedOffline = true)

@@ -53,6 +53,7 @@
   "error.trip_seats_unavailable": "په دې سفر کې یوازې {available} چوکۍ پاتې دي.",
   "error.trip_capacity_exceeded": "دا موټر دومره چوکۍ نه لري.",
   "error.trip_departed": "دا سفر مخکې روان شوی دی.",
+  "error.geofence_outside": "ولرو اوس مهال په کابل، پروان او غوربند کې خدمت کوي. داسې ښکاري چې تاسو له پوښښ سیمې بهر یاست، نو ستاسو غوښتنه چلوونکو ته نه لېږل کېږي.",
   "error.trip_cancelled": "دا سفر لغوه شوی دی.",
   "error.trip_no_driver_available": "اوس چلوونکی نشته. لږ وروسته بیا هڅه وکړئ.",
   "error.trip_driver_already_assigned": "بل چلوونکي دا سفر نیولی دی.",

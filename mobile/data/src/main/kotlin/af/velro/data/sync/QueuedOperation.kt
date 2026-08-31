@@ -36,6 +36,8 @@ object QueuedOperation {
                 dropoffDestinationId = string("dropoff_destination_id"),
                 idempotencyKey = idempotencyKey,
                 note = stringOrNull("note"),
+                latitude = stringOrNull("latitude"),
+                longitude = stringOrNull("longitude"),
             )
 
             OperationKind.CANCEL_BOOKING -> bookings.cancel(
