@@ -50,6 +50,17 @@ _EASTERN_DIGITS = str.maketrans(
 _STOPWORDS = frozenset({"قریه", "ده", "کلی", "village"})
 
 
+def normalise_digits(value: str) -> str:
+    """Eastern Arabic-Indic digits folded to Latin, and nothing else touched.
+
+    Split out of `normalise` because a boarding code is not a name: it must not
+    be lowercased, stripped of punctuation or have its diacritics removed. All
+    it needs is that ۲ and 2 are the same digit, which upper() does not do and
+    which the code comparison relied on for its whole life.
+    """
+    return value.translate(_EASTERN_DIGITS)
+
+
 def normalise(value: str) -> str:
     """Fold a name to its comparison form. Never stored, never displayed."""
     text = unicodedata.normalize("NFKC", value).strip().lower()

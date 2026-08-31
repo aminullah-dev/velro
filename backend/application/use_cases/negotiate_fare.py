@@ -11,7 +11,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from domain.enums import ActorRole, FareOfferStatus, RideRequestStatus
+from domain.driver import Driver
+from domain.enums import (
+    ActorRole,
+    DriverApprovalStatus,
+    DriverAvailability,
+    FareOfferStatus,
+    RideRequestStatus,
+)
 from domain.negotiation import FareOffer, assert_offer_allowed, total_fare
 from shared import error_codes
 from shared.clock import Clock
@@ -237,13 +244,17 @@ class OfferFare:
     """
 
     def __init__(
-        self, *, requests, offers, drivers, vehicles, audit, notifier=None,
-        clock: Clock, new_id: IdGenerator,
+        self, *, requests, offers, drivers, vehicles, audit, trips=None,
+        notifier=None, clock: Clock, new_id: IdGenerator,
     ) -> None:
         self._requests = requests
         self._offers = offers
         self._drivers = drivers
         self._vehicles = vehicles
+        # Optional so a caller that only wants to place a bid need not wire the
+        # trip repository; when absent the "already driving" half of the gate
+        # is skipped and acceptance still catches it.
+        self._trips = trips
         self._audit = audit
         self._notifier = notifier
         self._clock = clock
@@ -297,6 +308,10 @@ class OfferFare:
             already_offered=self._offers.open_for(row.id, driver.id) is not None,
             driver_is_passenger=row.passenger_id == cmd.driver_user_id,
         )
+
+        # Refused here as well as at acceptance, so a driver does not sit
+        # waiting on a bid that could never have been honoured.
+        _assert_driver_may_take_work(driver, self._trips, self._vehicles)
 
         vehicle = self._vehicles.current_for_driver(driver.id)
         created = self._offers.create(
@@ -390,6 +405,44 @@ def _tell(notifier, **kwargs) -> None:
         notifier.notify(**kwargs)
     except Exception:
         log.warning("notify.failed", message_key=kwargs.get("message_key"))
+
+
+def _assert_driver_may_take_work(driver_row, trips, vehicles) -> None:
+    """The same gate the scheduled path has always had.
+
+    dispatch.py checks four things before it lets a driver take a trip:
+    approval, availability, that he is not already on one, and that his vehicle
+    is active. The negotiated path checked none of them -- and the negotiated
+    path is how rides actually happen in VELRO. A driver whose approval had
+    been revoked could still bid and win; so could one with a suspended
+    vehicle; so could one already carrying a passenger, who would then have two
+    people expecting the same car and no way to see the second.
+
+    Called at acceptance, which is the moment the trip exists, and again when a
+    bid is placed so a driver is not left waiting on an offer that cannot be
+    honoured.
+    """
+    driver = Driver(
+        id=driver_row.id,
+        user_id=driver_row.user_id,
+        approval_status=DriverApprovalStatus(driver_row.approval_status),
+        availability=DriverAvailability(driver_row.availability),
+    )
+    driver.assert_can_accept()
+
+    in_flight = trips.active_for_driver(driver.id) if trips is not None else None
+    if in_flight is not None:
+        raise ConflictError(
+            error_codes.DRIVER_ALREADY_ON_TRIP,
+            driver_id=driver.id,
+            trip_id=in_flight.id,
+        )
+
+    vehicle = vehicles.primary_for_driver(driver.id)
+    if vehicle is None:
+        raise NotFoundError(error_codes.VEHICLE_NOT_FOUND, driver_id=driver.id)
+    if vehicle.status != "ACTIVE":
+        raise ConflictError(error_codes.VEHICLE_SUSPENDED, vehicle_id=vehicle.id)
 
 
 def _to_offer(row) -> FareOffer:
@@ -494,6 +547,11 @@ class AcceptOffer:
             raise NotFoundError(
                 error_codes.DRIVER_NOT_FOUND, driver_id=offer_row.driver_id
             )
+        # Re-checked rather than trusted from the bid: a driver can be
+        # suspended, go offline or win another ride in the minutes a passenger
+        # spends choosing between offers.
+        _assert_driver_may_take_work(driver, self._trips, self._vehicles)
+
         vehicle = self._vehicles.current_for_driver(driver.id)
         # Seats come from the vehicle when there is one: a Corolla cannot carry
         # a Hiace's worth of passengers because a request asked for it.
@@ -511,6 +569,10 @@ class AcceptOffer:
             ride_kind=RideKind.PRIVATE.value,
             seat_capacity=capacity,
             scheduled_departure_at=request_row.requested_for,
+            # The hire has two legs when the passenger asked for two and paid
+            # for two. Without this the return was priced, agreed and charged
+            # and then stopped existing at the moment of acceptance.
+            return_for=request_row.return_for,
             status=TripStatus.DRIVER_ASSIGNED.value,
             origin_station_id=request_row.origin_station_id,
             destination_id=request_row.destination_id,

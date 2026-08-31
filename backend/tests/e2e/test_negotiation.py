@@ -11,11 +11,20 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.e2e.conftest import auth, sign_in
+from tests.e2e.conftest import auth, road_ready_driver, sign_in
 
 RIDER = "+93700000100"
-DRIVER_A = "+93700000101"
-DRIVER_B = "+93700000102"
+# The seeded drivers, not freshly-registered ones.
+#
+# These fixtures used to sign in a new number and POST /driver/register, which
+# leaves a driver PENDING with no vehicle -- and every test here passed,
+# because the negotiated path had no gate: a person who had merely asked to
+# become a driver could bid on a real journey and win it. The scheduled path
+# has always checked approval, availability, an active vehicle and whether he
+# is already carrying somebody. Now both do, so these fixtures have to be
+# drivers who could actually turn up.
+DRIVER_A = "+93700000020"
+DRIVER_B = "+93700000021"
 
 
 @pytest.fixture(scope="module")
@@ -24,19 +33,34 @@ def rider(client: TestClient) -> dict:
 
 
 def _driver(client: TestClient, phone: str) -> dict:
+    """An approved driver, with a vehicle, online -- one who can take work."""
     session = auth(sign_in(client, phone))
-    client.post("/api/v1/driver/register", json={}, headers=session)
+    client.post(
+        "/api/v1/driver/status", json={"availability": "ONLINE"}, headers=session
+    )
     return session
 
 
 @pytest.fixture(scope="module")
-def driver_a(client: TestClient) -> dict:
-    return _driver(client, DRIVER_A)
+def driver_a(client: TestClient, admin_session: dict) -> dict:
+    session, _ = road_ready_driver(
+        client, admin_session, "+93700000101", "NEG-1101"
+    )
+    client.post(
+        "/api/v1/driver/status", json={"availability": "ONLINE"}, headers=session
+    )
+    return session
 
 
 @pytest.fixture(scope="module")
-def driver_b(client: TestClient) -> dict:
-    return _driver(client, DRIVER_B)
+def driver_b(client: TestClient, admin_session: dict) -> dict:
+    session, _ = road_ready_driver(
+        client, admin_session, "+93700000102", "NEG-1102"
+    )
+    client.post(
+        "/api/v1/driver/status", json={"availability": "ONLINE"}, headers=session
+    )
+    return session
 
 
 @pytest.fixture(scope="module")
@@ -87,11 +111,58 @@ def _ask(
     return r.json()["data"]
 
 
-def _clear(client: TestClient, rider: dict) -> None:
-    """A passenger may only have one request open, so tests tidy up."""
+def _release(client, *drivers) -> None:
+    """Put every driver back to idle and online."""
+    for driver in drivers:
+        trip = client.get("/api/v1/driver/trips/current", headers=driver)
+        data = trip.json().get("data") if trip.status_code == 200 else None
+        if data and data.get("trip"):
+            client.post(
+                f"/api/v1/driver/trips/{data['trip']['id']}/advance",
+                headers=driver, json={"target": "CANCELLED"},
+            )
+        client.post(
+            "/api/v1/driver/status", json={"availability": "ONLINE"}, headers=driver
+        )
+
+
+@pytest.fixture(autouse=True)
+def _idle_drivers(client: TestClient, driver_a: dict, driver_b: dict):
+    """Both drivers idle before and after every test in this module.
+
+    A driver may hold only one live trip since the negotiated path started
+    checking it, so a test that accepts an offer leaves its driver carrying a
+    passenger. Cleaning up afterwards as well as before matters because these
+    are the seeded drivers: leaving one mid-trip at the end of this module
+    breaks the vertical-slice test that signs in as the same man.
+    """
+    _release(client, driver_a, driver_b)
+    yield
+    _release(client, driver_a, driver_b)
+
+
+def _clear(client: TestClient, rider: dict, *drivers: dict) -> None:
+    """Tidy up between tests.
+
+    A passenger may hold only one open request, and -- since the negotiated
+    path started checking it -- a driver may hold only one live trip. Any test
+    that accepts an offer therefore leaves its driver carrying a passenger, and
+    the next test in the module finds him correctly refused. Releasing him here
+    is what lets these fixtures stay module-scoped.
+    """
     for row in client.get("/api/v1/ride-requests", headers=rider).json()["data"]:
         if row["status"] == "OPEN":
             client.post(f"/api/v1/ride-requests/{row['id']}/cancel", headers=rider)
+    for driver in drivers:
+        trip = client.get("/api/v1/driver/trips/current", headers=driver)
+        if trip.status_code != 200:
+            continue
+        data = trip.json().get("data")
+        if data:
+            client.post(
+                f"/api/v1/driver/trips/{data['id']}/advance",
+                headers=driver, json={"target": "CANCELLED"},
+            )
 
 
 # -- asking --------------------------------------------------------------
@@ -621,6 +692,181 @@ def test_a_round_trip_is_agreed_at_the_price_of_both_legs(
         f"/api/v1/bookings/{result['booking_id']}", headers=rider
     ).json()["data"]
     assert booking["fare_total"]["amount_minor"] == 65_000
+
+
+def test_a_driver_who_may_not_work_cannot_bid(
+    client: TestClient, rider: dict, admin_session: dict, journey: dict
+) -> None:
+    """The gate the scheduled path always had and this one never did.
+
+    dispatch.py has always checked approval, availability, an active vehicle
+    and whether the driver is already carrying somebody, before letting him
+    take a scheduled trip. The negotiated path -- which is how rides actually
+    happen in VELRO -- checked none of them. A person who had merely asked to
+    become a driver could bid on a real journey and win it, and every test in
+    this file passed while that was true, because the fixtures registered
+    exactly such a person.
+    """
+    unapproved = auth(sign_in(client, "+93700000109"))
+    client.post("/api/v1/driver/register", json={}, headers=unapproved)
+    _clear(client, rider)
+    asked = _ask(client, rider, journey, 30_000)
+    refused = client.post(
+        f"/api/v1/driver/ride-requests/{asked['id']}/offer",
+        json={"amount_minor": 30_000}, headers=unapproved,
+    )
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["error"]["code"] == "DRIVER_NOT_APPROVED"
+
+
+def test_a_driver_already_carrying_someone_cannot_win_a_second_ride(
+    client: TestClient, rider: dict, driver_a: dict, journey: dict
+) -> None:
+    """Two passengers, one car, and the second invisible to him.
+
+    Nothing declined a driver's other open offers when he won one, and nothing
+    checked whether he was already on a trip -- so he could be matched twice
+    and only ever see the first. The second passenger would be told a driver
+    was assigned and stand at the station.
+    """
+    _clear(client, rider)
+    first = _ask(client, rider, journey, 30_000)
+    offer = client.post(
+        f"/api/v1/driver/ride-requests/{first['id']}/offer",
+        json={"amount_minor": 30_000}, headers=driver_a,
+    ).json()["data"]
+    client.post(f"/api/v1/fare-offers/{offer['id']}/accept", headers=rider)
+
+    # He is now carrying somebody. A second request must not reach him.
+    second_rider = auth(sign_in(client, "+93700000108"))
+    _clear(client, second_rider)
+    second = _ask(client, second_rider, journey, 30_000)
+    refused = client.post(
+        f"/api/v1/driver/ride-requests/{second['id']}/offer",
+        json={"amount_minor": 30_000}, headers=driver_a,
+    )
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["error"]["code"] == "DRIVER_ALREADY_ON_TRIP"
+    _clear(client, second_rider)
+
+
+def test_a_journey_velro_has_not_modelled_can_still_be_agreed(
+    client: TestClient, rider: dict, driver_a: dict
+) -> None:
+    """A negotiated ride does not need a route, and now the schema agrees.
+
+    RouteRepository.find_for has always said in its own docstring that "a
+    negotiated ride does not need one -- two people agreed to make the journey
+    whether or not VELRO has modelled it -- so this returns None ... and the
+    trip simply carries no route", and AcceptOffer wrote route_id=None on that
+    basis. trips.route_id was NOT NULL, so the database refused: an
+    IntegrityError, a 500, and a passenger tapping "take this car" getting a
+    server error she could repeat for ever. On production 20 of the 90
+    station-to-destination pairs had no active route -- better than a fifth of
+    every journey the valley can ask for.
+
+    This test picks a pair deliberately: the destination NOT offered for the
+    station, which is exactly the pair no route was generated for.
+    """
+    districts = client.get("/api/v1/geo/districts", headers=rider).json()["data"]
+    unrouted = None
+    for district in districts:
+        villages = client.get(
+            f"/api/v1/geo/districts/{district['id']}/villages", headers=rider
+        ).json()["data"]
+        for village in villages:
+            stations = client.get(
+                f"/api/v1/geo/villages/{village['id']}/stations", headers=rider
+            ).json()["data"]
+            for station in stations:
+                offered = {
+                    d["id"] for d in client.get(
+                        f"/api/v1/geo/stations/{station['id']}/destinations",
+                        headers=rider,
+                    ).json()["data"]
+                }
+                everywhere = client.get(
+                    "/api/v1/geo/snapshot", headers=rider
+                ).json()["data"]["destinations"]
+                for d in everywhere:
+                    if d["id"] not in offered:
+                        unrouted = {"station_id": station["id"], "destination_id": d["id"]}
+                        break
+                if unrouted:
+                    break
+            if unrouted:
+                break
+        if unrouted:
+            break
+    if unrouted is None:
+        pytest.skip("the seed routes every station to every destination")
+
+    _clear(client, rider)
+    asked = _ask(client, rider, unrouted, minor=30_000)
+    offer = client.post(
+        f"/api/v1/driver/ride-requests/{asked['id']}/offer",
+        json={"amount_minor": 30_000}, headers=driver_a,
+    ).json()["data"]
+    taken = client.post(f"/api/v1/fare-offers/{offer['id']}/accept", headers=rider)
+    assert taken.status_code == 200, (
+        f"an unmodelled journey must still be agreeable, got {taken.status_code}: "
+        f"{taken.text[:300]}"
+    )
+    assert taken.json()["data"]["trip_number"].startswith("VLR-")
+
+
+def test_a_round_trip_stays_a_round_trip_after_it_is_agreed(
+    client: TestClient, rider: dict, driver_a: dict, journey: dict
+) -> None:
+    """The return has to survive acceptance.
+
+    It survived the whole negotiation -- asked for, priced, bid on, agreed,
+    charged -- and then ceased to exist at the moment the trip was created.
+    The trip carried one departure, the driver's assignment showed one leg,
+    and the passenger's booking showed one date, for a journey she had paid
+    for twice. The only row that still knew was the closed ride_request
+    nobody reads again.
+    """
+    _clear(client, rider)
+    back = _tomorrow(14)
+    asked = _ask(
+        client, rider, journey,
+        minor=30_000, return_minor=25_000, return_for=back,
+    )
+    offer = client.post(
+        f"/api/v1/driver/ride-requests/{asked['id']}/offer",
+        json={"amount_minor": 30_000, "return_amount_minor": 25_000},
+        headers=driver_a,
+    ).json()["data"]
+    result = client.post(
+        f"/api/v1/fare-offers/{offer['id']}/accept", headers=rider
+    ).json()["data"]
+
+    booking = client.get(
+        f"/api/v1/bookings/{result['booking_id']}", headers=rider
+    ).json()["data"]
+    assert booking["return_for"] is not None, (
+        "the booking must say when the car comes back, because she paid for it"
+    )
+    assert booking["return_for"].startswith(back[:10])
+
+
+def test_a_one_way_booking_carries_no_return_date(
+    client: TestClient, rider: dict, driver_a: dict, journey: dict
+) -> None:
+    _clear(client, rider)
+    asked = _ask(client, rider, journey, minor=30_000)
+    offer = client.post(
+        f"/api/v1/driver/ride-requests/{asked['id']}/offer",
+        json={"amount_minor": 30_000}, headers=driver_a,
+    ).json()["data"]
+    result = client.post(
+        f"/api/v1/fare-offers/{offer['id']}/accept", headers=rider
+    ).json()["data"]
+    booking = client.get(
+        f"/api/v1/bookings/{result['booking_id']}", headers=rider
+    ).json()["data"]
+    assert booking["return_for"] is None
 
 
 def test_a_driver_sees_both_legs_in_his_own_offers(

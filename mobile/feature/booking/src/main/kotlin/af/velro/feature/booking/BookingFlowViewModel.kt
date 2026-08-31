@@ -98,6 +98,12 @@ data class BookingFlowUiState(
      */
     val departureDay: Int? = null,
     val departureHour: Int = DEFAULT_DEPARTURE_HOUR,
+    /**
+     * The hour it is in Ghorband, held on the state so the hour rules can be
+     * tested at six in the evening without waiting until six in the evening.
+     * Refreshed whenever the flow reaches the ask step.
+     */
+    val nowHour: Int = LocalTime.now(Calendars.KABUL).hour,
 
     /**
      * Days after the outbound to come back, or null for one way.
@@ -177,6 +183,30 @@ data class BookingFlowUiState(
     }
 
     /**
+     * The same state with both chosen hours inside the hours actually offered.
+     *
+     * The day chips carry the existing hour through, and the hours on offer
+     * change with the day -- so at six in the evening, tapping "today" left the
+     * six-o'clock default selected while the row showed 19:00 and 20:00. No
+     * chip appeared chosen, and "ask for a car" sent this morning: refused,
+     * every time, with a message about a time in the past that the passenger
+     * never picked.
+     *
+     * The return has the same shape: a same-day return must leave after the
+     * outbound, so moving the outbound to 19:00 leaves a 14:00 return behind
+     * it, which the server refuses for a different reason.
+     */
+    fun withHoursInRange(): BookingFlowUiState {
+        val out = departureHours
+        val moved =
+            if (out.isEmpty() || departureHour in out) this
+            else copy(departureHour = out.first())
+        val back = moved.returnHours
+        return if (back.isEmpty() || moved.returnHour in back) moved
+        else moved.copy(returnHour = back.first())
+    }
+
+    /**
      * The hours worth offering for the return leg.
      *
      * A same-day return must leave after the outbound does, so those hours
@@ -208,7 +238,7 @@ data class BookingFlowUiState(
         get() {
             val first =
                 if (departureDay == 0)
-                    maxOf(EARLIEST_DEPARTURE_HOUR, LocalTime.now(Calendars.KABUL).hour + 1)
+                    maxOf(EARLIEST_DEPARTURE_HOUR, nowHour + 1)
                 else EARLIEST_DEPARTURE_HOUR
             return (first..LATEST_DEPARTURE_HOUR).toList()
         }
@@ -218,7 +248,12 @@ data class BookingFlowUiState(
         // way journey: sending it would put a request on the board that no
         // driver can answer, because the server requires both legs or neither.
         get() = canSearch && fareMinor != null && !isSubmitting &&
-            (returnAfterDays == null || returnFareMinor != null)
+            (returnAfterDays == null || returnFareMinor != null) &&
+            // A day with no hours left on it -- "today", once the last
+            // departure has gone -- cannot be asked for. The picker already
+            // says so; this is what stops the button sending it anyway.
+            (departureDay == null || departureHours.isNotEmpty()) &&
+            (returnAfterDays == null || returnHours.isNotEmpty())
 }
 
 sealed interface BookingEvent {
@@ -271,11 +306,16 @@ class BookingFlowViewModel @Inject constructor(
                 it.copy(expandedGroupId = if (it.expandedGroupId == event.groupId) null else event.groupId)
             }
             is BookingEvent.DestinationChosen -> _state.update {
+                // The hour is re-read here rather than at construction: the
+                // flow can sit on the destination list while the evening turns
+                // over, and the hours offered on the next screen are computed
+                // from it.
                 it.copy(
                     selectedDestination = event.destination,
                     step = BookingFlowUiState.Step.ASK,
+                    nowHour = LocalTime.now(Calendars.KABUL).hour,
                     errorCode = null,
-                )
+                ).withHoursInRange()
             }
             is BookingEvent.SeatCountChanged -> _state.update {
                 it.copy(seatCount = event.count.coerceIn(1, 4))

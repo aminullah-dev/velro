@@ -851,7 +851,17 @@ private fun VerifyPassenger(state: DriverHomeUiState, onEvent: (DriverHomeEvent)
             Spacer(Modifier.height(Spacing.md))
             OutlinedTextField(
                 value = state.verifyingCode,
-                onValueChange = { onEvent(DriverHomeEvent.VerifyCodeChanged(it.uppercase())) },
+                // Folded to Latin digits, like every other numeric field in
+                // both apps. This was the only one that did not, and it is the
+                // one that decides whether a passenger gets in the car: the
+                // code alphabet is 23456789ABC..., so 68% of codes contain a
+                // digit, and a driver on a Persian or Pashto keyboard types
+                // U+06F2 for "2". The server compares with upper(), which does
+                // not map Eastern digits, so his answer could never equal her
+                // code however carefully he read it off her screen.
+                onValueChange = {
+                    onEvent(DriverHomeEvent.VerifyCodeChanged(Numerals.latin(it).uppercase()))
+                },
                 singleLine = true,
                 // The code is alphanumeric and read aloud or shown on a screen;
                 // upper case avoids the driver hunting for the shift key.

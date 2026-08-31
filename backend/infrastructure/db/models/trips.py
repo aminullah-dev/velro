@@ -32,8 +32,11 @@ class TripRow(Auditable, Base):
     __tablename__ = "trips"
 
     number: Mapped[str] = mapped_column(String(24), nullable=False)   # VLR-2026-000001
-    route_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("routes.id", ondelete="RESTRICT"), nullable=False, index=True
+    # Nullable, because a negotiated ride is two people agreeing to travel
+    # whether or not VELRO has modelled the route between them. A scheduled
+    # trip always has one, from its schedule.
+    route_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("routes.id", ondelete="RESTRICT"), index=True
     )
     schedule_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("route_schedules.id", ondelete="RESTRICT"), index=True
@@ -43,6 +46,8 @@ class TripRow(Auditable, Base):
     scheduled_departure_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+    # The way back, on a hire that was agreed for both legs. Null is one way.
+    return_for: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(String(24), nullable=False)
     origin_station_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("stations.id", ondelete="RESTRICT"), nullable=False, index=True

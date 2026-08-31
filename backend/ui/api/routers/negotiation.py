@@ -291,12 +291,14 @@ def offer_fare(
     offers: Annotated[object, Depends(deps.fare_offers)],
     drivers: Annotated[object, Depends(deps.drivers)],
     vehicles: Annotated[object, Depends(deps.vehicles)],
+    trips: Annotated[object, Depends(deps.trips)],
     audit: Annotated[object, Depends(deps.audit)],
     notifier: Annotated[object, Depends(deps.notifier)],
 ) -> dict:
     """Name your price. Offering exactly what was asked is agreeing to it."""
     use_case = OfferFare(
         requests=requests, offers=offers, drivers=drivers, vehicles=vehicles,
+        trips=trips,
         audit=audit, notifier=notifier, clock=deps.clock(), new_id=deps.new_id,
     )
     offer = use_case.execute(

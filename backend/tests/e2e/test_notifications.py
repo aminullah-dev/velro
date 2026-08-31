@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.e2e.conftest import auth, sign_in
+from tests.e2e.conftest import auth, road_ready_driver, sign_in
 
 
 @pytest.fixture(scope="module")
@@ -18,18 +18,72 @@ def rider(client: TestClient) -> dict:
     return auth(sign_in(client, "+93700000120"))
 
 
-@pytest.fixture(scope="module")
-def hauler(client: TestClient) -> dict:
-    session = auth(sign_in(client, "+93700000121"))
-    client.post("/api/v1/driver/register", json={}, headers=session)
+def _working_driver(client: TestClient, phone: str) -> dict:
+    """A driver who could actually turn up: approved, with an active vehicle.
+
+    These fixtures used to sign in a fresh number and POST /driver/register,
+    which leaves a driver PENDING with no vehicle. Every test passed, because
+    the negotiated path had no gate at all -- somebody who had merely asked to
+    become a driver could bid on a real journey and win it. Both paths check
+    now, so the fixtures have to be drivers.
+    """
+    session = auth(sign_in(client, phone))
+    client.post(
+        "/api/v1/driver/status", json={"availability": "ONLINE"}, headers=session
+    )
     return session
 
 
 @pytest.fixture(scope="module")
-def rival(client: TestClient) -> dict:
-    session = auth(sign_in(client, "+93700000122"))
-    client.post("/api/v1/driver/register", json={}, headers=session)
+def hauler(client: TestClient, admin_session: dict) -> dict:
+    session, _ = road_ready_driver(
+        client, admin_session, "+93700000121", "NTF-1121"
+    )
+    client.post(
+        "/api/v1/driver/status", json={"availability": "ONLINE"}, headers=session
+    )
     return session
+
+
+@pytest.fixture(scope="module")
+def rival(client: TestClient, admin_session: dict) -> dict:
+    session, _ = road_ready_driver(
+        client, admin_session, "+93700000122", "NTF-1122"
+    )
+    client.post(
+        "/api/v1/driver/status", json={"availability": "ONLINE"}, headers=session
+    )
+    return session
+
+
+def _release(client, *drivers) -> None:
+    """Put every driver back to idle and online."""
+    for driver in drivers:
+        trip = client.get("/api/v1/driver/trips/current", headers=driver)
+        data = trip.json().get("data") if trip.status_code == 200 else None
+        if data and data.get("trip"):
+            client.post(
+                f"/api/v1/driver/trips/{data['trip']['id']}/advance",
+                headers=driver, json={"target": "CANCELLED"},
+            )
+        client.post(
+            "/api/v1/driver/status", json={"availability": "ONLINE"}, headers=driver
+        )
+
+
+@pytest.fixture(autouse=True)
+def _idle_drivers(client: TestClient, hauler: dict, rival: dict):
+    """Both drivers idle before and after every test in this module.
+
+    A driver may hold only one live trip since the negotiated path started
+    checking it, so a test that accepts an offer leaves its driver carrying a
+    passenger. Cleaning up afterwards as well as before matters because these
+    are the seeded drivers: leaving one mid-trip at the end of this module
+    breaks the vertical-slice test that signs in as the same man.
+    """
+    _release(client, hauler, rival)
+    yield
+    _release(client, hauler, rival)
 
 
 @pytest.fixture(scope="module")

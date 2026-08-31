@@ -71,6 +71,9 @@ class BookingOut(Schema):
     fare_breakdown: list[FareComponentOut] = Field(default_factory=list)
     payment_method: str
     scheduled_departure_at: datetime | None = None
+    # The way back, on a hire agreed for both legs. The passenger paid for it,
+    # so her own booking has to say when it is.
+    return_for: datetime | None = None
     # Present only once a driver is assigned, which is most of what a passenger
     # wants from a receipt: who drove, and in what.
     driver_name: str | None = None

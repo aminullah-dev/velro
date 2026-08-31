@@ -13,6 +13,7 @@ from domain.enums import (
     TripStatus,
 )
 from domain.lifecycles import BOOKABLE_TRIP_STATUSES
+from domain.text import normalise_digits
 from infrastructure.db.models.trips import (
     BookingRow,
     BookingSeatRow,
@@ -238,7 +239,13 @@ class BookingRepository(SqlRepository[BookingRow]):
         """
         stmt = self._base().where(
             BookingRow.trip_id == trip_id,
-            func.upper(BookingRow.verification_code) == code.strip().upper(),
+            # Eastern digits folded before comparing. Python's upper() maps
+            # no digits at all, so a driver typing ۲ on a Persian keyboard
+            # could never match a code containing 2 -- and 68% of codes
+            # contain a digit. Folded here as well as in the app because the
+            # handsets already in Ghorband carry the build that did not.
+            func.upper(BookingRow.verification_code)
+            == normalise_digits(code).strip().upper(),
             BookingRow.status.in_(_ACTIVE_BOOKING_STATUSES),
         )
         return self.session.scalars(stmt).one_or_none()

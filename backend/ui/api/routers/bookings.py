@@ -322,6 +322,7 @@ def _booking_out(
         ],
         payment_method=row.payment_method,
         scheduled_departure_at=trip.scheduled_departure_at if trip else None,
+        return_for=trip.return_for if trip else None,
         driver_name=driver_name,
         # Only while the journey is still ahead of her. BOOKING_LIFECYCLE knows
         # which those are, so this cannot drift from the definition of "over".
