@@ -141,6 +141,19 @@ fun OffersScreen(
             ) {
                 items(offers, key = { it.id }) { offer ->
                     OfferCard(
+                        // This list changes under the passenger's finger.
+                        //
+                        // Drivers bid while the screen is open, so a reply can
+                        // arrive in the moment somebody is reaching for
+                        // "accept" -- and without animation the row they aimed
+                        // at is simply somewhere else by the time the tap
+                        // lands. That is not a polish problem: it is agreeing
+                        // a fare with the wrong driver.
+                        //
+                        // The insert is animated so the shift is something the
+                        // eye can follow, and `key` above is what lets Compose
+                        // tell an inserted offer from a moved one.
+                        modifier = Modifier.animateItem(),
                         offer = offer,
                         // The whole journey, not the outbound leg: on a
                         // round trip `offeredFare` is half the ask, and
@@ -231,12 +244,13 @@ private fun OfferCard(
     accepting: Boolean,
     enabled: Boolean,
     onAccept: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
     val agrees = offer.agreesWith(asking)
     val difference = offer.differenceFrom(asking)
 
-    VelroCard {
+    VelroCard(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Row(
                 Modifier.fillMaxWidth(),

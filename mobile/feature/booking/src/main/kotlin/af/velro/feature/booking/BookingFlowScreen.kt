@@ -1,5 +1,18 @@
 package af.velro.feature.booking
 
+import af.velro.core.ui.component.ChevronForward
+import af.velro.core.ui.component.StepProgress
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedContent
+import af.velro.core.ui.theme.Motion
+import af.velro.core.ui.theme.LocalAnimationsEnabled
 import af.velro.core.i18n.MoneyFormatter
 import af.velro.domain.DEFAULT_CURRENCY
 import af.velro.domain.MoneyValue
@@ -15,6 +28,7 @@ import af.velro.core.ui.component.SeatAvailability
 import af.velro.core.ui.component.StationRow
 import af.velro.core.ui.component.TripOptionCard
 import af.velro.core.ui.component.VelroCard
+import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.Destination
@@ -44,6 +58,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -90,39 +105,32 @@ fun BookingFlowScreen(
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
+    val animate = LocalAnimationsEnabled.current
 
     LaunchedEffect(state.askedRequestId) {
         if (state.askedRequestId != null) onAsked()
     }
 
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text(strings[state.step.titleKey()]) },
-                navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            if (state.step == BookingFlowUiState.Step.ORIGIN_DISTRICT) onExit()
-                            else onEvent(BookingEvent.Back)
-                        }
-                    ) {
-                        // AutoMirrored: the arrow points the other way in RTL.
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = strings["common.action.back"],
-                        )
-                    }
-                },
-            )
+    // The frame, not a Scaffold of its own.
+    //
+    // This was the only screen in either app that built its own, and BackHandler
+    // lives inside VelroScreen -- so this seven-step form was the one place the
+    // system back gesture was not intercepted. The arrow stepped back one step;
+    // the gesture right beside it left the whole flow, throwing away the
+    // district, village, station, destination, fare, day and hour a passenger
+    // had just chosen. On an Android phone those two are the same intention.
+    VelroScreen(
+        title = strings[state.step.titleKey()],
+        onBack = {
+            if (state.step == BookingFlowUiState.Step.ORIGIN_DISTRICT) onExit()
+            else onEvent(BookingEvent.Back)
         },
-    ) { padding ->
-        Column(
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(horizontal = Spacing.gutter)
-        ) {
+        // The steps are lazy lists that scroll themselves; the ask step scrolls
+        // its own form.
+        scrollable = false,
+        modifier = modifier,
+    ) {
+        Column(Modifier.fillMaxSize()) {
             when {
                 state.isLoading -> LoadingState()
                 state.errorCode != null && state.isEmptyForStep() ->
@@ -135,7 +143,58 @@ fun BookingFlowScreen(
                     if (state.errorCode != null) {
                         InlineError(state.errorCode!!, context = state.errorContext)
                     }
-                    when (state.step) {
+                    // CONFIRMED is not one of the steps counted: it is the
+                    // receipt, not another thing to fill in, and a bar that
+                    // never reaches its end on the screen that says the booking
+                    // succeeded would be the one place it actively misleads.
+                    if (state.step != BookingFlowUiState.Step.CONFIRMED) {
+                        val total = BookingFlowUiState.Step.CONFIRMED.ordinal
+                        StepProgress(
+                            current = state.step.ordinal,
+                            total = total,
+                            label = strings[
+                                "common.state.step",
+                                "current" to state.step.ordinal + 1,
+                                "total" to total,
+                            ],
+                        )
+                    }
+                    // The seven steps used to be a bare `when`, so the most
+                    // travelled path in the product cut seven times between
+                    // choosing a district and seeing a fare -- no direction, no
+                    // sense of depth, nothing telling a passenger whether they
+                    // had gone forward or back.
+                    //
+                    // Direction comes from the step's own ordinal rather than a
+                    // remembered "last step": going back from ASK to DESTINATION
+                    // is backwards whatever route was taken to get there, and a
+                    // flag would have to be reset on every jump that skips a step.
+                    AnimatedContent(
+                        targetState = state.step,
+                        transitionSpec = {
+                            val forward = targetState.ordinal > initialState.ordinal
+                            if (!animate) {
+                                EnterTransition.None togetherWith ExitTransition.None
+                            } else {
+                                val dir =
+                                    if (forward) AnimatedContentTransitionScope.SlideDirection.Start
+                                    else AnimatedContentTransitionScope.SlideDirection.End
+                                val offsets = tween<IntOffset>(Motion.WITHIN_MS, easing = Motion.easing)
+                                val alphas = tween<Float>(Motion.WITHIN_MS, easing = Motion.easing)
+                                // Slides an eighth of the width, not the whole
+                                // of it: this is one panel of a form replacing
+                                // another inside a frame that is not moving, and
+                                // a full-width slide would claim the whole screen
+                                // had changed.
+                                (slideIntoContainer(dir, offsets) { it / 8 } + fadeIn(alphas))
+                                    .togetherWith(
+                                        slideOutOfContainer(dir, offsets) { it / 8 } + fadeOut(alphas),
+                                    )
+                            }
+                        },
+                        label = "booking-step",
+                    ) { step ->
+                    when (step) {
                         BookingFlowUiState.Step.ORIGIN_DISTRICT -> DistrictList(state, onEvent)
                         BookingFlowUiState.Step.ORIGIN_VILLAGE -> VillageList(state, onEvent)
                         BookingFlowUiState.Step.ORIGIN_STATION -> StationList(state, onEvent)
@@ -144,6 +203,7 @@ fun BookingFlowScreen(
                         BookingFlowUiState.Step.RESULTS -> ResultList(state, onEvent)
                         BookingFlowUiState.Step.CONFIRMED ->
                             Confirmation(state, onFinished)
+                    }
                     }
                 }
             }
@@ -176,15 +236,18 @@ private fun DistrictList(state: BookingFlowUiState, onEvent: (BookingEvent) -> U
     LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         items(state.districts, key = { it.id }) { district ->
             VelroCard(onClick = { onEvent(BookingEvent.DistrictChosen(district)) }) {
-                Column {
-                    Text(district.name, style = MaterialTheme.typography.bodyLarge)
-                    if (district.alternativeName != null) {
-                        Text(
-                            district.alternativeName!!,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(district.name, style = MaterialTheme.typography.bodyLarge)
+                        if (district.alternativeName != null) {
+                            Text(
+                                district.alternativeName!!,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
+                    ChevronForward()
                 }
             }
         }
@@ -227,7 +290,14 @@ private fun VillageList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Un
         LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             items(shown, key = { it.id }) { village ->
                 VelroCard(onClick = { onEvent(BookingEvent.VillageChosen(village)) }) {
-                    Text(village.name, style = MaterialTheme.typography.bodyLarge)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            village.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                        ChevronForward()
+                    }
                 }
             }
         }
@@ -239,6 +309,22 @@ private const val FILTER_THRESHOLD = 12
 
 @Composable
 private fun StationList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {
+    // The guard its two neighbours already had.
+    //
+    // Stations come from the Room cache, so a village whose stations were
+    // never downloaded -- a phone that has not had signal since install, which
+    // in Ghorband is a real morning -- rendered a completely blank screen:
+    // no list, no message, no way forward, and a back arrow the passenger has
+    // no reason to think is the answer.
+    if (state.stations.isEmpty()) {
+        EmptyState(
+            messageKey = "empty.stations",
+            actionKey = "empty.action.search_again",
+            onAction = { onEvent(BookingEvent.Retry) },
+            icon = Icons.Filled.LocationOn,
+        )
+        return
+    }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         items(state.stations, key = { it.id }) { station ->
             StationRow(station = station, onClick = { onEvent(BookingEvent.StationChosen(station)) })

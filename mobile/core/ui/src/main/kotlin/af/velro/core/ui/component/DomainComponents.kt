@@ -166,6 +166,7 @@ fun StationRow(
                     )
                 }
             }
+            ChevronForward()
         }
     }
 }

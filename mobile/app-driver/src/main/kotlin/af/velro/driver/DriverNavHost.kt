@@ -1,5 +1,7 @@
 package af.velro.driver
 
+import af.velro.core.ui.theme.NavMotion
+import af.velro.core.ui.theme.LocalAnimationsEnabled
 import af.velro.feature.auth.SignInRoute
 import af.velro.feature.driver.DocumentsRoute
 import af.velro.feature.safety.ReportsRoute
@@ -43,12 +45,21 @@ fun DriverNavHost(
         }
     }
 
+    // One motion spec for both apps, and honoured only when the person has
+    // left system animation on -- see LocalAnimationsEnabled.
+    val animate = LocalAnimationsEnabled.current
+
     NavHost(
         navController = navController,
         startDestination = if (isSignedIn) Routes.HOME else Routes.SIGN_IN,
+        enterTransition = { NavMotion.enter(this, animate) },
+        exitTransition = { NavMotion.exit(this, animate) },
+        popEnterTransition = { NavMotion.popEnter(this, animate) },
+        popExitTransition = { NavMotion.popExit(this, animate) },
     ) {
         composable(Routes.SIGN_IN) {
             SignInRoute(
+                taglineKey = "app.tagline.driver",
                 onSignedIn = { _, _ ->
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.SIGN_IN) { inclusive = true }

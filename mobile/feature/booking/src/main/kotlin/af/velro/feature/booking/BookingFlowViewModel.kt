@@ -143,7 +143,17 @@ data class BookingFlowUiState(
      * cash, and two numbers on a screen are not the number in the hand.
      */
     val totalFareMinor: Long?
-        get() = fareMinor?.let { out -> out + (returnFareMinor ?: 0L) }
+        // Null until every chosen leg has a price on it.
+        //
+        // An unpriced return counted as zero, so the moment the outbound fare
+        // was typed the screen said "Total 300 AFN" for a round trip the
+        // passenger had not finished pricing -- a number she might well send,
+        // and the one figure on the screen she is actually deciding about.
+        get() {
+            val out = fareMinor ?: return null
+            if (returnAfterDays != null && returnFareMinor == null) return null
+            return out + (returnFareMinor ?: 0L)
+        }
 
     /**
      * The chosen day and hour as an instant, or null for "now".
@@ -543,10 +553,16 @@ class BookingFlowViewModel @Inject constructor(
                 BookingFlowUiState.Step.ASK ->
                     // Back clears the price: a number typed for one destination
                     // must not silently become the offer for another.
+                    //
+                    // The return was left behind when it was added -- so a
+                    // fare typed for the way back from Kabul survived onto a
+                    // journey to Charikar, and so did the day it was for.
                     current.copy(
                         step = BookingFlowUiState.Step.DESTINATION,
                         offeredFare = "",
                         note = "",
+                        returnFare = "",
+                        returnAfterDays = null,
                     )
                 BookingFlowUiState.Step.RESULTS ->
                     current.copy(step = BookingFlowUiState.Step.ASK)
@@ -556,10 +572,19 @@ class BookingFlowViewModel @Inject constructor(
     }
 
     private fun retry() {
-        when (_state.value.step) {
+        val current = _state.value
+        when (current.step) {
             BookingFlowUiState.Step.ORIGIN_DISTRICT -> loadDistricts()
+            // The two steps that had no retry at all. Both read from the Room
+            // cache, so on a phone that has never had signal they are exactly
+            // the steps most likely to be empty -- and the only ones where a
+            // passenger could reach a dead end with nothing to press.
+            BookingFlowUiState.Step.ORIGIN_VILLAGE ->
+                current.selectedDistrict?.let(::chooseDistrict)
+            BookingFlowUiState.Step.ORIGIN_STATION ->
+                current.selectedVillage?.let(::chooseVillage)
             BookingFlowUiState.Step.DESTINATION ->
-                _state.value.selectedStation?.let(::chooseStation)
+                current.selectedStation?.let(::chooseStation)
             BookingFlowUiState.Step.RESULTS -> search()
             else -> Unit
         }

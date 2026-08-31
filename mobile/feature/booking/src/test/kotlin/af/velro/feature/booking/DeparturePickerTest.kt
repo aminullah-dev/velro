@@ -103,6 +103,28 @@ class DeparturePickerTest {
     }
 
     @Test
+    fun `a total is not shown until every chosen leg is priced`() {
+        // An unpriced return counted as zero, so the moment the outbound fare
+        // was typed the screen read "Total 300" for a round trip the passenger
+        // had not finished pricing -- the one figure she is actually deciding
+        // about, and one she might well send.
+        val half = ask(hour = 8)
+            .copy(departureDay = 1, returnAfterDays = 1, returnFare = "")
+        assertEquals(null, half.totalFareMinor)
+        assertFalse("an unfinished round trip must not be askable", half.canAsk)
+
+        val whole = half.copy(returnFare = "250")
+        assertEquals(55_000L, whole.totalFareMinor)
+        assertTrue(whole.canAsk)
+    }
+
+    @Test
+    fun `a one-way journey still totals its single leg`() {
+        val one = ask(hour = 8).copy(departureDay = 1)
+        assertEquals(30_000L, one.totalFareMinor)
+    }
+
+    @Test
     fun `asking for a car right now is unaffected by any of this`() {
         // departureDay null means "now": no hours, no clamping, and the
         // request carries no departure at all.

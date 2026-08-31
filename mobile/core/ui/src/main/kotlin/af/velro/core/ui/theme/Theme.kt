@@ -210,6 +210,11 @@ fun VelroTheme(
         LocalVelroStrings provides strings,
         LocalVelroLocale provides locale,
         LocalVelroDarkTheme provides darkTheme,
+        // Read once, at the top, so no screen has to ask the system itself and
+        // no screen can forget to. A person who has turned animation off in
+        // Android settings -- common on the handsets this is built for, and
+        // set silently by some vendor battery savers -- gets none from us.
+        LocalAnimationsEnabled provides systemAnimationsEnabled(),
     ) {
         MaterialTheme(
             colorScheme = if (darkTheme) DarkScheme else LightScheme,
