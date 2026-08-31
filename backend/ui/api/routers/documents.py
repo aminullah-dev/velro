@@ -25,7 +25,7 @@ from application.use_cases.driver_documents import (
     UploadDriverDocument,
 )
 from application.use_cases.record_name import RecordName, RecordNameCommand
-from domain.enums import ActorRole, DocumentStatus
+from domain.enums import BookingStatus, ActorRole, DocumentStatus
 from shared import error_codes
 from shared.errors import NotFoundError
 from ui.api import deps
@@ -228,6 +228,82 @@ def my_document_file(
         # so the endpoint cannot be used to discover document ids.
         raise NotFoundError(error_codes.DOCUMENT_NOT_FOUND, id=document_id)
     return _file_response(row)
+
+
+@router.get("/drivers/{driver_id}/photo")
+def driver_photo(
+    driver_id: str,
+    actor: Annotated[deps.Actor, Depends(deps.current_actor)],
+    documents: Annotated[object, Depends(deps.driver_documents)],
+    ride_requests: Annotated[object, Depends(deps.ride_requests)],
+    fare_offers: Annotated[object, Depends(deps.fare_offers)],
+    bookings: Annotated[object, Depends(deps.bookings)],
+    trips: Annotated[object, Depends(deps.trips)],
+) -> Response:
+    """The driver's face, for the passenger who is about to get into his car.
+
+    A passenger choosing between offers sees a name, a rating and a trip count,
+    and no picture -- while the driver has already sent a photograph of himself
+    and had it checked by the office. In a market where somebody decides
+    whether to get into a stranger's car on a road with no other traffic, that
+    photograph is the most useful thing the product is holding back.
+
+    NOT PUBLIC. It is an identity document, and the rule is a live reason to
+    see it rather than a role:
+
+      * this driver has an open offer on the passenger's own open request, or
+      * the passenger holds a booking on a trip this driver is driving.
+
+    Both are relationships the passenger is already in. Neither can be reached
+    by guessing an id: a stranger who asks about a driver they have no
+    connection to is answered exactly as though the driver did not exist, so
+    the endpoint cannot be walked to enumerate anybody.
+
+    Only the verified selfie is served, never the licence or the tazkira. Those
+    carry a number and an address; this carries a face, which is the part the
+    passenger needs and the only part they are owed.
+    """
+    if not _passenger_may_see(
+        actor.user_id, driver_id,
+        ride_requests=ride_requests, fare_offers=fare_offers,
+        bookings=bookings, trips=trips,
+    ):
+        raise NotFoundError(error_codes.DOCUMENT_NOT_FOUND, id=driver_id)
+
+    row = documents.current_for(driver_id, SELFIE_TYPE)
+    if row is None or str(row.status) != DocumentStatus.VERIFIED.value:
+        # An unverified photograph is not shown to anybody. The office has not
+        # yet said this is the man in the car.
+        raise NotFoundError(error_codes.DOCUMENT_NOT_FOUND, id=driver_id)
+    return _file_response(row)
+
+
+def _passenger_may_see(
+    user_id: str, driver_id: str, *, ride_requests, fare_offers, bookings, trips
+) -> bool:
+    """A live connection between this passenger and this driver."""
+    request = ride_requests.find_open_for_passenger(user_id)
+    if request is not None and fare_offers.open_for(request.id, driver_id) is not None:
+        return True
+
+    # Or he is driving a journey they have a seat on. Active bookings only: a
+    # trip finished last month is not a reason to keep reading his face.
+    for booking in bookings.list_for_passenger(user_id, limit=20, statuses=_LIVE_BOOKINGS):
+        trip = trips.find(booking.trip_id) if booking.trip_id else None
+        if trip is not None and trip.driver_id == driver_id:
+            return True
+    return False
+
+
+#: The states in which a passenger is still travelling with this driver.
+_LIVE_BOOKINGS = [
+    BookingStatus.CONFIRMED.value,
+    BookingStatus.DRIVER_ASSIGNED.value,
+    BookingStatus.READY.value,
+    BookingStatus.ONBOARD.value,
+]
+
+SELFIE_TYPE = "SELFIE"
 
 
 # -- the reviewer's side -------------------------------------------------

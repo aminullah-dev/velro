@@ -292,6 +292,17 @@ interface VelroApi {
      * through the same authenticated client as everything else, so the token
      * handling and refresh are not reimplemented for one screen.
      */
+    /**
+     * A driver's face, for a passenger who is about to ride with him.
+     *
+     * Refused with a 404 unless the caller has a live connection to that
+     * driver -- an open offer on their request, or a seat on his trip. The
+     * server decides; the app just asks.
+     */
+    @GET("drivers/{id}/photo")
+    @Streaming
+    suspend fun driverPhoto(@Path("id") driverId: String): Response<ResponseBody>
+
     @GET("driver/documents/{id}/file")
     @Streaming
     suspend fun documentFile(@Path("id") id: String): Response<ResponseBody>

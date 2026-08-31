@@ -1,5 +1,6 @@
 package af.velro.feature.booking
 
+import af.velro.data.repository.DocumentRepository
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
 import af.velro.data.repository.NegotiationRepository
@@ -30,6 +31,18 @@ data class OffersUiState(
     val isCancelling: Boolean = false,
     val cancelled: Boolean = false,
     val errorCode: String? = null,
+    /**
+     * Each bidding driver's face, by driver id.
+     *
+     * Fetched after the offers and never awaited by them: a picture is what
+     * makes the choice easier, and a slow one must not delay the prices that
+     * make the choice possible. An absent entry draws a silhouette.
+     *
+     * The server refuses a driver the passenger has no live connection to, so
+     * a missing entry can also mean "not allowed" -- which looks the same on
+     * screen, and should.
+     */
+    val driverPhotos: Map<String, ByteArray> = emptyMap(),
     val errorContext: Map<String, Any?> = emptyMap(),
 )
 
@@ -46,6 +59,7 @@ private const val POLL_SECONDS = 6L
 @HiltViewModel
 class OffersViewModel @Inject constructor(
     private val negotiation: NegotiationRepository,
+    private val documents: DocumentRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(OffersUiState())
@@ -62,6 +76,30 @@ class OffersViewModel @Inject constructor(
             is OffersEvent.Accept -> accept(event.offerId)
             OffersEvent.Cancel -> cancel()
             OffersEvent.DismissError -> _state.update { it.copy(errorCode = null) }
+        }
+    }
+
+    /**
+     * The face behind each price.
+     *
+     * One request per driver, launched and not awaited, so the offers are on
+     * screen while the pictures arrive. Only drivers not already held, because
+     * this list polls every few seconds and re-fetching a face the passenger
+     * is already looking at spends her data for nothing.
+     *
+     * A refusal is indistinguishable from an absence here, deliberately: the
+     * server answers 404 both when there is no photograph and when this
+     * passenger has no business seeing one, and neither is worth a message.
+     */
+    private fun loadPhotos(request: RideRequest?) {
+        val offers = request?.liveOffers.orEmpty()
+        for (offer in offers) {
+            if (offer.driverId in _state.value.driverPhotos) continue
+            viewModelScope.launch {
+                documents.driverPhoto(offer.driverId)?.let { bytes ->
+                    _state.update { it.copy(driverPhotos = it.driverPhotos + (offer.driverId to bytes)) }
+                }
+            }
         }
     }
 
@@ -85,7 +123,9 @@ class OffersViewModel @Inject constructor(
         if (showSpinner) _state.update { it.copy(isLoading = true, errorCode = null) }
         viewModelScope.launch {
             when (val result = negotiation.myRequests()) {
-                is ApiResult.Success -> _state.update {
+                is ApiResult.Success -> {
+                    loadPhotos(result.value.firstOrNull())
+                    _state.update {
                     it.copy(
                         // The newest request is the one being waited on.
                         request = result.value.firstOrNull(),
@@ -102,6 +142,7 @@ class OffersViewModel @Inject constructor(
                         // again.
                         errorCode = if (showSpinner) null else it.errorCode,
                     )
+                    }
                 }
                 is ApiResult.Failure -> _state.update {
                     // A failed poll on a screen that already has offers is not

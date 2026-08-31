@@ -56,6 +56,22 @@ class DocumentRepository @Inject constructor(
             ApiResult.Failure(ApiException(ApiException.UNKNOWN, httpStatus = 0))
         }
 
+    /**
+     * A driver's photograph, if this passenger is allowed it.
+     *
+     * A refusal is not an error worth showing: the picture is an enrichment of
+     * the offer card, and a card without a face is still a usable card. The
+     * caller treats null as "no photo".
+     */
+    suspend fun driverPhoto(driverId: String): ByteArray? =
+        try {
+            val response = api.driverPhoto(driverId)
+            val body = response.body()
+            if (response.isSuccessful && body != null) body.use { it.bytes() } else null
+        } catch (e: Exception) {
+            null
+        }
+
     suspend fun checklist(): ApiResult<DocumentChecklist> =
         mapper.call { api.documents() }.map { dto ->
             DocumentChecklist(

@@ -1,5 +1,6 @@
 package af.velro.feature.booking
 
+import af.velro.core.ui.component.PhotoAvatar
 import af.velro.core.i18n.MoneyFormatter
 import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.ErrorState
@@ -155,6 +156,7 @@ fun OffersScreen(
                         // tell an inserted offer from a moved one.
                         modifier = Modifier.animateItem(),
                         offer = offer,
+                        photo = state.driverPhotos[offer.driverId],
                         // The whole journey, not the outbound leg: on a
                         // round trip `offeredFare` is half the ask, and
                         // every reply would look expensive against it.
@@ -240,6 +242,8 @@ private fun Waiting() {
 @Composable
 private fun OfferCard(
     offer: FareOffer,
+    /** Null while it loads, or when the server declined to show it. */
+    photo: ByteArray?,
     asking: MoneyValue,
     accepting: Boolean,
     enabled: Boolean,
@@ -257,6 +261,15 @@ private fun OfferCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top,
             ) {
+                // The face, before the name and the price.
+                //
+                // A passenger choosing between bids read a name, a number of
+                // stars and a fare. The driver had already sent a photograph
+                // and had it verified by the office, and she -- the person
+                // about to get into his car on a road with nobody else on it
+                // -- was the one person never shown it.
+                PhotoAvatar(bytes = photo, size = Sizing.avatar)
+                Spacer(Modifier.size(Spacing.md))
                 Column(Modifier.weight(1f)) {
                     Text(
                         offer.driverName ?: strings["common.value.no_name"],
