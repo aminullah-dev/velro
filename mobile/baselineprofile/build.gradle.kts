@@ -22,6 +22,17 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 
+    // The benchmark variant is what StartupBenchmark runs in; the generator
+    // keeps its own. Kept non-minified and non-debuggable, because a
+    // debuggable build is not what anyone installs and its timings say nothing.
+    buildTypes {
+        create("benchmark") {
+            isDebuggable = false
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
+    }
+
     defaultConfig {
         // 28 is the floor for the profile tooling. The apps themselves still
         // go back to 24 -- a device below 28 simply gets no profile, which is
