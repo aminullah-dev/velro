@@ -36,6 +36,7 @@ from application.ports.services import (
 )
 from application.pricing.fixed import FareRequest
 from domain.booking import Booking
+from domain.trip import BOOKABLE_TRIP_STATUSES
 from domain.enums import ActorRole, BookingStatus, PaymentMethod, RideKind, TripStatus
 from domain.trip import Trip, TripSeat
 from shared import error_codes
@@ -142,6 +143,18 @@ class BookSeats:
         )
 
         # -- 3. the contended step ------------------------------------------
+        # The trip row first, then its seats, in that order everywhere. The
+        # bookable check in step 1 was optimistic and unlocked, so a departure
+        # committing in this window would otherwise sell a seat on a vehicle
+        # that has already left; AdvanceTrip takes the same lock, so the two
+        # serialise and the check below is true at commit, not merely at read.
+        trip_row = self._trips.lock(cmd.trip_id)
+        if trip_row is None or TripStatus(trip_row.status) not in BOOKABLE_TRIP_STATUSES:
+            raise ConflictError(
+                error_codes.TRIP_DEPARTED,
+                trip_id=cmd.trip_id,
+                status=trip_row.status if trip_row else "?",
+            )
         locked = self._seats.lock_available(cmd.trip_id, cmd.seat_count)
 
         booking_id = self._new_id()

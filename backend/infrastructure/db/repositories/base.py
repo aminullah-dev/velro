@@ -46,6 +46,21 @@ class SqlRepository(Generic[R]):
             raise NotFoundError(self.not_found_code, id=id)
         return row
 
+    def lock(self, id: str) -> R | None:
+        """The row, held FOR UPDATE until the transaction commits or rolls back.
+
+        For the writers of contended state: a status checked on an unlocked row
+        is true only at the instant of the read, and two transactions can both
+        pass the same check before either commits. Reading through this instead
+        serialises them -- the second blocks, then sees what the first wrote.
+
+        On SQLite the FOR UPDATE is dropped by the dialect; the database-wide
+        write lock stands in, which is the same stance seats.py takes.
+        """
+        return self.session.scalars(
+            self._base().where(self.model.id == id).with_for_update()
+        ).one_or_none()
+
     def find_by(self, **criteria: Any) -> R | None:
         stmt = self._base()
         for column, value in criteria.items():

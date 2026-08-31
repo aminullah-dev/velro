@@ -26,7 +26,7 @@ from domain.lifecycles import TRIP_TO_BOOKING_STATUS
 from domain.trip import Trip, TripSeat
 from shared import error_codes
 from shared.clock import Clock
-from shared.errors import ConflictError, PermissionError
+from shared.errors import NotFoundError, ConflictError, PermissionError
 from shared.ids import IdGenerator
 from shared.logging import get_logger
 from shared.money import DEFAULT_CURRENCY, Money
@@ -90,7 +90,12 @@ class AdvanceTrip:
 
     def execute(self, cmd: AdvanceTripCommand) -> AdvanceTripResult:
         now = self._clock.now()
-        row = self._trips.get(cmd.trip_id)
+        # Locked: book_seats takes this row before touching seats, so a
+        # departure and a booking can no longer both pass their checks in the
+        # same instant -- whichever runs second sees the other's write.
+        row = self._trips.lock(cmd.trip_id)
+        if row is None:
+            raise NotFoundError(self._trips.not_found_code, id=cmd.trip_id)
 
         trip = _to_trip(row, self._seats.list_for_trip(row.id))
         previous = trip.status

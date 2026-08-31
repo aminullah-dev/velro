@@ -221,7 +221,11 @@ def cancel_ride_request(
     offers: Annotated[object, Depends(deps.fare_offers)],
     audit: Annotated[object, Depends(deps.audit)],
 ) -> dict:
-    row = requests.find(request_id)
+    # Locked: the OPEN guard below closed the cancel-over-MATCHED bug, and an
+    # unlocked read reopens it as a race -- cancel and accept both pass their
+    # checks, and whichever commits second owns the status. With the lock the
+    # loser sees what the winner wrote and refuses honestly.
+    row = requests.lock(request_id)
     if row is None or row.passenger_id != actor.user_id:
         raise NotFoundError(error_codes.RIDE_REQUEST_NOT_FOUND, ride_request_id=request_id)
     now = deps.clock().now()

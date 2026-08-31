@@ -266,7 +266,10 @@ class OfferFare:
             raise NotFoundError(
                 error_codes.DRIVER_NOT_FOUND, user_id=cmd.driver_user_id
             )
-        row = self._requests.find(cmd.ride_request_id)
+        # Locked for the same reason accept locks: this path writes EXPIRED
+        # over an OPEN it may have raced, and a bid must not land on a request
+        # an accept is matching in the same instant.
+        row = self._requests.lock(cmd.ride_request_id)
         if row is None:
             raise NotFoundError(
                 error_codes.RIDE_REQUEST_NOT_FOUND, ride_request_id=cmd.ride_request_id
@@ -522,7 +525,14 @@ class AcceptOffer:
         offer_row = self._offers.find(cmd.offer_id)
         if offer_row is None:
             raise NotFoundError(error_codes.FARE_OFFER_NOT_FOUND, offer_id=cmd.offer_id)
-        request_row = self._requests.find(offer_row.ride_request_id)
+        # Locked, not merely read. The OPEN check below is the only thing
+        # standing between one request and two accepted offers, and on an
+        # unlocked row two accepts both see OPEN, both build a trip, a booking
+        # and a set of reserved seats, and the last commit owns request.trip_id
+        # -- one passenger, two drivers dispatched, one of them to nobody.
+        # There is no structural backstop (trips carry no ride_request_id), so
+        # the lock is the guarantee, and every writer of this status takes it.
+        request_row = self._requests.lock(offer_row.ride_request_id)
         if request_row is None:
             raise NotFoundError(
                 error_codes.RIDE_REQUEST_NOT_FOUND,
