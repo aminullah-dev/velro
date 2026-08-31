@@ -431,6 +431,7 @@
   "driver.documents.send": "ارسال عکس",
   "driver.documents.replace": "ارسال عکس نو",
   "driver.documents.not_sent": "فرستاده نشده",
+  "driver.documents.sent_on": "فرستاده شد {date}",
   "driver.documents.too_large": "این عکس کلان است. عکس خردتر بفرستید.",
   "error.vehicle_plate_invalid": "این نمبر پلیت درست معلوم نمی‌شود.",
   "error.vehicle_not_registered": "پیش از آنلاین شدن موتر خود را ثبت کنید.",

@@ -269,6 +269,31 @@ data class Earnings(
      * this is what they add up to.
      */
     val owed: MoneyValue get() = available + pending
+
+    /**
+     * Whether the driver is holding VELRO's money rather than the other way
+     * round.
+     *
+     * Read from the whole position, never from `available` alone. On a cash
+     * trip the fare is handed over at the vehicle, so the platform's share
+     * stays in the driver's pocket and the wallet goes negative. Opening a
+     * settlement then moves that debt out of `available` and into `pending` --
+     * so a rule written against `available` flips to "you owe nothing" at the
+     * exact moment the driver acts on the debt, while the screen behind it
+     * still shows the money. Both surfaces ask this now.
+     */
+    val owesPlatform: Boolean get() = owed.amountMinor < 0
+
+    /**
+     * The figure to headline, always positive.
+     *
+     * What he can take out, or what he is holding for us -- the label beside
+     * it says which, and the sign never reaches the screen.
+     */
+    val headlineAmount: MoneyValue
+        get() =
+            if (owesPlatform) MoneyValue(-owed.amountMinor, owed.currency)
+            else available
 }
 
 /**

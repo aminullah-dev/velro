@@ -431,6 +431,7 @@
   "driver.documents.send": "عکس ولېږئ",
   "driver.documents.replace": "نوی عکس ولېږئ",
   "driver.documents.not_sent": "نه دی لېږل شوی",
+  "driver.documents.sent_on": "ولېږل شو {date}",
   "driver.documents.too_large": "دا عکس لوی دی. کوچنی عکس ولېږئ.",
   "error.vehicle_plate_invalid": "دا د پلېټ شمېره سمه نه ښکاري.",
   "error.vehicle_not_registered": "له آنلاین کېدو مخکې خپل موټر ثبت کړئ.",

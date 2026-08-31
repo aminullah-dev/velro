@@ -86,18 +86,30 @@ fun EarningsScreen(
         modifier = modifier,
     ) {
         // The title lives in the app bar now, not twice on the screen.
+        //
+        // Sections are spaced like the home screen's: a step under the bar and
+        // a step between cards. Emitted flush against each other, the driver's
+        // money screen was the only one in the product where a card began
+        // exactly where the one above it ended.
+        Spacer(Modifier.height(Spacing.md))
 
         state.earnings?.let { Balance(it, state.payout) }
 
         if (state.errorCode != null) {
+            Spacer(Modifier.height(Spacing.lg))
             InlineError(state.errorCode!!, context = state.errorContext)
         }
 
-        state.payout?.let { Payout(it, state, onEvent) }
+        state.payout?.let {
+            Spacer(Modifier.height(Spacing.lg))
+            Payout(it, state, onEvent)
+        }
 
+        Spacer(Modifier.height(Spacing.lg))
         Ledger(state, onEvent)
 
         state.payout?.history?.filter { !it.isOpen }?.takeIf { it.isNotEmpty() }?.let {
+            Spacer(Modifier.height(Spacing.lg))
             History(it)
         }
 
@@ -113,8 +125,13 @@ private fun Balance(earnings: Earnings, payout: PayoutOptions?) {
     // the two it is must be readable at a glance by someone who does not read
     // easily -- so it is carried by the wording, an icon and the colour, never
     // by the colour alone.
-    val owes = payout?.owesPlatform == true
-    val headline = if (owes) payout.amountOwed else earnings.available
+    // The same rule the home card asks, from the same place.
+    //
+    // This read the server's payout flag while home read `available` directly,
+    // so the two screens could and did disagree. Both go through
+    // Earnings.owesPlatform now, which nets `pending` in -- see EarningsTest.
+    val owes = earnings.owesPlatform
+    val headline = earnings.headlineAmount
 
     VelroCard {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -142,10 +159,14 @@ private fun Balance(earnings: Earnings, payout: PayoutOptions?) {
             }
             Text(
                 MoneyFormatter.format(headline, strings),
-                style = MaterialTheme.typography.headlineMedium,
+                // The same size and colour the home card gives this figure.
+                // Tapping "earnings" from home used to make the number the
+                // driver came to check smaller and duller than the summary he
+                // tapped to get here.
+                style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 color = if (owes) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurface,
+                else MaterialTheme.colorScheme.primary,
             )
             if (owes) {
                 // The number alone invites the wrong conclusion -- a driver who
@@ -163,7 +184,18 @@ private fun Balance(earnings: Earnings, payout: PayoutOptions?) {
             if (earnings.pending.amountMinor != 0L) {
                 Spacer(Modifier.height(Spacing.xs))
                 Figure(
-                    if (owes) "driver.earnings.pending_collection"
+                    // The direction of the pending amount is the sign of the
+                    // pending amount, not the sign of the available balance.
+                    //
+                    // `owes` is derived from `available`, and requesting a
+                    // settlement moves the debt out of `available` into
+                    // `pending` -- so the instant a collection is opened,
+                    // `available` returns to zero, `owes` turns false, and the
+                    // seven afghani the driver is holding for VELRO was
+                    // labelled "payout in progress": money on its way to him.
+                    // It is the same seven, moving the other way.
+                    if (earnings.pending.amountMinor < 0L)
+                        "driver.earnings.pending_collection"
                     else "driver.earnings.pending",
                     MoneyValue(
                         kotlin.math.abs(earnings.pending.amountMinor),

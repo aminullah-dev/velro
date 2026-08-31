@@ -431,6 +431,7 @@
   "driver.documents.send": "Send a photo",
   "driver.documents.replace": "Send a new photo",
   "driver.documents.not_sent": "Not sent",
+  "driver.documents.sent_on": "Sent {date}",
   "driver.documents.too_large": "That photo is too large. Try again with a smaller one.",
   "error.vehicle_plate_invalid": "That number plate does not look right.",
   "error.vehicle_not_registered": "Register your vehicle before going online.",

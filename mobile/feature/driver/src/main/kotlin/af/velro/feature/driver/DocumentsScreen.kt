@@ -287,8 +287,18 @@ private fun DocumentRow(
 
             if (document != null) {
                 Spacer(Modifier.height(Spacing.xs))
+                // Said, not just shown.
+                //
+                // A bare date sat here in the same size and colour as the
+                // expiry line directly beneath it, so a card could carry two
+                // dates with only one of them labelled -- and on a screen
+                // about whether papers are still valid, "8 Sunbula" is a
+                // different fact depending on which one it is.
                 Text(
-                    Calendars.date(document.uploadedAt, strings.locale),
+                    strings[
+                        "driver.documents.sent_on",
+                        "date" to Calendars.date(document.uploadedAt, strings.locale),
+                    ],
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

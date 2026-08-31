@@ -287,6 +287,32 @@ fun DriverHomeScreen(
         // The greeting moved into the header, so this is the vehicle alone.
         DriverSummary(state.profile!!)
 
+        // His papers and his vehicle, reachable once he is approved.
+        //
+        // Both doors existed only inside the PendingApproval and BecomeADriver
+        // branches -- that is, only while `canWork` was false. The moment a
+        // driver was approved they closed behind him: he could not look at his
+        // own licence, could not re-upload one that was about to expire, and
+        // could not correct the vehicle a passenger is told to look for. The
+        // expiry warning itself lives on the documents screen, so the driver
+        // it is written for was the one driver who could never see it.
+        Spacer(Modifier.height(Spacing.sm))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            SecondaryAction(
+                label = strings["driver.documents.title"],
+                onClick = onOpenDocuments,
+                modifier = Modifier.weight(1f),
+            )
+            SecondaryAction(
+                label = strings["driver.vehicle.title"],
+                onClick = onOpenVehicle,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
         Spacer(Modifier.height(Spacing.lg))
 
         if (!state.canWork) {
@@ -894,7 +920,17 @@ private fun Earnings(state: DriverHomeUiState, onOpenEarnings: () -> Unit) {
                 // is true about his own wallet. The two words for it already
                 // existed -- they were only ever used on the earnings screen
                 // behind this card.
-                val owes = earnings.available.amountMinor < 0
+                // The wallet's whole position, not just the free part.
+                //
+                // Asking a settlement to be opened moves the debt out of
+                // `available` and into `pending`, so this card -- which read
+                // `available` alone -- went from "you owe VELRO 7" to
+                // "withdrawable: 0" the moment the driver acted on it, while
+                // the earnings screen one tap behind still showed the seven.
+                // Two screens disagreeing about a man's own money is worse
+                // than either of them being wrong on its own.
+                val owes = earnings.owesPlatform
+                val headline = earnings.headlineAmount
                 Text(
                     if (owes) strings["driver.earnings.owed"]
                     else strings["earnings.label.available"],
@@ -902,12 +938,7 @@ private fun Earnings(state: DriverHomeUiState, onOpenEarnings: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    MoneyFormatter.format(
-                        if (owes) earnings.available.copy(
-                            amountMinor = -earnings.available.amountMinor
-                        ) else earnings.available,
-                        strings,
-                    ),
+                    MoneyFormatter.format(headline, strings),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
                     color =
