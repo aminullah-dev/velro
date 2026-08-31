@@ -23,7 +23,7 @@ from application.use_cases.settlements import (
     read_balance,
     read_entry,
 )
-from domain.enums import SettlementStatus, WalletEntryKind
+from domain.enums import SettlementStatus
 from shared import error_codes
 from shared.errors import NotFoundError, ValidationError
 from shared.money import Money
@@ -164,6 +164,7 @@ def earnings_summary(
     actor: Annotated[deps.Actor, Depends(deps.require_driver)],
     drivers: Annotated[object, Depends(deps.drivers)],
     wallets: Annotated[object, Depends(deps.wallets)],
+    commissions: Annotated[object, Depends(deps.commissions)],
     period: Annotated[str, Query(pattern="^(DAY|WEEK|MONTH)$")] = "DAY",
     buckets: Annotated[int, Query(ge=1, le=53)] = 7,
 ) -> dict:
@@ -181,25 +182,16 @@ def earnings_summary(
     wallet = wallets.get_or_create(driver.id, "AFN")
 
     starts = _bucket_starts(period, buckets)
-    rows = wallets.entries_since(wallet.id, since=starts[0])
-
-    earned = {s: 0 for s in starts}
-    commission = {s: 0 for s in starts}
-    trips = {s: 0 for s in starts}
-    for row in rows:
-        entry = read_entry(row)
-        start = _bucket_for(entry.created_at, period, starts)
-        if start is None:
-            continue
-        minor = entry.amount.amount_minor
-        if entry.kind == WalletEntryKind.TRIP_EARNING:
-            earned[start] += minor
-            trips[start] += 1
-        elif entry.kind == WalletEntryKind.COMMISSION:
-            # Stored negative. Commission is reported as the positive amount
-            # deducted, because "commission: -125" reads to a driver as money
-            # he was given.
-            commission[start] += abs(minor)
+    # The commissions table, not the wallet ledger. A completed booking writes
+    # exactly one ledger entry -- the COMMISSION debit when the fare was cash,
+    # the TRIP_EARNING credit when the platform collected it -- so a summary
+    # built from the ledger reported zero journeys and a negative net for
+    # every driver in an all-cash market, which is this one. The commission
+    # row is written once per booking whichever way the money moved, and
+    # carries gross, platform and driver shares that CommissionSplit has
+    # already proven sum exactly.
+    rows = commissions.for_driver_since(driver.id, since=starts[0])
+    earned, commission, net, trips = _bucketise(rows, period, starts)
 
     currency = wallet.currency
     return ok(
@@ -210,13 +202,36 @@ def earnings_summary(
                     starts_on=s.date().isoformat(),
                     earned=MoneyOut.of(Money(earned[s], currency)),
                     commission=MoneyOut.of(Money(commission[s], currency)),
-                    net=MoneyOut.of(Money(earned[s] - commission[s], currency)),
+                    net=MoneyOut.of(Money(net[s], currency)),
                     trips=trips[s],
                 )
                 for s in starts
             ],
         ).model_dump()
     )
+
+
+def _bucketise(rows, period: str, starts: list[datetime]):
+    """Fold commission rows into per-bucket totals.
+
+    earned is the gross fare, commission the platform share, net the driver
+    share -- taken from the row rather than derived, so the chart can never
+    disagree with the split that was actually recorded. One row is one
+    journey, whoever held the cash.
+    """
+    earned = {s: 0 for s in starts}
+    commission = {s: 0 for s in starts}
+    net = {s: 0 for s in starts}
+    trips = {s: 0 for s in starts}
+    for row in rows:
+        start = _bucket_for(row.created_at, period, starts)
+        if start is None:
+            continue
+        earned[start] += row.gross_minor
+        commission[start] += row.platform_minor
+        net[start] += row.driver_minor
+        trips[start] += 1
+    return earned, commission, net, trips
 
 
 def _bucket_starts(period: str, count: int) -> list[datetime]:

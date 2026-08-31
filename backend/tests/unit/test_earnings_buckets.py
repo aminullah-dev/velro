@@ -96,3 +96,53 @@ class TestAssignment:
     def test_a_future_entry_lands_in_the_newest_bucket(self):
         starts = _bucket_starts("DAY", 5)
         assert _bucket_for(starts[-1] + timedelta(hours=6), "DAY", starts) == starts[-1]
+
+
+class TestBucketise:
+    """The fold from commission rows, which is where the cash bug lived.
+
+    The summary used to read the wallet ledger, where a completed booking
+    writes exactly one entry -- COMMISSION for a cash fare, TRIP_EARNING
+    otherwise -- so an all-cash driver showed zero journeys and a negative
+    net. These pin the new source: one commission row is one journey, and the
+    three figures come from the row rather than being derived.
+    """
+
+    @staticmethod
+    def _row(when, gross=90_000, platform=9_000):
+        from types import SimpleNamespace
+        return SimpleNamespace(
+            created_at=when, gross_minor=gross,
+            platform_minor=platform, driver_minor=gross - platform,
+        )
+
+    def test_a_cash_journey_is_still_a_journey(self):
+        from ui.api.routers.settlements import _bucket_starts, _bucketise
+        starts = _bucket_starts("DAY", 3)
+        rows = [self._row(starts[-1] + timedelta(hours=2))]
+        earned, commission, net, trips = _bucketise(rows, "DAY", starts)
+        assert trips[starts[-1]] == 1
+        assert earned[starts[-1]] == 90_000
+        assert commission[starts[-1]] == 9_000
+        assert net[starts[-1]] == 81_000
+
+    def test_net_is_the_recorded_driver_share_not_a_subtraction_here(self):
+        from ui.api.routers.settlements import _bucket_starts, _bucketise
+        starts = _bucket_starts("DAY", 2)
+        # A row whose split does not sum (cannot happen upstream; the point is
+        # that the fold reports what was recorded rather than recomputing).
+        from types import SimpleNamespace
+        row = SimpleNamespace(
+            created_at=starts[-1], gross_minor=100,
+            platform_minor=10, driver_minor=89,
+        )
+        *_, net, _t = _bucketise([row], "DAY", starts)
+        assert net[starts[-1]] == 89
+
+    def test_rows_before_the_window_are_dropped_not_folded_in(self):
+        from ui.api.routers.settlements import _bucket_starts, _bucketise
+        starts = _bucket_starts("DAY", 3)
+        rows = [self._row(starts[0] - timedelta(days=30))]
+        earned, *_ , trips = _bucketise(rows, "DAY", starts)
+        assert sum(earned.values()) == 0
+        assert sum(trips.values()) == 0

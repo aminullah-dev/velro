@@ -48,6 +48,29 @@ class CommissionRepository(SqlRepository[CommissionRow]):
         return self.find_by(booking_id=booking_id)
 
 
+    def for_driver_since(self, driver_id: str, *, since) -> list[CommissionRow]:
+        """Every commission row from `since`, oldest first.
+
+        This table is the truthful per-booking record of what a driver earned:
+        gross, platform share and driver share, written once at completion and
+        split-checked by CommissionSplit. The wallet ledger cannot serve here,
+        because a cash fare writes only the COMMISSION debit and a platform-
+        collected fare writes only the TRIP_EARNING credit -- one entry per
+        booking either way, with the other half implied. Summing implication
+        is how a chart ends up reporting zero trips in an all-cash market.
+        """
+        stmt = (
+            select(CommissionRow)
+            .where(
+                CommissionRow.driver_id == driver_id,
+                CommissionRow.deleted_at.is_(None),
+                CommissionRow.created_at >= since,
+            )
+            .order_by(CommissionRow.created_at.asc(), CommissionRow.id.asc())
+        )
+        return list(self.session.scalars(stmt).all())
+
+
 class WalletRepository(SqlRepository[WalletRow]):
     model = WalletRow
     not_found_code = error_codes.WALLET_NOT_FOUND
@@ -200,9 +223,7 @@ class WalletRepository(SqlRepository[WalletRow]):
         self.session.add(entry)
         return entry
 
-    def settle_hold(
-        self, *, wallet: WalletRow, amount_minor: int, collection: bool = False
-    ) -> None:
+    def settle_hold(self, *, wallet: WalletRow, amount_minor: int) -> None:
         """Settled. The pending bucket drains into the lifetime total.
 
         No ledger entry: the entry was written when the hold was placed, and the

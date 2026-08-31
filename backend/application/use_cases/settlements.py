@@ -300,9 +300,7 @@ class DecideSettlement:
         collection = settlement.direction is SettlementDirection.COLLECTION
         signed = -row.amount_minor if collection else row.amount_minor
         if settlement.status is SettlementStatus.PAID:
-            self._wallets.settle_hold(
-                wallet=wallet, amount_minor=signed, collection=collection
-            )
+            self._wallets.settle_hold(wallet=wallet, amount_minor=signed)
         elif settlement.status is SettlementStatus.REJECTED:
             # Whatever was held goes back exactly as it was: a refused payout
             # returns a credit, a refused collection returns the debt.
