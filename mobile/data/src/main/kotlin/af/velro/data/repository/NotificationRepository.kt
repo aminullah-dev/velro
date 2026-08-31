@@ -1,5 +1,6 @@
 package af.velro.data.repository
 
+import kotlinx.serialization.json.JsonPrimitive
 import af.velro.data.api.ApiResult
 import af.velro.data.api.MarkReadRequest
 import af.velro.data.api.ResponseMapper
@@ -34,7 +35,13 @@ class NotificationRepository @Inject constructor(
                     Notification(
                         id = n.id,
                         messageKey = n.message_key,
-                        payload = n.payload,
+                        // A JsonPrimitive's `content` is the value without
+                        // JSON quoting -- 32000 becomes "32000" and "AFN"
+                        // stays "AFN". Anything structured keeps its JSON
+                        // form rather than being dropped.
+                        payload = n.payload.mapValues { (_, value) ->
+                            (value as? JsonPrimitive)?.content ?: value.toString()
+                        },
                         tripId = n.trip_id,
                         bookingId = n.booking_id,
                         createdAt = runCatching { Instant.parse(n.created_at) }

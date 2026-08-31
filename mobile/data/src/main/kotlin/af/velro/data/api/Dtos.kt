@@ -1,5 +1,6 @@
 package af.velro.data.api
 
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.Serializable
 
 /**
@@ -500,7 +501,25 @@ data class RegisterDriverRequest(
 data class NotificationDto(
     val id: String,
     val message_key: String,
-    val payload: Map<String, String> = emptyMap(),
+    /**
+     * Whatever the server put in the payload, not a map of strings.
+     *
+     * It was `Map<String, String>`, and the server sends `amount_minor` as a
+     * number. kotlinx refuses the whole document on that mismatch, so every
+     * notification response failed to parse -- with an HTTP 200 in the log and
+     * an INTERNAL_ERROR in the app, which is why nothing pointed at this.
+     *
+     * Two consequences, and the smaller one is the visible one. The driver's
+     * home marked itself stale on every poll, so an online driver was told he
+     * was offline and looking at saved data. The larger one is that the inbox
+     * never loaded at all -- and the inbox is, by this file's own reckoning,
+     * the only thing that tells a driver his fare was accepted.
+     *
+     * JsonElement accepts a number, a string, a bool or null, so the app no
+     * longer breaks when the server adds a field of a type nobody predicted.
+     * The repository flattens it to the strings the domain wants.
+     */
+    val payload: Map<String, JsonElement> = emptyMap(),
     val channel: String,
     val delivery_status: String,
     val trip_id: String? = null,
