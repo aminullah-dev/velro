@@ -788,3 +788,8 @@ road.alert.caution	Extra caution on this stretch. Drive slowly.	در این من
 trip.vehicle_seen_now	Vehicle position: just now.	موقعیت موتر: همین حالا.	د موټر ځای: همدا اوس.	new — please check the Pashto
 trip.vehicle_seen	Vehicle last seen {minutes} min ago.	آخرین موقعیت موتر: {minutes} دقیقه پیش.	د موټر وروستی ځای: {minutes} دقیقې مخکې.	new — please check the Pashto
 app.update.body	A new VELRO version is ready — tap to download.	نسخهٔ نو ولرو آماده است — برای دانلود فشار دهید.	د ولرو نوې بڼه چمتو ده — ښکته کولو ته يې کېکاږئ.	new — please check the Pashto
+notif.duty.waiting	On duty — listening for ride requests.	در حال کار — گوش به زنگ درخواست‌های سفر.	په دنده — د سفر غوښتنو ته غوږ.	new — please check the Pashto
+notif.duty.on_trip	On a trip — map and road warnings active.	در سفر — نقشه و هشدارهای جاده فعال است.	په سفر کې — نقشه او د سړک خبرداري فعال دي.	new — please check the Pashto
+notif.ask.title	New ride request!	درخواست سفر نو!	د سفر نوې غوښتنه!	new — please check the Pashto
+notif.ask.body	A passenger is asking for a car. Open VELRO to answer.	مسافری موتر می‌خواهد. ولرو را باز کنید و جواب بدهید.	یو مسافر موټر غواړي. ولرو پرانیزئ او ځواب ورکړئ.	new — please check the Pashto
+notif.road.title	Road warning	هشدار جاده	د سړک خبرداری	new — please check the Pashto

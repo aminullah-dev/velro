@@ -68,6 +68,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -107,10 +109,9 @@ fun DriverHomeRoute(
                 is DriverHomeEffect.RequestsArrived -> {
                     // Sound and vibration, because a driver waiting for work is
                     // not staring at the screen -- he is parked, talking, or
-                    // watching the road. There is no push transport, so this is
-                    // the only thing that can reach him, and it only works
-                    // while the app is open. That limit is real and not
-                    // something this file can fix.
+                    // watching the road. With the screen dark it is the duty
+                    // service's system notification that reaches him instead;
+                    // this path is for the app in his hand.
                     ringOnce(context)
                     snackbar.showSnackbar(strings["driver.requests.arrived"])
                 }
@@ -138,8 +139,42 @@ fun DriverHomeRoute(
         }
     }
 
+    // Going online is the moment the duty service starts, and the service
+    // is useless without its two permissions: notifications (the whole
+    // point) and location (the pings and the road warnings). So the first
+    // tap on the toggle asks for both, and the toggle proceeds either way
+    // -- a denied permission narrows the service, it does not gate work.
+    var pendingToggle by remember { mutableStateOf(false) }
+    val dutyPermissions = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        if (pendingToggle) {
+            pendingToggle = false
+            viewModel.onEvent(DriverHomeEvent.ToggleOnline)
+        }
+    }
+    val onEvent: (DriverHomeEvent) -> Unit = { event ->
+        val turningOn = event is DriverHomeEvent.ToggleOnline && !state.isOnline
+        val wanted = buildList {
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                add(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+            add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+        }.filter {
+            androidx.core.content.ContextCompat.checkSelfPermission(context, it) !=
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+        if (turningOn && wanted.isNotEmpty() && !pendingToggle) {
+            pendingToggle = true
+            dutyPermissions.launch(wanted.toTypedArray())
+        } else {
+            viewModel.onEvent(event)
+        }
+    }
+
     DriverHomeScreen(
-        state, viewModel::onEvent,
+        state, onEvent,
         snackbarHost = snackbar,
         onOpenDocuments = onOpenDocuments,
         onOpenVehicle = onOpenVehicle,
