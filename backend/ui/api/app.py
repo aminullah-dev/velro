@@ -36,6 +36,7 @@ from ui.api.routers import (
     vehicles,
     maps,
     app_release,
+    tools,
 )
 from ui.api.session_scope import DatabaseSessionMiddleware
 
@@ -110,6 +111,7 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
     # The human-facing download page and the APK files live at the root:
     # "velro.example/app" is what gets said aloud in a bazaar.
     app.include_router(app_release.page_router)
+    app.include_router(tools.router)
 
     @app.get("/healthz", tags=["ops"])
     def liveness() -> dict:

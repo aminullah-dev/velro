@@ -12,6 +12,7 @@ and never profiled, and the tables they read grow fastest.
 from __future__ import annotations
 
 from dataclasses import asdict
+from decimal import Decimal
 from datetime import date, datetime, timedelta
 from typing import Annotated
 from zoneinfo import ZoneInfo
@@ -49,7 +50,7 @@ from infrastructure.db.models.routing import FareRuleRow, RouteRow
 from infrastructure.db.models.supply import DriverRow, VehicleRow
 from infrastructure.db.models.trips import BookingRow, TripRow
 from shared import error_codes
-from shared.errors import ConflictError, NotFoundError
+from shared.errors import ConflictError, NotFoundError, ValidationError
 from ui.api import deps
 from ui.api.errors import ok
 from ui.api.schemas.common import Schema
@@ -168,6 +169,9 @@ class DistrictAdminOut(Schema):
     status: str
     village_count: int
     station_count: int
+    #: The district centre, for the placer map to fly to.
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 @router.post("/routes/generate")
@@ -236,6 +240,8 @@ def districts(
                 id=row.id, code=row.code, name=row.name,
                 alternative_name=row.alternative_name, status=row.status,
                 village_count=int(village_count), station_count=int(station_count),
+                latitude=float(row.latitude) if row.latitude is not None else None,
+                longitude=float(row.longitude) if row.longitude is not None else None,
             ).model_dump()
             for row, village_count, station_count in session.execute(stmt).all()
         ]
@@ -300,6 +306,106 @@ def villages(
         ],
         meta={"total": int(total or 0), "limit": limit, "offset": offset},
     )
+
+
+class VillageCoordinatesIn(Schema):
+    """Both present to place, both null to clear. Half a coordinate is a typo."""
+
+    latitude: Decimal | None = None
+    longitude: Decimal | None = None
+
+
+@router.patch("/villages/{village_id}/coordinates")
+def place_village(
+    village_id: str,
+    body: VillageCoordinatesIn,
+    actor: Annotated[deps.Actor, Depends(deps.require_operations)],
+    session: deps.SessionDep,
+    audit: Annotated[object, Depends(deps.audit)],
+) -> dict:
+    """The operator's pin on the map, applied to a village and its stations.
+
+    This is how the 415 villages the public map has never heard of get their
+    coordinates: someone who has actually stood in them taps the road on the
+    product's own map. The village takes the point, and any of its stations
+    that have no point of their own take it too -- a station placed by an
+    earlier, better source keeps what it has. Clearing reverses exactly that:
+    the village and all its stations forget, because a wrong point that has
+    spread is worse than no point.
+
+    The bounds check is the region box with a margin: a mis-tap in the
+    Arabian Sea should fail loudly at the moment the operator can still see
+    which village they were holding.
+    """
+    if (body.latitude is None) != (body.longitude is None):
+        raise ValidationError(
+            error_codes.VALIDATION_FAILED, reason="half_a_coordinate"
+        )
+    if body.latitude is not None and not (
+        Decimal("34.0") <= body.latitude <= Decimal("36.0")
+        and Decimal("67.5") <= body.longitude <= Decimal("70.0")
+    ):
+        raise ValidationError(
+            error_codes.VALIDATION_FAILED, reason="outside_region",
+            latitude=str(body.latitude), longitude=str(body.longitude),
+        )
+
+    village = session.scalars(
+        select(VillageRow).where(
+            VillageRow.id == village_id, VillageRow.deleted_at.is_(None)
+        )
+    ).one_or_none()
+    if village is None:
+        raise NotFoundError(error_codes.VILLAGE_NOT_FOUND, village_id=village_id)
+
+    before = {
+        "latitude": str(village.latitude) if village.latitude is not None else None,
+        "longitude": str(village.longitude) if village.longitude is not None else None,
+    }
+    village.latitude = body.latitude
+    village.longitude = body.longitude
+    village.source_note = (
+        "placed by admin on the VELRO map" if body.latitude is not None else None
+    )
+    village.version += 1
+
+    stations = session.scalars(
+        select(StationRow).where(
+            StationRow.village_id == village_id, StationRow.deleted_at.is_(None)
+        )
+    ).all()
+    touched = []
+    for station in stations:
+        if body.latitude is None:
+            if station.latitude is not None:
+                station.latitude = None
+                station.longitude = None
+                touched.append(station.code)
+        elif station.latitude is None:
+            station.latitude = body.latitude
+            station.longitude = body.longitude
+            touched.append(station.code)
+
+    audit.write(
+        "village.coordinates",
+        actor_id=actor.user_id,
+        actor_role=actor.role,
+        entity_type="village",
+        entity_id=village_id,
+        before=before,
+        after={
+            "latitude": str(body.latitude) if body.latitude is not None else None,
+            "longitude": str(body.longitude) if body.longitude is not None else None,
+            "stations": touched,
+        },
+    )
+    return ok({
+        "village_id": village_id,
+        "latitude": float(body.latitude) if body.latitude is not None else None,
+        "longitude": float(body.longitude) if body.longitude is not None else None,
+        "stations_updated": touched,
+    })
+
 
 
 class StationAdminOut(Schema):
