@@ -67,13 +67,15 @@
 // The placer talks to the same API the apps do, as the same admin, through
 // the same OTP door. The token lives in this tab and nowhere else.
 let token = null;
+let refreshToken = null;
+let refreshing = null;  // the single in-flight refresh, never two
 let villages = [];      // full admin listing rows
 let selected = null;    // village row
 let pin = null;         // maplibre Marker for the pending tap
 let districts = {};     // id -> {latitude, longitude}
 
 const $ = (id) => document.getElementById(id);
-const api = (path, options = {}) =>
+const send = (path, options = {}) =>
   fetch("/api/v1" + path, {
     ...options,
     headers: {
@@ -88,6 +90,55 @@ const api = (path, options = {}) =>
     }
     return body;
   });
+
+/**
+ * Renew the access token, exactly once at a time.
+ *
+ * Refresh tokens rotate, and the server treats a replayed one as theft: it
+ * revokes every session the user has. Two requests expiring together and
+ * both refreshing would look precisely like that, and would end an
+ * operator's session in the middle of a valley. So every caller waits on
+ * the same promise.
+ */
+function renew() {
+  if (!refreshing) {
+    refreshing = fetch("/api/v1/auth/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken, device_id: "placer-web" }),
+    }).then(async (r) => {
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok || body.success === false) throw new Error("refresh");
+      token = body.data.access_token;
+      refreshToken = body.data.refresh_token;   // rotated: keep the new one
+    }).finally(() => { refreshing = null; });
+  }
+  return refreshing;
+}
+
+/**
+ * Every call, with one silent retry when the fifteen-minute access token
+ * runs out -- which a placing session always outlives. Anything else is
+ * passed through: a refusal deserves to be read, not retried.
+ */
+const api = async (path, options = {}) => {
+  try {
+    return await send(path, options);
+  } catch (e) {
+    if (e.message !== "TOKEN_EXPIRED" || !refreshToken) throw e;
+    try {
+      await renew();
+    } catch (_) {
+      // The refresh itself is gone (expired, or revoked elsewhere). Ask for
+      // the phone again -- and leave the tool exactly as it stands, pin and
+      // selection included, so signing back in resumes rather than restarts.
+      $("login").style.display = "flex";
+      $("status").textContent = "نشست تمام شد — دوباره وارد شوید.";
+      throw e;
+    }
+    return await send(path, options);
+  }
+};
 
 // Arabic-script shaping, before any map exists. Without it Persian place
 // names render left-to-right with unjoined letters, which is worse than no
@@ -139,6 +190,7 @@ $("verify").onclick = async () => {
       }),
     });
     token = reply.data.access_token;
+    refreshToken = reply.data.refresh_token;
     $("login").style.display = "none";
     $("tool").style.display = "flex";
     await load();

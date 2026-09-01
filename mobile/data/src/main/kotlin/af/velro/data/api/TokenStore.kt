@@ -12,13 +12,28 @@ import kotlinx.coroutines.flow.map
 private val Context.tokenDataStore by preferencesDataStore(name = "velro_session")
 
 /**
+ * The part of the session store the network layer touches.
+ *
+ * Extracted so the refresh authenticator can be exercised without Android:
+ * the thing worth testing about it is what happens when several expired
+ * requests race, and that must not need a device to find out.
+ */
+interface SessionTokens {
+    suspend fun currentAccessToken(): String?
+    suspend fun currentRefreshToken(): String?
+    suspend fun deviceId(): String
+    suspend fun save(session: SessionDto)
+    suspend fun clear()
+}
+
+/**
  * Where the session lives on the device.
  *
  * DataStore rather than SharedPreferences: the reads are on the request path
  * and must not block the main thread. The device id is generated once and kept,
  * so "sign out of all devices" can distinguish this handset from the others.
  */
-class TokenStore(private val context: Context) {
+class TokenStore(private val context: Context) : SessionTokens {
 
     private object Keys {
         val access = stringPreferencesKey("access_token")
@@ -44,13 +59,13 @@ class TokenStore(private val context: Context) {
     val locale: Flow<String> =
         context.tokenDataStore.data.map { it[Keys.locale] ?: "fa-AF" }
 
-    suspend fun currentAccessToken(): String? =
+    override suspend fun currentAccessToken(): String? =
         context.tokenDataStore.data.first()[Keys.access]
 
-    suspend fun currentRefreshToken(): String? =
+    override suspend fun currentRefreshToken(): String? =
         context.tokenDataStore.data.first()[Keys.refresh]
 
-    suspend fun deviceId(): String {
+    override suspend fun deviceId(): String {
         val existing = context.tokenDataStore.data.first()[Keys.deviceId]
         if (existing != null) return existing
         val generated = UUID.randomUUID().toString()
@@ -58,7 +73,7 @@ class TokenStore(private val context: Context) {
         return generated
     }
 
-    suspend fun save(session: SessionDto) {
+    override suspend fun save(session: SessionDto) {
         context.tokenDataStore.edit {
             it[Keys.access] = session.access_token
             it[Keys.refresh] = session.refresh_token
@@ -72,7 +87,7 @@ class TokenStore(private val context: Context) {
     }
 
     /** Clears the session but keeps the device id and the chosen language. */
-    suspend fun clear() {
+    override suspend fun clear() {
         context.tokenDataStore.edit {
             it.remove(Keys.access)
             it.remove(Keys.refresh)

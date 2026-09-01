@@ -10,7 +10,7 @@ import okhttp3.Response
 import okhttp3.Route
 
 /** Attaches the access token and a request id to every call. */
-class AuthInterceptor(private val tokens: TokenStore) : Interceptor {
+class AuthInterceptor(private val tokens: SessionTokens) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = runBlocking { tokens.currentAccessToken() }
@@ -34,14 +34,35 @@ class AuthInterceptor(private val tokens: TokenStore) : Interceptor {
  * returns to sign-in rather than retrying forever.
  */
 class TokenRefreshAuthenticator(
-    private val tokens: TokenStore,
+    private val tokens: SessionTokens,
     private val json: Json,
     private val refreshCall: suspend (String, String?) -> Response,
 ) : Authenticator {
 
+    /**
+     * Renew the session, exactly once no matter how many calls expire at once.
+     *
+     * Refresh tokens rotate, and the server treats a replayed one as theft:
+     * it revokes every session that user has (RefreshSession). Two requests
+     * expiring together -- which is the normal case, since everything on a
+     * screen expires in the same second -- would each post the same refresh
+     * token, and the loser's replay would sign the driver out of a phone he
+     * is working from. Hence the lock, and the check after it: whoever waits
+     * finds the token already renewed and simply retries with it, spending
+     * no second refresh at all.
+     */
+    @Synchronized
     override fun authenticate(route: Route?, response: Response): Request? {
-        if (response.request.header("Authorization") == null) return null
+        val used = response.request.header("Authorization") ?: return null
         if (priorResponseCount(response) >= 1) return null   // already retried once
+
+        val current = runBlocking { tokens.currentAccessToken() }
+        if (current != null && "Bearer $current" != used) {
+            // Renewed by whoever held the lock first. Nothing to do but use it.
+            return response.request.newBuilder()
+                .header("Authorization", "Bearer $current")
+                .build()
+        }
 
         val refreshToken = runBlocking { tokens.currentRefreshToken() } ?: return null
 
