@@ -54,6 +54,15 @@ android {
                 storePassword = keystorePassword
                 keyAlias = secret("VELRO_KEY_ALIAS", "keyAlias") ?: "velro"
                 keyPassword = secret("VELRO_KEY_PASSWORD", "keyPassword") ?: keystorePassword
+                // v2 is what Android 7 and later verify, and minSdk is 24 --
+                // v1 would only matter for handsets this app already refuses
+                // to install on. v3 adds nothing today and everything on the
+                // day the key has to be rotated: rotation is only possible if
+                // the first signature already carried the scheme that allows
+                // it, and that day cannot be planned for afterwards.
+                enableV1Signing = false
+                enableV2Signing = true
+                enableV3Signing = true
             }
         }
     }
