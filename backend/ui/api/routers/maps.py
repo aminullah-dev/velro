@@ -145,7 +145,7 @@ def journey(
     origin, origin_code = mapdata.place(session, "stations", origin_station_id)
     destination, dest_code = mapdata.place(session, "destinations", destination_id)
 
-    line = mapdata.journey_line(
+    shape = mapdata.journey_line(
         origin_code,
         dest_code,
         (origin["longitude"], origin["latitude"]) if origin else None,
@@ -164,7 +164,8 @@ def journey(
     return ok({
         "origin": origin,
         "destination": destination,
-        "geometry": [[lat, lon] for lon, lat in line] if line else None,
+        "geometry": [[lat, lon] for lon, lat in shape["points"]] if shape else None,
+        "avg_speed_kmh": shape["avg_speed_kmh"] if shape else None,
         "stations": stations,
         "attribution": "© OpenStreetMap",
     })

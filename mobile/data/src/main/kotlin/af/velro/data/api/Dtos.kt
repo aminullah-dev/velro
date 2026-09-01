@@ -763,6 +763,8 @@ data class TripMapDto(
     val stations: List<MapPlaceDto> = emptyList(),
     /** Advisory zones along the road. Only the driver's app announces them. */
     val alerts: List<RoadAlertDto> = emptyList(),
+    /** The routing engine's average for this road, for honest ETAs. */
+    val avg_speed_kmh: Double? = null,
     val attribution: String = "",
 )
 
@@ -799,4 +801,24 @@ data class CrashRequest(
     val sdk: Int,
     val stack: String,
     val occurred_at: String,
+)
+
+
+@Serializable
+data class RideVehicleDto(
+    val brand: String? = null,
+    val model: String? = null,
+    val colour: String? = null,
+    val plate_number: String,
+    val seat_capacity: Int,
+)
+
+@Serializable
+data class RideDriverDto(
+    val driver_id: String,
+    val name: String? = null,
+    val phone: String,
+    val rating_average: Double? = null,
+    val rating_count: Int = 0,
+    val vehicle: RideVehicleDto? = null,
 )

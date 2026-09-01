@@ -215,29 +215,43 @@ def place(session, table: str, place_id: str | None):
     return point, row.code
 
 
+def _leg_speed_kmh(leg: dict) -> float | None:
+    if not leg.get("duration_s"):
+        return None
+    return round(leg["distance_m"] / leg["duration_s"] * 3.6, 1)
+
+
 def journey_line(
     origin_code: str | None,
     dest_code: str | None,
     origin: tuple[float, float] | None,
     dest: tuple[float, float] | None,
-) -> list[list[float]] | None:
-    """The road between a trip's two ends, as (lon, lat) points.
+) -> dict | None:
+    """The road between a trip's two ends.
 
-    An exact precomputed pair wins; otherwise the best corridor slice. None
-    means the honest answer is "no line" -- an endpoint with no coordinates,
-    or ends that do not sit on any road this file knows.
+    Returns {"points": [(lon, lat), ...], "avg_speed_kmh": float | None}. The
+    speed is the routing engine's own average for the leg the shape came
+    from -- what this road actually does, curves and bazaars amortised --
+    which is what an honest "arriving in N minutes" divides by. None means
+    "no line": an endpoint with no coordinates, or ends that do not sit on
+    any road this file knows.
+
+    An exact precomputed pair wins; otherwise the best corridor slice.
     """
     if origin is None or dest is None:
         return None
 
     exact = _legs().get(f"pair:{origin_code}:{dest_code}")
     if exact:
-        return exact["points"]
+        return {"points": exact["points"], "avg_speed_kmh": _leg_speed_kmh(exact)}
     reverse = _legs().get(f"pair:{dest_code}:{origin_code}")
     if reverse:
-        return list(reversed(reverse["points"]))
+        return {
+            "points": list(reversed(reverse["points"])),
+            "avg_speed_kmh": _leg_speed_kmh(reverse),
+        }
 
-    best: list[list[float]] | None = None
+    best: dict | None = None
     best_score = float("inf")
     for leg in _legs().values():
         points = leg["points"]
@@ -249,6 +263,9 @@ def journey_line(
         if score < best_score:
             lo, hi = min(i, j), max(i, j)
             cut = points[lo : hi + 1]
-            best = cut if i <= j else list(reversed(cut))
+            best = {
+                "points": cut if i <= j else list(reversed(cut)),
+                "avg_speed_kmh": _leg_speed_kmh(leg),
+            }
             best_score = score
     return best

@@ -177,6 +177,8 @@ data class TripMapData(
     val stations: List<MapPlace>,
     /** The road's advisories; empty on the passenger's previews. */
     val alerts: List<RoadAlert> = emptyList(),
+    /** The routing engine's average for this road, km/h. */
+    val avgSpeedKmh: Double? = null,
     val attribution: String,
     /** Where the base map's style lives -- this build's own API host. */
     val styleUrl: String,
@@ -191,6 +193,7 @@ fun af.velro.data.api.TripMapDto.toMapData(): TripMapData = TripMapData(
     alerts = alerts.map {
         RoadAlert(it.latitude, it.longitude, it.radius_m, it.kind, it.message_key)
     },
+    avgSpeedKmh = avg_speed_kmh,
     attribution = attribution,
     styleUrl = af.velro.data.BuildConfig.API_BASE_URL + "geo/map/style.json",
 )

@@ -793,3 +793,10 @@ notif.duty.on_trip	On a trip — map and road warnings active.	در سفر — �
 notif.ask.title	New ride request!	درخواست سفر نو!	د سفر نوې غوښتنه!	new — please check the Pashto
 notif.ask.body	A passenger is asking for a car. Open VELRO to answer.	مسافری موتر می‌خواهد. ولرو را باز کنید و جواب بدهید.	یو مسافر موټر غواړي. ولرو پرانیزئ او ځواب ورکړئ.	new — please check the Pashto
 notif.road.title	Road warning	هشدار جاده	د سړک خبرداری	new — please check the Pashto
+track.title	Track your ride	ردیابی سفر	د سفر څارنه	new — please check the Pashto
+track.eta	Arriving in about {minutes} min	رسیدن حدود {minutes} دقیقهٔ دیگر	شاوخوا {minutes} دقیقې وروسته رسېږي	new — please check the Pashto
+track.eta_now	The car is nearly there	موتر همین نزدیکی‌هاست	موټر همدا نږدې دی	new — please check the Pashto
+track.eta_unknown	Waiting for the car's position…	در انتظار موقعیت موتر…	د موټر ځای ته انتظار…	new — please check the Pashto
+track.call	Call	زنگ زدن	زنګ ووهئ	new — please check the Pashto
+track.awaiting_driver	No driver assigned yet.	هنوز راننده‌ای تعیین نشده است.	تر اوسه چلوونکی نه دی ټاکل شوی.	new — please check the Pashto
+track.open	Watch on the map	دیدن روی نقشه	پر نقشه یې وګورئ	new — please check the Pashto

@@ -1,5 +1,7 @@
 package af.velro.feature.trip
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import af.velro.core.map.JourneyMap
 import af.velro.core.i18n.Numerals
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,10 +65,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun BookingDetailRoute(
     onBack: () -> Unit = {},
+    onTrack: () -> Unit = {},
     viewModel: BookingDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    BookingDetailScreen(state, viewModel::onEvent, onBack = onBack)
+    BookingDetailScreen(state, viewModel::onEvent, onBack = onBack, onTrack = onTrack)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,6 +78,7 @@ fun BookingDetailScreen(
     state: BookingDetailUiState,
     onEvent: (BookingDetailEvent) -> Unit,
     onBack: () -> Unit = {},
+    onTrack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
@@ -138,7 +142,20 @@ fun BookingDetailScreen(
         // here" and "the car was here ten minutes ago".
         state.journeyMap?.let { drawn ->
             Spacer(Modifier.height(Spacing.md))
-            JourneyMap(drawn, vehicle = state.vehicle)
+            // The small map is a doorway: the full tracking screen is one
+            // tap, on the card or on the line under it.
+            Box(Modifier.clickable(enabled = booking.isActive) { onTrack() }) {
+                JourneyMap(drawn, vehicle = state.vehicle)
+            }
+            if (booking.isActive) {
+                Spacer(Modifier.height(Spacing.xxs))
+                Text(
+                    strings["track.open"],
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { onTrack() },
+                )
+            }
             state.vehicleAgeSeconds?.let { age ->
                 Spacer(Modifier.height(Spacing.xxs))
                 Text(

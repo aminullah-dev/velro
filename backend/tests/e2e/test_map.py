@@ -74,6 +74,8 @@ class TestJourneyPreview:
         body = journey.json()["data"]
         assert body["origin"]["name"].startswith("ایستگاه")
         assert body["geometry"], "the coordinate-bearing pair must draw a line"
+        # The routing engine's own average for this road, for honest ETAs.
+        assert 30 < body["avg_speed_kmh"] < 100
         assert body["attribution"] == "© OpenStreetMap"
 
     def test_the_preview_needs_a_signed_in_user(self, client: TestClient):
@@ -180,3 +182,23 @@ class TestVehiclePrivacy:
         )
         assert answer.status_code == 200, answer.text
         assert answer.json()["data"] is None
+        # Yesterday's driver is not hers to call, either.
+        crew = client.get(
+            f"/api/v1/bookings/{settled['id']}/driver",
+            headers=passenger_session,
+        )
+        assert crew.status_code == 200 and crew.json()["data"] is None
+
+    def test_someone_elses_driver_card_does_not_exist(
+        self, client: TestClient, admin_session: dict, passenger_session: dict
+    ):
+        rows = client.get("/api/v1/admin/bookings", headers=admin_session).json()["data"]
+        mine = client.get("/api/v1/bookings", headers=passenger_session).json()["data"]
+        my_ids = {b["id"] for b in mine.get("bookings", [])}
+        foreign = next((r for r in rows if r["id"] not in my_ids), None)
+        if foreign is None:
+            return
+        refused = client.get(
+            f"/api/v1/bookings/{foreign['id']}/driver", headers=passenger_session
+        )
+        assert refused.status_code == 404, refused.text

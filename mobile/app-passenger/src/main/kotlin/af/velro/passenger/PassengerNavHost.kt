@@ -26,6 +26,7 @@ import af.velro.feature.auth.SignInRoute
 import af.velro.feature.booking.BookingFlowRoute
 import af.velro.feature.booking.OffersRoute
 import af.velro.feature.trip.BookingDetailRoute
+import af.velro.feature.trip.TrackRideRoute
 import af.velro.feature.trip.HistoryRoute
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -75,12 +76,14 @@ private object Routes {
     const val HOME = "home"
     const val BOOK = "book"
     const val BOOKING_DETAIL = "booking/{bookingId}"
+    const val TRACK = "track/{bookingId}"
     const val HISTORY = "history"
     const val REPORTS = "reports"
     const val OFFERS = "offers"
     const val ACCOUNT = "account"
 
     fun bookingDetail(id: String) = "booking/$id"
+    fun track(id: String) = "track/$id"
 }
 
 @Composable
@@ -178,8 +181,19 @@ fun PassengerNavHost(
             )
         }
 
-        composable(Routes.BOOKING_DETAIL) {
-            BookingDetailRoute(onBack = { navController.popBackStack() })
+        composable(Routes.BOOKING_DETAIL) { entry ->
+            BookingDetailRoute(
+                onBack = { navController.popBackStack() },
+                onTrack = {
+                    navController.navigate(
+                        Routes.track(entry.arguments?.getString("bookingId") ?: return@BookingDetailRoute)
+                    )
+                },
+            )
+        }
+
+        composable(Routes.TRACK) {
+            TrackRideRoute(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.OFFERS) {

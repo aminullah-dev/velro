@@ -405,7 +405,7 @@ def trip_map(
     origin, origin_code = mapdata.place(session, "stations", trip.origin_station_id)
     destination, dest_code = mapdata.place(session, "destinations", trip.destination_id)
 
-    line = mapdata.journey_line(
+    shape = mapdata.journey_line(
         origin_code,
         dest_code,
         (origin["longitude"], origin["latitude"]) if origin else None,
@@ -439,7 +439,8 @@ def trip_map(
         "origin": origin,
         "destination": destination,
         # (lat, lon) pairs, the order every mobile mapping API speaks.
-        "geometry": [[lat, lon] for lon, lat in line] if line else None,
+        "geometry": [[lat, lon] for lon, lat in shape["points"]] if shape else None,
+        "avg_speed_kmh": shape["avg_speed_kmh"] if shape else None,
         "stations": stations,
         "alerts": alerts,
         "attribution": "© OpenStreetMap",

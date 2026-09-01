@@ -486,3 +486,58 @@ def vehicle_location(
         "age_seconds": age_s,
     })
 
+@router.get("/bookings/{booking_id}/driver")
+def booking_driver(
+    booking_id: str,
+    actor: deps.ActorDep,
+    bookings: Annotated[object, Depends(deps.bookings)],
+    trips: Annotated[object, Depends(deps.trips)],
+    drivers: Annotated[object, Depends(deps.drivers)],
+    users: Annotated[object, Depends(deps.users)],
+    vehicles: Annotated[object, Depends(deps.vehicles)],
+) -> dict:
+    """Who is coming for me, and in what.
+
+    The tracking screen's second half: a passenger waiting at a roadside
+    deserves the driver's name, his standing, the car's plate to check
+    against the one that stops, and a number to call -- there is no chat
+    system and no masking proxy in this product's world; a phone call is
+    how a driver and a passenger have always found each other here, and
+    the driver already holds her number in his manifest for exactly the
+    same reason.
+
+    Same privacy shape as the photograph and the moving dot: her own
+    booking, and only while a car is actually owed. Null before a driver
+    is assigned and after the ride is over -- yesterday's driver is not
+    hers to call.
+    """
+    booking = bookings.get(booking_id)
+    if booking.passenger_id != actor.user_id:
+        raise NotFoundError(bookings.not_found_code, booking_id=booking_id)
+    if booking.status not in _TRACKABLE_STATUSES or booking.trip_id is None:
+        return ok(None)
+    trip = trips.find(booking.trip_id)
+    if trip is None or trip.driver_id is None:
+        return ok(None)
+
+    driver = drivers.get(trip.driver_id)
+    user = users.get(driver.user_id)
+    vehicle = vehicles.find(trip.vehicle_id) if trip.vehicle_id else None
+    return ok({
+        "driver_id": driver.id,
+        "name": user.full_name,
+        "phone": user.phone,
+        "rating_average": (
+            round(driver.rating_sum / driver.rating_count, 2)
+            if driver.rating_count else None
+        ),
+        "rating_count": driver.rating_count,
+        "vehicle": {
+            "brand": vehicle.brand,
+            "model": vehicle.model,
+            "colour": vehicle.colour,
+            "plate_number": vehicle.plate_number,
+            "seat_capacity": vehicle.seat_capacity,
+        } if vehicle else None,
+    })
+

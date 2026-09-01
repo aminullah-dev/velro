@@ -201,6 +201,26 @@ class BookingRepository @Inject constructor(
             dto?.let { VehiclePing(it.latitude, it.longitude, it.age_seconds) }
         }
 
+    /**
+     * Who is coming, in what, and a number to call. Null before a driver is
+     * assigned and after the ride is over -- same rule as the moving dot.
+     */
+    suspend fun rideDriver(bookingId: String): ApiResult<RideDriver?> =
+        mapper.callNullable { api.bookingDriver(bookingId) }.map { dto ->
+            dto?.let {
+                RideDriver(
+                    driverId = it.driver_id,
+                    name = it.name,
+                    phone = it.phone,
+                    ratingAverage = it.rating_average,
+                    ratingCount = it.rating_count,
+                    vehicle = it.vehicle?.let { v ->
+                        RideVehicle(v.brand, v.model, v.colour, v.plate_number, v.seat_capacity)
+                    },
+                )
+            }
+        }
+
 }
 
 
@@ -208,4 +228,22 @@ data class VehiclePing(
     val latitude: Double,
     val longitude: Double,
     val ageSeconds: Int,
+)
+
+
+data class RideVehicle(
+    val brand: String?,
+    val model: String?,
+    val colour: String?,
+    val plateNumber: String,
+    val seatCapacity: Int,
+)
+
+data class RideDriver(
+    val driverId: String,
+    val name: String?,
+    val phone: String,
+    val ratingAverage: Double?,
+    val ratingCount: Int,
+    val vehicle: RideVehicle?,
 )

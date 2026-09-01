@@ -226,6 +226,11 @@ interface VelroApi {
         @Query("destination_id") destinationId: String,
     ): Response<Envelope<TripMapDto>>
 
+    @GET("bookings/{bookingId}/driver")
+    suspend fun bookingDriver(
+        @Path("bookingId") bookingId: String,
+    ): Response<Envelope<RideDriverDto?>>
+
     @GET("bookings/{bookingId}/vehicle-location")
     suspend fun vehicleLocation(
         @Path("bookingId") bookingId: String,
