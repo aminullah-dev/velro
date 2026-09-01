@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -25,22 +27,33 @@ android {
 
     buildFeatures { compose = true }
 
-    // Read from the environment, never from a file in the repository. An
-    // unsigned release APK cannot be installed on a handset at all, so this is
-    // not optional -- but a keystore or its password inside the repo would be
-    // one `git push` away from letting anyone ship an update that Android
-    // accepts as VELRO. Absent, the release build is simply unsigned and says
-    // so, rather than silently signing with the debug key.
-    val keystorePath: String? = System.getenv("VELRO_KEYSTORE")
-    val keystorePassword: String? = System.getenv("VELRO_KEYSTORE_PASSWORD")
+    // Never from a file in the repository: a keystore or its password
+    // committed here would be one `git push` away from letting anyone ship an
+    // update that Android accepts as VELRO. Absent, the release build is
+    // simply unsigned and says so, rather than silently signing with the
+    // debug key -- and an unsigned release APK cannot be installed at all.
+    //
+    // Two ways in, because there are two ways to build. The environment is
+    // what a terminal and a CI runner have; keystore.properties is what
+    // Android Studio can use, since a GUI launched from the Dock inherits
+    // none of a shell's exported variables. The file lives beside this build
+    // script, is git-ignored, and is read only for its path and password.
+    val secrets = rootProject.file("keystore.properties").takeIf { it.isFile }?.let {
+        Properties().apply { it.inputStream().use(::load) }
+    }
+    fun secret(env: String, key: String): String? =
+        System.getenv(env) ?: secrets?.getProperty(key)
+
+    val keystorePath: String? = secret("VELRO_KEYSTORE", "storeFile")
+    val keystorePassword: String? = secret("VELRO_KEYSTORE_PASSWORD", "storePassword")
 
     signingConfigs {
         if (keystorePath != null && keystorePassword != null) {
             create("release") {
                 storeFile = file(keystorePath)
                 storePassword = keystorePassword
-                keyAlias = System.getenv("VELRO_KEY_ALIAS") ?: "velro"
-                keyPassword = System.getenv("VELRO_KEY_PASSWORD") ?: keystorePassword
+                keyAlias = secret("VELRO_KEY_ALIAS", "keyAlias") ?: "velro"
+                keyPassword = secret("VELRO_KEY_PASSWORD", "keyPassword") ?: keystorePassword
             }
         }
     }

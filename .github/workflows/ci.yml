@@ -52,5 +52,7 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
-      - run: gradle test -q
+      # Through the wrapper, so CI builds with the same Gradle the laptops
+      # and Android Studio use rather than whatever the runner ships.
+      - run: ./gradlew test
         working-directory: mobile

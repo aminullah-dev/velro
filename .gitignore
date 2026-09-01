@@ -59,5 +59,6 @@ admin/tsconfig.tsbuildinfo
 # passed to Gradle through the environment -- never committed. A keystore in
 # the repository is one push away from letting anyone ship an update that
 # Android accepts as VELRO.
+keystore.properties
 *.jks
 *.keystore
