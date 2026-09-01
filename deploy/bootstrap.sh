@@ -48,6 +48,9 @@ grep -q '^JWT_SECRET=.\{32,\}'    .env || stop "JWT_SECRET in deploy/.env must b
 
 # -- the deploy itself ---------------------------------------------------
 
+# The admin panel's build reads backend/resources/locales, so it needs the
+# whole tree present -- which it is, whether this arrived by git or by the
+# rsync in push.sh.
 say "Building the admin panel (in Docker, so this server needs no Node)"
 docker compose run --rm admin-build
 

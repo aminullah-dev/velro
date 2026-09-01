@@ -23,6 +23,20 @@ WORKDIR /app
 COPY . .
 RUN pip install --no-cache-dir .
 
+# The source tree wins over the installed copy, which is what makes the
+# scripts work at all.
+#
+# `pip install .` puts a second copy of every package into site-packages.
+# Running `uvicorn ...` from /app imports the /app copy, because Python puts
+# the working directory first -- but running `python scripts/geography.py`
+# puts /app/scripts first instead, and `infrastructure` then comes from
+# site-packages, where resources/ is not a sibling. The file loads, finds
+# nothing, and says so politely: "no geography.csv; nothing to import",
+# while the file sits in /app/resources being perfectly readable. Four
+# hundred and twenty-seven villages did not arrive on the first deploy for
+# exactly this reason.
+ENV PYTHONPATH=/app
+
 # Uploaded documents -- tazkiras, licences, vehicle papers -- live under
 # storage_root. This is where the compose file mounts a real volume; without
 # a declared mount point here a redeploy would silently lose them to the
