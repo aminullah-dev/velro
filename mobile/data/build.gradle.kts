@@ -24,8 +24,25 @@ android {
         // phone is for at this stage. `-Pvelro.apiHost=<lan-ip>` points it at
         // the machine running scripts/dev-api.sh instead. The default stays
         // the emulator, because that is the common case.
+        // Two ways to say where the backend is, because there are two kinds
+        // of answer. `velro.apiHost` is the development shorthand -- a bare
+        // address that means "http, port 8000", which is what dev-api.sh
+        // serves. `velro.apiUrl` is the whole truth and is used verbatim,
+        // which production needs: https, no port, and a path.
+        //
+        // Deriving one from the other was tried and is wrong: a release
+        // pointed at api.velro.linumic.com would have been built as
+        // http://api.velro.linumic.com:8000/, which is neither the scheme
+        // nor the port a real deployment answers on -- an APK that cannot
+        // reach its own backend, discovered by whoever installed it.
         val apiHost = (project.findProperty("velro.apiHost") as String?) ?: "10.0.2.2"
-        buildConfigField("String", "API_BASE_URL", "\"http://$apiHost:8000/api/v1/\"")
+        val apiUrl = (project.findProperty("velro.apiUrl") as String?)
+            ?: "http://$apiHost:8000/api/v1/"
+        require(apiUrl.endsWith("/api/v1/")) {
+            "velro.apiUrl must end in /api/v1/ -- Retrofit resolves every " +
+                "endpoint against it as a directory: $apiUrl"
+        }
+        buildConfigField("String", "API_BASE_URL", "\"$apiUrl\"")
     }
     buildFeatures { buildConfig = true }
 

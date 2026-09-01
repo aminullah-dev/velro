@@ -68,8 +68,18 @@ android {
     }
 
     buildTypes {
-        debug { applicationIdSuffix = ".debug" }
+        debug {
+            applicationIdSuffix = ".debug"
+            // Plain HTTP, because the development backend speaks it.
+            manifestPlaceholders["cleartext"] = "true"
+        }
         release {
+            // Refused. A release build talks to api.velro.linumic.com over
+            // TLS or it does not talk: a passenger's phone number and a
+            // driver's licence photograph crossing a valley's mobile network
+            // in the clear is not a thing to leave possible because it was
+            // convenient during development.
+            manifestPlaceholders["cleartext"] = "false"
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true

@@ -46,6 +46,13 @@ docker compose exec api alembic upgrade head
 docker compose exec api python scripts/seed.py   # first deploy only
 ```
 
+That last line is not only sample data: `seed.py` applies
+`backend/resources/geo/geography.csv`, which is the real geography -- 427
+villages, their stations, and every coordinate an operator has placed by
+hand. It is the only copy of that work outside the laptop it was typed on,
+which is why it lives in git. Re-run it after pulling a commit that changed
+that file, or run the narrower `python scripts/geography.py import`.
+
 Then confirm it is actually alive:
 
 ```bash
@@ -63,6 +70,30 @@ docker compose exec api alembic upgrade head   # no-op if nothing changed
 
 `db` and `caddy` are not rebuilt on a normal deploy -- only `api` and the
 admin static files change on an ordinary release.
+
+## Getting the apps onto the server
+
+The APKs are built on a laptop, because the signing key is on that laptop
+and must never be on this server. So they arrive by upload:
+
+```bash
+# on the laptop, pointed at the real backend
+cd backend && scripts/publish-apks.sh https://api.velro.linumic.com/api/v1/
+
+# then, from the same laptop
+scp backend/var/apks/velro-*.apk backend/var/apks/release.json root@<vps>:/tmp/
+ssh root@<vps> 'cd /opt/velro/deploy && for f in velro-passenger.apk velro-driver.apk release.json; do docker compose cp /tmp/$f api:/app/var/apks/$f; done'
+```
+
+They land in the `api_apks` volume, which survives redeploys. After that,
+`https://api.velro.linumic.com/app` is the page people are pointed at, and
+every installed app checks `/api/v1/app/version` on launch and offers the
+update itself.
+
+A release build refuses cleartext HTTP, so the URL above must be the https
+one -- `publish-apks.sh` refuses to build a release against anything else,
+which is the difference between finding that out here and finding it out
+from a driver in a valley whose app cannot reach anything.
 
 ## Backups
 

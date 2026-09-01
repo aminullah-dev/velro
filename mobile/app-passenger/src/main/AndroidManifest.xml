@@ -36,7 +36,7 @@
         android:theme="@style/Theme.Velro"
         android:supportsRtl="true"
         android:allowBackup="false"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="${cleartext}">
 
         <activity
             android:name=".MainActivity"

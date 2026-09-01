@@ -40,4 +40,19 @@ EXPOSE 8000
 # VPS actually chosen, not guessed at here. Access logs go to Caddy, which
 # already logs every request with a request ID; a second copy from uvicorn
 # would just be noise in the same stream.
-CMD ["uvicorn", "ui.api.app:asgi", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--no-access-log"]
+# --proxy-headers with a wildcard trust, and both halves are deliberate.
+#
+# Caddy terminates TLS and forwards over the compose network, so it arrives
+# from a container address, not 127.0.0.1 -- which is all uvicorn trusts by
+# default. Untrusted means X-Forwarded-Proto is ignored, request.base_url
+# comes out http, and the map style hands the apps http:// tile URLs that a
+# release build refuses outright: the map simply does not draw, in
+# production only, for a reason nothing in the app can explain.
+#
+# The wildcard is safe here precisely because of what the compose file does
+# NOT do: port 8000 is never published, so the only thing that can reach
+# this process is Caddy on the internal network. If that ever changes, this
+# has to change with it.
+CMD ["uvicorn", "ui.api.app:asgi", "--host", "0.0.0.0", "--port", "8000", \
+     "--workers", "2", "--no-access-log", \
+     "--proxy-headers", "--forwarded-allow-ips", "*"]

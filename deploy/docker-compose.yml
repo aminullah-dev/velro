@@ -72,6 +72,13 @@ services:
       # Remove the entries the day real people start signing in -- a test
       # number that outlives the testing is a permanently unlocked account.
       VELRO_OTP_TEST_NUMBERS: ${OTP_TEST_NUMBERS:-}
+      # Numbers the service-area fence does not apply to, comma-separated
+      # E.164. Deliberately a different list from the one above: the tester
+      # lives on another continent and must still receive real codes on a
+      # real handset while asking for rides from outside the valley. Without
+      # this the operator is fenced out of his own product the moment it
+      # leaves his laptop.
+      VELRO_GEOFENCE_EXEMPT_PHONES: ${GEOFENCE_EXEMPT_PHONES:-}
       VELRO_STORAGE_ROOT: /app/var/storage
       # otp_debug_echo is deliberately absent: config.load refuses to start a
       # production deployment with it set, so it must never appear here even
@@ -82,6 +89,12 @@ services:
       # mount into the image: the container is rebuilt on every deploy and
       # these documents must not go with it.
       - api_storage:/app/var/storage
+      # The published APKs, for the same reason and one more: they are built
+      # on a laptop with a signing key that never comes near this server, so
+      # they arrive by upload rather than by image. Inside the image they
+      # would vanish on the next deploy and the download page would quietly
+      # go back to saying nothing is published.
+      - api_apks:/app/var/apks
     healthcheck:
       # /readyz, not /healthz: liveness never touches the database on purpose
       # (a Postgres blip must not make an orchestrator kill a healthy
@@ -110,5 +123,6 @@ services:
 volumes:
   db_data:
   api_storage:
+  api_apks:
   caddy_data:
   caddy_config:
