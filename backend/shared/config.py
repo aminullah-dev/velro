@@ -32,7 +32,23 @@ class Settings:
     database_url: str
     jwt_secret: str
     jwt_access_ttl_seconds: int = 900
-    jwt_refresh_ttl_seconds: int = 60 * 60 * 24 * 30
+    #: Six months, not one, and the reason is money.
+    #:
+    #: A refresh token rotates on every use, so anyone who opens the app
+    #: inside the window never signs in again -- the window only matters for
+    #: someone who goes quiet. At thirty days that is a passenger who
+    #: travels seasonally, or a driver who parks the car for Ramadan, and
+    #: each one costs a real SMS at roughly $0.45 against a $50 monthly
+    #: budget: about a hundred and ten messages, total, for everything.
+    #:
+    #: Six months is safe here for a reason that is specific to this
+    #: codebase rather than general good practice: current_actor re-reads
+    #: the user row on every authenticated request, so a suspended account
+    #: dies immediately whatever its token says, and a replayed refresh
+    #: token revokes every session the user has. The window's length does
+    #: not weaken revocation; it only decides how often a quiet phone has to
+    #: spend a message to come back.
+    jwt_refresh_ttl_seconds: int = 60 * 60 * 24 * 180
     default_locale: str = "fa-AF"
     supported_locales: tuple[str, ...] = ("en", "fa-AF", "ps")
     default_currency: str = "AFN"
@@ -77,7 +93,7 @@ class Settings:
 _DEFAULTS: dict[str, Any] = {
     "environment": "development",
     "jwt_access_ttl_seconds": 900,
-    "jwt_refresh_ttl_seconds": 60 * 60 * 24 * 30,
+    "jwt_refresh_ttl_seconds": 60 * 60 * 24 * 180,
     "default_locale": "fa-AF",
     "default_currency": "AFN",
     "default_timezone": "Asia/Kabul",
