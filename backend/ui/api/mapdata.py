@@ -215,6 +215,32 @@ def place(session, table: str, place_id: str | None):
     return point, row.code
 
 
+#: How far a leg's stored endpoint may sit from the place's live coordinates
+#: before the leg is treated as describing somewhere else.
+_STALE_ENDPOINT_M = 500
+
+
+def _leg_matches(leg: dict, origin: tuple[float, float], dest: tuple[float, float],
+                 reversed_: bool = False) -> bool:
+    """Is this precomputed leg still about these two places?
+
+    A leg written before a station was corrected still starts where the
+    station used to be. Rather than pretend, the reader checks and falls
+    through to slicing a corridor, which uses the live coordinates. A leg
+    from an older file with no endpoints recorded is trusted, because that
+    is all the information there is.
+    """
+    a, b = leg.get("from_lonlat"), leg.get("to_lonlat")
+    if a is None or b is None:
+        return True
+    if reversed_:
+        a, b = b, a
+    return (
+        _metres((a[0], a[1]), origin) <= _STALE_ENDPOINT_M
+        and _metres((b[0], b[1]), dest) <= _STALE_ENDPOINT_M
+    )
+
+
 def _leg_speed_kmh(leg: dict) -> float | None:
     if not leg.get("duration_s"):
         return None
@@ -242,10 +268,10 @@ def journey_line(
         return None
 
     exact = _legs().get(f"pair:{origin_code}:{dest_code}")
-    if exact:
+    if exact and _leg_matches(exact, origin, dest):
         return {"points": exact["points"], "avg_speed_kmh": _leg_speed_kmh(exact)}
     reverse = _legs().get(f"pair:{dest_code}:{origin_code}")
-    if reverse:
+    if reverse and _leg_matches(reverse, origin, dest, reversed_=True):
         return {
             "points": list(reversed(reverse["points"])),
             "avg_speed_kmh": _leg_speed_kmh(reverse),

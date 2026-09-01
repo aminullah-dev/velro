@@ -115,29 +115,49 @@ class TestRefusals:
         assert refused.status_code == 403, refused.text
 
 
-class TestAlreadyPlacedStationsKeepTheirPoint:
-    def test_a_station_with_its_own_point_is_not_overwritten(
+class TestCorrections:
+    """The case the first real operator session produced.
+
+    خیشکی was seeded at a sample coordinate; the operator moved the village
+    fourteen kilometres to where it actually is. The station must arrive
+    with it -- it is the station the geofence, the journey line and the ETA
+    all read.
+    """
+
+    def test_a_corrected_village_brings_its_station_along(
         self, client: TestClient, admin_session: dict
     ):
-        # خیشکی's village row: its station was seeded with real coordinates.
         rows = client.get(
             "/api/v1/admin/villages", params={"q": "خیشکی", "limit": 10},
             headers=admin_session,
         ).json()["data"]
         village = next(v for v in rows if v["name"] == "خیشکی")
-        before_lat = village["latitude"]
+        original = (str(village["latitude"]), str(village["longitude"]))
+        assert village["station_count"] >= 1
+
         moved = client.patch(
             f"/api/v1/admin/villages/{village['id']}/coordinates",
-            json={"latitude": "35.20000", "longitude": "68.70000"},
+            json={"latitude": "35.00118", "longitude": "68.79793"},
             headers=admin_session,
         )
         assert moved.status_code == 200, moved.text
-        # The village moved, but its already-placed station kept its point.
-        assert moved.json()["data"]["stations_updated"] == []
-        # Put the village back exactly as the seed had it.
+        assert moved.json()["data"]["stations_updated"], (
+            "the station must follow its village, not stay on the sample point"
+        )
+
+        # And the station really holds the new point, not just the report.
+        stations = client.get(
+            "/api/v1/admin/stations", params={"q": "خیشکی", "limit": 10},
+            headers=admin_session,
+        ).json()["data"]
+        moved_station = next(
+            st for st in stations if st["village_name"] == "خیشکی"
+        )
+        assert abs(moved_station["latitude"] - 35.00118) < 0.0001
+
         client.patch(
             f"/api/v1/admin/villages/{village['id']}/coordinates",
-            json={"latitude": str(before_lat), "longitude": str(village["longitude"])},
+            json={"latitude": original[0], "longitude": original[1]},
             headers=admin_session,
         )
 

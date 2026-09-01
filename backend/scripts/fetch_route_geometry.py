@@ -83,6 +83,14 @@ def _route(client: httpx.Client, a: tuple[float, float], b: tuple[float, float])
     return {
         "distance_m": round(route["distance"]),
         "duration_s": round(route["duration"]),
+        # The coordinates this shape was asked about. A station's point can
+        # be corrected later -- the first operator session moved one
+        # fourteen kilometres -- and a precomputed line drawn from the old
+        # one is a lie the reader must be able to detect. mapdata compares
+        # these against the live coordinates and ignores a leg that has
+        # drifted.
+        "from_lonlat": [round(a[0], 5), round(a[1], 5)],
+        "to_lonlat": [round(b[0], 5), round(b[1], 5)],
         # (lon, lat) pairs, rounded to ~1 m so the file stays honest and small.
         "points": [[round(lon, 5), round(lat, 5)] for lon, lat in route["geometry"]["coordinates"]],
     }

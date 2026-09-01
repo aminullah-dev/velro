@@ -23,6 +23,7 @@
  .row { padding:8px 10px; border-radius:10px; background:#124e3e; cursor:pointer;
         display:flex; justify-content:space-between; align-items:center; font-size:.9rem; }
  .row.placed { background:#0b3a2e; color:#8fb8a9; }
+ .row.guess { background:#3d3a1c; color:#e8dfa8; }
  .row.active { outline: 2px solid #f5c400; }
  .row small { color:#9dbdb2; }
  #bar { display:flex; gap:8px; }
@@ -212,24 +213,41 @@ async function load() {
   drawPlaced();
 }
 
+// Three states, not two. A seeded guess looks placed and is not: the very
+// first one an operator checked was fourteen kilometres wrong, so it sorts
+// with the work, not with the finished.
+const stateOf = (v) =>
+  v.latitude === null ? "unplaced" : v.from_seed ? "guess" : "done";
+const RANK = { unplaced: 0, guess: 1, done: 2 };
+
 function render() {
   const q = $("search").value.trim();
-  const rows = villages
-    .filter((v) => !q || v.name.includes(q) || v.district_name.includes(q))
-    .sort((a, b) =>
-      (a.latitude === null) === (b.latitude === null)
-        ? a.name.localeCompare(b.name, "fa")
-        : a.latitude === null ? -1 : 1
-    );
-  const unplaced = villages.filter((v) => v.latitude === null).length;
-  $("progress").textContent =
-    `مانده: ${unplaced} از ${villages.length} قریه`;
-  $("list").replaceChildren(...rows.map((v) => {
+  const shown = villages.filter(
+    (v) => !q || v.name.includes(q) || v.district_name.includes(q)
+  ).sort((a, b) =>
+    RANK[stateOf(a)] - RANK[stateOf(b)] || a.name.localeCompare(b.name, "fa")
+  );
+
+  const count = (list, state) => list.filter((v) => stateOf(v) === state).length;
+  let line = `مانده: ${count(villages, "unplaced")} از ${villages.length} قریه`;
+  const guesses = count(villages, "guess");
+  if (guesses) line += ` · ${guesses} نقطهٔ نمونه برای بررسی`;
+  if (selected) {
+    // The district he is actually working through, so progress is visible
+    // at the scale he works at rather than only at the scale of everything.
+    const mine = villages.filter((v) => v.district_id === selected.district_id);
+    line += ` · ${selected.district_name}: ${count(mine, "done")} از ${mine.length}`;
+  }
+  $("progress").textContent = line;
+
+  $("list").replaceChildren(...shown.map((v) => {
+    const state = stateOf(v);
     const el = document.createElement("div");
-    el.className = "row" + (v.latitude !== null ? " placed" : "") +
+    el.className = "row" + (state === "done" ? " placed" : "") +
+                   (state === "guess" ? " guess" : "") +
                    (selected && selected.id === v.id ? " active" : "");
-    el.innerHTML = `<span>${v.name}</span><small>${v.district_name}` +
-                   (v.latitude !== null ? " ✓" : "") + "</small>";
+    const mark = state === "done" ? " ✓" : state === "guess" ? " ⚠︎" : "";
+    el.innerHTML = `<span>${v.name}</span><small>${v.district_name}${mark}</small>`;
     el.onclick = () => select(v);
     return el;
   }));
@@ -238,17 +256,25 @@ function render() {
 function select(v) {
   selected = v;
   dropPin(null);
-  $("status").textContent = v.latitude !== null
-    ? "نقطه دارد — برای جابه‌جایی، جای نو را بزنید."
-    : "جای این قریه را روی نقشه بزنید.";
+  $("status").textContent =
+    v.latitude === null ? "جای این قریه را روی نقشه بزنید."
+    : v.from_seed ? "این نقطه حدس نمونه است — درستش را بزنید."
+    : "نقطه دارد — برای جابه‌جایی، جای نو را بزنید.";
   $("clear").disabled = v.latitude === null;
   render();
+  const district = districts[v.district_id];
   const anchor = v.latitude !== null
     ? [v.longitude, v.latitude]
-    : districts[v.district_id] && districts[v.district_id].latitude !== null
-      ? [districts[v.district_id].longitude, districts[v.district_id].latitude]
+    : district && district.latitude !== null
+      ? [district.longitude, district.latitude]
       : null;
-  if (anchor) map.flyTo({ center: anchor, zoom: v.latitude !== null ? 13 : 11 });
+  // Only move the map when the target is not already on screen. Placing a
+  // valley means placing neighbours, and flying back to the district centre
+  // after every save threw away the zoom he had just set -- so he zoomed in
+  // again, every single time.
+  if (anchor && !map.getBounds().contains(anchor)) {
+    map.flyTo({ center: anchor, zoom: v.latitude !== null ? 13 : 11 });
+  }
 }
 
 map.on("click", (e) => {
@@ -277,14 +303,16 @@ $("save").onclick = async () => {
       body: JSON.stringify({ latitude: lat.toFixed(6), longitude: lng.toFixed(6) }),
     });
     selected.latitude = lat; selected.longitude = lng;
+    selected.from_seed = false;
     $("status").textContent =
       `ثبت شد ✓ (${reply.data.stations_updated.length} ایستگاه هم‌نقطه شد)`;
     dropPin(null); drawPlaced();
     // Straight to the next unplaced village in the same district: the whole
     // session is "walk the valley in your head, tap, tap, tap".
+    const wanted = (v) => stateOf(v) !== "done";
     const next = villages.find(
-      (v) => v.latitude === null && v.district_id === selected.district_id
-    ) || villages.find((v) => v.latitude === null);
+      (v) => wanted(v) && v.district_id === selected.district_id
+    ) || villages.find(wanted);
     if (next) select(next); else { selected = null; render(); }
   } catch (e) { $("status").textContent = "ثبت نشد: " + e.message; }
 };
@@ -305,6 +333,13 @@ $("clear").onclick = async () => {
 };
 
 $("search").oninput = render;
+
+// Enter saves the pin. Four hundred villages is four hundred round trips
+// from the map to a button; the keyboard shortens each one.
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || e.target === $("search")) return;
+  if (!$("save").disabled) { e.preventDefault(); $("save").click(); }
+});
 
 // Every placed village as a small dot, so the next tap has neighbours to
 // line up against.

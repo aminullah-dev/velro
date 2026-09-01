@@ -258,6 +258,10 @@ class VillageAdminOut(Schema):
     latitude: float | None
     longitude: float | None
     station_count: int
+    #: True when the only coordinates this village has are the seed's guess.
+    #: Placed and unplaced are not the whole truth: a guess looks placed and
+    #: is not.
+    from_seed: bool = False
 
 
 @router.get("/villages")
@@ -301,11 +305,52 @@ def villages(
                 latitude=float(v.latitude) if v.latitude is not None else None,
                 longitude=float(v.longitude) if v.longitude is not None else None,
                 station_count=int(station_count),
+                from_seed=v.source_note == SEED_SOURCE_NOTE,
             ).model_dump()
             for v, district_name, station_count in rows
         ],
         meta={"total": int(total or 0), "limit": limit, "offset": offset},
     )
+
+
+def _metres(a: tuple, b: tuple) -> float:
+    """Equirectangular metres. Exact enough to ask "is this the same spot"."""
+    import math
+
+    lat_a, lon_a = float(a[0]), float(a[1])
+    lat_b, lon_b = float(b[0]), float(b[1])
+    dx = (lon_a - lon_b) * 111_320 * math.cos(math.radians((lat_a + lat_b) / 2))
+    dy = (lat_a - lat_b) * 110_574
+    return math.hypot(dx, dy)
+
+
+#: A station further than this from where its village stood was put there
+#: deliberately, and a correction to the village does not drag it along.
+STATION_FOLLOWS_WITHIN_M = 1_000
+
+#: What scripts/seed.py writes on the coordinates it invents. A point
+#: wearing this is a plausible guess, never ground truth -- the first one an
+#: operator checked was fourteen kilometres out -- so the placer shows it as
+#: work still to do rather than a tick.
+SEED_SOURCE_NOTE = "development seed - not master data"
+PLACED_SOURCE_NOTE = "placed by admin on the VELRO map"
+
+
+def station_follows(
+    station_at: tuple | None, village_was_at: tuple | None
+) -> bool:
+    """Does this station move when its village is corrected?
+
+    A station with no point of its own always takes the village's. One that
+    was standing with the village follows it. One standing somewhere else --
+    which nothing can produce today, and which a future station-level tool
+    would -- stays where it was put.
+    """
+    if station_at is None or station_at[0] is None:
+        return True
+    if village_was_at is None:
+        return False
+    return _metres(station_at, village_was_at) <= STATION_FOLLOWS_WITHIN_M
 
 
 class VillageCoordinatesIn(Schema):
@@ -327,11 +372,21 @@ def place_village(
 
     This is how the 415 villages the public map has never heard of get their
     coordinates: someone who has actually stood in them taps the road on the
-    product's own map. The village takes the point, and any of its stations
-    that have no point of their own take it too -- a station placed by an
-    earlier, better source keeps what it has. Clearing reverses exactly that:
-    the village and all its stations forget, because a wrong point that has
-    spread is worse than no point.
+    product's own map.
+
+    A station follows its village when it was standing with it -- which is
+    every station today, since the seed created each one at its village's
+    coordinates and nothing else can move one. The first correction proved
+    why that matters: خیشکی's seeded point was a sample, the operator moved
+    the village fourteen kilometres to where it actually is, and the station
+    stayed behind on the old spot -- and the station is what the geofence,
+    the journey line and the ETA all read. So "the station keeps its own
+    point" now means what it was meant to mean: a point somebody put
+    somewhere else on purpose, more than a kilometre from where the village
+    stood, is left alone. Everything else moves with the village.
+
+    Clearing reverses exactly that: the village and all its stations forget,
+    because a wrong point that has spread is worse than no point.
 
     The bounds check is the region box with a margin: a mis-tap in the
     Arabian Sea should fail loudly at the moment the operator can still see
@@ -365,7 +420,7 @@ def place_village(
     village.latitude = body.latitude
     village.longitude = body.longitude
     village.source_note = (
-        "placed by admin on the VELRO map" if body.latitude is not None else None
+        PLACED_SOURCE_NOTE if body.latitude is not None else None
     )
     village.version += 1
 
@@ -374,6 +429,10 @@ def place_village(
             StationRow.village_id == village_id, StationRow.deleted_at.is_(None)
         )
     ).all()
+    was_at = None
+    if before["latitude"] is not None:
+        was_at = (Decimal(before["latitude"]), Decimal(before["longitude"]))
+
     touched = []
     for station in stations:
         if body.latitude is None:
@@ -381,7 +440,8 @@ def place_village(
                 station.latitude = None
                 station.longitude = None
                 touched.append(station.code)
-        elif station.latitude is None:
+            continue
+        if station_follows((station.latitude, station.longitude), was_at):
             station.latitude = body.latitude
             station.longitude = body.longitude
             touched.append(station.code)
@@ -417,6 +477,11 @@ class StationAdminOut(Schema):
     district_name: str
     is_primary: bool
     status: str
+    #: Where the station actually is -- the point the geofence, the journey
+    #: line and the ETA all read. Absent from this listing until a placement
+    #: correction had to be verified and there was no way to look.
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 @router.get("/stations")
@@ -442,6 +507,8 @@ def stations(
                 id=s.id, code=s.code, name=s.name, village_id=s.village_id,
                 village_name=village_name, district_name=district_name,
                 is_primary=s.is_primary, status=s.status,
+                latitude=float(s.latitude) if s.latitude is not None else None,
+                longitude=float(s.longitude) if s.longitude is not None else None,
             ).model_dump()
             for s, village_name, district_name in session.execute(stmt).all()
         ]
