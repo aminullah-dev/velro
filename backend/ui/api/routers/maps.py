@@ -38,10 +38,19 @@ def _layers() -> list[dict]:
         {"id": "background", "type": "background",
          "paint": {"background-color": "#f4efe6"}},
         {"id": "earth", "type": "fill", "source": "region", "source-layer": "earth",
+         "filter": ["==", ["geometry-type"], "Polygon"],
          "paint": {"fill-color": "#f1ebdd"}},
         {"id": "landcover", "type": "fill", "source": "region", "source-layer": "landcover",
+         "filter": ["==", ["geometry-type"], "Polygon"],
          "paint": {"fill-color": "#e9e5d4", "fill-opacity": 0.6}},
+        # Polygons only, explicitly. The water layer carries rivers as
+        # LineStrings alongside lakes as Polygons, and a fill layer with no
+        # geometry filter fills the rivers too -- which MapLibre renders as
+        # enormous triangular wedges fanning across the valley. It looked
+        # like a lake nobody had heard of, on every map in the product,
+        # because all three surfaces read this one style.
         {"id": "water", "type": "fill", "source": "region", "source-layer": "water",
+         "filter": ["==", ["geometry-type"], "Polygon"],
          "paint": {"fill-color": "#a9c8e4"}},
         {"id": "water-line", "type": "line", "source": "region", "source-layer": "water",
          "filter": ["==", ["geometry-type"], "LineString"],

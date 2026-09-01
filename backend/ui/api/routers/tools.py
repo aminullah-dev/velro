@@ -26,6 +26,11 @@ router = APIRouter(tags=["tools"])
 _ASSETS = {
     "maplibre-gl.js": "text/javascript",
     "maplibre-gl.css": "text/css",
+    # Arabic-script shaping and bidi for the web renderer. Without it the
+    # browser draws Persian place names left to right with unjoined
+    # letterforms -- سیاه‌گرد came out as "درگ ه‌ای‌س". The Android renderer
+    # shapes natively and needs none of this.
+    "mapbox-gl-rtl-text.min.js": "text/javascript",
 }
 
 

@@ -52,16 +52,24 @@ class TrackRideViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             bookings.booking(bookingId).collect { booking ->
+                val first = _state.value.booking == null
                 _state.update { it.copy(booking = booking) }
-                if (booking != null && _state.value.journeyMap == null) {
+                if (booking != null && first) {
+                    // The cache emits a moment after this screen opens, and
+                    // the poll below had already fired against a null
+                    // booking by then -- leaving "waiting for the car's
+                    // position" on screen for a full cycle, on the one
+                    // screen whose entire job is to answer that question
+                    // now. So the first arrival draws immediately.
                     loadOnce(booking)
+                    refreshLive(booking)
                 }
             }
         }
         viewModelScope.launch {
             while (isActive) {
-                _state.value.booking?.let { refreshLive(it) }
                 delay(POLL_SECONDS * 1000)
+                _state.value.booking?.let { refreshLive(it) }
             }
         }
     }

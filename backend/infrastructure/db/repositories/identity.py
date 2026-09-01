@@ -86,6 +86,35 @@ class UserRepository(SqlRepository[UserRow]):
         if existing is None:
             self.session.add(UserRoleRow(id=new_id(), user_id=user_id, role_id=role.id))
 
+    def revoke_role(self, user_id: str, role_code: str) -> bool:
+        """Take a role away. The missing half of grant_role.
+
+        Suspension is the switch for a passenger who trolls drivers; for a
+        staff account gone wrong the answer was always meant to be revoking
+        the role -- which nothing could do, so the answer was theoretical.
+
+        Soft-deleted rather than deleted, like everything else here: who held
+        which key and until when is exactly the question an audit asks after
+        the fact. Returns whether anything was actually held.
+        """
+        from datetime import UTC, datetime
+
+        role = self.session.scalars(
+            select(RoleRow).where(RoleRow.code == role_code, RoleRow.deleted_at.is_(None))
+        ).one()
+        held = self.session.scalars(
+            select(UserRoleRow).where(
+                UserRoleRow.user_id == user_id,
+                UserRoleRow.role_id == role.id,
+                UserRoleRow.deleted_at.is_(None),
+            )
+        ).one_or_none()
+        if held is None:
+            return False
+        held.deleted_at = datetime.now(UTC)
+        self.session.add(held)
+        return True
+
     def record_rating(self, user_id: str, score: int) -> None:
         """Add one score a driver gave this passenger.
 

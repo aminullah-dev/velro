@@ -1,0 +1,68 @@
+"""Make a real phone number an administrator.
+
+The seed creates one administrator, +93700000001, which exists so the tests
+have somebody to be. The operator's own handset is a different number, and
+until now there was no way to give it the keys short of writing SQL -- which
+is exactly the kind of thing that gets done once, wrong, at midnight.
+
+Creates the user if the number has never signed in, grants the role, and
+says what it did. Refuses nothing quietly.
+
+    PYTHONPATH=. .venv/bin/python scripts/grant-admin.py +13438677631
+    PYTHONPATH=. .venv/bin/python scripts/grant-admin.py +93700000001 --revoke
+
+The number still signs in the ordinary way, with an OTP. This grants
+authority, never access.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+
+from domain.identity import ADMIN, PhoneNumber
+from infrastructure.db.repositories.identity import UserRepository
+from shared.ids import new_id
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("phone", help="E.164 or local form; normalised the same way sign-in does")
+    parser.add_argument("--revoke", action="store_true", help="take the role away instead")
+    args = parser.parse_args()
+
+    phone = PhoneNumber.parse(args.phone)
+    url = os.environ.get(
+        "VELRO_DATABASE_URL",
+        "postgresql+psycopg://aminullahhashemi@localhost:5432/velro_dev",
+    )
+    engine = create_engine(url)
+    with Session(engine) as session:
+        users = UserRepository(session)
+        row = users.find_by_phone(phone.value)
+        if row is None:
+            if args.revoke:
+                print(f"no account for {phone.value}; nothing to revoke")
+                return 1
+            row = users.create(id=new_id(), phone=phone.value, locale="fa-AF", full_name=None)
+            print(f"created account for {phone.value}")
+
+        if args.revoke:
+            users.revoke_role(row.id, ADMIN)
+            session.commit()
+            print(f"{phone.value} is no longer an administrator")
+            return 0
+
+        users.grant_role(row.id, ADMIN)
+        session.commit()
+        print(f"{phone.value} is an administrator ({row.id})")
+        print("Sign in as usual; the OTP is unchanged.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

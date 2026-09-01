@@ -89,6 +89,16 @@ const api = (path, options = {}) =>
     return body;
   });
 
+// Arabic-script shaping, before any map exists. Without it Persian place
+// names render left-to-right with unjoined letters, which is worse than no
+// labels: سیاه‌گرد reads as "درگ ه‌ای‌س". Failure is survivable, so it is
+// caught rather than fatal.
+try {
+  maplibregl.setRTLTextPlugin(
+    "/admin/placer/assets/mapbox-gl-rtl-text.min.js", null, true,
+  );
+} catch (e) { /* already set, or unsupported: labels degrade, map works */ }
+
 const map = new maplibregl.Map({
   container: "map",
   style: "/api/v1/geo/map/style.json",
@@ -101,11 +111,19 @@ map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
 // -- sign in ------------------------------------------------------------
 $("send").onclick = async () => {
   try {
-    await api("/auth/otp/request", {
+    const reply = await api("/auth/otp/request", {
       method: "POST",
       body: JSON.stringify({ phone: $("phone").value.trim(), locale: "fa-AF" }),
     });
     $("code").style.display = $("verify").style.display = "block";
+    // A development server echoes the code it just sent; production refuses
+    // to (shared/config.py). Filling it in here is therefore not a hole --
+    // it is only ever possible when the server has already decided this
+    // machine is a development one, and it saves the operator reading a log.
+    if (reply.data && reply.data.debug_code) {
+      $("code").value = reply.data.debug_code;
+      $("status").textContent = "کود توسط سرور محلی پر شد.";
+    }
     $("code").focus();
   } catch (e) { alert("ارسال نشد: " + e.message); }
 };
