@@ -24,7 +24,7 @@ import sys
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from domain.identity import ADMIN, PhoneNumber
+from domain.identity import ADMIN, SUPER_ADMIN, PhoneNumber
 from infrastructure.db.repositories.identity import UserRepository
 from shared.ids import new_id
 
@@ -33,6 +33,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("phone", help="E.164 or local form; normalised the same way sign-in does")
     parser.add_argument("--revoke", action="store_true", help="take the role away instead")
+    parser.add_argument(
+        "--role", default=ADMIN, choices=(ADMIN, SUPER_ADMIN),
+        help="SUPER_ADMIN also carries settings.manage -- the owner's own "
+             "account, not an operator's",
+    )
     args = parser.parse_args()
 
     phone = PhoneNumber.parse(args.phone)
@@ -52,14 +57,14 @@ def main() -> int:
             print(f"created account for {phone.value}")
 
         if args.revoke:
-            users.revoke_role(row.id, ADMIN)
+            users.revoke_role(row.id, args.role)
             session.commit()
-            print(f"{phone.value} is no longer an administrator")
+            print(f"{phone.value} no longer holds {args.role}")
             return 0
 
-        users.grant_role(row.id, ADMIN)
+        users.grant_role(row.id, args.role)
         session.commit()
-        print(f"{phone.value} is an administrator ({row.id})")
+        print(f"{phone.value} now holds {args.role} ({row.id})")
         print("Sign in as usual; the OTP is unchanged.")
     return 0
 
