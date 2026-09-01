@@ -8,6 +8,8 @@ message, so an unthrottled endpoint is both a security hole and a bill.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -177,6 +179,11 @@ class VerifyOtp:
         new_id: IdGenerator,
         access_ttl_seconds: int,
         refresh_ttl_seconds: int,
+        #: Writes the attempt counter in a transaction of its own. A wrong
+        #: code answers 401, and the request's transaction is rolled back
+        #: with it -- which used to take the counter along, leaving a
+        #: five-digit code guessable without limit.
+        record_attempt: Callable[[str, int, datetime | None], None] | None = None,
     ) -> None:
         self._users = users
         self._otps = otps
@@ -189,6 +196,8 @@ class VerifyOtp:
         self._new_id = new_id
         self._access_ttl = access_ttl_seconds
         self._refresh_ttl = refresh_ttl_seconds
+        self._record_attempt = record_attempt
+
 
     def execute(self, cmd: VerifyOtpCommand) -> Session:
         phone = PhoneNumber.parse(cmd.phone, default_country_code=_country(self._settings))
@@ -210,11 +219,18 @@ class VerifyOtp:
         try:
             challenge.verify(self._codes.hash(cmd.code, phone), at=now)
         finally:
-            # The attempt counter is persisted whether or not the code matched,
-            # so a brute-force run cannot be reset by simply failing.
+            # The attempt counter must survive a refusal, and the request's
+            # own transaction does not: the middleware commits only on a
+            # response under 400, so every wrong code used to roll its own
+            # counter back. Written twice on purpose -- into this
+            # transaction, so a successful sign-in stays consistent with
+            # everything else it does, and through the recorder, whose
+            # transaction is already committed by the time the 401 leaves.
             row.attempts = challenge.attempts
             row.consumed_at = challenge.consumed_at
             self._otps.save(row)
+            if self._record_attempt is not None:
+                self._record_attempt(row.id, challenge.attempts, challenge.consumed_at)
 
         user_row = self._users.find_by_phone(phone.value)
         is_new = user_row is None

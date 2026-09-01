@@ -81,6 +81,10 @@ from infrastructure.db.repositories.trips import (
     RideRequestRepository,
     TripRepository,
 )
+from shared.logging import get_logger
+from sqlalchemy import update
+log = get_logger(__name__)
+
 from infrastructure.db.session import build_engine, build_session_factory
 from infrastructure.services.audit import SqlAuditLog
 from infrastructure.services.codes import SecretsOtpGenerator, SecretsVerificationCodeGenerator
@@ -144,6 +148,45 @@ def users(session: SessionDep) -> UserRepository:
 
 def otps(session: SessionDep) -> OtpRepository:
     return OtpRepository(session)
+
+
+def otp_attempt_recorder():
+    """Write an OTP attempt where a refusal cannot undo it.
+
+    The request transaction commits only on a successful response, which is
+    right for everything except this: a wrong code returns 401, the rollback
+    takes the attempt counter with it, and a five-digit code becomes
+    guessable without limit. Verified before fixing -- three wrong codes in a
+    row each answered "4 attempts remaining" and left attempts = 0 in the
+    database.
+
+    So the counter travels in its own short transaction, which survives the
+    refusal that follows it. Failing to write it must not turn a wrong code
+    into a 500: the caller still gets its answer, and the operator gets a log
+    line, because a brute-force defence that takes the service down with it
+    is its own denial of service.
+    """
+    from datetime import datetime
+
+    from infrastructure.db.models.identity import OtpChallengeRow
+
+    def record(challenge_id: str, attempts: int, consumed_at: datetime | None) -> None:
+        try:
+            with _session_factory()() as own:
+                own.execute(
+                    update(OtpChallengeRow)
+                    .where(OtpChallengeRow.id == challenge_id)
+                    .values(attempts=attempts, consumed_at=consumed_at)
+                )
+                own.commit()
+        except Exception as exc:  # noqa: BLE001 - never break the response
+            log.error(
+                "otp.attempt_not_recorded",
+                challenge_id=challenge_id,
+                error=type(exc).__name__,
+            )
+
+    return record
 
 
 def refresh_tokens(session: SessionDep) -> RefreshTokenRepository:

@@ -80,6 +80,7 @@ def verify_otp(
         new_id=deps.new_id,
         access_ttl_seconds=cfg.jwt_access_ttl_seconds,
         refresh_ttl_seconds=cfg.jwt_refresh_ttl_seconds,
+        record_attempt=deps.otp_attempt_recorder(),
     )
     session = use_case.execute(
         VerifyOtpCommand(
