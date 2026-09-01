@@ -59,6 +59,7 @@ def request_otp(
             locale=body.locale,
             request_ip=request.client.host if request.client else None,
             channel=body.channel,
+            audience=body.audience,
         )
     )
     return ok(asdict(result))

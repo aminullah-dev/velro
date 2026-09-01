@@ -31,6 +31,11 @@ export function SignInPage({ onSignedIn }: { onSignedIn: () => void }) {
       const result = await api.post<{ debug_code: string | null }>("/auth/otp/request", {
         phone,
         locale,
+        // The console asks as itself. The server answers the same way for any
+        // number, but only actually sends to one that already holds a staff
+        // role -- so a stranger guessing numbers here costs nothing and
+        // learns nothing.
+        audience: "staff",
       });
       setStep("code");
       // Development builds echo the code so a developer with no SMS gateway

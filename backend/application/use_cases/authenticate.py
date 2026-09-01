@@ -9,9 +9,9 @@ message, so an unthrottled endpoint is both a security hole and a bill.
 from __future__ import annotations
 
 from collections.abc import Callable
-
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
+from typing import Any
 
 from application.ports.repositories import (
     OtpRepository,
@@ -26,7 +26,13 @@ from application.ports.services import (
     TokenService,
 )
 from domain.enums import Locale, UserStatus
-from domain.identity import PASSENGER, OtpChallenge, PhoneNumber, User
+from domain.identity import (
+    PASSENGER,
+    STAFF_ROLES,
+    OtpChallenge,
+    PhoneNumber,
+    User,
+)
 from shared import error_codes
 from shared.clock import Clock
 from shared.errors import AuthenticationError, RateLimitError
@@ -34,6 +40,13 @@ from shared.ids import IdGenerator
 from shared.logging import get_logger
 
 log = get_logger(__name__)
+
+#: The handsets. Anybody may ask for a code, because anybody may open an
+#: account -- that is the product.
+APP_AUDIENCE = "app"
+#: The operator console. The people who belong here are already known, so a
+#: number without a staff role is answered but never sent to.
+STAFF_AUDIENCE = "staff"
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +58,12 @@ class RequestOtpCommand:
     #: the handset online; "sms" is forty-five cents and reaches a phone with
     #: no data at all. They know which they are; we do not.
     channel: str = "sms"
+    #: Which front door this came from. "app" is the passenger and driver
+    #: handsets: anybody may ask, because anybody may open an account. "staff"
+    #: is the operator console, where the set of people who belong is already
+    #: known -- so a number without a staff role gets no code and costs no
+    #: message. See RequestOtp._is_staff.
+    audience: str = "app"
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,6 +122,27 @@ class RequestOtp:
         # nobody, never everybody.
         self._test_numbers = test_numbers
 
+    def _is_staff(self, phone: PhoneNumber) -> bool:
+        """Does this number already hold a role that opens the console?
+
+        Read from user_roles, not from a list in configuration. A list has to
+        be edited on the server every time somebody is hired or let go, and
+        the day it disagrees with the database is the day a person removed
+        from the roles table still receives console codes. The roles table is
+        already the thing every request is authorised against; asking it here
+        means there is one answer to the question, not two.
+
+        A suspended account is refused too. It would be turned away at the
+        next request anyway, so sending it a code only spends a message to
+        arrive at the same place.
+        """
+        user = self._users.find_by_phone(phone.value)
+        if user is None:
+            return False
+        if user.status != UserStatus.ACTIVE.value:
+            return False
+        return bool(STAFF_ROLES & set(self._users.roles_of(user.id)))
+
     def execute(self, cmd: RequestOtpCommand) -> RequestOtpResult:
         phone = PhoneNumber.parse(cmd.phone, default_country_code=_country(self._settings))
         now = self._clock.now()
@@ -119,8 +159,34 @@ class RequestOtp:
                 retry_after_seconds=window,
             )
 
-        length = self._settings.get_int("otp.length", 5)
         ttl = self._settings.get_int("otp.ttl_seconds", 300)
+
+        if cmd.audience == STAFF_AUDIENCE and not self._is_staff(phone):
+            # Not an error, and deliberately indistinguishable from success.
+            #
+            # Answering "that number is not staff" would turn this endpoint
+            # into a directory of who runs the service: anybody could walk a
+            # list of numbers and learn which ones open the console. So the
+            # console gets the same answer either way, no challenge is
+            # created, and no message is paid for.
+            #
+            # The cost of that choice is that somebody who mistypes their own
+            # number waits for a code that never arrives. For a door with a
+            # handful of keyholders who know their own numbers, that is a
+            # better trade than telling a stranger which keys exist.
+            log.warning(
+                "auth.otp.staff_only_refused",
+                phone=phone.masked,
+                detail="console code requested for a number with no staff role",
+            )
+            return RequestOtpResult(
+                expires_in_seconds=ttl,
+                resend_after_seconds=window,
+                debug_code=None,
+                channel="sms",
+            )
+
+        length = self._settings.get_int("otp.length", 5)
         code = self._codes.generate(length)
 
         self._otps.create(

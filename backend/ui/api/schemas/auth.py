@@ -12,6 +12,11 @@ class RequestOtpIn(Schema):
     #: with no data, and a default that fails is worse than a default that
     #: costs more.
     channel: str = Field(default="sms", pattern=r"^(sms|telegram)$")
+    #: Which front door asked. The handsets send "app" -- the default, and
+    #: what every existing client already sends by sending nothing. The
+    #: operator console sends "staff", which restricts delivery to numbers
+    #: that already hold a staff role.
+    audience: str = Field(default="app", pattern=r"^(app|staff)$")
 
 
 class RequestOtpOut(Schema):
