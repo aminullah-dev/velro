@@ -769,6 +769,12 @@ def seed(session) -> None:
 
     session.commit()
 
+    # The sample geography above is enough to run the product; the committed
+    # file is what the product actually serves. Applied after the commit so
+    # a failure here leaves a working seed rather than nothing.
+    apply_committed_geography(session)
+    session.commit()
+
     print("seeded:")
     for key in sorted(created):
         print(f"  {key:20} {created[key]}")
@@ -792,6 +798,25 @@ def main() -> int:
     with factory() as session:
         seed(session)
     return 0
+
+
+
+def apply_committed_geography(session) -> None:
+    """Bring in the real villages and their placed coordinates, if present.
+
+    The sample above is enough to run the product; resources/geo/geography.csv
+    is what the product actually serves -- 427 villages that arrived through
+    one spreadsheet nobody kept, and the coordinates an operator placed by
+    hand. A fresh clone gets both, or gets a clear line saying it did not.
+    """
+    from infrastructure import geo_coordinates as geo
+
+    places = geo.read()
+    if not places:
+        print("geography: no committed file; sample geography only")
+        return
+    applied = geo.apply(session, places)
+    print(f"geography: {applied.summary()}")
 
 
 if __name__ == "__main__":

@@ -19,6 +19,16 @@ from domain.enums import DestinationKind, GeoStatus
 from shared import error_codes
 from shared.errors import ValidationError
 
+#: Where a coordinate came from, written into source_note.
+#:
+#: The distinction is not bookkeeping. A seeded point is a plausible guess
+#: made by a developer who has never been there -- the first one an operator
+#: checked was fourteen kilometres out -- while an operator's point is the
+#: only ground truth this product will ever have. Only the second kind is
+#: master data, and only the second kind is exported.
+SEED_SOURCE_NOTE = "development seed - not master data"
+PLACED_SOURCE_NOTE = "placed by admin on the VELRO map"
+
 _LAT_RANGE = (Decimal("-90"), Decimal("90"))
 _LON_RANGE = (Decimal("-180"), Decimal("180"))
 

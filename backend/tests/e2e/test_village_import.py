@@ -269,13 +269,23 @@ class TestCommit:
     ) -> None:
         """Numbering carries on rather than restarting, so a second import does
         not collide with the first."""
-        existing = client.get(
-            "/api/v1/admin/villages?district_id=", headers=staff
-        ).json()["data"]
         siahgird = next(
             d for d in client.get("/api/v1/admin/districts", headers=staff).json()["data"]
             if d["code"] == "GRB-SYG"
         )
+        # Every village in the district, not the first page of all of them:
+        # the real geography has 427, and the highest code is not on page one.
+        existing = []
+        while True:
+            page = client.get(
+                "/api/v1/admin/villages",
+                params={"district_id": siahgird["id"], "limit": 200,
+                        "offset": len(existing)},
+                headers=staff,
+            ).json()
+            existing.extend(page["data"])
+            if len(existing) >= page["meta"]["total"] or not page["data"]:
+                break
         highest = max(
             int(v["code"].rsplit("-", 1)[-1])
             for v in existing

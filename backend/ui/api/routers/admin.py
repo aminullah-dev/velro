@@ -30,6 +30,7 @@ from application.use_cases.record_name import RecordName, RecordNameCommand
 from domain.identity import DRIVER as DRIVER_ROLE
 from domain.identity import PhoneNumber
 from domain.identity import User as DomainUser
+from domain.geography import PLACED_SOURCE_NOTE, SEED_SOURCE_NOTE
 from domain.enums import (
     DriverApprovalStatus,
     Locale,
@@ -328,12 +329,8 @@ def _metres(a: tuple, b: tuple) -> float:
 #: deliberately, and a correction to the village does not drag it along.
 STATION_FOLLOWS_WITHIN_M = 1_000
 
-#: What scripts/seed.py writes on the coordinates it invents. A point
-#: wearing this is a plausible guess, never ground truth -- the first one an
-#: operator checked was fourteen kilometres out -- so the placer shows it as
-#: work still to do rather than a tick.
-SEED_SOURCE_NOTE = "development seed - not master data"
-PLACED_SOURCE_NOTE = "placed by admin on the VELRO map"
+# The provenance vocabulary lives in the domain: two scripts and this
+# router all have to agree on what a coordinate's origin means.
 
 
 def station_follows(
@@ -489,8 +486,16 @@ def stations(
     actor: Annotated[deps.Actor, Depends(deps.require_staff)],
     session: deps.SessionDep,
     village_id: str | None = None,
+    q: Annotated[str | None, Query(max_length=80)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> dict:
+    """Stations, filtered.
+
+    The search is not decoration: there are 427 of them and this listing
+    pages at a hundred, so without it the only way to find one is to know
+    its village's id -- which is how three tests came to be quietly reading
+    the wrong hundred rows.
+    """
     stmt = (
         select(StationRow, VillageRow.name, DistrictRow.name)
         .join(VillageRow, VillageRow.id == StationRow.village_id)
@@ -501,6 +506,13 @@ def stations(
     )
     if village_id:
         stmt = stmt.where(StationRow.village_id == village_id)
+    if q:
+        from domain.text import comparison_key
+
+        needle = comparison_key(q)
+        stmt = stmt.where(
+            or_(StationRow.name_key.like(f"%{needle}%"), StationRow.code.like(f"%{q}%"))
+        )
     return ok(
         [
             StationAdminOut(

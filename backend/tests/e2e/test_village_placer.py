@@ -147,7 +147,8 @@ class TestCorrections:
 
         # And the station really holds the new point, not just the report.
         stations = client.get(
-            "/api/v1/admin/stations", params={"q": "خیشکی", "limit": 10},
+            "/api/v1/admin/stations",
+            params={"village_id": village["id"], "limit": 10},
             headers=admin_session,
         ).json()["data"]
         moved_station = next(

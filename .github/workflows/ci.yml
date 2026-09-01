@@ -38,6 +38,9 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: alembic upgrade head
       - run: python scripts/seed.py
+      # The geography is master data in a file; importing it here means
+      # every push proves the file can still rebuild what it describes.
+      - run: python scripts/geography.py import
       - run: pytest -q
 
   mobile:

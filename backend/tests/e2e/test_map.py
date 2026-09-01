@@ -87,12 +87,18 @@ class TestJourneyPreview:
 
 
 def _station_id(client, admin, code):
-    rows = client.get("/api/v1/admin/stations", headers=admin).json()["data"]
+    # Filtered, not paged through: with 427 stations the first hundred rows
+    # are an arbitrary hundred.
+    rows = client.get(
+        "/api/v1/admin/stations", params={"q": code, "limit": 200}, headers=admin,
+    ).json()["data"]
     return next(r["id"] for r in rows if r.get("code") == code)
 
 
 def _destination_id(client, admin, code):
-    rows = client.get("/api/v1/admin/destinations", headers=admin).json()["data"]
+    rows = client.get(
+        "/api/v1/admin/destinations", params={"limit": 200}, headers=admin,
+    ).json()["data"]
     return next(r["id"] for r in rows if r.get("code") == code)
 
 
