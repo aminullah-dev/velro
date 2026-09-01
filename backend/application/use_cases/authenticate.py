@@ -41,6 +41,10 @@ class RequestOtpCommand:
     phone: str
     locale: str = Locale.DARI.value
     request_ip: str | None = None
+    #: Where the person asked for the code. "telegram" is a cent and needs
+    #: the handset online; "sms" is forty-five cents and reaches a phone with
+    #: no data at all. They know which they are; we do not.
+    channel: str = "sms"
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +55,11 @@ class RequestOtpResult:
     # true in production. It exists so a developer without an SMS gateway can
     # still log in.
     debug_code: str | None = None
+    #: Which channel actually carried it, which is not always the one asked
+    #: for: a Telegram code that cannot be delivered falls through to SMS,
+    #: and the screen must say where to look rather than leave somebody
+    #: staring at the wrong app.
+    channel: str = "sms"
 
 
 class RequestOtp:
@@ -66,6 +75,10 @@ class RequestOtp:
         new_id: IdGenerator,
         debug_echo: bool = False,
         test_numbers: frozenset[str] = frozenset(),
+        #: The Telegram channel, when the deployment has an account for it.
+        #: None means the choice does not exist and every code is an SMS --
+        #: which is a configuration, not a failure.
+        telegram: Any | None = None,
     ) -> None:
         self._users = users
         self._otps = otps
@@ -75,6 +88,7 @@ class RequestOtp:
         self._clock = clock
         self._new_id = new_id
         self._debug_echo = debug_echo
+        self._telegram = telegram
         # Numbers that skip the carrier and get their code in the response.
         #
         # Not the same thing as debug_echo, and deliberately so. debug_echo is
@@ -128,20 +142,39 @@ class RequestOtp:
                 phone=phone.masked,
                 detail="no SMS sent; the code is returned in the response",
             )
-        else:
-            self._sms.send(
-                phone=phone,
-                message_key="auth.sms.otp",
-                payload={"code": code, "ttl_minutes": ttl // 60},
-                # The language they picked on the sign-in screen, before they
-                # have an account for it to be stored on.
-                locale=cmd.locale,
-            )
+        channel = "sms"
+        if not is_test_number:
+            payload = {"code": code, "ttl_minutes": ttl // 60}
+            # Telegram only if they asked for it and the deployment has it.
+            # A cent instead of forty-five, and it reaches a phone that is
+            # online -- which is why the person choosing is the right person
+            # to decide: they know whether they use Telegram, and we do not.
+            if cmd.channel == "telegram" and self._telegram is not None:
+                if self._telegram.send(
+                    phone=phone, message_key="auth.sms.otp",
+                    payload=payload, locale=cmd.locale,
+                ):
+                    channel = "telegram"
+
+            if channel != "telegram":
+                # Either they asked for SMS, or Telegram would not carry it --
+                # not a Telegram user, no data, an empty balance. Falling
+                # through rather than failing is the whole point: nobody is
+                # locked out of the product because the cheap pipe was shut.
+                self._sms.send(
+                    phone=phone,
+                    message_key="auth.sms.otp",
+                    payload=payload,
+                    # The language they picked on the sign-in screen, before
+                    # they have an account for it to be stored on.
+                    locale=cmd.locale,
+                )
 
         return RequestOtpResult(
             expires_in_seconds=ttl,
             resend_after_seconds=window,
             debug_code=code if (self._debug_echo or is_test_number) else None,
+            channel=channel,
         )
 
 

@@ -73,8 +73,13 @@ class AuthRepository @Inject constructor(
         ratingCount = dto.rating_count,
     )
 
-    suspend fun requestOtp(phone: String, locale: Locale): ApiResult<RequestOtpResponse> =
-        mapper.call { api.requestOtp(RequestOtpRequest(phone, locale.tag)) }
+    suspend fun requestOtp(
+        phone: String,
+        locale: Locale,
+        /** Where the person asked for it: "sms" or "telegram". */
+        channel: String = "sms",
+    ): ApiResult<RequestOtpResponse> =
+        mapper.call { api.requestOtp(RequestOtpRequest(phone, locale.tag, channel)) }
 
     suspend fun verifyOtp(phone: String, code: String, locale: Locale): ApiResult<Session> {
         val result = mapper.call {

@@ -51,12 +51,14 @@ def request_otp(
         clock=deps.clock(), new_id=deps.new_id,
         debug_echo=deps.settings().otp_debug_echo,
         test_numbers=frozenset(deps.settings().otp_test_numbers),
+        telegram=deps.telegram_sender(),
     )
     result = use_case.execute(
         RequestOtpCommand(
             phone=body.phone,
             locale=body.locale,
             request_ip=request.client.host if request.client else None,
+            channel=body.channel,
         )
     )
     return ok(asdict(result))

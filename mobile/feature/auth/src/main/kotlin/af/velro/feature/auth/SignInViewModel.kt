@@ -48,6 +48,19 @@ data class SignInUiState(
     val resendAfterSeconds: Int = 0,
     /** Development builds echo the code so a developer with no SMS gateway can sign in. */
     val debugCode: String? = null,
+    /**
+     * Where to send the code, chosen by the person signing in.
+     *
+     * They know whether they use Telegram and we do not, so it is their
+     * choice rather than a guess from the phone number. It matters: a code
+     * over Telegram costs a cent and one over an Afghan carrier costs about
+     * forty-five, against a budget of roughly a hundred and ten messages a
+     * month. SMS is the default because it is the one that reaches a handset
+     * with no data at all.
+     */
+    val channel: String = CHANNEL_SMS,
+    /** What actually carried it -- not always what was asked for. */
+    val sentChannel: String = CHANNEL_SMS,
 ) {
     enum class Step { PHONE, CODE }
 
@@ -56,8 +69,12 @@ data class SignInUiState(
     val canResend: Boolean get() = resendAfterSeconds <= 0 && !isSubmitting
 }
 
+const val CHANNEL_SMS = "sms"
+const val CHANNEL_TELEGRAM = "telegram"
+
 sealed interface SignInEvent {
     data class PhoneChanged(val value: String) : SignInEvent
+    data class ChannelChosen(val channel: String) : SignInEvent
     data class CodeChanged(val value: String) : SignInEvent
     data class LocaleChanged(val locale: Locale) : SignInEvent
     data object RequestCode : SignInEvent
@@ -87,6 +104,9 @@ class SignInViewModel @Inject constructor(
         when (event) {
             is SignInEvent.PhoneChanged ->
                 _state.update { it.copy(phone = event.value, errorCode = null) }
+
+            is SignInEvent.ChannelChosen ->
+                _state.update { it.copy(channel = event.channel, errorCode = null) }
 
             is SignInEvent.CodeChanged ->
                 _state.update { it.copy(code = event.value.take(8), errorCode = null) }
@@ -118,12 +138,21 @@ class SignInViewModel @Inject constructor(
 
         _state.update { it.copy(isSubmitting = true, errorCode = null) }
         viewModelScope.launch {
-            when (val result = auth.requestOtp(current.phone, current.locale)) {
+            when (
+                val result = auth.requestOtp(
+                    current.phone, current.locale, current.channel,
+                )
+            ) {
                 is ApiResult.Success -> _state.update {
                     it.copy(
                         step = SignInUiState.Step.CODE,
                         isSubmitting = false,
                         resendAfterSeconds = result.value.resend_after_seconds,
+                        // Where it actually went. A Telegram request that
+                        // could not be delivered comes back as "sms", and the
+                        // next screen has to point at the right app rather
+                        // than leave somebody watching the wrong one.
+                        sentChannel = result.value.channel,
                         debugCode = result.value.debug_code,
                         // Prefilled in development only; in production this is
                         // null and the field starts empty.

@@ -20,13 +20,20 @@ data class MoneyDto(val amount_minor: Long, val currency: String)
 // -- auth ---------------------------------------------------------------
 
 @Serializable
-data class RequestOtpRequest(val phone: String, val locale: String = "fa-AF")
+data class RequestOtpRequest(
+    val phone: String,
+    val locale: String = "fa-AF",
+    /** "sms" or "telegram" -- what the person chose on the sign-in screen. */
+    val channel: String = "sms",
+)
 
 @Serializable
 data class RequestOtpResponse(
     val expires_in_seconds: Int,
     val resend_after_seconds: Int,
     val debug_code: String? = null,
+    /** What actually carried it. Not always what was asked for. */
+    val channel: String = "sms",
 )
 
 @Serializable

@@ -186,6 +186,135 @@ class TwilioSmsSender:
         ).accepted
 
 
+class TelegramGatewaySender:
+    """The same code, delivered over Telegram instead of a carrier.
+
+    One HTTP call, the same shape as the Twilio adapter and for the same
+    reason: sendVerificationMessage takes a phone number and a code we
+    generated ourselves, so nothing about how the product makes, hashes or
+    checks a code changes -- only the pipe it travels down.
+
+    Why it exists is money. A message to an Afghan number costs roughly
+    $0.45; this costs $0.01 and refunds itself when it is not delivered.
+    Against a $50 monthly budget that is the difference between a hundred
+    sign-ins and several thousand.
+
+    What it cannot do is reach a phone that is not on Telegram, or one with
+    no data at that moment -- which in a valley on 2G is a real person, not
+    an edge case. So this is never the only sender: it goes at the front of
+    the chain and a carrier goes behind it.
+    """
+
+    API = "https://gatewayapi.telegram.org"
+
+    name = "telegram"
+    is_alphanumeric = False
+
+    def __init__(
+        self,
+        *,
+        token: str,
+        client: httpx.Client | None = None,
+        timeout_seconds: float = 10.0,
+    ) -> None:
+        self._token = token
+        self._client = client
+        self._timeout = timeout_seconds
+
+    @property
+    def sender(self) -> str:
+        return "telegram"
+
+    def send(
+        self,
+        *,
+        phone: PhoneNumber,
+        message_key: str,
+        payload: dict[str, Any],
+        locale: str,
+    ) -> bool:
+        return self.attempt(
+            phone=phone, message_key=message_key, payload=payload, locale=locale
+        ).accepted
+
+    def attempt(
+        self,
+        *,
+        phone: PhoneNumber,
+        message_key: str,
+        payload: dict[str, Any],
+        locale: str,
+    ) -> Attempt:
+        """Deliver the code we already generated.
+
+        `locale` is accepted and unused, deliberately: Telegram renders its
+        own verification message in the language the recipient's own Telegram
+        is set to, which is better than our translation would be and is not
+        ours to override.
+        """
+        code = str(payload.get("code", ""))
+        started = time.monotonic()
+
+        if not code.isdigit() or not (4 <= len(code) <= 8):
+            # The Gateway only carries numeric codes of 4-8 digits. Anything
+            # else is a message this channel cannot express, and refusing is
+            # what puts the carrier behind it to work.
+            return Attempt(
+                provider="telegram", sender="telegram", accepted=False,
+                latency_ms=0, error_code="unsupported_code",
+                error_detail=f"telegram carries 4-8 digit codes, got {len(code)}",
+            )
+
+        client = self._client or httpx.Client(timeout=self._timeout)
+        try:
+            reply = client.post(
+                f"{self.API}/sendVerificationMessage",
+                headers={"Authorization": f"Bearer {self._token}"},
+                json={"phone_number": phone.value, "code": code},
+            )
+            latency = int((time.monotonic() - started) * 1000)
+            body = reply.json() if reply.content else {}
+        except Exception as exc:  # noqa: BLE001 -- a refusal, not a crash
+            latency = int((time.monotonic() - started) * 1000)
+            log.warning(
+                "sms.telegram.failed", phone=phone.masked,
+                error=type(exc).__name__, latency_ms=latency,
+            )
+            return Attempt(
+                provider="telegram", sender="telegram", accepted=False,
+                latency_ms=latency, error_code=type(exc).__name__,
+                error_detail=str(exc)[:200],
+            )
+        finally:
+            if self._client is None:
+                client.close()
+
+        ok = bool(body.get("ok"))
+        result = body.get("result") or {}
+        if not ok:
+            # "Not a Telegram user", "no recent activity", an empty balance:
+            # all the same answer here, which is that the chain should try the
+            # next sender. The reason is logged, not shown -- a passenger does
+            # not need to hear about our account balance.
+            log.warning(
+                "sms.telegram.refused", phone=phone.masked,
+                error=str(body.get("error"))[:120], status=reply.status_code,
+            )
+        return Attempt(
+            provider="telegram",
+            sender="telegram",
+            accepted=ok,
+            latency_ms=latency,
+            network=likely_network(phone.value),
+            provider_message_id=result.get("request_id"),
+            # $0.01 a code, quoted in the same micro-units the carrier costs
+            # use so two channels can be compared on one scale.
+            cost_micros=10_000 if ok else None,
+            cost_currency="USD" if ok else None,
+            error_code=None if ok else str(body.get("error"))[:60] or "refused",
+        )
+
+
 class FallbackSmsSender:
     """Tries each sender in turn, best guess first.
 

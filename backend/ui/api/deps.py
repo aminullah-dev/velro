@@ -150,6 +150,19 @@ def otps(session: SessionDep) -> OtpRepository:
     return OtpRepository(session)
 
 
+@lru_cache(maxsize=1)
+def telegram_sender():
+    """The Telegram channel, or None when nobody has opened an account.
+
+    Cached beside sms() and for the same reason: it holds an HTTP client, and
+    building one per sign-in would open a connection pool per request.
+    """
+    from infrastructure.services.sms import TelegramGatewaySender
+
+    token = settings().telegram_gateway_token
+    return TelegramGatewaySender(token=token) if token else None
+
+
 def otp_attempt_recorder():
     """Write an OTP attempt where a refusal cannot undo it.
 

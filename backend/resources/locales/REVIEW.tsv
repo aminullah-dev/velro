@@ -802,3 +802,7 @@ track.awaiting_driver	No driver assigned yet.	هنوز راننده‌ای تع�
 track.open	Watch on the map	دیدن روی نقشه	پر نقشه یې وګورئ	new — please check the Pashto
 ride.distance_km	{km} km	{km} کیلومتر	{km} کیلومتره	new — please check the Pashto
 ride.duration_minutes	about {minutes} min	حدود {minutes} دقیقه	شاوخوا {minutes} دقیقې	new — please check the Pashto
+auth.channel.question	Where should we send the code?	کود را کجا بفرستیم؟	کوډ چېرته درولېږو؟	new — please check the Pashto
+auth.channel.sms	SMS	پیامک	پیغام	new — please check the Pashto
+auth.channel.telegram	Telegram	تلگرام	تلګرام	new — please check the Pashto
+auth.hint.code_sent_telegram	A verification code was sent to your Telegram	کود تأیید به تلگرام شما فرستاده شد	د تأیید کوډ ستاسو تلګرام ته ولېږل شو	new — please check the Pashto

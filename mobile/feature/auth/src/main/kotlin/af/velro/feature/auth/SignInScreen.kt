@@ -212,7 +212,41 @@ private fun PhoneStep(state: SignInUiState, onEvent: (SignInEvent) -> Unit) {
         )
     }
 
-    Spacer(Modifier.height(Spacing.xl))
+    Spacer(Modifier.height(Spacing.lg))
+
+    // Where the code should arrive, chosen by the person who knows.
+    //
+    // Not a guess from the number: whether somebody uses Telegram is not
+    // something a prefix can tell you. It matters because a code over
+    // Telegram costs a cent and one over an Afghan carrier costs about
+    // forty-five, against a budget of roughly a hundred and ten messages a
+    // month -- so every person who picks Telegram pays for forty-five who
+    // cannot. SMS stays selected by default, because it is the one that
+    // reaches a handset with no data at all.
+    Text(
+        strings["auth.channel.question"],
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(Spacing.xs))
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        for (choice in listOf(CHANNEL_SMS, CHANNEL_TELEGRAM)) {
+            FilterChip(
+                selected = state.channel == choice,
+                onClick = { onEvent(SignInEvent.ChannelChosen(choice)) },
+                label = {
+                    Text(
+                        strings[
+                            if (choice == CHANNEL_SMS) "auth.channel.sms"
+                            else "auth.channel.telegram"
+                        ]
+                    )
+                },
+            )
+        }
+    }
+
+    Spacer(Modifier.height(Spacing.lg))
 
     PrimaryAction(
         label = strings["auth.action.send_code"],
@@ -232,7 +266,14 @@ private fun CodeStep(state: SignInUiState, onEvent: (SignInEvent) -> Unit) {
     // saying "verification code" twice with nothing telling the person a
     // message had actually gone out.
     Text(
-        strings["auth.hint.code_sent"],
+        // Where it actually went, which is not always where it was asked
+        // for: a Telegram code that could not be delivered arrives as an
+        // SMS, and pointing at the wrong app is how somebody sits waiting
+        // for a message that is already on their phone.
+        strings[
+            if (state.sentChannel == CHANNEL_TELEGRAM) "auth.hint.code_sent_telegram"
+            else "auth.hint.code_sent"
+        ],
         style = MaterialTheme.typography.titleMedium,
         textAlign = TextAlign.Center,
     )

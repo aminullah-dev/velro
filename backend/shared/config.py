@@ -75,6 +75,11 @@ class Settings:
     # without rotating the password to the whole account.
     twilio_api_key_sid: str = ""
     twilio_auth_token: str = ""
+    #: Telegram Gateway, from gateway.telegram.org. Empty means the channel
+    #: does not exist and every code goes by SMS -- which is the correct
+    #: behaviour for a deployment that has not opened an account, not a
+    #: degraded one.
+    telegram_gateway_token: str = ""
     # The registered alphanumeric sender ID -- what Etisalat, MTN, Roshan and
     # Salaam require, and what AWCC refuses. Registration takes about a week.
     twilio_sender_id: str = ""
@@ -107,6 +112,7 @@ _DEFAULTS: dict[str, Any] = {
     "twilio_account_sid": "",
     "twilio_api_key_sid": "",
     "twilio_auth_token": "",
+    "telegram_gateway_token": "",
     "twilio_sender_id": "",
     "twilio_sender_number": "",
     "push_provider": "console",

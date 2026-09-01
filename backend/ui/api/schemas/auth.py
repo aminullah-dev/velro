@@ -8,11 +8,19 @@ from ui.api.schemas.common import Schema
 class RequestOtpIn(Schema):
     phone: str = Field(min_length=6, max_length=24, examples=["0700123456"])
     locale: str = Field(default="fa-AF", pattern=r"^(en|fa-AF|ps)$")
+    #: Where to send it. Defaults to SMS: it is the one that reaches a phone
+    #: with no data, and a default that fails is worse than a default that
+    #: costs more.
+    channel: str = Field(default="sms", pattern=r"^(sms|telegram)$")
 
 
 class RequestOtpOut(Schema):
     expires_in_seconds: int
     resend_after_seconds: int
+    #: What actually carried it. A Telegram request that could not be
+    #: delivered comes back as "sms", so the screen can point at the right
+    #: app rather than leave somebody watching the wrong one.
+    channel: str = "sms"
     # Present only when the deployment enables it. Never in production.
     debug_code: str | None = None
 
