@@ -216,8 +216,10 @@ def apply(session, places: list[Place]) -> Applied:
                 result.skipped.append((place.code, "its village is not in the file"))
                 continue
             result.created.append(place.code)
-            if place.latitude is None:
-                continue
+            # No early exit for a row without coordinates: a station that
+            # has just been created is exactly the one that still has to
+            # inherit its village's point, and the block below is where
+            # that happens.
             row_id, current = new, None
         else:
             row_id, current = row.id, (row.latitude, row.longitude)
@@ -225,7 +227,26 @@ def apply(session, places: list[Place]) -> Applied:
                 villages_by_code[place.code] = row.id
 
         if place.latitude is None:
-            continue          # the file says nobody has placed this yet
+            # A station carries no point of its own in the file when it
+            # simply stands with its village -- so it inherits, here, at the
+            # moment it exists. Doing it when the village was placed does not
+            # work on a fresh database: villages are written first precisely
+            # because a station cannot be created before the village that
+            # owns it, which means the station is not there yet to follow.
+            # Four hundred and fifteen stations arrived on production with no
+            # coordinates for exactly this reason, and the export could not
+            # see it, because a station that agrees with its village is
+            # recorded as a blank either way.
+            if place.kind == "station":
+                session.execute(
+                    sql("UPDATE stations s SET latitude = v.latitude, "
+                        "  longitude = v.longitude, version = s.version + 1 "
+                        "FROM villages v "
+                        "WHERE s.village_id = v.id AND s.id = :id "
+                        "  AND s.latitude IS NULL AND v.latitude IS NOT NULL"),
+                    {"id": row_id},
+                )
+            continue          # the file says nobody has placed this one
         if current and current[0] is not None and _metres(
             current, (place.latitude, place.longitude)
         ) <= 1:

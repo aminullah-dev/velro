@@ -43,6 +43,14 @@ class TripOption:
     vehicle_id: str | None
     pickup_sequence: int
     dropoff_sequence: int
+    #: How far the journey is and how long it takes, when anyone knows.
+    #: Measured from the committed road geometry where both ends have
+    #: coordinates (scripts/measure-routes.py), corrected by hand where they
+    #: do not. None rather than a guess: the seed's 25 km for every journey
+    #: inside Ghorband was worse than saying nothing, because it looked like
+    #: an answer.
+    distance_m: int | None = None
+    duration_minutes: int | None = None
 
 
 class SearchTrips:
@@ -93,6 +101,10 @@ class SearchTrips:
             route.id: self._segment_for(route.id, station.id, destination.id)
             for route in serving
         }
+        measurements = {
+            route.id: (route.distance_m, route.duration_minutes)
+            for route in serving
+        }
 
         options: list[TripOption] = []
         for trip in found:
@@ -139,6 +151,8 @@ class SearchTrips:
                     vehicle_id=trip.vehicle_id,
                     pickup_sequence=from_seq,
                     dropoff_sequence=to_seq,
+                    distance_m=measurements.get(trip.route_id, (None, None))[0],
+                    duration_minutes=measurements.get(trip.route_id, (None, None))[1],
                 )
             )
         return options

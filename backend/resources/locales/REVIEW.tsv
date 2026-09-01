@@ -800,3 +800,5 @@ track.eta_unknown	Waiting for the car's position…	در انتظار موقعی
 track.call	Call	زنگ زدن	زنګ ووهئ	new — please check the Pashto
 track.awaiting_driver	No driver assigned yet.	هنوز راننده‌ای تعیین نشده است.	تر اوسه چلوونکی نه دی ټاکل شوی.	new — please check the Pashto
 track.open	Watch on the map	دیدن روی نقشه	پر نقشه یې وګورئ	new — please check the Pashto
+ride.distance_km	{km} km	{km} کیلومتر	{km} کیلومتره	new — please check the Pashto
+ride.duration_minutes	about {minutes} min	حدود {minutes} دقیقه	شاوخوا {minutes} دقیقې	new — please check the Pashto

@@ -56,6 +56,29 @@ class TestRebuilding:
             1 for p in places if p.latitude is not None
         )
 
+    def test_no_station_is_left_behind_by_a_placed_village(self, client, places):
+        """The assertion the file format cannot make on its own.
+
+        A station that agrees with its village is a blank row either way, so
+        an export matches a file whether the stations were placed or not --
+        which is how 415 of them reached production with no coordinates and
+        nothing noticed. This asks the database instead.
+        """
+        from sqlalchemy import text as sql
+
+        with deps._session_factory()() as session:
+            apply(session, places)
+            orphans = session.execute(sql(
+                "SELECT s.code FROM stations s JOIN villages v ON v.id = s.village_id "
+                "WHERE v.latitude IS NOT NULL AND s.latitude IS NULL "
+                "AND s.deleted_at IS NULL LIMIT 5"
+            )).all()
+            session.rollback()
+        assert not orphans, (
+            f"stations whose village is placed but they are not: "
+            f"{[o.code for o in orphans]}"
+        )
+
     def test_a_station_arrives_standing_with_its_village(self, client, places):
         placed = next(
             (p for p in places if p.kind == "village" and p.latitude is not None),

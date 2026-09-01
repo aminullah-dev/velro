@@ -693,6 +693,8 @@
   "ride.offers.cancelled_title": "دا غوښتنه لغوه شوه",
   "ride.offers.cancelled_body": "کله چې د سفر لپاره چمتو یاست بیا وپوښتئ.",
   "ride.offers.ask_again": "بیا پوښتنه",
+  "ride.distance_km": "{km} کیلومتره",
+  "ride.duration_minutes": "شاوخوا {minutes} دقیقې",
   "admin.routes.generate": "د نویو تم ځایونو لپاره لارې جوړول",
   "admin.routes.generate_hint": "راوړل شوی تم ځای تر څو چې دا ونه چلېږي هیڅ لاره نه لري، او له بې‌لارې تم ځایه سفر نه شي کېدای.",
   "admin.routes.generated": "{created} لارې جوړې شوې او {updated} نوې شوې، د {stations} تم ځایونو لپاره.",

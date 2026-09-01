@@ -693,6 +693,8 @@
   "ride.offers.cancelled_title": "این درخواست لغو شد",
   "ride.offers.cancelled_body": "هر وقت آمادهٔ سفر بودید دوباره بپرسید.",
   "ride.offers.ask_again": "دوباره پرسیدن",
+  "ride.distance_km": "{km} کیلومتر",
+  "ride.duration_minutes": "حدود {minutes} دقیقه",
   "admin.routes.generate": "ساختن مسیرها برای ایستگاه‌های نو",
   "admin.routes.generate_hint": "ایستگاهی که وارد شده تا این کار اجرا نشود هیچ مسیری ندارد، و از ایستگاه بدون مسیر سفر شده نمی‌تواند.",
   "admin.routes.generated": "{created} مسیر ساخته شد و {updated} مسیر تازه شد، برای {stations} ایستگاه.",

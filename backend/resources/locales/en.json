@@ -693,6 +693,8 @@
   "ride.offers.cancelled_title": "This request was cancelled",
   "ride.offers.cancelled_body": "Ask again whenever you are ready to travel.",
   "ride.offers.ask_again": "Ask again",
+  "ride.distance_km": "{km} km",
+  "ride.duration_minutes": "about {minutes} min",
   "admin.routes.generate": "Build routes for the new stations",
   "admin.routes.generate_hint": "An imported station has no routes until this is run, and a station with no routes cannot be travelled from.",
   "admin.routes.generated": "{created} routes created and {updated} updated, covering {stations} stations.",

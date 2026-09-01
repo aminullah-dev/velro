@@ -172,6 +172,8 @@ data class TripOptionDto(
     val fare_per_seat: MoneyDto? = null,
     val status: String,
     val has_driver: Boolean,
+    val distance_m: Int? = null,
+    val duration_minutes: Int? = null,
 )
 
 @Serializable

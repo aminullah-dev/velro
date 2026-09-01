@@ -87,6 +87,7 @@ def search_trips(
                 fare_total=MoneyOut.of(o.fare_total),
                 fare_per_seat=MoneyOut.of(o.fare_per_seat),
                 status=o.status.value, has_driver=o.driver_id is not None,
+                distance_m=o.distance_m, duration_minutes=o.duration_minutes,
             ).model_dump()
             for o in options
         ],

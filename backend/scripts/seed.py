@@ -385,6 +385,14 @@ def seed(session) -> None:
                 "latitude": lat, "longitude": lon,
             },
         )
+        # _get_or_create only fills defaults when it creates. A database
+        # seeded before these coordinates existed -- which production was --
+        # would keep NULLs forever, and every route measured against a
+        # district would stay a guess. Filling a missing point is safe;
+        # overwriting a present one is not, because an operator may have
+        # corrected it.
+        if row.latitude is None and lat is not None:
+            row.latitude, row.longitude = lat, lon
         destinations[f"INT-{code}"] = row
         note("destinations", made)
 

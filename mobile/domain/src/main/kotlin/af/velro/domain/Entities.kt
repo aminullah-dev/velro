@@ -87,6 +87,9 @@ data class TripOption(
     val farePerSeat: MoneyValue?,
     val status: TripStatus,
     val hasDriver: Boolean,
+    /** How far and how long, when anyone knows. Null is an honest answer. */
+    val distanceM: Int? = null,
+    val durationMinutes: Int? = null,
 ) {
     fun canSeat(passengers: Int): Boolean =
         seatsAvailable >= passengers && status in Lifecycles.bookableTripStatuses

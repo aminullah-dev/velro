@@ -211,6 +211,36 @@ fun TripOptionCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
+            // How far, and how long. Shown only when it is actually known:
+            // every journey inside Ghorband used to carry the same invented
+            // 25 km, which is worse than silence because it reads as an
+            // answer. Measured from the road now, where both ends have been
+            // placed, and absent where they have not.
+            option.distanceM?.let { metres ->
+                Spacer(Modifier.size(Spacing.xxs))
+                Text(
+                    buildString {
+                        append(strings[
+                            "ride.distance_km",
+                            "km" to Numerals.localise(
+                                (metres / 1000).toString(), locale,
+                            ),
+                        ])
+                        option.durationMinutes?.let { minutes ->
+                            append(" · ")
+                            append(strings[
+                                "ride.duration_minutes",
+                                "minutes" to Numerals.localise(
+                                    minutes.toString(), locale,
+                                ),
+                            ])
+                        }
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             Spacer(Modifier.size(Spacing.md))
 
             Row(

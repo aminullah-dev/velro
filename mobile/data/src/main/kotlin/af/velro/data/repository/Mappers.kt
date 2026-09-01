@@ -147,6 +147,8 @@ fun TripOptionDto.toDomain() = TripOption(
     farePerSeat = fare_per_seat?.toDomain(),
     status = enumOrNull<TripStatus>(status) ?: TripStatus.SCHEDULED,
     hasDriver = has_driver,
+    distanceM = distance_m,
+    durationMinutes = duration_minutes,
 )
 
 fun BookingDto.toDomain() = Booking(

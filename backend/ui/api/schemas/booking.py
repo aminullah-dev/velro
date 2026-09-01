@@ -29,6 +29,8 @@ class TripOptionOut(Schema):
     fare_per_seat: MoneyOut | None
     status: str
     has_driver: bool
+    distance_m: int | None = None
+    duration_minutes: int | None = None
 
 
 class BookSeatsIn(Schema):

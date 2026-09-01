@@ -662,6 +662,64 @@ class UpdateFareIn(Schema):
     note: str | None = None
 
 
+class RouteMeasurementIn(Schema):
+    """Both optional, so one can be corrected without restating the other."""
+
+    distance_m: int | None = Field(default=None, ge=100, le=1_000_000)
+    duration_minutes: int | None = Field(default=None, ge=1, le=1_440)
+
+
+@router.patch("/routes/{route_id}")
+def correct_route(
+    route_id: str,
+    body: RouteMeasurementIn,
+    actor: Annotated[deps.Actor, Depends(deps.require_operations)],
+    session: deps.SessionDep,
+    audit: Annotated[object, Depends(deps.audit)],
+) -> dict:
+    """How far it really is, when somebody knows better than the map.
+
+    scripts/measure-routes.py walks the committed road geometry and writes
+    down the length of every journey whose two ends have coordinates -- which
+    is the honest number and needs no typing. This is for the rest: a route
+    with an unplaced end still carrying whatever the seed guessed, or a road
+    the geometry describes wrongly because it was rebuilt, or a stretch that
+    is closed in winter and genuinely longer.
+
+    Audited like every other correction, because "why does it say 47 km" is
+    a question somebody will ask months from now.
+    """
+    row = session.scalars(
+        select(RouteRow).where(RouteRow.id == route_id, RouteRow.deleted_at.is_(None))
+    ).one_or_none()
+    if row is None:
+        raise NotFoundError(error_codes.ROUTE_NOT_FOUND, route_id=route_id)
+    if body.distance_m is None and body.duration_minutes is None:
+        raise ValidationError(error_codes.VALIDATION_FAILED, reason="nothing_to_change")
+
+    before = {"distance_m": row.distance_m, "duration_minutes": row.duration_minutes}
+    if body.distance_m is not None:
+        row.distance_m = body.distance_m
+    if body.duration_minutes is not None:
+        row.duration_minutes = body.duration_minutes
+    row.version += 1
+
+    audit.write(
+        "route.measured",
+        actor_id=actor.user_id,
+        actor_role=actor.role,
+        entity_type="route",
+        entity_id=route_id,
+        before=before,
+        after={"distance_m": row.distance_m, "duration_minutes": row.duration_minutes},
+    )
+    return ok({
+        "route_id": route_id,
+        "distance_m": row.distance_m,
+        "duration_minutes": row.duration_minutes,
+    })
+
+
 @router.post("/routes/{route_id}/fare")
 def set_route_fare(
     route_id: str,
