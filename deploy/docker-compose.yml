@@ -118,7 +118,29 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data       # the ACME account and issued certificates
       - caddy_config:/config
-      - ../admin/dist:/srv/admin:ro   # built by `npm run build` before deploy
+      - admin_dist:/srv/admin:ro      # written by the admin-build service
+
+  # A one-shot build, not a running service: `docker compose run --rm
+  # admin-build`. It exists so the VPS needs Docker and nothing else -- no
+  # Node, no npm, and no chance of the server's Node version differing from
+  # the one the panel was written against.
+  #
+  # The whole repository is mounted rather than just admin/, because the
+  # panel's prebuild step copies the locale files out of backend/resources
+  # (admin/scripts/sync-locales.mjs): one key set, three surfaces, and that
+  # only stays true if the build can see both.
+  admin-build:
+    image: node:22-alpine
+    working_dir: /repo/admin
+    profiles: ["build"]
+    volumes:
+      - ../:/repo
+      # A volume, so the container's Linux node_modules never collide with
+      # whatever a developer's laptop left in the working tree.
+      - admin_node_modules:/repo/admin/node_modules
+      - admin_dist:/out
+    command: >
+      sh -c "npm ci && npm run build && rm -rf /out/* && cp -r dist/. /out/"
 
 volumes:
   db_data:
@@ -126,3 +148,5 @@ volumes:
   api_apks:
   caddy_data:
   caddy_config:
+  admin_dist:
+  admin_node_modules:
