@@ -1,15 +1,15 @@
 key	english	dari	pashto	flag
 app.name	VELRO	ولرو	ولرو	
 app.tagline	Book a seat. Travel with confidence.	چوکی رزرو کنید. با اطمینان سفر کنید.	چوکۍ ونیسئ. په ډاډ سره سفر وکړئ.	
-app.tagline.driver	Find passengers. Drive with confidence.	مسافر پیدا کنید. با اطمینان رانندگی کنید.	مسافر ومومئ. په ډاډ سره موټر وچلوئ.	loanword?
+app.tagline.driver	Find passengers. Drive with confidence.	مسافر پیدا کنید. با اطمینان رانندگی کنید.	مسافر پیدا کړئ. په ډاډه زړه موټر وچلوئ.	
 error.validation_failed	Please check the information you entered.	لطفاً معلومات وارد شده را بررسی کنید.	مهرباني وکړئ، ورکړل شوي معلومات وګورئ.	
 error.phone_invalid	That phone number does not look right.	این شماره تیلفون درست معلوم نمی‌شود.	دا د تلیفون شمېره سمه نه ښکاري.	
 error.locale_unsupported	That language is not available yet.	این زبان فعلاً موجود نیست.	دا ژبه لا نه ده چمتو.	
-error.otp_invalid	That code is not correct. {attempts_remaining} attempts left.	کود درست نیست. {attempts_remaining} کوشش باقی مانده است.	کوډ سم نه دی. {attempts_remaining} هڅې پاتې دي.	loanword?
-error.otp_expired	That code has expired. Request a new one.	وقت این کود تمام شده است. کود نو بخواهید.	د دې کوډ وخت تېر دی. نوی کوډ وغواړئ.	loanword?
-error.otp_attempts_exceeded	Too many incorrect codes. Request a new one.	کودهای نادرست زیاد شد. کود نو بخواهید.	ناسم کوډونه ډېر شول. نوی کوډ وغواړئ.	loanword?
-error.otp_rate_limited	Please wait {retry_after_seconds} seconds before asking for another code.	لطفاً {retry_after_seconds} ثانیه صبر کنید و بعد کود نو بخواهید.	مهرباني وکړئ {retry_after_seconds} ثانیې انتظار وکړئ، بیا نوی کوډ وغواړئ.	loanword?
-error.otp_already_consumed	That code has already been used.	این کود قبلاً استفاده شده است.	دا کوډ مخکې کارول شوی دی.	loanword?
+error.otp_invalid	That code is not correct. {attempts_remaining} attempts left.	کود درست نیست. {attempts_remaining} کوشش باقی مانده است.	دا کوډ سم نه دی. {attempts_remaining} هڅې پاتې دي.	
+error.otp_expired	That code has expired. Request a new one.	وقت این کود تمام شده است. کود نو بخواهید.	د دې کوډ موده پای ته رسېدلې ده. نوی کوډ وغواړئ.	
+error.otp_attempts_exceeded	Too many incorrect codes. Request a new one.	کودهای نادرست زیاد شد. کود نو بخواهید.	ناسم کوډونه ډېر ځله داخل شوي. نوی کوډ وغواړئ.	
+error.otp_rate_limited	Please wait {retry_after_seconds} seconds before asking for another code.	لطفاً {retry_after_seconds} ثانیه صبر کنید و بعد کود نو بخواهید.	مهرباني وکړئ د بل کوډ له غوښتلو مخکې {retry_after_seconds} ثانیې انتظار وکړئ.	
+error.otp_already_consumed	That code has already been used.	این کود قبلاً استفاده شده است.	دا کوډ مخکې کارول شوی دی.	
 error.token_invalid	Please sign in again.	لطفاً دوباره داخل شوید.	مهرباني وکړئ، بیا ننوځئ.	
 error.token_expired	Your session has ended. Please sign in again.	وقت نشست شما تمام شد. لطفاً دوباره داخل شوید.	ستاسو ناسته پای ته ورسېده. بیا ننوځئ.	
 error.refresh_token_revoked	You have been signed out. Please sign in again.	از حساب برآمده‌اید. لطفاً دوباره داخل شوید.	له حسابه وتلي یاست. بیا ننوځئ.	
@@ -19,60 +19,60 @@ error.permission_denied	You do not have permission to do that.	شما اجازه
 error.province_not_found	That province was not found.	این ولایت یافت نشد.	دا ولایت ونه موندل شو.	
 error.district_not_found	That district was not found.	این ولسوالی یافت نشد.	دا ولسوالي ونه موندل شوه.	
 error.village_not_found	That village was not found.	این قریه یافت نشد.	دا کلی ونه موندل شو.	
-error.village_code_taken	A village already uses the code {code}.	کود {code} قبلاً برای قریه دیگری ثبت است.	کوډ {code} مخکې د بل کلي لپاره ثبت دی.	loanword?
-error.station_not_found	That station was not found.	این ایستگاه یافت نشد.	دا تم ځای ونه موندل شو.	recently corrected
-error.station_disabled	That station is not in service right now.	این ایستگاه فعلاً فعال نیست.	دا تم ځای اوس فعال نه دی.	recently corrected
+error.village_code_taken	A village already uses the code {code}.	کود {code} قبلاً برای قریه دیگری ثبت است.	د {code} کوډ لا دمخه د یوه بل کلي لپاره کارول شوی دی.	
+error.station_not_found	That station was not found.	این ایستگاه یافت نشد.	هغه تم ځای ونه موندل شو.	
+error.station_disabled	That station is not in service right now.	این ایستگاه فعلاً فعال نیست.	هغه تم ځای اوس مهال فعال نه دی.	
 error.destination_not_found	That destination was not found.	این مقصد یافت نشد.	دا منزل ونه موندل شو.	
 error.destination_disabled	That destination is not available right now.	این مقصد فعلاً موجود نیست.	دا منزل اوس نشته.	
 error.destination_cycle	That destination cannot contain itself.	یک مقصد نمی‌تواند شامل خودش باشد.	یو منزل خپل ځان نشي رانغاړلی.	
-error.import_file_unreadable	The file could not be read. Check the format and try again.	فایل خوانده نشد. فارمت را بررسی و دوباره کوشش کنید.	فایل ونه لوستل شو. بڼه وګورئ او بیا هڅه وکړئ.	loanword?
-error.import_column_missing	The column {column} is missing from the file.	ستون {column} در فایل موجود نیست.	کالم {column} په فایل کې نشته.	loanword?
+error.import_file_unreadable	The file could not be read. Check the format and try again.	فایل خوانده نشد. فارمت را بررسی و دوباره کوشش کنید.	فایل ولوستل نشو. بڼه یې وګورئ او بیا هڅه وکړئ.	
+error.import_column_missing	The column {column} is missing from the file.	ستون {column} در فایل موجود نیست.	په فایل کې د {column} ستون نشته.	
 error.import_row_invalid	Row {row} could not be read.	سطر {row} خوانده نشد.	کرښه {row} ونه لوستل شوه.	
 error.import_duplicate_detected	{count} possible duplicates need review.	{count} مورد احتمالی تکراری نیاز به بررسی دارد.	{count} احتمالي تکراري موارد کتنې ته اړتیا لري.	
 error.import_already_committed	This import has already been applied.	این وارد کردن قبلاً تطبیق شده است.	دا واردول مخکې تطبیق شوي دي.	
 error.import_not_previewed	Review the preview before applying this import.	قبل از تطبیق، پیش‌نمایش را بررسی کنید.	له تطبیق مخکې مخکتنه وګورئ.	
 error.route_not_found	That route was not found.	این مسیر یافت نشد.	دا لار ونه موندل شوه.	
 error.route_disabled	That route is not in service right now.	این مسیر فعلاً فعال نیست.	دا لار اوس فعاله نه ده.	
-error.route_not_resolvable	No vehicle travels between those two places.	بین این دو محل موتری رفت‌وآمد نمی‌کند.	د دې دوو ځایونو ترمنځ موټر نه ځي.	loanword?
-error.route_stops_out_of_order	The stops are not in travelling order.	ترتیب ایستگاه‌ها درست نیست.	د تم ځایونو ترتیب سم نه دی.	recently corrected
-error.route_template_scope_empty	No stations exist for this template yet.	برای این نمونه هنوز ایستگاهی موجود نیست.	د دې نمونې لپاره لا تم ځای نشته.	recently corrected
+error.route_not_resolvable	No vehicle travels between those two places.	بین این دو محل موتری رفت‌وآمد نمی‌کند.	د دغو دوو ځایونو ترمنځ هېڅ موټر تګ راتګ نه کوي.	
+error.route_stops_out_of_order	The stops are not in travelling order.	ترتیب ایستگاه‌ها درست نیست.	د تم ځایونو ترتیب د سفر له ترتیب سره سم نه دی.	
+error.route_template_scope_empty	No stations exist for this template yet.	برای این نمونه هنوز ایستگاهی موجود نیست.	تر اوسه د دې نمونې لپاره هېڅ تم ځای نشته.	
 error.fare_not_configured	No price has been set for this trip yet.	برای این سفر هنوز کرایه تعیین نشده است.	د دې سفر لپاره لا کرایه نه ده ټاکل شوې.	
 error.fare_negative	A price cannot be less than zero.	کرایه نمی‌تواند کمتر از صفر باشد.	کرایه له صفر څخه کمه نشي کېدای.	
-error.driver_not_found	That driver was not found.	این راننده یافت نشد.	دا چلوونکی ونه موندل شو.	recently corrected
+error.driver_not_found	That driver was not found.	این راننده یافت نشد.	هغه چلوونکی ونه موندل شو.	
 error.driver_not_approved	This account has not been approved yet.	این حساب هنوز تأیید نشده است.	دا حساب لا نه دی تصویب شوی.	
-error.driver_suspended	This driver account is suspended.	حساب این راننده بند است.	د دې چلوونکي حساب بند دی.	recently corrected
+error.driver_suspended	This driver account is suspended.	حساب این راننده بند است.	د دې چلوونکي حساب ځنډول شوی دی.	
 error.driver_offline	You need to go online first.	اول باید آنلاین شوید.	لومړی باید آنلاین شئ.	
 error.driver_already_on_trip	You are already on a trip.	شما همین حالا در یک سفر هستید.	تاسو همدا اوس په یوه سفر کې یاست.	
 error.driver_documents_incomplete	Some documents are still missing.	بعضی اسناد هنوز کم است.	ځینې اسناد لا کم دي.	
-error.vehicle_not_found	No vehicle is registered to this account.	برای این حساب موتری ثبت نشده است.	د دې حساب لپاره موټر نه دی ثبت شوی.	loanword?
-error.vehicle_suspended	This vehicle is not approved for service.	این موتر برای کار تأیید نیست.	دا موټر د کار لپاره تصویب شوی نه دی.	loanword?
-error.vehicle_plate_taken	That number plate is already registered.	این نمبر پلیت قبلاً ثبت شده است.	دا د پلېټ شمېره مخکې ثبت شوې ده.	loanword?
+error.vehicle_not_found	No vehicle is registered to this account.	برای این حساب موتری ثبت نشده است.	د دې حساب لپاره هېڅ موټر ثبت شوی نه دی.	
+error.vehicle_suspended	This vehicle is not approved for service.	این موتر برای کار تأیید نیست.	دا موټر د خدمت لپاره منظور شوی نه دی.	
+error.vehicle_plate_taken	That number plate is already registered.	این نمبر پلیت قبلاً ثبت شده است.	د پلېټ دا شمېره لا دمخه ثبت شوې ده.	
 error.vehicle_capacity_invalid	The number of seats is not valid.	تعداد چوکی‌ها درست نیست.	د چوکیو شمېر سم نه دی.	
 error.trip_not_found	That trip was not found.	این سفر یافت نشد.	دا سفر ونه موندل شو.	
 error.trip_invalid_transition	That change is not possible right now.	این تغییر فعلاً ممکن نیست.	دا بدلون اوس ممکن نه دی.	
 error.trip_seats_unavailable	Only {available} seats are left on this trip.	تنها {available} چوکی در این سفر باقی است.	په دې سفر کې یوازې {available} چوکۍ پاتې دي.	
-error.trip_capacity_exceeded	This vehicle does not have that many seats.	این موتر این تعداد چوکی ندارد.	دا موټر دومره چوکۍ نه لري.	loanword?
+error.trip_capacity_exceeded	This vehicle does not have that many seats.	این موتر این تعداد چوکی ندارد.	په دې موټر کې دومره څوکۍ نشته.	
 error.trip_departed	This trip has already left.	این سفر قبلاً حرکت کرده است.	دا سفر مخکې روان شوی دی.	
 error.trip_cancelled	This trip was cancelled.	این سفر لغو شده است.	دا سفر لغوه شوی دی.	
-error.trip_no_driver_available	No driver is available right now. Please try again shortly.	فعلاً راننده موجود نیست. کمی بعد دوباره کوشش کنید.	اوس چلوونکی نشته. لږ وروسته بیا هڅه وکړئ.	recently corrected
-error.trip_driver_already_assigned	Another driver has already taken this trip.	راننده دیگری این سفر را گرفته است.	بل چلوونکي دا سفر نیولی دی.	recently corrected
-error.booking_not_found	That booking was not found.	این رزرو یافت نشد.	دا ریزرف ونه موندل شو.	recently corrected
+error.trip_no_driver_available	No driver is available right now. Please try again shortly.	فعلاً راننده موجود نیست. کمی بعد دوباره کوشش کنید.	اوس مهال هېڅ چلوونکی نشته. لږ وروسته بیا هڅه وکړئ.	
+error.trip_driver_already_assigned	Another driver has already taken this trip.	راننده دیگری این سفر را گرفته است.	بل چلوونکي لا دمخه دا سفر اخیستی دی.	
+error.booking_not_found	That booking was not found.	این رزرو یافت نشد.	هغه ریزرف ونه موندل شو.	
 error.booking_invalid_transition	That change is not possible right now.	این تغییر فعلاً ممکن نیست.	دا بدلون اوس ممکن نه دی.	
-error.booking_already_cancelled	This booking was already cancelled.	این رزرو قبلاً لغو شده است.	دا ریزرف مخکې لغوه شوی دی.	recently corrected
-error.booking_not_cancellable	This booking can no longer be cancelled.	این رزرو دیگر لغو شده نمی‌تواند.	دا ریزرف نور نشي لغوه کېدای.	recently corrected
-error.booking_verification_failed	That code does not match any passenger on this trip.	این کود با هیچ مسافر این سفر مطابقت ندارد.	دا کوډ د دې سفر له هیڅ مسافر سره سمون نه لري.	loanword?
-error.booking_limit_reached	You already have {maximum} active bookings.	شما {maximum} رزرو فعال دارید.	تاسو {maximum} فعال ریزرفونه لرئ.	recently corrected
-error.booking_seat_count_invalid	You can book between 1 and {maximum} seats.	از ۱ تا {maximum} چوکی رزرو کرده می‌توانید.	له ۱ څخه تر {maximum} چوکیو پورې ریزرف کولی شئ.	recently corrected
+error.booking_already_cancelled	This booking was already cancelled.	این رزرو قبلاً لغو شده است.	دا ریزرف مخکې لغوه شوی دی.	
+error.booking_not_cancellable	This booking can no longer be cancelled.	این رزرو دیگر لغو شده نمی‌تواند.	دا ریزرف نور لغوه کېدای نه شي.	
+error.booking_verification_failed	That code does not match any passenger on this trip.	این کود با هیچ مسافر این سفر مطابقت ندارد.	دا کوډ د دې سفر له هېڅ مسافر سره سمون نه خوري.	
+error.booking_limit_reached	You already have {maximum} active bookings.	شما {maximum} رزرو فعال دارید.	تاسو لا دمخه {maximum} فعال ریزرفونه لرئ.	
+error.booking_seat_count_invalid	You can book between 1 and {maximum} seats.	از ۱ تا {maximum} چوکی رزرو کرده می‌توانید.	تاسو له ۱ څخه تر {maximum} څوکیو پورې ریزرف کولی شئ.	
 error.booking_stops_out_of_order	The pick-up must come before the drop-off.	محل سوارشدن باید پیش از محل پیاده‌شدن باشد.	د سپرېدو ځای باید د کښېوتلو له ځای مخکې وي.	
 error.payment_not_found	That payment was not found.	این پرداخت یافت نشد.	دا تادیه ونه موندل شوه.	
 error.payment_already_collected	This fare has already been paid.	این کرایه قبلاً پرداخت شده است.	دا کرایه مخکې ورکړل شوې ده.	
 error.commission_rate_invalid	The commission rate is not valid.	فیصدی کمیشن درست نیست.	د کمیشن سلنه سمه نه ده.	
-error.wallet_not_found	No wallet was found for this driver.	برای این راننده بټوه‌ای یافت نشد.	د دې چلوونکي لپاره بټوه ونه موندل شوه.	recently corrected
-error.wallet_insufficient_balance	The balance is not enough.	بیلانس کافی نیست.	بیلانس بس نه دی.	loanword?
+error.wallet_not_found	No wallet was found for this driver.	برای این راننده کیف پولی یافت نشد.	د دې چلوونکي لپاره بټوه ونه موندل شوه.	
+error.wallet_insufficient_balance	The balance is not enough.	بیلانس کافی نیست.	بیلانس کافي نه دی.	
 error.settlement_invalid_transition	That settlement change is not possible.	این تغییر در تصفیه ممکن نیست.	په تصفیه کې دا بدلون ممکن نه دی.	
 error.rating_out_of_range	Choose between 1 and 5 stars.	از ۱ تا ۵ ستاره انتخاب کنید.	له ۱ څخه تر ۵ ستورو پورې وټاکئ.	
-error.rating_already_submitted	You have already rated this trip.	شما این سفر را قبلاً امتیاز داده‌اید.	دې سفر ته مو مخکې ستوری ورکړی دی.	recently corrected
-error.rating_trip_not_completed	You can rate a trip once it is finished.	پس از ختم سفر امتیاز داده می‌توانید.	د سفر له پای ته رسېدو وروسته ستوری ورکولی شئ.	recently corrected
+error.rating_already_submitted	You have already rated this trip.	شما این سفر را قبلاً امتیاز داده‌اید.	تاسو دې سفر ته مخکې ستوری ورکړی دی.	
+error.rating_trip_not_completed	You can rate a trip once it is finished.	پس از ختم سفر امتیاز داده می‌توانید.	تاسو هغه وخت سفر ته ستوری ورکولی شئ چې سفر پای ته ورسېږي.	
 error.ticket_not_found	That request was not found.	این درخواست یافت نشد.	دا غوښتنه ونه موندل شوه.	
 error.ticket_closed	This request is closed.	این درخواست بسته شده است.	دا غوښتنه تړل شوې ده.	
 error.setting_not_found	A required setting is missing.	یک تنظیم ضروری موجود نیست.	یوه اړینه تنظیم نشته.	
@@ -81,17 +81,17 @@ error.idempotency_key_reused	This request was already sent with different detail
 error.concurrent_modification	Someone else changed this. Please try again.	کسی دیگر این را تغییر داد. دوباره کوشش کنید.	بل چا دا بدل کړ. بیا هڅه وکړئ.	
 error.rate_limited	Too many requests. Please wait a moment.	درخواست‌ها زیاد شد. کمی صبر کنید.	غوښتنې ډېرې شوې. لږ انتظار وکړئ.	
 error.sequence_exhausted	Numbering for this year is exhausted.	شماره‌گذاری این سال تمام شده است.	د دې کال شمېرنه پای ته رسېدلې ده.	
-error.storage_unavailable	Files cannot be saved right now.	فعلاً فایل ذخیره شده نمی‌تواند.	اوس فایل نشي زېرمه کېدای.	loanword?
+error.storage_unavailable	Files cannot be saved right now.	فعلاً فایل ذخیره شده نمی‌تواند.	اوس مهال فایلونه نه شي زېرمه کېدای.	
 error.sms_delivery_failed	The message could not be sent.	پیام فرستاده نشد.	پیغام ونه لېږل شو.	
 error.push_delivery_failed	The notification could not be delivered.	خبرنامه نرسید.	خبرتیا ونه رسېده.	
 error.internal_error	Something did not work. Please try again.	کار درست نشد. لطفاً دوباره کوشش کنید.	کار سم نه شو. مهرباني وکړئ بیا هڅه وکړئ.	
 error.network_offline	Your connection is weak. Please try again.	اتصال انترنت ضعیف است. دوباره کوشش کنید.	ستاسو د انټرنیټ اړیکه کمزورې ده. بیا هڅه وکړئ.	
-auth.sms.otp	Your VELRO code is {code}. It expires in {ttl_minutes} minutes.	کود ولرو شما {code} است. تا {ttl_minutes} دقیقه اعتبار دارد.	ستاسو د ولرو کوډ {code} دی. تر {ttl_minutes} دقیقو پورې اعتبار لري.	loanword?
+auth.sms.otp	Your VELRO code is {code}. It expires in {ttl_minutes} minutes.	کود ولرو شما {code} است. تا {ttl_minutes} دقیقه اعتبار دارد.	ستاسو د ولرو کوډ {code} دی. دا کوډ تر {ttl_minutes} دقیقو پورې اعتبار لري.	
 auth.title.sign_in	Sign in	ورود	ننوتل	
 auth.field.phone	Phone number	شماره تیلفون	د تلیفون شمېره	
-auth.field.code	Verification code	کود تأیید	د تایید کوډ	loanword?
-auth.hint.code_sent	A verification code was sent to this number	کود تأیید به این شماره فرستاده شد	د تایید کوډ دې شمېرې ته ولېږل شو	loanword?
-auth.action.send_code	Send code	ارسال کود	کوډ ولېږئ	loanword?
+auth.field.code	Verification code	کود تأیید	د تایید کوډ	
+auth.hint.code_sent	A verification code was sent to this number	کود تأیید به این شماره فرستاده شد	د تایید کوډ دې شمېرې ته ولېږل شو.	
+auth.action.send_code	Send code	ارسال کود	کوډ ولېږئ	
 auth.action.resend_code	Send again	ارسال دوباره	بیا ولېږئ	
 auth.action.resend_code_in	Send again in {seconds}s	ارسال دوباره پس از {seconds} ثانیه	{seconds} ثانیې وروسته بیا ولېږئ	
 auth.action.sign_in	Sign in	داخل شوید	ننوځئ	
@@ -101,64 +101,64 @@ home.question.from	Where are you travelling from?	از کجا می‌روید؟	
 home.question.to	Where are you going?	به کجا می‌روید؟	کوم ځای ته ځئ؟	
 home.question.when	When?	چه وقت؟	کله؟	
 home.question.passengers	Passengers	تعداد مسافر	د مسافرو شمېر	
-home.action.search	Find a vehicle	جستجوی موتر	د موټر لټون	loanword?
+home.action.search	Find a vehicle	جستجوی موتر	موټر پیدا کړئ	
 home.value.now	Now	همین حالا	همدا اوس	
 home.section.recent_trips	Recent trips	سفرهای اخیر	وروستي سفرونه	
-home.section.upcoming	Upcoming booking	رزرو پیش‌رو	راتلونکی ریزرف	recently corrected
-home.section.saved_stations	Saved stations	ایستگاه‌های ذخیره‌شده	زېرمه شوي تم ځایونه	recently corrected
+home.section.upcoming	Upcoming booking	رزرو پیش‌رو	راتلونکی ریزرف	
+home.section.saved_stations	Saved stations	ایستگاه‌های ذخیره‌شده	زېرمه شوي تم ځایونه	
 location.action.search	Search	جستجو	لټون	
 location.action.browse	Browse	مرور	کتل	
 location.action.nearby	Nearby	نزدیک من	زما نږدې	
 location.label.district	District	ولسوالی	ولسوالي	
 location.label.village	Village	قریه	کلی	
-location.label.station	Station	ایستگاه	تم ځای	recently corrected
+location.label.station	Station	ایستگاه	تم ځای	
 location.label.origin	Pick-up	محل سوارشدن	د سپرېدو ځای	
 location.label.destination	Destination	مقصد	منزل	
-location.hint.search	Type a village or station name	نام قریه یا ایستگاه را بنویسید	د کلي یا تم ځای نوم ولیکئ	recently corrected
+location.hint.search	Type a village or station name	نام قریه یا ایستگاه را بنویسید	د کلي یا تم ځای نوم ولیکئ	
 location.distance.metres	{distance} m away	{distance} متر فاصله	{distance} متره واټن	
 location.distance.kilometres	{distance} km away	{distance} کیلومتر فاصله	{distance} کیلومتره واټن	
-ride.kind.private	Private vehicle	موتر اختصاصی	ځانګړی موټر	loanword?
+ride.kind.private	Private vehicle	موتر اختصاصی	ځانګړی موټر	
 ride.kind.shared	Shared seat	چوکی مشترک	ګډه چوکۍ	
-ride.kind.scheduled	Booked for later	رزرو برای بعد	د وروسته لپاره ریزرف	recently corrected
+ride.kind.scheduled	Booked for later	رزرو برای بعد	د وروسته لپاره ریزرف	
 ride.label.seats_available	{count} of {capacity} seats left	{count} از {capacity} چوکی باقی است	له {capacity} څخه {count} چوکۍ پاتې دي	
 ride.label.departs_at	Departs {time}	حرکت {time}	د تګ وخت {time}	
 ride.label.fare	Fare	کرایه	کرایه	
 ride.label.fare_per_seat	Per seat	فی چوکی	فی چوکۍ	
-ride.action.request	Request vehicle	درخواست موتر	د موټر غوښتنه	loanword?
-ride.action.book_seat	Book a seat	رزرو چوکی	د چوکۍ ریزرف	recently corrected
-ride.action.confirm	Confirm booking	تأیید رزرو	د ریزرف تایید	recently corrected
-booking.title	Booking	رزرو	ریزرف	recently corrected
-booking.label.number	Booking number	نمبر رزرو	د ریزرف شمېره	recently corrected
+ride.action.request	Request vehicle	درخواست موتر	د موټر غوښتنه وکړئ	
+ride.action.book_seat	Book a seat	رزرو چوکی	یوه څوکۍ ریزرف کړئ	
+ride.action.confirm	Confirm booking	تأیید رزرو	ریزرف تایید کړئ	
+booking.title	Booking	رزرو	ریزرف	
+booking.label.number	Booking number	نمبر رزرو	د ریزرف شمېره	
 booking.label.seat	Seat	چوکی	چوکۍ	
-booking.label.code	Boarding code	کود سوارشدن	د سپرېدو کوډ	loanword?
-booking.hint.code	Show this code to the driver.	این کود را به راننده نشان بدهید.	دا کوډ چلوونکي ته وښیئ.	loanword?
-booking.action.cancel	Cancel booking	لغو رزرو	ریزرف لغوه کړئ	recently corrected
-booking.confirm.cancel	Cancel this booking?	این رزرو لغو شود؟	دا ریزرف لغوه شي؟	recently corrected
+booking.label.code	Boarding code	کود سوارشدن	د سپرېدو کوډ	
+booking.hint.code	Show this code to the driver.	این کود را به راننده نشان بدهید.	دا کوډ چلوونکي ته وښایئ.	
+booking.action.cancel	Cancel booking	لغو رزرو	ریزرف لغوه کړئ	
+booking.confirm.cancel	Cancel this booking?	این رزرو لغو شود؟	دا ریزرف لغوه شي؟	
 booking.status.pending	Pending	در انتظار	په انتظار کې	
 booking.status.confirmed	Confirmed	تأییدشده	تایید شوی	
-booking.status.driver_assigned	Driver assigned	راننده تعیین شد	چلوونکی وټاکل شو	recently corrected
+booking.status.driver_assigned	Driver assigned	راننده تعیین شد	چلوونکی وټاکل شو	
 booking.status.ready	Ready to board	آماده سوارشدن	د سپرېدو لپاره چمتو	
-booking.status.onboard	On board	در موتر	په موټر کې	loanword?
+booking.status.onboard	On board	در موتر	په موټر کې	
 booking.status.completed	Completed	تکمیل‌شده	بشپړ شوی	
 booking.status.cancelled	Cancelled	لغوشده	لغوه شوی	
 booking.status.no_show	Did not travel	سفر نکرد	سفر یې ونه کړ	
 trip.status.scheduled	Scheduled	پلان‌شده	پلان شوی	
-trip.status.requested	Finding a driver	در جستجوی راننده	د چلوونکي په لټه کې	recently corrected
-trip.status.driver_assigned	Driver assigned	راننده تعیین شد	چلوونکی وټاکل شو	recently corrected
-trip.status.driver_arriving	Driver on the way	راننده در راه است	چلوونکی په لار کې دی	recently corrected
-trip.status.arrived_at_pickup	Driver has arrived	راننده رسید	چلوونکی ورسېد	recently corrected
+trip.status.requested	Finding a driver	در جستجوی راننده	د چلوونکي په لټه کې	
+trip.status.driver_assigned	Driver assigned	راننده تعیین شد	چلوونکی وټاکل شو	
+trip.status.driver_arriving	Driver on the way	راننده در راه است	چلوونکی په لاره کې دی	
+trip.status.arrived_at_pickup	Driver has arrived	راننده رسید	چلوونکی راورسېد	
 trip.status.boarding	Boarding	سوارشدن	سپرېدل	
 trip.status.in_transit	On the way	در راه	په لار کې	
 trip.status.arrived	Arrived	رسید	ورسېد	
 trip.status.completed	Completed	تکمیل‌شده	بشپړ شوی	
 trip.status.cancelled	Cancelled	لغوشده	لغوه شوی	
 trip.status.expired	Expired	وقت گذشته	وخت تېر	
-trip.status.no_driver_available	No driver found	راننده پیدا نشد	چلوونکی ونه موندل شو	recently corrected
-trip.label.driver	Driver	راننده	چلوونکی	recently corrected
-trip.label.vehicle	Vehicle	موتر	موټر	loanword?
-trip.label.plate	Number plate	نمبر پلیت	د پلېټ شمېره	loanword?
+trip.status.no_driver_available	No driver found	راننده پیدا نشد	چلوونکی ونه موندل شو	
+trip.label.driver	Driver	راننده	چلوونکی	
+trip.label.vehicle	Vehicle	موتر	موټر	
+trip.label.plate	Number plate	نمبر پلیت	د پلېټ شمېره	
 trip.label.eta	Arriving in {minutes} minutes	تا {minutes} دقیقه می‌رسد	تر {minutes} دقیقو پورې رسېږي	
-trip.action.call_driver	Call driver	تماس با راننده	چلوونکي ته زنګ	recently corrected
+trip.action.call_driver	Call driver	تماس با راننده	چلوونکي ته زنګ ووهئ	
 trip.action.share	Share trip	شریک‌سازی سفر	سفر شریکول	
 trip.action.emergency	Emergency	اضطراری	بيړني حالت	
 trip.emergency.call	Emergency call	تماس اضطراری	بيړنی زنګ	
@@ -178,7 +178,7 @@ driver.action.arrived_destination	Arrived at destination	به مقصد رسید�
 driver.action.arrived	I have arrived	رسیدم	ورسېدم	
 driver.action.start_trip	Start trip	شروع سفر	سفر پیل کړئ	
 driver.action.complete_trip	Complete trip	ختم سفر	سفر بشپړ کړئ	
-driver.action.verify_passenger	Check passenger code	بررسی کود مسافر	د مسافر کوډ وګورئ	loanword?
+driver.action.verify_passenger	Check passenger code	بررسی کود مسافر	د مسافر کوډ وګورئ	
 driver.label.pickup	Pick-up	محل سوارشدن	د سپرېدو ځای	
 driver.label.destination	Destination	مقصد	منزل	
 driver.label.passengers	Passengers	مسافران	مسافر	
@@ -190,15 +190,15 @@ earnings.label.pending	Pending	در جریان	په جریان کې
 earnings.label.lifetime	Total earned	مجموع درآمد	ټول عاید	
 earnings.label.commission	VELRO commission	کمیشن ولرو	د ولرو کمیشن	
 earnings.label.trips	Completed trips	سفرهای تکمیل‌شده	بشپړ شوي سفرونه	
-rating.title	Rate your trip	به سفر خود امتیاز بدهید	خپل سفر ته ستوری ورکړئ	recently corrected
+rating.title	Rate your trip	به سفر خود امتیاز بدهید	خپل سفر ته ستوری ورکړئ	
 rating.hint	How was it?	سفر چطور بود؟	سفر څنګه و؟	
 rating.action.submit	Submit	ثبت	ثبت	
 rating.action.skip	Skip	بعداً	وروسته	
 rating.field.comment	Add a comment (optional)	نظر خود را بنویسید (اختیاری)	خپل نظر ولیکئ (اختیاري)	
 cancel.reason.passenger_cancelled	I changed my plans	پلان خود را تغییر دادم	خپل پلان مې بدل کړ	
-cancel.reason.driver_cancelled	The driver cancelled	راننده لغو کرد	د چلوونکي لغوه کول	recently corrected
-cancel.reason.no_driver_available	No driver was available	راننده موجود نبود	چلوونکی نه و	recently corrected
-cancel.reason.vehicle_problem	Vehicle problem	مشکل موتر	د موټر ستونزه	loanword?
+cancel.reason.driver_cancelled	The driver cancelled	راننده لغو کرد	چلوونکي سفر لغوه کړ	
+cancel.reason.no_driver_available	No driver was available	راننده موجود نبود	هېڅ چلوونکی موجود نه و	
+cancel.reason.vehicle_problem	Vehicle problem	مشکل موتر	د موټر ستونزه	
 cancel.reason.weather	Weather	هوا	هوا	
 cancel.reason.admin_cancelled	Cancelled by VELRO	لغو توسط ولرو	د ولرو لخوا لغوه	
 cancel.reason.other	Other	دیگر	بل	
@@ -206,7 +206,7 @@ vehicle_type.sedan	Sedan	سیدان	سیدان
 vehicle_type.suv	SUV	جیپ	جیپ	
 vehicle_type.van	Van	ون	ون	
 vehicle_type.hiace	Hiace	هایس	هایس	
-vehicle_type.bus	Bus	بس	بس	loanword?
+vehicle_type.bus	Bus	بس	بس	
 vehicle_type.other	Other	دیگر	بل	
 role.super_admin	Super administrator	مدیر ارشد	لوی مدیر	
 role.admin	Administrator	مدیر	مدیر	
@@ -214,14 +214,14 @@ role.operations_manager	Operations manager	مدیر عملیات	د عملیات
 role.dispatcher	Dispatcher	دسپچر	دسپچر	
 role.finance_manager	Finance manager	مدیر مالی	د مالي چارو مدیر	
 role.support_agent	Support agent	کارمند پشتیبانی	د ملاتړ کارکوونکی	
-role.driver	Driver	راننده	چلوونکی	recently corrected
+role.driver	Driver	راننده	چلوونکی	
 role.passenger	Passenger	مسافر	مسافر	
 empty.trips	No trips yet.	هنوز سفری ثبت نشده است.	لا هیڅ سفر نشته.	
-empty.bookings	No bookings yet.	هنوز رزروی ثبت نشده است.	لا هیڅ ریزرف نشته.	recently corrected
-empty.search_results	No vehicles found for this route and time.	برای این مسیر و وقت موتری یافت نشد.	د دې لارې او وخت لپاره موټر ونه موندل شو.	loanword?
+empty.bookings	No bookings yet.	هنوز رزروی ثبت نشده است.	تر اوسه هېڅ ریزرف نشته.	
+empty.search_results	No vehicles found for this route and time.	برای این مسیر و وقت موتری یافت نشد.	د دې لارې او وخت لپاره هېڅ موټر ونه موندل شو.	
 empty.notifications	No notifications.	خبرنامه‌ای نیست.	هیڅ خبرتیا نشته.	
 empty.earnings	No earnings yet.	هنوز درآمدی نیست.	لا هیڅ عاید نشته.	
-empty.stations	No stations listed for this village yet.	برای این قریه هنوز ایستگاهی ثبت نشده است.	د دې کلي لپاره تر اوسه کوم تم ځای نه دی ثبت شوی.	recently corrected
+empty.stations	No stations listed for this village yet.	برای این قریه هنوز ایستگاهی ثبت نشده است.	د دې کلي لپاره تر اوسه هېڅ تم ځای نه دی ثبت شوی.	
 empty.action.search_again	Search again	جستجوی دوباره	بیا لټون	
 common.action.retry	Try again	دوباره کوشش	بیا هڅه	
 common.action.cancel	Cancel	لغو	لغوه	
@@ -236,11 +236,11 @@ driver.earnings.period_trips	from {trips} trips	از {trips} سفر	له {trips}
 driver.earnings.period.day	Daily	روزانه	ورځنی	
 driver.earnings.period.week	Weekly	هفته‌وار	اونیز	
 driver.earnings.period.month	Monthly	ماهانه	میاشتنی	
-driver.profile.title	Your profile	پروفایل شما	ستاسو پروفایل	loanword?
-driver.profile.rating	Rating	امتیاز	ستوری	recently corrected
-driver.profile.no_rating	No ratings yet	هنوز امتیازی نگرفته‌اید	تر اوسه مو ستوری نه دی ترلاسه کړی	recently corrected
+driver.profile.title	Your profile	پروفایل شما	ستاسو پروفایل	
+driver.profile.rating	Rating	امتیاز	ستوری	
+driver.profile.no_rating	No ratings yet	هنوز امتیازی نگرفته‌اید	تر اوسه مو هېڅ ستوری نه دی ترلاسه کړی	
 driver.profile.trips	Completed trips	سفرهای تکمیل‌شده	بشپړ شوي سفرونه	
-driver.profile.since	Driving with VELRO	راننده در ولرو	په ولرو کې چلوونکی	recently corrected
+driver.profile.since	Driving with VELRO	راننده در ولرو	په ولرو کې چلوونکی	
 driver.profile.no_photo	No photo yet	هنوز عکسی نفرستاده‌اید	تر اوسه مو عکس نه دی لېږلی	
 driver.profile.public	What passengers see	آنچه مسافران می‌بینند	هغه څه چې مسافران يې ګوري	
 driver.profile.public_hint	This is how you appear when a passenger is choosing between offers.	وقتی مسافر بین پیشنهادها انتخاب می‌کند، شما را این‌طور می‌بیند.	کله چې مسافر د وړاندیزونو ترمنځ ټاکنه کوي، تاسو داسې ویني.	
@@ -258,9 +258,9 @@ admin.title	VELRO Admin	پنل مدیریت ولرو	د ولرو مدیریت پ
 admin.nav.dashboard	Dashboard	داشبورد	ډشبورډ	
 admin.nav.operations	Dispatch	دسپچ	دسپچ	
 admin.nav.trips	Trips	سفرها	سفرونه	
-admin.nav.bookings	Bookings	رزروها	ریزرفونه	recently corrected
-admin.nav.drivers	Drivers	رانندگان	چلوونکي	recently corrected
-admin.nav.vehicles	Vehicles	موترها	موټرونه	loanword?
+admin.nav.bookings	Bookings	رزروها	ریزرفونه	
+admin.nav.drivers	Drivers	رانندگان	چلوونکي	
+admin.nav.vehicles	Vehicles	موترها	موټرونه	
 admin.nav.locations	Locations	موقعیت‌ها	ځایونه	
 admin.nav.routes	Routes & pricing	مسیرها و قیمت	لارې او بیې	
 admin.nav.finance	Finance	مالی	مالي	
@@ -268,37 +268,37 @@ admin.nav.settings	Settings	تنظیمات	تنظیمات
 admin.nav.audit	Audit log	سابقه فعالیت	د فعالیت ثبت	
 admin.stat.active_trips	Trips in progress	سفرهای در جریان	روان سفرونه	
 admin.stat.trips_today	Departures today	حرکت‌های امروز	د نن ورځې تګونه	
-admin.stat.bookings_today	Bookings today	رزروهای امروز	د نن ورځې ریزرفونه	recently corrected
+admin.stat.bookings_today	Bookings today	رزروهای امروز	د نن ورځې ریزرفونه	
 admin.stat.passengers	Passengers	مسافران	مسافر	
-admin.stat.drivers	Drivers	رانندگان	چلوونکي	recently corrected
+admin.stat.drivers	Drivers	رانندگان	چلوونکي	
 admin.stat.drivers_pending	Awaiting approval	در انتظار تأیید	د تصویب په انتظار	
 admin.stat.drivers_online	Online now	آنلاین	آنلاین	
-admin.stat.vehicles	Vehicles	موترها	موټرونه	loanword?
+admin.stat.vehicles	Vehicles	موترها	موټرونه	
 admin.stat.revenue_today	Fares today	کرایه‌های امروز	د نن ورځې کرایې	
 admin.stat.commission_today	VELRO commission	کمیشن ولرو	د ولرو کمیشن	
-admin.stat.driver_earnings_today	Driver earnings	درآمد رانندگان	د چلوونکو عاید	recently corrected
+admin.stat.driver_earnings_today	Driver earnings	درآمد رانندگان	د چلوونکو عاید	
 admin.stat.cancellations_today	Cancellations today	لغوهای امروز	د نن ورځې لغوې	
-admin.stat.unassigned	Trips needing a driver	سفرهای بدون راننده	پرته له چلوونکي سفرونه	recently corrected
+admin.stat.unassigned	Trips needing a driver	سفرهای بدون راننده	هغه سفرونه چې چلوونکی نه لري	
 admin.col.number	Number	نمبر	شمېره	
 admin.col.status	Status	وضعیت	حالت	
 admin.col.departure	Departure	وقت حرکت	د تګ وخت	
 admin.col.origin	From	از	له	
 admin.col.destination	To	به	ته	
-admin.col.driver	Driver	راننده	چلوونکی	recently corrected
-admin.col.plate	Plate	نمبر پلیت	د پلېټ شمېره	loanword?
+admin.col.driver	Driver	راننده	چلوونکی	
+admin.col.plate	Plate	نمبر پلیت	د پلېټ شمېره	
 admin.col.seats	Seats	چوکی‌ها	چوکۍ	
 admin.col.passenger	Passenger	مسافر	مسافر	
 admin.col.phone	Phone	تیلفون	تلیفون	
 admin.col.fare	Fare	کرایه	کرایه	
 admin.col.payment	Payment	پرداخت	تادیه	
 admin.col.created	Created	ثبت‌شده	ثبت شوی	
-admin.col.code	Code	کود	کوډ	loanword?
+admin.col.code	Code	کود	کوډ	
 admin.col.name	Name	نام	نوم	
 admin.col.district	District	ولسوالی	ولسوالي	
 admin.col.village	Village	قریه	کلی	
 admin.col.villages	Villages	قریه‌ها	کلي	
-admin.col.stations	Stations	ایستگاه‌ها	تم ځایونه	recently corrected
-admin.col.rating	Rating	امتیاز	ستوری	recently corrected
+admin.col.stations	Stations	ایستگاه‌ها	تم ځایونه	
+admin.col.rating	Rating	امتیاز	ستوری	
 admin.col.trips	Trips	سفرها	سفرونه	
 admin.col.type	Type	نوع	ډول	
 admin.col.capacity	Capacity	ظرفیت	ظرفیت	
@@ -317,7 +317,7 @@ admin.col.setting	Setting	تنظیم	تنظیم
 admin.col.parent	Within	زیرمجموعه	په	
 admin.action.approve	Approve	تأیید	تصویب	
 admin.action.suspend	Suspend	تعلیق	ځنډول	
-admin.action.offer	Offer to drivers	پیشنهاد به رانندگان	چلوونکو ته وړاندیز	recently corrected
+admin.action.offer	Offer to drivers	پیشنهاد به رانندگان	چلوونکو ته وړاندیز	
 admin.action.set_price	Change price	تغییر قیمت	د بیې بدلون	
 admin.action.save	Save	ذخیره	زېرمه کول	
 admin.action.refresh	Refresh	تازه‌سازی	تازه کول	
@@ -327,29 +327,29 @@ admin.action.previous	Previous	قبلی	مخکینی
 admin.filter.all	All	همه	ټول	
 admin.filter.active_only	In progress only	فقط در جریان	یوازې روان	
 admin.hint.search_villages	Search by village name	جستجو با نام قریه	د کلي په نوم ولټوئ	
-admin.hint.search_routes	Search by route code	جستجو با کود مسیر	د لارې په کوډ ولټوئ	loanword?
+admin.hint.search_routes	Search by route code	جستجو با کود مسیر	د لارې په کوډ ولټوئ	
 admin.showing	Showing {from}–{to} of {total}	نمایش {from}–{to} از {total}	د {total} څخه {from}–{to}	
 admin.section.locations	Districts	ولسوالی‌ها	ولسوالۍ	
 admin.section.villages	Villages	قریه‌ها	کلي	
-admin.section.stations	Stations	ایستگاه‌ها	تم ځایونه	recently corrected
+admin.section.stations	Stations	ایستگاه‌ها	تم ځایونه	
 admin.section.destinations	Destinations	مقصدها	منزلونه	
-admin.section.unassigned	Trips needing a driver	سفرهای بدون راننده	پرته له چلوونکي سفرونه	recently corrected
-admin.section.pending_drivers	Drivers awaiting approval	رانندگان در انتظار تأیید	د تصویب په انتظار چلوونکي	recently corrected
+admin.section.unassigned	Trips needing a driver	سفرهای بدون راننده	هغه سفرونه چې چلوونکی نه لري	
+admin.section.pending_drivers	Drivers awaiting approval	رانندگان در انتظار تأیید	د تصویب په تمه چلوونکي	
 admin.finance.gross	Gross fares	مجموع کرایه‌ها	ټولې کرایې	
 admin.finance.platform	VELRO commission	کمیشن ولرو	د ولرو کمیشن	
-admin.finance.driver	Driver earnings	درآمد رانندگان	د چلوونکو عاید	recently corrected
+admin.finance.driver	Driver earnings	درآمد رانندگان	د چلوونکو عاید	
 admin.finance.cash	Collected in cash	دریافت نقدی	نغدي ترلاسه	
 admin.finance.online	Collected online	دریافت آنلاین	آنلاین ترلاسه	
-admin.finance.pending_settlement	Owed to drivers	قابل پرداخت به رانندگان	چلوونکو ته د ورکړې وړ	recently corrected
+admin.finance.pending_settlement	Owed to drivers	قابل پرداخت به رانندگان	چلوونکو ته د ورکړې وړ	
 admin.finance.paid_settlement	Paid out	پرداخت‌شده	ورکړل شوي	
 admin.finance.period	Last {days} days	{days} روز اخیر	وروستۍ {days} ورځې	
-admin.finance.bookings	Completed bookings	رزروهای تکمیل‌شده	بشپړ شوي ریزرفونه	recently corrected
+admin.finance.bookings	Completed bookings	رزروهای تکمیل‌شده	بشپړ شوي ریزرفونه	
 admin.empty.trips	No trips match this filter.	سفری با این فلتر یافت نشد.	د دې فلټر سره سفر ونه موندل شو.	
-admin.empty.bookings	No bookings yet.	هنوز رزروی ثبت نشده است.	لا هیڅ ریزرف نشته.	recently corrected
-admin.empty.drivers	No drivers registered.	راننده‌ای ثبت نشده است.	هیڅ چلوونکی نه دی ثبت شوی.	recently corrected
-admin.empty.unassigned	Every trip has a driver.	همه سفرها راننده دارند.	ټول سفرونه چلوونکی لري.	recently corrected
+admin.empty.bookings	No bookings yet.	هنوز رزروی ثبت نشده است.	تر اوسه هېڅ ریزرف نشته.	
+admin.empty.drivers	No drivers registered.	راننده‌ای ثبت نشده است.	تر اوسه هېڅ چلوونکی ثبت شوی نه دی.	
+admin.empty.unassigned	Every trip has a driver.	همه سفرها راننده دارند.	د ټولو سفرونو لپاره چلوونکی ټاکل شوی دی.	
 admin.empty.audit	Nothing recorded yet.	هنوز چیزی ثبت نشده است.	لا هیڅ نه دي ثبت شوي.	
-admin.confirm.suspend	Suspend this driver?	این راننده تعلیق شود؟	دا چلوونکی وځنډول شي؟	recently corrected
+admin.confirm.suspend	Suspend this driver?	این راننده تعلیق شود؟	دا چلوونکی وځنډول شي؟	
 admin.prompt.new_price	New price in AFN	قیمت نو به افغانی	نوې بیه په افغانیو	
 admin.signin.title	Staff sign-in	ورود کارمندان	د کارکوونکو ننوتل	
 driver.approval.pending	Awaiting approval	در انتظار تأیید	د تصویب په انتظار	
@@ -366,7 +366,7 @@ route.type.local	Village to centre	قریه به مرکز	کلی تر مرکز
 route.type.district_to_district	District to district	ولسوالی به ولسوالی	ولسوالي تر ولسوالۍ	
 route.type.intercity	Intercity	بین‌شهری	ښارونو ترمنځ	
 route.type.city	To Kabul	به کابل	کابل ته	
-route.type.station_to_station	Station to station	ایستگاه به ایستگاه	تم ځای تر تم ځایه	recently corrected
+route.type.station_to_station	Station to station	ایستگاه به ایستگاه	له تم ځای څخه تر تم ځایه	
 payment.method.cash	Cash	نقدی	نغدي	
 payment.method.mobile_wallet	Mobile wallet	کیف پول موبایل	د موبایل بټوه	
 payment.method.card	Card	کارت	کارت	
@@ -380,10 +380,10 @@ geo.status.inactive	Not in service	غیرفعال	غیر فعال
 admin.nav.import	Import villages	وارد کردن قریه‌ها	د کلیو واردول	
 admin.import.title	Import villages	وارد کردن قریه‌ها	د کلیو واردول	
 admin.import.subtitle	Nothing is written until you review what was found.	تا زمانی که نتیجه را بررسی نکنید، چیزی ثبت نمی‌شود.	تر هغه چې پایله ونه ګورئ، هیڅ نه ثبتېږي.	
-admin.import.choose_file	Choose a file	انتخاب فایل	فایل وټاکئ	loanword?
+admin.import.choose_file	Choose a file	انتخاب فایل	فایل وټاکئ	
 admin.import.accepted_formats	CSV, Excel or JSON. Required columns: district_code, name.	CSV، اکسل یا JSON. ستون‌های ضروری: district_code و name.	CSV، اکسل یا JSON. اړین کالمونه: district_code او name.	
 admin.import.optional_columns	Optional: alternative_names, latitude, longitude, code, station_name, note.	اختیاری: alternative_names، latitude، longitude، code، station_name، note.	اختیاري: alternative_names، latitude، longitude، code، station_name، note.	
-admin.import.uploading	Reading the file…	در حال خواندن فایل…	فایل لوستل کېږي…	loanword?
+admin.import.uploading	Reading the file…	در حال خواندن فایل…	فایل لوستل کېږي…	
 admin.import.summary	Summary	خلاصه	لنډیز	
 admin.import.total_rows	Rows read	سطرهای خوانده‌شده	لوستل شوې کرښې	
 admin.import.will_create	Will be added	اضافه می‌شود	اضافه کېږي	
@@ -392,63 +392,63 @@ admin.import.warnings	Imported with a warning	با هشدار وارد می‌ش
 admin.import.duplicates	Need your decision	نیاز به تصمیم شما	ستاسو پرېکړې ته اړتیا	
 admin.import.problems_title	Rows with a problem	سطرهای دارای مشکل	ستونزمنې کرښې	
 admin.import.duplicates_title	Possible duplicates	موارد احتمالی تکراری	احتمالي تکراري توکي	
-admin.import.duplicates_hint	These names already exist or repeat in the file. Nothing is merged automatically — tick a row only if it is genuinely a different place.	این نام‌ها قبلاً موجود اند یا در فایل تکرار شده‌اند. هیچ چیز خودکار یکجا نمی‌شود — تنها زمانی علامت بزنید که واقعاً جای دیگری باشد.	دا نومونه دمخه شته یا په فایل کې تکرار شوي. هیڅ شی په اتوماتيک ډول نه یوځای کېږي — یوازې هغه وخت نښه کړئ چې واقعاً بل ځای وي.	loanword?
+admin.import.duplicates_hint	These names already exist or repeat in the file. Nothing is merged automatically — tick a row only if it is genuinely a different place.	این نام‌ها قبلاً موجود اند یا در فایل تکرار شده‌اند. هیچ چیز خودکار یکجا نمی‌شود — تنها زمانی علامت بزنید که واقعاً جای دیگری باشد.	دا نومونه لا دمخه شته یا په فایل کې تکرار شوي دي. هېڅ شی په اتومات ډول نه یوځای کېږي — یوازې هغه وخت یوه کرښه وټاکئ چې رښتیا هم د بل ځای نوم وي.	
 admin.import.will_create_title	Villages to be added	قریه‌هایی که اضافه می‌شوند	هغه کلي چې اضافه کېږي	
 admin.import.row	Row	سطر	کرښه	
-admin.import.incoming	In the file	در فایل	په فایل کې	loanword?
+admin.import.incoming	In the file	در فایل	په فایل کې	
 admin.import.existing	Already known	قبلاً موجود	دمخه پېژندل شوی	
 admin.import.similarity	Similarity	شباهت	ورته والی	
 admin.import.keep_both	A different place — add it	جای دیگری است — اضافه شود	بل ځای دی — اضافه یې کړئ	
 admin.import.blocking_flag	Blocks the row	سطر را مسدود می‌کند	کرښه بندوي	
 admin.import.warning_flag	Warning only	تنها هشدار	یوازې خبرتیا	
-admin.import.create_stations	Create a station for each village	برای هر قریه یک ایستگاه ساخته شود	د هر کلي لپاره یو تم ځای جوړ شي	recently corrected
+admin.import.create_stations	Create a station for each village	برای هر قریه یک ایستگاه ساخته شود	د هر کلي لپاره یو تم ځای جوړ کړئ	
 admin.import.commit	Import {count} villages	وارد کردن {count} قریه	{count} کلي واردول	
-admin.import.committed	Added {villages} villages, {aliases} alternative names and {stations} stations. {skipped} duplicates were skipped.	{villages} قریه، {aliases} نام جایگزین و {stations} ایستگاه اضافه شد. {skipped} مورد تکراری رد شد.	{villages} کلي، {aliases} بدیل نومونه او {stations} تم ځایونه اضافه شول. {skipped} تکراري توکي پرېښودل شول.	recently corrected
+admin.import.committed	Added {villages} villages, {aliases} alternative names and {stations} stations. {skipped} duplicates were skipped.	{villages} قریه، {aliases} نام جایگزین و {stations} ایستگاه اضافه شد. {skipped} مورد تکراری رد شد.	{villages} کلي، {aliases} بدیل نومونه او {stations} تم ځایونه اضافه شول. {skipped} تکراري توکي له پامه وغورځول شول.	
 admin.import.history	Past imports	وارد کردن‌های قبلی	پخواني واردونې	
-admin.import.start_over	Import another file	وارد کردن فایل دیگر	بل فایل واردول	loanword?
-admin.import.nothing_to_import	Nothing in this file can be imported.	هیچ چیزی از این فایل وارد شده نمی‌تواند.	له دې فایل څخه هیڅ نشي واردېدای.	loanword?
+admin.import.start_over	Import another file	وارد کردن فایل دیگر	بل فایل وارد کړئ	
+admin.import.nothing_to_import	Nothing in this file can be imported.	هیچ چیزی از این فایل وارد شده نمی‌تواند.	له دې فایل څخه د واردولو لپاره هېڅ شی نشته.	
 admin.import.reason.missing	Missing	خالی است	تش دی	
 admin.import.reason.unknown_district	No such district	چنین ولسوالی وجود ندارد	داسې ولسوالي نشته	
 admin.import.reason.not_a_number	Not a number	عدد نیست	شمېره نه ده	
 admin.import.reason.out_of_range	Outside the possible range	خارج از حدود ممکن	له ممکنه حدودو بهر	
 admin.import.reason.exists_in_same_district	Already exists in this district	قبلاً در همین ولسوالی موجود است	دمخه په همدې ولسوالۍ کې شته	
-admin.import.reason.repeated_in_file	Repeated earlier in the file	قبلاً در همین فایل تکرار شده	دمخه په همدې فایل کې تکرار شوی	loanword?
+admin.import.reason.repeated_in_file	Repeated earlier in the file	قبلاً در همین فایل تکرار شده	مخکې په همدې فایل کې تکرار شوی	
 admin.col.aliases	Also known as	نام‌های جایگزین	بدیل نومونه	
-error.driver_already_registered	This account is already registered as a driver.	این حساب قبلاً به‌عنوان راننده ثبت شده است.	دا حساب دمخه د چلوونکي په توګه ثبت شوی دی.	recently corrected
+error.driver_already_registered	This account is already registered as a driver.	این حساب قبلاً به‌عنوان راننده ثبت شده است.	دا حساب لا دمخه د چلوونکي په توګه ثبت شوی دی.	
 error.document_not_found	That document was not found.	این سند یافت نشد.	دا سند ونه موندل شو.	
 error.document_type_unknown	That is not a document we ask for.	این سند از جمله اسناد مورد نیاز نیست.	دا سند زموږ له اړینو اسنادو څخه نه دی.	
-error.document_rejection_reason_required	Say why it was rejected, so the driver knows what to send again.	دلیل رد را بنویسید تا راننده بداند چه چیزی را دوباره بفرستد.	د رد دلیل ولیکئ، ترڅو چلوونکی پوه شي چې څه بیا ولېږي.	recently corrected
-admin.nav.approvals	Driver approvals	تأیید رانندگان	د چلوونکو تصویب	recently corrected
-admin.approvals.title	Driver approvals	تأیید رانندگان	د چلوونکو تصویب	recently corrected
-admin.approvals.subtitle	A driver cannot receive work until every document is verified.	راننده تا زمانی که همه اسناد تأیید نشوند، سفر گرفته نمی‌تواند.	چلوونکی تر هغه سفر نشي اخیستلی چې ټول اسناد یې تصویب نشي.	recently corrected
+error.document_rejection_reason_required	Say why it was rejected, so the driver knows what to send again.	دلیل رد را بنویسید تا راننده بداند چه چیزی را دوباره بفرستد.	د رد دلیل ولیکئ، ترڅو چلوونکی پوه شي چې څه شی بیا ولېږي.	
+admin.nav.approvals	Driver approvals	تأیید رانندگان	د چلوونکو تصویب	
+admin.approvals.title	Driver approvals	تأیید رانندگان	د چلوونکو تصویب	
+admin.approvals.subtitle	A driver cannot receive work until every document is verified.	راننده تا زمانی که همه اسناد تأیید نشوند، سفر گرفته نمی‌تواند.	چلوونکی تر هغه سفر نه شي اخیستلی چې ټول اسناد یې تایید شوي نه وي.	
 admin.approvals.pending	Awaiting review	در انتظار بررسی	د کتنې په انتظار	
-admin.approvals.none	No drivers are waiting.	راننده‌ای در انتظار نیست.	هیڅ چلوونکی په انتظار کې نشته.	recently corrected
+admin.approvals.none	No drivers are waiting.	راننده‌ای در انتظار نیست.	هیڅ چلوونکی د تصویب په تمه نشته.	
 admin.approvals.documents	Documents	اسناد	اسناد	
 admin.approvals.missing	Still missing	هنوز کم است	لا کم دي	
 admin.approvals.complete	All documents verified	همه اسناد تأیید شد	ټول اسناد تصویب شول	
-admin.approvals.approve_driver	Approve this driver	تأیید این راننده	دا چلوونکی تصویب کړئ	recently corrected
+admin.approvals.approve_driver	Approve this driver	تأیید این راننده	دا چلوونکی تصویب کړئ	
 admin.approvals.view	View	دیدن	کتل	
 admin.approvals.verify	Verify	تأیید	تصویب	
 admin.approvals.reject	Reject	رد	ردول	
 admin.approvals.reject_reason	Why is it being rejected?	دلیل رد چیست؟	د رد دلیل څه دی؟	
-admin.approvals.reject_hint	The driver sees this, so say what to send instead.	راننده این را می‌بیند، پس بنویسید چه چیزی بفرستد.	چلوونکی دا ویني، نو ولیکئ چې څه ولېږي.	recently corrected
+admin.approvals.reject_hint	The driver sees this, so say what to send instead.	راننده این را می‌بیند، پس بنویسید چه چیزی بفرستد.	چلوونکی دا پیغام ویني، نو ولیکئ چې څه شی باید بیا ولېږي.	
 admin.approvals.superseded	Replaced	جایگزین‌شده	بدل شوی	
 admin.approvals.uploaded	Uploaded	ارسال‌شده	لېږل شوی	
 admin.approvals.expires	Expires	تاریخ ختم	د پای نېټه	
 admin.approvals.expiry_prompt	Expiry date (YYYY-MM-DD), or leave blank	تاریخ ختم (YYYY-MM-DD) یا خالی بگذارید	د پای نېټه (YYYY-MM-DD) یا یې تشه پرېږدئ	
-admin.approvals.select_driver	Choose a driver to review.	یک راننده را برای بررسی انتخاب کنید.	د کتنې لپاره یو چلوونکی وټاکئ.	recently corrected
+admin.approvals.select_driver	Choose a driver to review.	یک راننده را برای بررسی انتخاب کنید.	د کتنې لپاره یو چلوونکی وټاکئ.	
 admin.approvals.not_uploaded	Not sent yet	هنوز فرستاده نشده	لا نه دی لېږل شوی	
-document.type.license	Driving licence	جواز راننده‌گی	د موټر چلولو جواز	loanword?
+document.type.license	Driving licence	جواز راننده‌گی	د موټر چلولو جواز	
 document.type.national_id	National identity card	تذکره	تذکره	
-document.type.vehicle_registration	Vehicle registration	جواز سیر موتر	د موټر جواز سیر	loanword?
+document.type.vehicle_registration	Vehicle registration	جواز سیر موتر	د موټر جواز سیر	
 document.status.pending	Awaiting review	در انتظار بررسی	د کتنې په انتظار	
 document.status.verified	Verified	تأییدشده	تصویب شوی	
 document.status.rejected	Rejected	ردشده	رد شوی	
 document.status.expired	Expired	وقت گذشته	وخت تېر	
-admin.approvals.unreadable	This file will not open.	این فایل باز نمی‌شود.	دا فایل نه پرانیستل کېږي.	loanword?
+admin.approvals.unreadable	This file will not open.	این فایل باز نمی‌شود.	دا فایل نه پرانیستل کېږي.	
 admin.approvals.unreadable_hint	It is probably corrupt. Reject it and ask for another photograph.	احتمالاً خراب است. آن را رد کنید و عکس دیگری بخواهید.	ښایي خراب وي. رد یې کړئ او بل عکس وغواړئ.	
 driver.documents.title	Your documents	اسناد شما	ستاسو اسناد	
-driver.documents.not_a_driver	You are not registered as a driver yet.	شما هنوز به‌عنوان راننده ثبت نشده‌اید.	تاسو لا د چلوونکي په توګه نه یاست ثبت شوي.	recently corrected
+driver.documents.not_a_driver	You are not registered as a driver yet.	شما هنوز به‌عنوان راننده ثبت نشده‌اید.	تاسو لا د چلوونکي په توګه ثبت شوي نه یاست.	
 driver.documents.apply	Apply to drive	درخواست راننده‌گی	د چلوونکۍ غوښتنه	
 driver.documents.approved	Approved. You can go online.	تأیید شد. آنلاین شده می‌توانید.	تصویب شو. آنلاین کېدای شئ.	
 driver.documents.awaiting_review	Everything sent. Waiting for VELRO to check them.	همه فرستاده شد. منتظر بررسی ولرو باشید.	ټول ولېږل شول. د ولرو د کتنې انتظار وکړئ.	
@@ -458,31 +458,31 @@ driver.documents.replace	Send a new photo	ارسال عکس نو	نوی عکس �
 driver.documents.not_sent	Not sent	فرستاده نشده	نه دی لېږل شوی	
 driver.documents.sent_on	Sent {date}	فرستاده شد {date}	ولېږل شو {date}	
 driver.documents.too_large	That photo is too large. Try again with a smaller one.	این عکس کلان است. عکس خردتر بفرستید.	دا عکس لوی دی. کوچنی عکس ولېږئ.	
-error.vehicle_plate_invalid	That number plate does not look right.	این نمبر پلیت درست معلوم نمی‌شود.	دا د پلېټ شمېره سمه نه ښکاري.	loanword?
-error.vehicle_not_registered	Register your vehicle before going online.	پیش از آنلاین شدن موتر خود را ثبت کنید.	له آنلاین کېدو مخکې خپل موټر ثبت کړئ.	loanword?
-error.vehicle_type_unknown	Choose one of the vehicle types listed.	یکی از نوع‌های موتر فهرست‌شده را انتخاب کنید.	د لیست شویو موټرو له ډولونو یو وټاکئ.	loanword?
-driver.vehicle.title	Your vehicle	موتر شما	ستاسو موټر	loanword?
-driver.vehicle.none	You have not registered a vehicle yet.	شما هنوز موتری ثبت نکرده‌اید.	تاسو لا موټر نه دی ثبت کړی.	loanword?
+error.vehicle_plate_invalid	That number plate does not look right.	این نمبر پلیت درست معلوم نمی‌شود.	د پلېټ دا شمېره سمه نه ښکاري.	
+error.vehicle_not_registered	Register your vehicle before going online.	پیش از آنلاین شدن موتر خود را ثبت کنید.	مخکې له آنلاین کېدو خپل موټر ثبت کړئ.	
+error.vehicle_type_unknown	Choose one of the vehicle types listed.	یکی از نوع‌های موتر فهرست‌شده را انتخاب کنید.	له لست څخه د موټر یو ډول وټاکئ.	
+driver.vehicle.title	Your vehicle	موتر شما	ستاسو موټر	
+driver.vehicle.none	You have not registered a vehicle yet.	شما هنوز موتری ثبت نکرده‌اید.	تاسو لا تر اوسه موټر نه دی ثبت کړی.	
 driver.vehicle.awaiting	Waiting for VELRO to check it.	منتظر بررسی ولرو باشید.	د ولرو د کتنې انتظار وکړئ.	
 driver.vehicle.active	In service.	فعال است.	فعال دی.	
 driver.vehicle.suspended	Taken out of service. Contact support.	از کار افتاده. با پشتیبانی تماس بگیرید.	له کاره لرې شوی. له ملاتړ سره اړیکه ونیسئ.	
 driver.vehicle.type	Type	نوع	ډول	
-driver.vehicle.plate	Number plate	نمبر پلیت	د پلېټ شمېره	loanword?
+driver.vehicle.plate	Number plate	نمبر پلیت	د پلېټ شمېره	
 driver.vehicle.brand	Make	کمپنی	کمپنۍ	
-driver.vehicle.model	Model	ماډل	ماډل	
+driver.vehicle.model	Model	مودل	ماډل	
 driver.vehicle.year	Year	سال	کال	
 driver.vehicle.colour	Colour	رنگ	رنګ	
 driver.vehicle.seats	Seats for passengers	چوکی برای مسافران	د مسافرو لپاره چوکۍ	
-driver.vehicle.save	Save vehicle	ذخیره موتر	موټر زېرمه کړئ	loanword?
-driver.vehicle.edit	Change vehicle	تغییر موتر	موټر بدل کړئ	loanword?
-driver.vehicle.plate_hint	As written on the plate, for example PRW-1234	طوری که در پلیت نوشته است، مثلاً PRW-1234	لکه څنګه چې په پلېټ لیکل شوی، بېلګه PRW-1234	loanword?
-admin.nav.vehicle_approvals	Vehicle approvals	تأیید موترها	د موټرو تصویب	loanword?
-admin.vehicles.pending	Vehicles awaiting activation	موترهای در انتظار فعال‌سازی	د فعالولو په انتظار موټرونه	loanword?
-admin.vehicles.none	No vehicles are waiting.	موتری در انتظار نیست.	هیڅ موټر په انتظار کې نشته.	loanword?
+driver.vehicle.save	Save vehicle	ذخیره موتر	موټر ثبت کړئ	
+driver.vehicle.edit	Change vehicle	تغییر موتر	موټر بدل کړئ	
+driver.vehicle.plate_hint	As written on the plate, for example PRW-1234	طوری که در پلیت نوشته است، مثلاً PRW-1234	لکه څنګه چې پر پلېټ لیکل شوې وي، د بېلګې په توګه PRW-1234	
+admin.nav.vehicle_approvals	Vehicle approvals	تأیید موترها	د موټرو تصویب	
+admin.vehicles.pending	Vehicles awaiting activation	موترهای در انتظار فعال‌سازی	د فعالولو په تمه موټرونه	
+admin.vehicles.none	No vehicles are waiting.	موتری در انتظار نیست.	هیڅ موټر د فعالولو په تمه نشته.	
 admin.vehicles.activate	Activate	فعال‌سازی	فعالول	
 admin.vehicles.suspend	Take out of service	از کار انداختن	له کاره ایستل	
 admin.vehicles.suspend_reason	Why is it being taken out of service?	دلیل از کار انداختن چیست؟	د له کاره ایستلو دلیل څه دی؟	
-admin.vehicles.driver_status	Driver	راننده	چلوونکی	recently corrected
+admin.vehicles.driver_status	Driver	راننده	چلوونکی	
 driver.vehicle.seats_count	{count} seats	{count} چوکی	{count} چوکۍ	
 driver.vehicle.retired	No longer in use.	دیگر استفاده نمی‌شود.	نور نه کارول کېږي.	
 error.settlement_not_found	That payout request no longer exists.	این درخواست پرداخت دیگر وجود ندارد.	دا د تادیې غوښتنه نور نشته.	
@@ -534,10 +534,10 @@ history.action.load_more	Show older	نمایش قدیمی‌ترها	زاړه و
 receipt.line.times	{label} × {count}	{label} × {count}	{label} × {count}	
 receipt.label.cancellation_fee	Cancellation fee	فیس لغو	د لغوې فیس	
 receipt.label.no_fee	You were not charged.	از شما چیزی گرفته نشد.	له تاسو څه وا نه خیستل شول.	
-receipt.label.driver	Driver	راننده	چلوونکی	recently corrected
-receipt.label.vehicle	Vehicle	موتر	موټر	loanword?
+receipt.label.driver	Driver	راننده	چلوونکی	
+receipt.label.vehicle	Vehicle	موتر	موټر	
 fare.component.seat	Seat fare	کرایه چوکی	د چوکۍ کرایه	
-fare.component.private_vehicle	Whole vehicle	کرایه تمام موتر	د ټول موټر کرایه	loanword?
+fare.component.private_vehicle	Whole vehicle	کرایه تمام موتر	د ټول موټر کرایه	
 fare.component.base	Base fare	کرایه اساسی	بنسټیزه کرایه	
 fare.component.other	Other	سایر	نور	
 error.settlement_direction_invalid	You owe VELRO {amount}; there is nothing to withdraw.	شما {amount} به ولرو بدهکار هستید؛ چیزی برای برداشت نیست.	تاسو ولرو ته {amount} پوروړي یاست؛ د اخیستلو لپاره څه نشته.	
@@ -548,11 +548,11 @@ driver.earnings.pending_collection	Being settled	در حال تصفیه	د تص�
 settlement.direction.payout	Paid to you	پرداخت به شما	تاسو ته تادیه	
 settlement.direction.collection	Paid by you	پرداخت از شما	له تاسو تادیه	
 admin.settlements.collect	Record a payment	ثبت پرداخت	د تادیې ثبت	
-admin.settlements.collect_from	Cash received from a driver	پول نقد گرفته‌شده از راننده	له چلوونکي څخه اخیستل شوي نغدې	recently corrected
+admin.settlements.collect_from	Cash received from a driver	پول نقد گرفته‌شده از راننده	له چلوونکي څخه ترلاسه شوې نغدې پیسې	
 admin.settlements.owed	Owes	بدهی	پور	
 admin.col.direction	Direction	جهت	لوری	
-admin.settlements.debtors	Drivers who owe	رانندگان بدهکار	پوروړي چلوونکي	recently corrected
-admin.settlements.no_debtors	No driver owes anything.	هیچ راننده‌ای بدهی ندارد.	هیڅ چلوونکی پور نه لري.	recently corrected
+admin.settlements.debtors	Drivers who owe	رانندگان بدهکار	پوروړي چلوونکي	
+admin.settlements.no_debtors	No driver owes anything.	هیچ راننده‌ای بدهی ندارد.	هیڅ چلوونکی پوروړی نه دی.	
 admin.action.reason	Reason	دلیل	دلیل	
 admin.approvals.expiry_hint	Leave blank if this document does not expire.	اگر این سند تاریخ ختم ندارد، خالی بگذارید.	که دا سند د پای نېټه نه لري، خالي یې پرېږدئ.	
 admin.col.expires	Expires on	تاریخ ختم	د پای نېټه	
@@ -569,10 +569,10 @@ error.fare_offer_amount_invalid	Enter a fare above zero.	کرایه بالاتر
 error.fare_offer_implausible	Check that price — it is far from what was asked.	این قیمت را ببینید — با آنچه خواسته شده خیلی فرق دارد.	دا بیه وګورئ — له غوښتل شوې سره ډېر توپیر لري.	
 fare.component.agreed	Agreed fare	کرایه توافق‌شده	هوکړه شوې کرایه	
 ride.ask.title	How much will you pay?	چقدر می‌پردازید؟	څومره به ورکړئ؟	
-ride.ask.hint	Name a fare. Drivers will answer with theirs.	کرایه‌ای پیشنهاد کنید. رانندگان قیمت خود را می‌گویند.	یوه کرایه وړاندیز کړئ. چلوونکي به خپله بیه ووایي.	recently corrected
-ride.ask.action	Ask for a ride	درخواست موتر	د موټر غوښتنه	loanword?
+ride.ask.hint	Name a fare. Drivers will answer with theirs.	کرایه‌ای پیشنهاد کنید. رانندگان قیمت خود را می‌گویند.	یوه کرایه وړاندیز کړئ. چلوونکي به خپله بیه ووایي.	
+ride.ask.action	Ask for a ride	درخواست موتر	د موټر غوښتنه وکړئ	
 ride.ask.passengers	Passengers	مسافران	مسافر	
-ride.ask.note	Anything the driver should know	چیزی که راننده باید بداند	هغه څه چې چلوونکی یې باید پوه شي	recently corrected
+ride.ask.note	Anything the driver should know	چیزی که راننده باید بداند	هغه څه چې چلوونکی یې باید پوه شي	
 ride.ask.when	When do you travel?	چه وقت سفر می‌کنید؟	کله سفر کوئ؟	
 ride.when.now	Now	همین حالا	همدا اوس	
 ride.when.today	Today	امروز	نن	
@@ -586,16 +586,16 @@ ride.return.same_day	Same day	همان روز	هماغه ورځ
 ride.return.next_day	The next day	روز بعد	بله ورځ	
 ride.return.in_days	{days} days later	{days} روز بعد	{days} ورځې وروسته	
 ride.return.label	Return	برگشت	بېرته	
-ride.return.hint	One driver, one fare, both ways.	یک راننده، یک کرایه، رفت و برگشت.	یو موټروان، یوه کرایه، تګ او راتګ.	loanword?
+ride.return.hint	One driver, one fare, both ways.	یک راننده، یک کرایه، رفت و برگشت.	یو چلوونکی، یوه کرایه، تګ او راتګ.	
 ride.ask.fare_out	Fare there	کرایه رفت	د تګ کرایه	
 ride.ask.fare_back	Fare back	کرایه برگشت	د راتګ کرایه	
 ride.ask.fare_total	Total {amount}	مجموع {amount}	ټول {amount}	
 ride.offers.leg_out	There	رفت	تګ	
 ride.offers.leg_back	Back	برگشت	راتګ	
-ride.offers.title	Drivers who answered	رانندگانی که جواب دادند	هغه چلوونکي چې ځواب یې ورکړ	recently corrected
-ride.offers.waiting	Waiting for drivers to answer.	منتظر جواب رانندگان باشید.	د چلوونکو د ځواب انتظار وکړئ.	recently corrected
+ride.offers.title	Drivers who answered	رانندگانی که جواب دادند	هغه چلوونکي چې ځواب یې ورکړی	
+ride.offers.waiting	Waiting for drivers to answer.	منتظر جواب رانندگان باشید.	د چلوونکو د ځواب په تمه یاست.	
 ride.offers.you_asked	You asked for {amount}	شما {amount} پیشنهاد کردید	تاسو {amount} وړاندیز کړ	
-ride.offers.accept	Take this ride	این موتر را بگیرید	دا موټر ونیسئ	loanword?
+ride.offers.accept	Take this ride	این موتر را بگیرید	دا سفر واخلئ	
 ride.offers.same_as_asked	Agreed your price	قیمت شما را قبول کرد	ستاسو بیه یې ومنله	
 ride.offers.trips	{count} trips	{count} سفر	{count} سفرونه	
 ride.action.cancel	Cancel the request	لغو درخواست	غوښتنه لغوه کړئ	
@@ -616,11 +616,11 @@ admin.negotiations.none	Nobody is waiting right now.	فعلاً کسی منتظ�
 admin.negotiations.asking	Asking	پیشنهاد مسافر	د مسافر وړاندیز	
 admin.negotiations.offers	Offers	پیشنهادها	وړاندیزونه	
 admin.negotiations.no_offers	No answer yet	هنوز جوابی نیست	لا ځواب نشته	
-admin.negotiations.readonly	Read only. The fare is agreed between the passenger and the driver.	فقط برای دیدن. کرایه میان مسافر و راننده توافق می‌شود.	یوازې د کتلو لپاره. کرایه د مسافر او چلوونکي ترمنځ هوکړه کیږي.	recently corrected
+admin.negotiations.readonly	Read only. The fare is agreed between the passenger and the driver.	فقط برای دیدن. کرایه میان مسافر و راننده توافق می‌شود.	یوازې د کتلو لپاره. کرایه د مسافر او چلوونکي ترمنځ هوکړه کېږي.	
 admin.col.waiting	Waiting since	منتظر از	له کله منتظر	
-notify.offer.received	A driver offered {amount} for your ride.	یک راننده {amount} پیشنهاد داد.	یوه چلوونکي {amount} وړاندیز وکړ.	recently corrected
-notify.offer.accepted	Your fare was accepted. Booking {booking_number}.	کرایه شما قبول شد. رزرو {booking_number}.	ستاسو کرایه ومنل شوه. ریزرف {booking_number}.	recently corrected
-notify.offer.declined	That passenger chose another driver.	آن مسافر راننده دیگری را انتخاب کرد.	هغه مسافر بل چلوونکی وټاکه.	recently corrected
+notify.offer.received	A driver offered {amount} for your ride.	یک راننده {amount} پیشنهاد داد.	یوه چلوونکي ستاسو د سفر لپاره {amount} وړاندیز کړی دی.	
+notify.offer.accepted	Your fare was accepted. Booking {booking_number}.	کرایه شما قبول شد. رزرو {booking_number}.	ستاسو کرایه ومنل شوه. ریزرف {booking_number}.	
+notify.offer.declined	That passenger chose another driver.	آن مسافر راننده دیگری را انتخاب کرد.	هغه مسافر بل چلوونکی وټاکه.	
 notify.request.expired	Nobody answered your request in time.	کسی به موقع به درخواست شما جواب نداد.	چا ستاسو غوښتنې ته پر وخت ځواب ورنکړ.	
 inbox.title	Messages	پیام‌ها	پیغامونه	
 inbox.empty	Nothing yet.	فعلاً چیزی نیست.	لا هیڅ نشته.	
@@ -631,7 +631,7 @@ admin.approvals.identity	Identity check	بررسی هویت	د هویت کتنه
 admin.approvals.compare	Does the face match the tazkira?	آیا چهره با تذکره یکی است؟	ایا مخ له تذکرې سره سمون لري؟	
 admin.approvals.no_selfie	No photo sent yet	هنوز عکسی فرستاده نشده	لا عکس نه دی لېږل شوی	
 admin.approvals.no_tazkira	No tazkira sent yet	هنوز تذکره فرستاده نشده	لا تذکره نه ده لېږل شوې	
-admin.approvals.file_unavailable	This file will not open.	این فایل باز نمی‌شود.	دا فایل نه پرانیستل کیږي.	loanword?
+admin.approvals.file_unavailable	This file will not open.	این فایل باز نمی‌شود.	دا فایل نه پرانیستل کېږي.	
 common.month.1	Jan	جنوری	جنوري	
 common.month.2	Feb	فبروری	فبروري	
 common.month.3	Mar	مارچ	مارچ	
@@ -662,20 +662,20 @@ error.driver_documents_expired	A document has expired. Send a new photo of it to
 driver.documents.valid_until	Valid until {date}	تا {date} اعتبار دارد	تر {date} پورې اعتبار لري	
 driver.documents.expiring_soon	Expires {date}. Send a new photo before then.	در {date} تمام می‌شود. پیش از آن عکس نو بفرستید.	په {date} کې پای ته رسېږي. تر هغې مخکې نوی عکس واستوئ.	
 driver.documents.expired	Expired {date}. Send a new photo to work again.	در {date} تمام شده است. عکس نو بفرستید تا دوباره کار کرده بتوانید.	په {date} کې پای ته رسېدلی. نوی عکس واستوئ چې بیا کار وکړئ.	
-error.vehicle_documents_incomplete	The vehicle's papers are not complete yet.	اسناد موتر هنوز تکمیل نیست.	د موټر اسناد لا نه دي بشپړ.	loanword?
-error.vehicle_documents_expired	The vehicle's permit has expired. Send a new photo of it to work again.	جواز سیر موتر تاریخش گذشته است. عکس نو آن را بفرستید تا دوباره کار کرده بتوانید.	د موټر د جواز سیر نېټه تېره ده. نوی عکس یې واستوئ چې بیا کار وکړئ.	loanword?
-vehicle.documents.title	Papers for this vehicle	اسناد این موتر	د دې موټر اسناد	loanword?
-vehicle.documents.subtitle	Each vehicle needs its own permit.	هر موتر جواز سیر خود را ضرورت دارد.	هر موټر خپل جواز سیر ته اړتیا لري.	loanword?
+error.vehicle_documents_incomplete	The vehicle's papers are not complete yet.	اسناد موتر هنوز تکمیل نیست.	د موټر اسناد لا بشپړ شوي نه دي.	
+error.vehicle_documents_expired	The vehicle's permit has expired. Send a new photo of it to work again.	جواز سیر موتر تاریخش گذشته است. عکس نو آن را بفرستید تا دوباره کار کرده بتوانید.	د موټر د جواز سیر نېټه تېره شوې ده. د هغه نوی عکس واستوئ ترڅو بیا کار وکړای شئ.	
+vehicle.documents.title	Papers for this vehicle	اسناد این موتر	د دې موټر اسناد	
+vehicle.documents.subtitle	Each vehicle needs its own permit.	هر موتر جواز سیر خود را ضرورت دارد.	هر موټر خپل جواز سیر ته اړتیا لري.	
 notify.trip.cancelled	Your trip {booking_number} was called off. You have not been charged.	سفر شما {booking_number} لغو شد. هیچ پولی از شما گرفته نشده است.	ستاسو سفر {booking_number} لغو شو. له تاسو څخه هیڅ پیسې نه دي اخیستل شوي.	
 ride.offers.expired_title	Nobody answered in time	کسی به وقت جواب نداد	چا په وخت ځواب ورنه کړ	
-ride.offers.expired_body	No driver named a price for this trip. Ask again — you can offer a different fare.	هیچ راننده‌ای برای این سفر قیمت نداد. دوباره بپرسید — می‌توانید کرایهٔ دیگری پیشنهاد کنید.	هیڅ چلوونکي د دې سفر لپاره بیه ونه ښوده. بیا وپوښتئ — بل کرایه وړاندیز کولی شئ.	recently corrected
+ride.offers.expired_body	No driver named a price for this trip. Ask again — you can offer a different fare.	هیچ راننده‌ای برای این سفر قیمت نداد. دوباره بپرسید — می‌توانید کرایهٔ دیگری پیشنهاد کنید.	هیڅ چلوونکي د دې سفر لپاره بیه ونه ښوده. بیا یې وغواړئ — تاسو کولای شئ بله کرایه وړاندیز کړئ.	
 ride.offers.cancelled_title	This request was cancelled	این درخواست لغو شد	دا غوښتنه لغوه شوه	
 ride.offers.cancelled_body	Ask again whenever you are ready to travel.	هر وقت آمادهٔ سفر بودید دوباره بپرسید.	کله چې د سفر لپاره چمتو یاست بیا وپوښتئ.	
 ride.offers.ask_again	Ask again	دوباره پرسیدن	بیا پوښتنه	
-admin.routes.generate	Build routes for the new stations	ساختن مسیرها برای ایستگاه‌های نو	د نویو تم ځایونو لپاره لارې جوړول	recently corrected
-admin.routes.generate_hint	An imported station has no routes until this is run, and a station with no routes cannot be travelled from.	ایستگاهی که وارد شده تا این کار اجرا نشود هیچ مسیری ندارد، و از ایستگاه بدون مسیر سفر شده نمی‌تواند.	راوړل شوی تم ځای تر څو چې دا ونه چلېږي هیڅ لاره نه لري، او له بې‌لارې تم ځایه سفر نه شي کېدای.	recently corrected
-admin.routes.generated	{created} routes created and {updated} updated, covering {stations} stations.	{created} مسیر ساخته شد و {updated} مسیر تازه شد، برای {stations} ایستگاه.	{created} لارې جوړې شوې او {updated} نوې شوې، د {stations} تم ځایونو لپاره.	recently corrected
-admin.routes.generate_needed	The import created {stations} stations. They cannot be travelled from until routes are built for them.	این وارد کردن {stations} ایستگاه ساخت. تا زمانی که مسیرهای‌شان ساخته نشود، از آن‌ها سفر شده نمی‌تواند.	دې راوړلو {stations} تم ځایونه جوړ کړل. تر څو چې د دوی لارې جوړې نه شي، له دوی څخه سفر نه شي کېدای.	recently corrected
+admin.routes.generate	Build routes for the new stations	ساختن مسیرها برای ایستگاه‌های نو	د نویو تم ځایونو لپاره لارې جوړې کړئ	
+admin.routes.generate_hint	An imported station has no routes until this is run, and a station with no routes cannot be travelled from.	ایستگاهی که وارد شده تا این کار اجرا نشود هیچ مسیری ندارد، و از ایستگاه بدون مسیر سفر شده نمی‌تواند.	وارد شوی تم ځای تر هغه پورې هېڅ لاره نه لري چې دا کار اجرا شي، او له هغه تم ځای څخه چې لاره ونه لري سفر نه شي کېدای.	
+admin.routes.generated	{created} routes created and {updated} updated, covering {stations} stations.	{created} مسیر ساخته شد و {updated} مسیر تازه شد، برای {stations} ایستگاه.	{created} لارې جوړې او {updated} لارې نوې شوې، چې {stations} تم ځایونه پوښي.	
+admin.routes.generate_needed	The import created {stations} stations. They cannot be travelled from until routes are built for them.	این وارد کردن {stations} ایستگاه ساخت. تا زمانی که مسیرهای‌شان ساخته نشود، از آن‌ها سفر شده نمی‌تواند.	په واردولو سره {stations} تم ځایونه جوړ شول. تر هغو له دغو تم ځایونو څخه سفر نه شي کېدای چې لارې ورته جوړې نه شي.	
 driver.trip.cancel	Cancel this trip	لغو این سفر	دا سفر لغوه کړئ	
 driver.trip.cancel_title	Why can you not make this trip?	چرا این سفر را کرده نمی‌توانید؟	ولې دا سفر نه شئ کولی؟	
 driver.trip.cancel_hint	The passenger is told at once. Cancelling often will suspend you.	به مسافر فوراً خبر داده می‌شود. لغو کردن پی‌درپی باعث معطلی شما می‌شود.	مسافر ته سمدلاسه خبر ورکول کېږي. ډېر لغو کول به ستاسو کار ودروي.	
@@ -686,9 +686,9 @@ safety.not_rescue	VELRO is not an emergency service. We cannot send anyone to yo
 safety.call_emergency	Call {number}	زنگ زدن به {number}	{number} ته زنګ ووهئ	
 safety.call_emergency_hint	Police and ambulance. Works without internet.	پولیس و امبولانس. بدون انترنت هم کار می‌کند.	پولیس او امبولانس. له انټرنېټ پرته هم کار کوي.	
 safety.tell_someone	Send your details to someone you trust	معلومات خود را به کسی که اعتماد دارید بفرستید	خپل معلومات هغه چا ته ولېږئ چې باور پرې لرئ	
-safety.tell_someone_hint	Opens a message with the car, the driver and your journey. You choose who to send it to.	پیامی با موتر، راننده و سفر شما باز می‌شود. خودتان انتخاب می‌کنید به کی بفرستید.	د موټر، چلوونکي او ستاسو د سفر پیغام پرانیستل کېږي. تاسو پخپله ټاکئ چا ته یې لېږئ.	loanword?
-safety.sms_body	I am in a VELRO car. Plate {plate}. Driver {driver}. Driver's number {driver_phone}. Booking {booking}. From {origin} to {destination}.	من در موتر ولرو هستم. پلیت {plate}. راننده {driver}. شماره راننده {driver_phone}. رزرو {booking}. از {origin} به {destination}.	زه د ولرو په موټر کې یم. پلېټ {plate}. چلوونکی {driver}. د چلوونکي شمېره {driver_phone}. ریزرف {booking}. له {origin} څخه {destination} ته.	loanword?
-safety.details_title	The car you are in	موتری که در آن هستید	هغه موټر چې پکې یاست	loanword?
+safety.tell_someone_hint	Opens a message with the car, the driver and your journey. You choose who to send it to.	پیامی با موتر، راننده و سفر شما باز می‌شود. خودتان انتخاب می‌کنید به کی بفرستید.	یو پیغام پرانیستل کېږي چې موټر، چلوونکی او ستاسو د سفر معلومات پکې وي. تاسو پخپله ټاکئ چې چا ته یې ولېږئ.	
+safety.sms_body	I am in a VELRO car. Plate {plate}. Driver {driver}. Driver's number {driver_phone}. Booking {booking}. From {origin} to {destination}.	من در موتر ولرو هستم. پلیت {plate}. راننده {driver}. شماره راننده {driver_phone}. رزرو {booking}. از {origin} به {destination}.	زه د ولرو په موټر کې یم. پلېټ {plate}. چلوونکی {driver}. د چلوونکي شمېره {driver_phone}. ریزرف {booking}. له {origin} څخه تر {destination} پورې.	
+safety.details_title	The car you are in	موتری که در آن هستید	هغه موټر چې تاسو پکې یاست	
 safety.read_aloud	You can read this out on the phone.	این را در تیلفون خوانده می‌توانید.	دا په تلیفون کې لوستلی شئ.	
 safety.report	Tell VELRO what happened	به ولرو بگویید چه شد	ولرو ته ووایاست څه وشول	
 safety.report_hint	Office hours only. Nobody may read this until morning. If you are in danger now, call {number}.	فقط در ساعات کاری. شاید تا صبح کسی این را نخواند. اگر همین حالا در خطر هستید، به {number} زنگ بزنید.	یوازې د کار په ساعتونو کې. کېدای شي تر سهاره یې څوک ونه لولي. که همدا اوس په خطر کې یاست، {number} ته زنګ ووهئ.	
@@ -702,11 +702,11 @@ ticket.status.in_progress	Being looked at	در حال بررسی	په کتنه �
 ticket.status.resolved	Answered	جواب داده شد	ځواب ورکړل شو	
 ticket.status.closed	Closed	بسته	تړل شوی	
 ticket.category.safety	Safety	مصونیت	خوندیتوب	
-ticket.category.lost_item	Something left in the car	چیزی در موتر مانده	څه شی په موټر کې پاتې شوی	loanword?
+ticket.category.lost_item	Something left in the car	چیزی در موتر مانده	په موټر کې پاتې شوی شی	
 ticket.category.fare_dispute	The fare was wrong	کرایه غلط بود	کرایه سمه نه وه	
-ticket.category.driver_conduct	How the driver behaved	رفتار راننده	د چلوونکي چلند	recently corrected
+ticket.category.driver_conduct	How the driver behaved	رفتار راننده	د چلوونکي چلند	
 ticket.category.passenger_conduct	How the passenger behaved	رفتار مسافر	د مسافر چلند	
-ticket.category.vehicle_condition	The condition of the car	حالت موتر	د موټر حالت	loanword?
+ticket.category.vehicle_condition	The condition of the car	حالت موتر	د موټر حالت	
 ticket.category.app_problem	A problem with the app	مشکل در اپ	په اپ کې ستونزه	
 ticket.category.other	Something else	چیز دیگر	بل څه	
 admin.nav.support	Support	پشتیبانی	ملاتړ	
@@ -745,25 +745,25 @@ safety.awaiting_answer	Nobody has answered yet.	هنوز کسی جواب ندا�
 driver.nav.home	VELRO	ولرو	ولرو	
 auth.sign_out_warning	Your journeys will be removed from this phone. You will need a connection to sign in again.	سفرهای شما از این تیلفون پاک می‌شود. برای ورود دوباره به انترنت ضرورت دارید.	ستاسو سفرونه به له دې تلیفونه پاک شي. د بیا ننوتلو لپاره به انټرنېټ ته اړتیا ولرئ.	
 rating.thanks	Thank you. Your rating was sent.	تشکر. نظر شما فرستاده شد.	مننه. ستاسو نظر ولېږل شو.	
-error.ride_request_already_open	You are already asking for a ride. Open it to see the prices drivers have offered.	شما همین حالا یک درخواست سفر باز دارید. آن را باز کنید تا قیمت‌های رانندگان را ببینید.	تاسو دمخه د سفر یوه غوښتنه پرانیستې لرئ. پرانیزئ یې چې د چلوونکو بیې وګورئ.	recently corrected
+error.ride_request_already_open	You are already asking for a ride. Open it to see the prices drivers have offered.	شما همین حالا یک درخواست سفر باز دارید. آن را باز کنید تا قیمت‌های رانندگان را ببینید.	تاسو لا دمخه د سفر یوه غوښتنه پرانیستې لرئ. هغه پرانیزئ چې د چلوونکو وړاندیز شوې بیې وګورئ.	
 home.open_request.title	You are asking for a ride	شما درخواست سفر داده‌اید	تاسو د سفر غوښتنه کړې	
-home.open_request.offers	{count} drivers have named a price	{count} راننده قیمت داده‌اند	{count} چلوونکو بیه ښودلې	recently corrected
-home.open_request.waiting	Waiting for drivers	منتظر رانندگان	د چلوونکو په تمه	recently corrected
+home.open_request.offers	{count} drivers have named a price	{count} راننده قیمت داده‌اند	{count} چلوونکو بیه ښودلې	
+home.open_request.waiting	Waiting for drivers	منتظر رانندگان	د چلوونکو په تمه	
 home.open_request.expires_in	{minutes} minutes left	{minutes} دقیقه باقی است	{minutes} دقیقې پاتې دي	
 home.open_request.expiring	Less than a minute left	کمتر از یک دقیقه باقی است	تر یوې دقیقې لږ پاتې دي	
 home.open_request.open	See the prices	دیدن قیمت‌ها	بیې وګورئ	
 driver.action.call_passenger	Call the passenger	زنگ زدن به مسافر	مسافر ته زنګ ووهئ	
-booking.action.call_driver	Call the driver	زنگ زدن به راننده	چلوونکي ته زنګ ووهئ	recently corrected
+booking.action.call_driver	Call the driver	زنگ زدن به راننده	چلوونکي ته زنګ ووهئ	
 common.value.no_name	No name given	نام داده نشده	نوم نه دی ورکړل شوی	
 common.value.unknown	Not known	نامعلوم	نامعلوم	
 driver.greeting_no_name	Hello	سلام	سلام	
-driver.welcome.title	Drive with VELRO	با ولرو موتر برانید	له ولرو سره موټر وچلوئ	loanword?
-driver.welcome.body	Apply, then send photographs of your tazkira, your licence and the car's papers. VELRO checks them and tells you.	درخواست بدهید، بعد عکس تذکره، جواز رانندگی و اسناد موتر را بفرستید. ولرو آن‌ها را بررسی می‌کند و به شما خبر می‌دهد.	غوښتنه وکړئ، بیا د خپلې تذکرې، د موټر چلولو جواز او د موټر د اسنادو عکسونه ولېږئ. ولرو یې ګوري او تاسو ته خبر درکوي.	loanword?
+driver.welcome.title	Drive with VELRO	با ولرو موتر برانید	له ولرو سره موټر وچلوئ	
+driver.welcome.body	Apply, then send photographs of your tazkira, your licence and the car's papers. VELRO checks them and tells you.	درخواست بدهید، بعد عکس تذکره، جواز رانندگی و اسناد موتر را بفرستید. ولرو آن‌ها را بررسی می‌کند و به شما خبر می‌دهد.	غوښتنه وکړئ، بیا د خپلې تذکرې، د موټر چلولو جواز او د موټر د اسنادو عکسونه ولېږئ. ولرو به یې وګوري او تاسو ته به خبر درکړي.	
 profile.field.name	Your name	نام شما	ستاسو نوم	
-profile.hint.name_driver	Passengers see this name when they choose your car.	مسافران این نام را وقتی می‌بینند که موتر شما را انتخاب می‌کنند.	مسافران دا نوم هغه وخت ویني چې ستاسو موټر غوره کوي.	loanword?
+profile.hint.name_driver	Passengers see this name when they choose your car.	مسافران این نام را وقتی می‌بینند که موتر شما را انتخاب می‌کنند.	مسافر دا نوم هغه وخت ویني چې ستاسو موټر غوره کوي.	
 profile.hint.name_optional	You can leave this empty, or ask someone to write it for you.	این را خالی گذاشته می‌توانید، یا از کسی بخواهید که برای شما بنویسد.	دا خالي پرېښودلی شئ، یا له چا وغواړئ چې ستاسو لپاره یې ولیکي.	
 admin.approvals.record_name	Name on the tazkira	نام روی تذکره	په تذکره کې نوم	
-admin.approvals.name_hint	Passengers see this name when they choose his car. Leave it empty to approve without changing it.	مسافران این نام را وقتی می‌بینند که موتر او را انتخاب می‌کنند. اگر خالی بماند، نام تغییر نمی‌کند.	مسافران دا نوم هغه وخت ویني چې د هغه موټر غوره کوي. که خالي پاتې شي، نوم نه بدلېږي.	loanword?
+admin.approvals.name_hint	Passengers see this name when they choose his car. Leave it empty to approve without changing it.	مسافران این نام را وقتی می‌بینند که موتر او را انتخاب می‌کنند. اگر خالی بماند، نام تغییر نمی‌کند.	مسافر دا نوم هغه وخت ویني چې د هغه موټر غوره کوي. که خالي پاتې شي، نوم به بدل نه شي.	
 driver.offline.title	You are offline	شما آفلاین هستید	تاسو آفلاین یاست	
 driver.offline.body	Passengers cannot see you, and you cannot see who is waiting. Turn the switch above on to start.	مسافران شما را دیده نمی‌توانند و شما هم نمی‌بینید که کی منتظر است. برای شروع، کلید بالا را روشن کنید.	مسافران تاسو نه شي لیدلی، او تاسو هم نه وینئ چې څوک انتظار باسي. د پیل لپاره، پورتنۍ تڼۍ چالانه کړئ.	
 driver.offline.waiting	Someone is waiting right now	همین حالا کسی منتظر است	همدا اوس څوک انتظار باسي	
@@ -775,40 +775,40 @@ driver.verify.boarded_named	{name} is on board.	{name} سوار شده است.	{
 driver.trip.completed	Trip complete. You earned {amount}.	سفر تکمیل شد. {amount} به دست آوردید.	سفر بشپړ شو. {amount} مو ترلاسه کړل.	
 driver.trip.completed_plain	Trip complete.	سفر تکمیل شد.	سفر بشپړ شو.	
 error.ride_request_departure_past	That time has already passed. Choose a later one.	آن وقت گذشته است. وقت دیرتری انتخاب کنید.	هغه وخت تېر شوی. وروسته وخت وټاکئ.	
-error.ride_request_departure_too_far	You can arrange a ride up to {horizon_days} days ahead.	تا {horizon_days} روز پیشتر می‌توانید موتر بگیرید.	تر {horizon_days} ورځو پورې مخکې موټر نیولی شئ.	loanword?
+error.ride_request_departure_too_far	You can arrange a ride up to {horizon_days} days ahead.	تا {horizon_days} روز پیشتر می‌توانید موتر بگیرید.	تاسو تر {horizon_days} ورځو مخکې پورې موټر نیولی شئ.	
 error.ride_request_return_before_departure	The return must be after you set out.	برگشت باید بعد از رفتن باشد.	بېرته راتګ باید د تګ نه وروسته وي.	
 error.fare_offer_return_mismatch	Please give a price for the return as well.	برای برگشت هم قیمت بدهید.	د بېرته راتګ لپاره هم بیه ورکړئ.	
 error.currency_mismatch	Those prices are in different currencies.	این قیمت‌ها به پول‌های مختلف است.	دا بیې په بېلابېلو پیسو دي.	
-error.geofence_outside	VELRO serves Kabul, Parwan and Ghorband for now. It looks like you are outside the service area, so we cannot send your request to drivers.	ولرو فعلاً در کابل، پروان و غوربند خدمات می‌دهد. به نظر می‌رسد بیرون از ساحهٔ پوشش هستید، بنابراین درخواست شما به راننده‌ها فرستاده نمی‌شود.	ولرو اوس مهال په کابل، پروان او غوربند کې خدمت کوي. داسې ښکاري چې تاسو له پوښښ سیمې بهر یاست، نو ستاسو غوښتنه چلوونکو ته نه لېږل کېږي.	new — please check the Pashto
-error.user_already_suspended	That account is already suspended or closed.	آن حساب از قبل بند یا بسته است.	هغه حساب له مخکې بند یا تړل شوی دی.	new — please check the Pashto
-error.user_not_suspended	That account is not suspended.	آن حساب بند نیست.	هغه حساب بند نه دی.	new — please check the Pashto
-road.alert.curve	Sharp bends ahead. Slow down.	کجی جاده پیش رو است. آهسته برانید.	مخکې د سړک کوږوالی دی. ورو چلوئ.	new — please check the Pashto
-road.alert.bazaar	Approaching a bazaar. Please take care.	به بازار نزدیک می‌شوید. لطفاً احتیاط کنید.	بازار ته نږدې کېږئ. مهرباني وکړئ پام وکړئ.	new — please check the Pashto
-road.alert.caution	Extra caution on this stretch. Drive slowly.	در این منطقه احتیاط بیشتر کنید. آهسته برانید.	په دې سیمه کې ډېر پام وکړئ. ورو چلوئ.	new — please check the Pashto
-trip.vehicle_seen_now	Vehicle position: just now.	موقعیت موتر: همین حالا.	د موټر ځای: همدا اوس.	new — please check the Pashto
-trip.vehicle_seen	Vehicle last seen {minutes} min ago.	آخرین موقعیت موتر: {minutes} دقیقه پیش.	د موټر وروستی ځای: {minutes} دقیقې مخکې.	new — please check the Pashto
-app.update.body	A new VELRO version is ready — tap to download.	نسخهٔ نو ولرو آماده است — برای دانلود فشار دهید.	د ولرو نوې بڼه چمتو ده — ښکته کولو ته يې کېکاږئ.	new — please check the Pashto
-notif.duty.waiting	On duty — listening for ride requests.	در حال کار — گوش به زنگ درخواست‌های سفر.	په دنده — د سفر غوښتنو ته غوږ.	new — please check the Pashto
-notif.duty.on_trip	On a trip — map and road warnings active.	در سفر — نقشه و هشدارهای جاده فعال است.	په سفر کې — نقشه او د سړک خبرداري فعال دي.	new — please check the Pashto
-notif.ask.title	New ride request!	درخواست سفر نو!	د سفر نوې غوښتنه!	new — please check the Pashto
-notif.ask.body	A passenger is asking for a car. Open VELRO to answer.	مسافری موتر می‌خواهد. ولرو را باز کنید و جواب بدهید.	یو مسافر موټر غواړي. ولرو پرانیزئ او ځواب ورکړئ.	new — please check the Pashto
-notif.road.title	Road warning	هشدار جاده	د سړک خبرداری	new — please check the Pashto
-notif.offer.title	A trip is offered to you!	سفری برای شما پیشنهاد شد!	یو سفر تاسو ته وړاندیز شو!	new — please check the Pashto
-notif.offer.body	The office has a trip for you. Open VELRO to take it before the offer runs out.	دفتر یک سفر برای شما دارد. ولرو را باز کنید و پیش از ختم مهلت آن را بگیرید.	دفتر تاسو لپاره یو سفر لري. ولرو پرانیزئ او مخکې له دې چې مهلت یې پای ته ورسېږي، ویې نیسئ.	new — please check the Pashto
-notify.trip.offered	The office offered you trip {trip_number}. Open VELRO to take it.	دفتر سفر {trip_number} را به شما پیشنهاد کرد. ولرو را باز کنید و آن را بگیرید.	دفتر سفر {trip_number} تاسو ته وړاندیز کړ. ولرو پرانیزئ او ویې نیسئ.	new — please check the Pashto
-track.title	Track your ride	ردیابی سفر	د سفر څارنه	new — please check the Pashto
-track.eta	Arriving in about {minutes} min	رسیدن حدود {minutes} دقیقهٔ دیگر	شاوخوا {minutes} دقیقې وروسته رسېږي	new — please check the Pashto
-track.eta_now	The car is nearly there	موتر همین نزدیکی‌هاست	موټر همدا نږدې دی	new — please check the Pashto
-track.eta_unknown	Waiting for the car's position…	در انتظار موقعیت موتر…	د موټر ځای ته انتظار…	new — please check the Pashto
-track.call	Call	زنگ زدن	زنګ ووهئ	new — please check the Pashto
-track.awaiting_driver	No driver assigned yet.	هنوز راننده‌ای تعیین نشده است.	تر اوسه چلوونکی نه دی ټاکل شوی.	new — please check the Pashto
-track.open	Watch on the map	دیدن روی نقشه	پر نقشه یې وګورئ	new — please check the Pashto
-ride.distance_km	{km} km	{km} کیلومتر	{km} کیلومتره	new — please check the Pashto
-ride.duration_minutes	about {minutes} min	حدود {minutes} دقیقه	شاوخوا {minutes} دقیقې	new — please check the Pashto
-auth.channel.question	Where should we send the code?	کود را کجا بفرستیم؟	کوډ چېرته درولېږو؟	new — please check the Pashto
-auth.channel.sms	SMS	پیامک	پیغام	new — please check the Pashto
-auth.channel.telegram	Telegram	تلگرام	تلګرام	new — please check the Pashto
-auth.hint.code_sent_telegram	A verification code was sent to your Telegram	کود تأیید به تلگرام شما فرستاده شد	د تأیید کوډ ستاسو تلګرام ته ولېږل شو	new — please check the Pashto
+error.geofence_outside	VELRO serves Kabul, Parwan and Ghorband for now. It looks like you are outside the service area, so we cannot send your request to drivers.	ولرو فعلاً در کابل، پروان و غوربند خدمات می‌دهد. به نظر می‌رسد بیرون از ساحهٔ پوشش هستید، بنابراین درخواست شما به راننده‌ها فرستاده نمی‌شود.	ولرو اوس مهال په کابل، پروان او غوربند کې خدمت کوي. داسې ښکاري چې تاسو د خدمت له سیمې بهر یاست، نو ستاسو غوښتنه چلوونکو ته نه شو لېږلی.	
+error.user_already_suspended	That account is already suspended or closed.	آن حساب از قبل بند یا بسته است.	دا حساب لا دمخه ځنډول شوی یا تړل شوی دی.	
+error.user_not_suspended	That account is not suspended.	آن حساب بند نیست.	دا حساب ځنډول شوی نه دی.	
+road.alert.curve	Sharp bends ahead. Slow down.	کجی جاده پیش رو است. آهسته برانید.	مخکې د سړک سخت تاوونه دي. ورو موټر وچلوئ.	
+road.alert.bazaar	Approaching a bazaar. Please take care.	به بازار نزدیک می‌شوید. لطفاً احتیاط کنید.	بازار ته نږدې کېږئ. مهرباني وکړئ پام وکړئ.	
+road.alert.caution	Extra caution on this stretch. Drive slowly.	در این منطقه احتیاط بیشتر کنید. آهسته برانید.	په دې برخه کې ډېر پام وکړئ. ورو موټر وچلوئ.	
+trip.vehicle_seen_now	Vehicle position: just now.	موقعیت موتر: همین حالا.	د موټر موقعیت: همدا اوس.	
+trip.vehicle_seen	Vehicle last seen {minutes} min ago.	آخرین موقعیت موتر: {minutes} دقیقه پیش.	د موټر وروستی لیدل شوی موقعیت: {minutes} دقیقې مخکې.	
+app.update.body	A new VELRO version is ready — tap to download.	نسخهٔ نو ولرو آماده است — برای دانلود فشار دهید.	د ولرو نوې نسخه چمتو ده — د ښکته کولو لپاره یې کېکاږئ.	
+notif.duty.waiting	On duty — listening for ride requests.	در حال کار — گوش به زنگ درخواست‌های سفر.	په دنده — د سفر غوښتنو ته په تمه.	
+notif.duty.on_trip	On a trip — map and road warnings active.	در سفر — نقشه و هشدارهای جاده فعال است.	په سفر کې — نقشه او د سړک خبرداري فعال دي.	
+notif.ask.title	New ride request!	درخواست سفر نو!	د سفر نوې غوښتنه!	
+notif.ask.body	A passenger is asking for a car. Open VELRO to answer.	مسافری موتر می‌خواهد. ولرو را باز کنید و جواب بدهید.	یو مسافر موټر غواړي. ولرو پرانیزئ او ځواب ورکړئ.	
+notif.road.title	Road warning	هشدار جاده	د سړک خبرداری	
+notif.offer.title	A trip is offered to you!	سفری برای شما پیشنهاد شد!	یو سفر تاسو ته وړاندیز شوی!	
+notif.offer.body	The office has a trip for you. Open VELRO to take it before the offer runs out.	دفتر یک سفر برای شما دارد. ولرو را باز کنید و پیش از ختم مهلت آن را بگیرید.	دفتر تاسو ته یو سفر لري. ولرو پرانیزئ او مخکې له دې چې د وړاندیز موده پای ته ورسېږي، هغه واخلئ.	
+notify.trip.offered	The office offered you trip {trip_number}. Open VELRO to take it.	دفتر سفر {trip_number} را به شما پیشنهاد کرد. ولرو را باز کنید و آن را بگیرید.	دفتر تاسو ته سفر {trip_number} وړاندیز کړی دی. ولرو پرانیزئ او هغه واخلئ.	
+track.title	Track your ride	ردیابی سفر	خپل سفر وڅارئ	
+track.eta	Arriving in about {minutes} min	رسیدن حدود {minutes} دقیقهٔ دیگر	شاوخوا {minutes} دقیقې وروسته به ورسېږي	
+track.eta_now	The car is nearly there	موتر همین نزدیکی‌هاست	موټر نږدې دی	
+track.eta_unknown	Waiting for the car's position…	در انتظار موقعیت موتر…	د موټر د موقعیت په تمه…	
+track.call	Call	زنگ زدن	زنګ ووهئ	
+track.awaiting_driver	No driver assigned yet.	هنوز راننده‌ای تعیین نشده است.	تر اوسه چلوونکی نه دی ټاکل شوی.	
+track.open	Watch on the map	دیدن روی نقشه	پر نقشه یې وګورئ	
+ride.distance_km	{km} km	{km} کیلومتر	{km} کیلومتره	
+ride.duration_minutes	about {minutes} min	حدود {minutes} دقیقه	شاوخوا {minutes} دقیقې	
+auth.channel.question	Where should we send the code?	کود را کجا بفرستیم؟	کوډ چېرته درولېږو؟	
+auth.channel.sms	SMS	پیامک	SMS	
+auth.channel.telegram	Telegram	تلگرام	Telegram	
+auth.hint.code_sent_telegram	A verification code was sent to your Telegram	کود تأیید به تلگرام شما فرستاده شد	د تایید کوډ ستاسو Telegram ته ولېږل شو.	
 auth.channel.email	Email	ایمیل	برېښنالیک	
 auth.hint.code_sent_email	A verification code was sent to your email	کود تأیید به ایمیل شما فرستاده شد	د تأیید کوډ ستاسو برېښنالیک ته ولېږل شو	
 auth.email.otp_subject	Your VELRO sign-in code	کود ورود ولرو	د ولرو د ننوتلو کوډ	
@@ -875,11 +875,19 @@ common.value.never	Never	هرگز	هېڅکله
 common.value.minutes_ago	{minutes} min ago	{minutes} دقیقه پیش	{minutes} دقیقې مخکې	
 common.value.hours_ago	{hours} h ago	{hours} ساعت پیش	{hours} ساعته مخکې	
 common.value.days_ago	{days} days ago	{days} روز پیش	{days} ورځې مخکې	
-driver.trip.start_unverified_title	Start anyway?	با این حال شروع شود؟	بیا هم پیل شي؟	review
-driver.trip.start_unverified_body	{unverified} of {total} passengers not yet verified.	{unverified} از {total} مسافر هنوز تأیید نشده است.	له {total} مسافرو څخه {unverified} لا تر اوسه تایید شوي نه دي.	review
-driver.trip.start_unverified_confirm	Start	شروع شود	پیل شي	review
-driver.trip.start_unverified_back	Go back	برگردید	بېرته ولاړ شئ	review
-error.geofence_location_required	We need your location to confirm you are in a VELRO area. Please allow location access and try again.	برای تأیید اینکه در ساحهٔ پوشش ولرو هستید، به موقعیت شما نیاز داریم. لطفاً اجازهٔ دسترسی به موقعیت را بدهید و دوباره تلاش کنید.	د دې لپاره چې ډاډ ترلاسه کړو تاسو د ولرو په پوښښ سیمه کې یاست، ستاسو موقعیت ته اړتیا لرو. مهرباني وکړئ موقعیت ته د لاسرسي اجازه ورکړئ او بیا هڅه وکړئ.	review — new; check Dari and Pashto
-location.permission.rationale	VELRO asks for your location only to confirm you are inside the service area.	ولرو موقعیت شما را فقط برای تأیید اینکه در ساحهٔ پوشش هستید می‌پرسد.	ولرو ستاسو موقعیت یوازې د دې لپاره غواړي چې ډاډ ترلاسه کړي تاسو په پوښښ سیمه کې یاست.	review — new; check Dari and Pashto
-location.permission.denied	Location access is off for VELRO. Turn it on in your phone's settings, then try again.	دسترسی ولرو به موقعیت خاموش است. آن را در تنظیمات تیلفون خود روشن کنید و دوباره تلاش کنید.	د ولرو لپاره موقعیت ته لاسرسی بند دی. په خپل تلیفون کې یې د تنظیماتو له لارې فعال کړئ او بیا هڅه وکړئ.	review — new; check Dari and Pashto
-location.action.open_settings	Open settings	باز کردن تنظیمات	تنظیمات پرانیستل	review — new; check Dari and Pashto
+driver.trip.start_unverified_title	Start anyway?	با این حال شروع شود؟	بیا هم پیل شي؟	
+driver.trip.start_unverified_body	{unverified} of {total} passengers not yet verified.	{unverified} از {total} مسافر هنوز تأیید نشده است.	له {total} مسافرو څخه {unverified} لا تر اوسه تایید شوي نه دي.	
+driver.trip.start_unverified_confirm	Start	شروع شود	پیل کړئ	
+driver.trip.start_unverified_back	Go back	برگردید	بېرته لاړ شئ	
+error.geofence_location_required	We need your location to confirm you are in a VELRO area. Please allow location access and try again.	برای تأیید اینکه در ساحهٔ پوشش ولرو هستید، به موقعیت شما نیاز داریم. لطفاً اجازهٔ دسترسی به موقعیت را بدهید و دوباره تلاش کنید.	د دې لپاره چې ډاډ ترلاسه کړو تاسو د ولرو د خدمت په سیمه کې یاست، ستاسو موقعیت ته اړتیا لرو. مهرباني وکړئ د موقعیت اجازه ورکړئ او بیا هڅه وکړئ.	
+location.permission.rationale	VELRO asks for your location only to confirm you are inside the service area.	ولرو موقعیت شما را فقط برای تأیید اینکه در ساحهٔ پوشش هستید می‌پرسد.	ولرو ستاسو موقعیت یوازې د دې لپاره غواړي چې ډاډ ترلاسه کړي تاسو د خدمت په سیمه کې یاست.	
+location.permission.denied	Location access is off for VELRO. Turn it on in your phone's settings, then try again.	دسترسی ولرو به موقعیت خاموش است. آن را در تنظیمات تیلفون خود روشن کنید و دوباره تلاش کنید.	د ولرو لپاره د موقعیت لاسرسی بند دی. د خپل تلیفون له تنظیماتو څخه یې فعال کړئ، بیا هڅه وکړئ.	
+location.action.open_settings	Open settings	باز کردن تنظیمات	تنظیمات پرانیزئ	
+sync.queued.generic	Saved. It will be sent when the connection returns.	ذخیره شد. با برگشتن انترنت فرستاده می‌شود.	خوندي شو. انټرنېټ چې راستون شو، لېږل کېږي.	
+sync.queued.booking_title	Your seat request is saved — you do not have a seat yet	درخواست چوکی شما ذخیره شد — هنوز چوکی ندارید	ستاسو د چوکۍ غوښتنه خوندي شوه — تر اوسه چوکۍ نه لرئ	
+sync.queued.booking_body	There was no connection. The request will be sent the moment signal returns, and the answer will appear on the home screen. Do not travel to the station on this alone.	انترنت نبود. به محض برگشتن سیگنال، درخواست فرستاده می‌شود و نتیجه در صفحه اصلی ظاهر می‌شود. تنها با تکیه بر این به ایستگاه نروید.	انټرنېټ نه و. سیګنال چې راستون شو، غوښتنه لېږل کېږي او پایله یې په اصلي پاڼه کې ښکاري. یوازې پر دې تکیه تم ځای ته مه ځئ.	
+sync.pending.count	{count} saved actions are waiting for a connection	{count} کار ذخیره‌شده منتظر انترنت است	{count} خوندي شوي کارونه انټرنېټ ته په تمه دي	
+sync.failed.title	Could not be sent	فرستاده نشد	ونه لېږل شو	
+sync.kind.book_seats	Seat booking	رزرو چوکی	د چوکۍ ریزرف	
+sync.kind.cancel_booking	Booking cancellation	لغو رزرو	د ریزرف لغوه	
+sync.kind.rate_trip	Trip rating	امتیاز سفر	د سفر ستوری	

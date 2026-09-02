@@ -69,6 +69,17 @@ def test_no_translation_is_blank(locale: str) -> None:
     assert not blank, f"{locale} has empty strings: {blank}"
 
 
+# Written the same in every language, by choice rather than by omission.
+#
+# "app.name" is the product's own name. The other two are how the owner --
+# reviewing all 219 flagged Pashto strings himself on 2 September 2026 --
+# chose to write them in Pashto: the acronym and the application are read in
+# Latin on a phone in Parwan, and he kept them that way even inside otherwise
+# fully Pashto sentences ("د تایید کوډ ستاسو Telegram ته ولېږل شو"). Dari
+# still uses پیامک and تلگرام; the two languages are allowed to differ here.
+WRITTEN_IN_LATIN_ON_PURPOSE = {"app.name", "auth.channel.sms", "auth.channel.telegram"}
+
+
 @pytest.mark.parametrize("locale", RTL_LOCALES)
 def test_rtl_locales_are_written_in_perso_arabic(locale: str) -> None:
     """Catches a key accidentally left as its English source text.
@@ -81,7 +92,7 @@ def test_rtl_locales_are_written_in_perso_arabic(locale: str) -> None:
     latin_only = sorted(
         key
         for key, value in load(locale).items()
-        if key not in {"app.name"}
+        if key not in WRITTEN_IN_LATIN_ON_PURPOSE
         and any("a" <= ch.lower() <= "z" for ch in _outside_placeholders(value))
         and not any("؀" <= ch <= "ۿ" for ch in value)
     )
