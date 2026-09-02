@@ -114,6 +114,10 @@ object IdempotencyKeys {
 
     fun forAccept(tripId: String, driverId: String): String = "accept:$tripId:$driverId"
 
+    /** One ask per attempt: the same journey, seats and attempt id replay as one request. */
+    fun forAsk(originStationId: String, destinationId: String, seats: Int, attemptId: String): String =
+        "ask:$originStationId:$destinationId:$seats:$attemptId"
+
     /** A fresh attempt id, held by the screen so a rotation does not change it. */
     fun newAttemptId(): String = UUID.randomUUID().toString()
 }

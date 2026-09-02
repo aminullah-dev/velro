@@ -11,7 +11,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query
 from pydantic import Field
 
 from application.use_cases.negotiate_fare import (
@@ -31,6 +31,7 @@ from shared.money import Money
 from ui.api import deps
 from ui.api.errors import ok
 from ui.api.geofence import assert_inside
+from ui.api.idempotency import idempotent
 from ui.api.schemas.common import MoneyOut, Schema
 
 
@@ -123,6 +124,7 @@ router = APIRouter(tags=["negotiation"])
 # -- the passenger's side ------------------------------------------------
 
 @router.post("/ride-requests", status_code=201)
+@idempotent("ride_requests.create")
 def request_ride(
     body: RequestRideIn,
     actor: deps.ActorDep,
@@ -130,9 +132,15 @@ def request_ride(
     geo: Annotated[object, Depends(deps.geography)],
     app_settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
+    idem: Annotated[object, Depends(deps.idempotency)] = None,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> dict:
     # The ask is the loud mutation -- it rings every online driver. It does not
-    # leave this function unless it comes from inside the service area.
+    # leave this function unless it comes from inside the service area, and it
+    # is idempotent for the same reason a booking is: on these connections the
+    # request that timed out at the handset very often succeeded at the server,
+    # and the passenger's next tap is the same ask, not a second one that
+    # rings every driver again.
     users_repo = deps.users(requests.session)
     assert_inside(
         geo=geo,

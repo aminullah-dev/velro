@@ -46,9 +46,12 @@ class NegotiationRepository @Inject constructor(
         latitude: String? = null,
         longitude: String? = null,
         locationIsMock: Boolean = false,
+        /** Held by the screen across rotation, so a retry is the same ask. */
+        idempotencyKey: String,
     ): ApiResult<RideRequest> =
         mapper.call {
             api.requestRide(
+                idempotencyKey,
                 RequestRideRequest(
                     origin_station_id = originStationId,
                     destination_id = destinationId,

@@ -147,6 +147,10 @@ interface VelroApi {
      */
     @POST("ride-requests")
     suspend fun requestRide(
+        // The ask rings every online driver. A retry after a dropped
+        // connection must be the same ask, not a second one that rings them
+        // all again -- the same contract a booking has carried from the start.
+        @Header("Idempotency-Key") idempotencyKey: String,
         @Body body: RequestRideRequest,
     ): Response<Envelope<RideRequestDto>>
 

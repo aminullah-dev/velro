@@ -480,6 +480,11 @@ class BookingFlowViewModel @Inject constructor(
                 latitude = standing?.latitude,
                 longitude = standing?.longitude,
                 locationIsMock = standing?.isMock ?: false,
+                // The same attempt id the booking path holds: a retry after a
+                // dropped connection is this ask again, not a second one.
+                idempotencyKey = IdempotencyKeys.forAsk(
+                    station.id, destination.id, current.seatCount, current.attemptId,
+                ),
             )
             when (result) {
                 is ApiResult.Success -> _state.update {
