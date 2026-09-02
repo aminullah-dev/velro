@@ -244,10 +244,12 @@ def cancel_booking(
     cancellations: Annotated[object, Depends(deps.cancellations)],
     settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
+    drivers: Annotated[object, Depends(deps.drivers)],
 ) -> dict:
     use_case = CancelBooking(
         bookings=bookings, trips=trips, seats=seats, cancellations=cancellations,
         settings=settings, audit=audit, clock=deps.clock(), new_id=deps.new_id,
+        drivers=drivers,
     )
     result = use_case.execute(
         CancelBookingCommand(
