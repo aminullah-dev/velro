@@ -23,20 +23,31 @@ export function SignInPage({ onSignedIn }: { onSignedIn: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Where the code should go. Email is the console's own pipe: free, and it
+  // reaches a laptop in another country when the SIM does not. The server
+  // honours it only for a staff account with an address on file, and says
+  // which pipe actually carried the code so the hint below can be honest.
+  const [channel, setChannel] = useState<"sms" | "email">("email");
+  const [sentBy, setSentBy] = useState<"sms" | "email" | "telegram">("sms");
 
   async function requestCode() {
     setBusy(true);
     setError(null);
     try {
-      const result = await api.post<{ debug_code: string | null }>("/auth/otp/request", {
+      const result = await api.post<{
+        debug_code: string | null;
+        channel: "sms" | "email" | "telegram";
+      }>("/auth/otp/request", {
         phone,
         locale,
+        channel,
         // The console asks as itself. The server answers the same way for any
         // number, but only actually sends to one that already holds a staff
         // role -- so a stranger guessing numbers here costs nothing and
         // learns nothing.
         audience: "staff",
       });
+      setSentBy(result.channel ?? "sms");
       setStep("code");
       // Development builds echo the code so a developer with no SMS gateway
       // can still sign in; in production this is null.
@@ -109,6 +120,21 @@ export function SignInPage({ onSignedIn }: { onSignedIn: () => void }) {
                 onKeyDown={(event) => event.key === "Enter" && requestCode()}
               />
             </label>
+            <div className="field">
+              <span>{t("auth.channel.question")}</span>
+              <div className="lang-row" style={{ marginBottom: 0 }}>
+                {(["email", "sms"] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`small${option === channel ? " on" : ""}`}
+                    onClick={() => setChannel(option)}
+                  >
+                    {t(`auth.channel.${option}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
             <button
               className="primary"
               style={{ width: "100%" }}
@@ -120,6 +146,18 @@ export function SignInPage({ onSignedIn }: { onSignedIn: () => void }) {
           </>
         ) : (
           <>
+            {/* Says where the code actually went, which is not always where
+                it was asked to go: an account with no address on file, or a
+                deployment with no mail server, gets an SMS instead. */}
+            <p className="page-sub" style={{ marginBottom: "var(--s-4)" }}>
+              {t(
+                sentBy === "email"
+                  ? "auth.hint.code_sent_email"
+                  : sentBy === "telegram"
+                    ? "auth.hint.code_sent_telegram"
+                    : "auth.hint.code_sent",
+              )}
+            </p>
             <label className="field">
               <span>{t("auth.field.code")}</span>
               <input

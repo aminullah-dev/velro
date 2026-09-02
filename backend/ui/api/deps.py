@@ -163,6 +163,27 @@ def telegram_sender():
     return TelegramGatewaySender(token=token) if token else None
 
 
+@lru_cache(maxsize=1)
+def email_sender():
+    """The mail channel for console codes, or None when no server is set.
+
+    Cached for the same reason as sms(): the config is read once, and the
+    object is stateless between messages.
+    """
+    from infrastructure.services.email import SmtpEmailSender
+
+    cfg = settings()
+    if not cfg.smtp_host:
+        return None
+    return SmtpEmailSender(
+        host=cfg.smtp_host,
+        port=cfg.smtp_port,
+        username=cfg.smtp_username,
+        password=cfg.smtp_password,
+        sender=cfg.smtp_from or cfg.smtp_username,
+    )
+
+
 def otp_attempt_recorder():
     """Write an OTP attempt where a refusal cannot undo it.
 
@@ -591,6 +612,7 @@ __all__ = [
     "db_session",
     "driver_locations",
     "drivers",
+    "email_sender",
     "fare_strategy",
     "fares",
     "geography",

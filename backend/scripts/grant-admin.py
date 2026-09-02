@@ -10,6 +10,10 @@ says what it did. Refuses nothing quietly.
 
     PYTHONPATH=. .venv/bin/python scripts/grant-admin.py +13438677631
     PYTHONPATH=. .venv/bin/python scripts/grant-admin.py +93700000001 --revoke
+    PYTHONPATH=. .venv/bin/python scripts/grant-admin.py +13438677631 --email me@example.org
+
+--email puts an address on the account so the console can send its code
+there instead of by SMS -- free, and reachable from anywhere the SIM is not.
 
 The number still signs in the ordinary way, with an OTP. This grants
 authority, never access.
@@ -33,6 +37,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("phone", help="E.164 or local form; normalised the same way sign-in does")
     parser.add_argument("--revoke", action="store_true", help="take the role away instead")
+    parser.add_argument(
+        "--email", default=None,
+        help="an inbox for the console's sign-in code; clears it when given as ''",
+    )
     parser.add_argument(
         "--role", default=ADMIN, choices=(ADMIN, SUPER_ADMIN),
         help="SUPER_ADMIN also carries settings.manage -- the owner's own "
@@ -63,8 +71,18 @@ def main() -> int:
             return 0
 
         users.grant_role(row.id, args.role)
+        if args.email is not None:
+            address = args.email.strip().lower()
+            if address and ("@" not in address or " " in address):
+                print(f"that does not look like an email address: {args.email!r}")
+                return 1
+            row.email = address or None
+            row.version += 1
+            session.add(row)
         session.commit()
         print(f"{phone.value} now holds {args.role} ({row.id})")
+        if args.email is not None:
+            print(f"console codes may go to {row.email or 'SMS only (address cleared)'}")
         print("Sign in as usual; the OTP is unchanged.")
     return 0
 

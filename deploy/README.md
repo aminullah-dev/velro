@@ -75,6 +75,50 @@ The same script. It notices the database already has a geography and
 imports rather than re-seeds -- seeding twice would schedule a second set
 of trips onto a live product.
 
+## Staff sign-in by email
+
+The console can send its sign-in code to an inbox instead of a SIM. Free where
+an Afghan carrier charges nearly half a dollar a code, and it reaches a laptop
+in another country when the Roshan SIM does not. Only staff accounts, only
+with an address on file; the handsets never see this channel.
+
+Three steps, in this order:
+
+```bash
+# 1. The mail server. Gmail: smtp.gmail.com, 587, the account address, and an
+#    App Password (myaccount.google.com -> Security -> App passwords), never
+#    the account password. Host, port, username and From go in deploy/.env;
+#    the password goes in through set-secret.sh so it is never on screen or
+#    in shell history.
+deploy/set-secret.sh SMTP_PASSWORD
+
+# 2. The address on your own account.
+ssh root@<vps> 'cd /opt/velro/deploy && docker compose exec api \
+  python scripts/grant-admin.py +93793817977 --role SUPER_ADMIN --email you@example.org'
+
+# 3. Sign in at admin.velro.linumic.com with "Email" chosen. The screen says
+#    where the code actually went: with no server or no address it falls
+#    through to SMS and says "sent to this number" instead.
+```
+
+**Do step 3 before the next redeploy.** The seed's `+93700000001` still holds
+SUPER_ADMIN on the production database and sits on `OTP_TEST_NUMBERS`, which
+hands its code to anyone who asks for it. The code now refuses to echo a code
+for any staff account whatever that list says, so the next `deploy/push.sh`
+closes that door -- and with it the only way that number could sign in. Have
+email working for your own number first, then redeploy, then take the role
+away from the seed accounts:
+
+```bash
+ssh root@<vps> 'cd /opt/velro/deploy && docker compose exec api \
+  python scripts/grant-admin.py +93700000001 --role SUPER_ADMIN --revoke && docker compose exec api \
+  python scripts/grant-admin.py +93700000002 --role ADMIN --revoke'
+```
+
+(`+93700000002` holds DISPATCHER, which grant-admin cannot revoke; take it
+away in the console under Users, or with the SQL in the 2026-09-01 notes.)
+Then remove both from `OTP_TEST_NUMBERS` in `deploy/.env`.
+
 ## Getting the apps onto the server
 
 The APKs are built on a laptop, because the signing key is on that laptop

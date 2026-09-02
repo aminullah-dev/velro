@@ -10,8 +10,10 @@ class RequestOtpIn(Schema):
     locale: str = Field(default="fa-AF", pattern=r"^(en|fa-AF|ps)$")
     #: Where to send it. Defaults to SMS: it is the one that reaches a phone
     #: with no data, and a default that fails is worse than a default that
-    #: costs more.
-    channel: str = Field(default="sms", pattern=r"^(sms|telegram)$")
+    #: costs more. "email" is honoured only for the staff console, and only
+    #: for an account with an address on file; anyone else asking for it
+    #: gets an SMS and is told so.
+    channel: str = Field(default="sms", pattern=r"^(sms|telegram|email)$")
     #: Which front door asked. The handsets send "app" -- the default, and
     #: what every existing client already sends by sending nothing. The
     #: operator console sends "staff", which restricts delivery to numbers

@@ -52,6 +52,7 @@ def request_otp(
         debug_echo=deps.settings().otp_debug_echo,
         test_numbers=frozenset(deps.settings().otp_test_numbers),
         telegram=deps.telegram_sender(),
+        email=deps.email_sender(),
     )
     result = use_case.execute(
         RequestOtpCommand(

@@ -80,6 +80,16 @@ class Settings:
     #: behaviour for a deployment that has not opened an account, not a
     #: degraded one.
     telegram_gateway_token: str = ""
+    #: An outgoing mail server, for the staff console's sign-in codes. Empty
+    #: host means the channel does not exist and a console code goes by SMS
+    #: like every other -- a configuration, not a failure. The password is a
+    #: secret and arrives through deploy/set-secret.sh, never a file in git.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    #: The From address. Defaults to the username when empty.
+    smtp_from: str = ""
     # The registered alphanumeric sender ID -- what Etisalat, MTN, Roshan and
     # Salaam require, and what AWCC refuses. Registration takes about a week.
     twilio_sender_id: str = ""
@@ -113,6 +123,11 @@ _DEFAULTS: dict[str, Any] = {
     "twilio_api_key_sid": "",
     "twilio_auth_token": "",
     "telegram_gateway_token": "",
+    "smtp_host": "",
+    "smtp_port": 587,
+    "smtp_username": "",
+    "smtp_password": "",
+    "smtp_from": "",
     "twilio_sender_id": "",
     "twilio_sender_number": "",
     "push_provider": "console",

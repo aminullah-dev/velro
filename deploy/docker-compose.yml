@@ -70,6 +70,13 @@ services:
       # hundred sign-ins a month and several thousand -- for the people who
       # choose it, which is their choice to make and not ours.
       VELRO_TELEGRAM_GATEWAY_TOKEN: ${TELEGRAM_GATEWAY_TOKEN:-}
+      # The staff console's mail channel. Empty host means console codes go
+      # by SMS; the password arrives through set-secret.sh.
+      VELRO_SMTP_HOST: ${SMTP_HOST:-}
+      VELRO_SMTP_PORT: ${SMTP_PORT:-587}
+      VELRO_SMTP_USERNAME: ${SMTP_USERNAME:-}
+      VELRO_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      VELRO_SMTP_FROM: ${SMTP_FROM:-}
       # Numbers that skip the carrier, comma-separated E.164.
       #
       # Not the same thing as the debug echo above, which is refused in

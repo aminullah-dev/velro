@@ -806,3 +806,7 @@ auth.channel.question	Where should we send the code?	کود را کجا بفرس
 auth.channel.sms	SMS	پیامک	پیغام	new — please check the Pashto
 auth.channel.telegram	Telegram	تلگرام	تلګرام	new — please check the Pashto
 auth.hint.code_sent_telegram	A verification code was sent to your Telegram	کود تأیید به تلگرام شما فرستاده شد	د تأیید کوډ ستاسو تلګرام ته ولېږل شو	new — please check the Pashto
+auth.channel.email	Email	ایمیل	برېښنالیک	
+auth.hint.code_sent_email	A verification code was sent to your email	کود تأیید به ایمیل شما فرستاده شد	د تأیید کوډ ستاسو برېښنالیک ته ولېږل شو	
+auth.email.otp_subject	Your VELRO sign-in code	کود ورود ولرو	د ولرو د ننوتلو کوډ	
+auth.email.otp	Your VELRO code is {code}. It expires in {ttl_minutes} minutes.\n\nIf you did not ask for this code, ignore this message.	کود ولرو شما {code} است. تا {ttl_minutes} دقیقه اعتبار دارد.\n\nاگر شما این کود را درخواست نکرده‌اید، این پیام را نادیده بگیرید.	ستاسو د ولرو کوډ {code} دی. تر {ttl_minutes} دقیقو پورې اعتبار لري.\n\nکه تاسو دا کوډ نه وي غوښتی، دا پیغام له پامه وغورځوئ.	

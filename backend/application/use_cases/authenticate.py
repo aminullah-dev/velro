@@ -48,6 +48,12 @@ APP_AUDIENCE = "app"
 #: number without a staff role is answered but never sent to.
 STAFF_AUDIENCE = "staff"
 
+#: The console's own channel. An inbox is free where a carrier charges
+#: nearly half a dollar, and it is reachable from a laptop anywhere -- which
+#: a SIM in a drawer in Parwan is not. Only staff, only with an address on
+#: file; the handsets never see it.
+EMAIL_CHANNEL = "email"
+
 
 @dataclass(frozen=True, slots=True)
 class RequestOtpCommand:
@@ -98,6 +104,9 @@ class RequestOtp:
         #: None means the choice does not exist and every code is an SMS --
         #: which is a configuration, not a failure.
         telegram: Any | None = None,
+        #: The mail channel for console codes. None means no server is set
+        #: and a console code goes by SMS -- a configuration, not a failure.
+        email: Any | None = None,
     ) -> None:
         self._users = users
         self._otps = otps
@@ -108,6 +117,7 @@ class RequestOtp:
         self._new_id = new_id
         self._debug_echo = debug_echo
         self._telegram = telegram
+        self._email = email
         # Numbers that skip the carrier and get their code in the response.
         #
         # Not the same thing as debug_echo, and deliberately so. debug_echo is
@@ -123,7 +133,11 @@ class RequestOtp:
         self._test_numbers = test_numbers
 
     def _is_staff(self, phone: PhoneNumber) -> bool:
-        """Does this number already hold a role that opens the console?
+        return self._staff_account(phone) is not None
+
+    def _staff_account(self, phone: PhoneNumber) -> Any | None:
+        """The account behind this number, if it holds a role that opens the
+        console; None for everybody else.
 
         Read from user_roles, not from a list in configuration. A list has to
         be edited on the server every time somebody is hired or let go, and
@@ -137,11 +151,11 @@ class RequestOtp:
         arrive at the same place.
         """
         user = self._users.find_by_phone(phone.value)
-        if user is None:
-            return False
-        if user.status != UserStatus.ACTIVE.value:
-            return False
-        return bool(STAFF_ROLES & set(self._users.roles_of(user.id)))
+        if user is None or user.status != UserStatus.ACTIVE.value:
+            return None
+        if not STAFF_ROLES & set(self._users.roles_of(user.id)):
+            return None
+        return user
 
     def execute(self, cmd: RequestOtpCommand) -> RequestOtpResult:
         phone = PhoneNumber.parse(cmd.phone, default_country_code=_country(self._settings))
@@ -161,7 +175,8 @@ class RequestOtp:
 
         ttl = self._settings.get_int("otp.ttl_seconds", 300)
 
-        if cmd.audience == STAFF_AUDIENCE and not self._is_staff(phone):
+        staff = self._staff_account(phone) if cmd.audience == STAFF_AUDIENCE else None
+        if cmd.audience == STAFF_AUDIENCE and staff is None:
             # Not an error, and deliberately indistinguishable from success.
             #
             # Answering "that number is not staff" would turn this endpoint
@@ -198,6 +213,23 @@ class RequestOtp:
             request_ip=cmd.request_ip,
         )
         is_test_number = phone.value in self._test_numbers
+        if is_test_number and self._is_staff(phone):
+            # A listed number is handed its code in the API response, to
+            # whoever asked. For a passenger's test handset that is a free
+            # sign-in during development. For an account that opens the
+            # console it is the console, handed to the internet: the seed's
+            # +93700000001 sat on this list on the production server with
+            # SUPER_ADMIN, and two unauthenticated requests were a full
+            # takeover. So a staff account is never a test number, whatever
+            # the list says -- it takes the real path, at real cost, and the
+            # log says why. debug_echo is untouched: that switch is refused
+            # in production by config.load and is how the suites sign in.
+            log.error(
+                "auth.otp.staff_test_number_ignored",
+                phone=phone.masked,
+                detail="a staff account is on OTP_TEST_NUMBERS; sending for real instead",
+            )
+            is_test_number = False
         if is_test_number:
             # Logged at warning, every time, because a test number that
             # outlives the testing is a permanently unlocked account and the
@@ -211,11 +243,27 @@ class RequestOtp:
         channel = "sms"
         if not is_test_number:
             payload = {"code": code, "ttl_minutes": ttl // 60}
-            # Telegram only if they asked for it and the deployment has it.
-            # A cent instead of forty-five, and it reaches a phone that is
+            # The console's inbox first, when it asked for it and has one.
+            # Then Telegram, if they asked for it and the deployment has it:
+            # a cent instead of forty-five, and it reaches a phone that is
             # online -- which is why the person choosing is the right person
             # to decide: they know whether they use Telegram, and we do not.
+            # Then the carrier, which reaches a phone with no data at all.
             if (
+                cmd.channel == EMAIL_CHANNEL
+                and staff is not None
+                and staff.email
+                and self._email is not None
+                and self._email.send(
+                    to=staff.email,
+                    subject_key="auth.email.otp_subject",
+                    message_key="auth.email.otp",
+                    payload=payload,
+                    locale=cmd.locale,
+                )
+            ):
+                channel = EMAIL_CHANNEL
+            elif (
                 cmd.channel == "telegram"
                 and self._telegram is not None
                 and self._telegram.send(
@@ -225,11 +273,13 @@ class RequestOtp:
             ):
                 channel = "telegram"
 
-            if channel != "telegram":
-                # Either they asked for SMS, or Telegram would not carry it --
-                # not a Telegram user, no data, an empty balance. Falling
-                # through rather than failing is the whole point: nobody is
-                # locked out of the product because the cheap pipe was shut.
+            if channel == "sms":
+                # Either they asked for SMS, or the pipe they asked for would
+                # not carry it -- no address on file, no mail server, not a
+                # Telegram user, no data, an empty balance. Falling through
+                # rather than failing is the whole point: nobody is locked
+                # out of the product because the cheap pipe was shut, and the
+                # answer says which pipe actually carried it.
                 self._sms.send(
                     phone=phone,
                     message_key="auth.sms.otp",

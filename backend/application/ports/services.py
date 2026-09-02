@@ -111,6 +111,24 @@ class SmsSender(Protocol):
     ) -> bool: ...
 
 
+class EmailSender(Protocol):
+    """Delivery of one email, for the staff console's sign-in code.
+
+    Finished words, like an SMS, so the sender is told the language. Two
+    keys rather than one: a subject line is its own sentence.
+    """
+
+    def send(
+        self,
+        *,
+        to: str,
+        subject_key: str,
+        message_key: str,
+        payload: dict[str, Any],
+        locale: str,
+    ) -> bool: ...
+
+
 class VerificationCodeGenerator(Protocol):
     """The short code a driver checks against a passenger's booking."""
 

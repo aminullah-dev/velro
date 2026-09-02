@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.enums import Locale, UserStatus
@@ -22,12 +32,22 @@ class UserRow(Auditable, Base):
     rating_sum: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     rating_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: For the staff console's sign-in code, and nothing else. The phone is
+    #: the identity; this is a second pipe the code may travel down, and it
+    #: is empty on almost every row -- most of Ghorband has no inbox.
+    email: Mapped[str | None] = mapped_column(String(254))
 
     __table_args__ = (
         # Uniqueness that matters to the business is a database constraint, not
         # an application check: two sign-ups a microsecond apart both pass an
         # application check and only one may win.
         UniqueConstraint("phone", name="uq_users_phone"),
+        # Partial: nulls are the common case and must not collide.
+        Index(
+            "uq_users_email", "email", unique=True,
+            postgresql_where=text("email IS NOT NULL"),
+            sqlite_where=text("email IS NOT NULL"),
+        ),
         enum_check("status", UserStatus, name="users_status"),
         enum_check("locale", Locale, name="users_locale"),
     )
