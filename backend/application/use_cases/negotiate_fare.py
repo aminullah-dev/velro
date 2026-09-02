@@ -552,7 +552,18 @@ class AcceptOffer:
         offer = _to_offer(offer_row)
         offer.accept(at=now)
 
-        driver = self._drivers.find(offer_row.driver_id)
+        # Locked, not merely found. A driver bids on several requests at
+        # once -- that is the board working -- and two passengers can accept
+        # two of his bids in the same instant. Each accept holds its own
+        # request row, so the request lock above says nothing about him; on
+        # an unlocked driver both accepts read "free", both build a trip, and
+        # he has two passengers expecting the same car. The lock makes the
+        # second accept wait, then find the first trip in flight and refuse.
+        #
+        # Request first, then driver: the only other path that holds a
+        # driver row is AcceptTrip, which holds a trip first, and nothing
+        # holds a driver and then wants a request or a trip -- so no cycle.
+        driver = self._drivers.lock(offer_row.driver_id)
         if driver is None:
             raise NotFoundError(
                 error_codes.DRIVER_NOT_FOUND, driver_id=offer_row.driver_id

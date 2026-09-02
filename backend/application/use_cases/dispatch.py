@@ -182,10 +182,25 @@ class AcceptTripResult:
 class AcceptTrip:
     """A driver takes a trip.
 
-    The race here is two drivers accepting the same offer. It is resolved the
-    same way as the seat race: the trip row is locked, and the state machine
-    refuses a second assignment because DRIVER_ASSIGNED is not reachable from
-    DRIVER_ASSIGNED.
+    Two races live here, and both are settled by row locks rather than by
+    checks -- a check on an unlocked row is true only at the instant of the
+    read, and two transactions can both pass it before either commits.
+
+    Two drivers, one trip: the trip row is locked. The loser blocks until the
+    winner commits, re-reads DRIVER_ASSIGNED, and the state machine refuses
+    the second assignment because DRIVER_ASSIGNED is not reachable from
+    DRIVER_ASSIGNED. This docstring used to claim the lock existed; the code
+    read the row with ``get``. Two accepts in the same instant both saw
+    SCHEDULED, both assigned, the last commit owned ``driver_id``, and both
+    handsets showed the driver a trip. Two cars to one station.
+
+    One driver, two trips: the driver row is locked too, after the trip. The
+    second accept blocks on it, then finds the first trip in flight and is
+    refused. Without it a driver tapping two offers at once was on two trips.
+
+    Trip first, then driver, everywhere: AdvanceTrip already locks the trip
+    and then writes the driver's availability, so this is the order that can
+    never form a cycle with it.
     """
 
     def __init__(
@@ -203,7 +218,17 @@ class AcceptTrip:
     def execute(self, cmd: AcceptTripCommand) -> AcceptTripResult:
         now = self._clock.now()
 
-        driver_row = self._drivers.find_by_user(cmd.driver_user_id)
+        found = self._drivers.find_by_user(cmd.driver_user_id)
+        if found is None:
+            raise NotFoundError(error_codes.DRIVER_NOT_FOUND, user_id=cmd.driver_user_id)
+
+        # The contended rows, held until this transaction ends. Everything
+        # checked below is checked against what the previous holder wrote,
+        # which is the only kind of check that means anything here.
+        row = self._trips.lock(cmd.trip_id)
+        if row is None:
+            raise NotFoundError(self._trips.not_found_code, id=cmd.trip_id)
+        driver_row = self._drivers.lock(found.id)
         if driver_row is None:
             raise NotFoundError(error_codes.DRIVER_NOT_FOUND, user_id=cmd.driver_user_id)
 
@@ -229,7 +254,6 @@ class AcceptTrip:
         if vehicle.status != "ACTIVE":
             raise ConflictError(error_codes.VEHICLE_SUSPENDED, vehicle_id=vehicle.id)
 
-        row = self._trips.get(cmd.trip_id)
         from application.use_cases.trip_lifecycle import _to_trip
 
         trip = _to_trip(row, [])
