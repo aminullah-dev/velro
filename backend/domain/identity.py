@@ -13,7 +13,8 @@ from datetime import datetime
 
 from domain.enums import ActorRole, Locale, UserStatus
 from shared import error_codes
-from shared.errors import AuthenticationError, ConflictError, ValidationError, PermissionError as DomainPermissionError
+from shared.errors import AuthenticationError, ConflictError, ValidationError
+from shared.errors import PermissionError as DomainPermissionError
 
 # The eight roles of section 58. Roles are fixed; the permissions attached to
 # them are rows, so an operator can retune a role without a deploy.

@@ -11,7 +11,7 @@ regardless of storage.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from domain.enums import RideKind, SeatStatus, TripStatus
 from domain.lifecycles import BOOKABLE_TRIP_STATUSES, TRIP_LIFECYCLE
@@ -157,13 +157,29 @@ class Trip:
     def is_bookable(self) -> bool:
         return self.status in BOOKABLE_TRIP_STATUSES
 
-    def assert_bookable(self, seat_count: int) -> None:
+    def assert_bookable(
+        self,
+        seat_count: int,
+        *,
+        at: datetime | None = None,
+        closes_before: timedelta = timedelta(0),
+    ) -> None:
         """Everything that must be true before seats are locked for a booking.
 
         This is the optimistic pre-check that produces a good error message. It
         is *not* the guarantee -- the guarantee is the row lock and the unique
         constraint in the repository, because two callers can both pass this
         check at the same instant.
+
+        ``at`` is the clock. Status alone says whether the vehicle has left;
+        it says nothing about a trip whose departure time came and went with
+        nobody advancing it -- SCHEDULED at 07:00, still SCHEDULED at noon,
+        and bookable by anyone holding its id. The search never offers such
+        a trip, so this only ever refuses a stale screen or a hand-built
+        request, but a seat sold on a vehicle that left five hours ago is a
+        seat sold on nothing. ``closes_before`` is the operator's cutoff, so
+        a booking made ninety seconds before departure -- which a driver at
+        the station cannot act on -- can be refused as well.
         """
         if seat_count <= 0:
             raise ValidationError(
@@ -174,6 +190,14 @@ class Trip:
         if not self.is_bookable:
             raise ConflictError(
                 error_codes.TRIP_DEPARTED, trip_id=self.id, status=str(self.status)
+            )
+        if at is not None and at >= self.scheduled_departure_at - closes_before:
+            raise ConflictError(
+                error_codes.TRIP_DEPARTED,
+                trip_id=self.id,
+                status=str(self.status),
+                scheduled_departure_at=self.scheduled_departure_at.isoformat(),
+                closes_before_minutes=int(closes_before.total_seconds() // 60),
             )
         if seat_count > self.seats_available:
             raise ConflictError(

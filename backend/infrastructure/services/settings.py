@@ -25,6 +25,10 @@ DEFAULTS: dict[str, Any] = {
     "booking.max_active_per_passenger": 5,
     "booking.max_seats_per_booking": 4,
     "booking.cancellation_window_minutes": 15,
+    # How long before departure a trip stops taking bookings. Zero is the
+    # departure time itself, and the floor: whatever this says, a seat is
+    # never sold on a vehicle whose scheduled departure has passed.
+    "booking.cutoff_minutes": 0,
     "booking.verification_code_length": 4,
     "otp.length": 5,
     "otp.ttl_seconds": 300,

@@ -21,6 +21,7 @@ placed between 2 and 4 would serialise every booking on that trip behind it.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 
 from application.ports.repositories import (
     BookingRepository,
@@ -46,6 +47,10 @@ from shared.money import Money
 
 SETTING_MAX_ACTIVE_BOOKINGS = "booking.max_active_per_passenger"
 SETTING_MAX_SEATS_PER_BOOKING = "booking.max_seats_per_booking"
+#: Minutes before departure at which booking closes. Zero closes it at the
+#: departure time itself, which is the floor: a seat is never sold on a
+#: vehicle whose scheduled departure has already passed.
+SETTING_CUTOFF_MINUTES = "booking.cutoff_minutes"
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,7 +125,8 @@ class BookSeats:
 
         trip_row = self._trips.get(cmd.trip_id)
         trip = _to_trip(trip_row, self._seats.list_for_trip(cmd.trip_id))
-        trip.assert_bookable(cmd.seat_count)
+        closes_before = timedelta(minutes=self._settings.get_int(SETTING_CUTOFF_MINUTES, 0))
+        trip.assert_bookable(cmd.seat_count, at=now, closes_before=closes_before)
 
         route = self._routes.get(trip.route_id)
         stops = self._routes.stops_of(trip.route_id)
@@ -148,7 +154,13 @@ class BookSeats:
         # that has already left; AdvanceTrip takes the same lock, so the two
         # serialise and the check below is true at commit, not merely at read.
         trip_row = self._trips.lock(cmd.trip_id)
-        if trip_row is None or TripStatus(trip_row.status) not in BOOKABLE_TRIP_STATUSES:
+        if (
+            trip_row is None
+            or TripStatus(trip_row.status) not in BOOKABLE_TRIP_STATUSES
+            # The clock again, against the locked row: true at commit, not
+            # merely at the read a moment ago.
+            or now >= trip_row.scheduled_departure_at - closes_before
+        ):
             raise ConflictError(
                 error_codes.TRIP_DEPARTED,
                 trip_id=cmd.trip_id,
