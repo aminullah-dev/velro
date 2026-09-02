@@ -134,10 +134,14 @@ def _own_vehicle(vehicle_id: str, actor, drivers, vehicles):
 
 
 def _file_response(row) -> Response:
-    content, content_type = deps.file_storage().get(row.file_key)
+    # Storage answers with a StoredFileContent, as documents.py reads it. This
+    # unpacked it as a pair and raised on every request -- unnoticed because
+    # no app ever asked for a vehicle document's bytes until the driver's
+    # screen started showing his جواز سیر photo.
+    stored = deps.file_storage().get(row.file_key)
     return Response(
-        content=content,
-        media_type=content_type,
+        content=stored.content,
+        media_type=stored.content_type,
         headers={
             # Never cached by a proxy: these are scans of legal documents.
             "cache-control": "private, no-store",

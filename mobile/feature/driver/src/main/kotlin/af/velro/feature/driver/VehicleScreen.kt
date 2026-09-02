@@ -4,11 +4,13 @@ import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.ErrorState
 import af.velro.core.ui.component.InlineError
 import af.velro.core.ui.component.LoadingState
+import af.velro.core.ui.component.PhotoThumbnail
 import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
+import af.velro.core.ui.theme.Sizing
 import af.velro.core.ui.theme.Spacing
 import af.velro.core.i18n.Calendars
 import af.velro.domain.DocumentStatus
@@ -119,7 +121,7 @@ fun VehicleScreen(
         // certify the second.
         state.papers?.let { papers ->
             Spacer(Modifier.height(Spacing.md))
-            VehiclePapers(papers, state.uploadingPaper, onEvent)
+            VehiclePapers(papers, state.thumbnails, state.uploadingPaper, onEvent)
         }
 
         Spacer(Modifier.height(Spacing.xl))
@@ -279,6 +281,7 @@ private fun TypeChip(type: VehicleType, selected: String, onEvent: (VehicleEvent
 @Composable
 private fun VehiclePapers(
     papers: VehicleChecklist,
+    thumbnails: Map<String, ByteArray>,
     uploading: String?,
     onEvent: (VehicleEvent) -> Unit,
 ) {
@@ -318,9 +321,11 @@ private fun VehiclePapers(
         )
 
         for (kind in papers.required) {
+            val document = papers.currentFor(kind)
             VehiclePaperRow(
                 typeCode = kind,
-                document = papers.currentFor(kind),
+                document = document,
+                thumbnail = document?.let { thumbnails[it.id] },
                 uploading = uploading == kind,
                 onPick = {
                     pendingType = kind
@@ -339,6 +344,7 @@ private fun VehiclePaperRow(
     document: VehicleDocument?,
     uploading: Boolean,
     onPick: () -> Unit,
+    thumbnail: ByteArray? = null,
 ) {
     val strings = LocalVelroStrings.current
 
@@ -381,6 +387,17 @@ private fun VehiclePaperRow(
                     document.rejectionReason!!,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
+                )
+            }
+
+            if (document != null) {
+                Spacer(Modifier.height(Spacing.md))
+                // What he actually sent, the way his own papers show it: a
+                // wrong page or a hand over the permit is found here rather
+                // than by the office refusing it a day later.
+                PhotoThumbnail(
+                    bytes = thumbnail,
+                    modifier = Modifier.fillMaxWidth().height(Sizing.thumbnail),
                 )
             }
 

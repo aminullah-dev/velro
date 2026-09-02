@@ -376,6 +376,17 @@ interface VelroApi {
         @Part("document_type_code") documentTypeCode: RequestBody,
     ): Response<Envelope<UploadedDocumentDto>>
 
+    /**
+     * The driver's own copy of a permit he sent for one of his cars.
+     *
+     * Raw bytes, like [documentFile]: the image itself, through the same
+     * authenticated client. The server answers a car that is not his with
+     * 404 rather than 403, so the route cannot be walked to find document ids.
+     */
+    @GET("driver/vehicle-documents/{id}/file")
+    @Streaming
+    suspend fun vehicleDocumentFile(@Path("id") id: String): Response<ResponseBody>
+
     // -- the inbox ------------------------------------------------------
     //
     // The row in the inbox is the record; a push, when there is one, is a

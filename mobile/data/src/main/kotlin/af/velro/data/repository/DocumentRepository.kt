@@ -42,8 +42,14 @@ class DocumentRepository @Inject constructor(
      * does in the other direction.
      */
     suspend fun file(documentId: String): ApiResult<ByteArray> =
+        bytesOf { api.documentFile(documentId) }
+
+    /** One raw-bytes read, shared by the driver's papers and the car's. */
+    private suspend fun bytesOf(
+        call: suspend () -> retrofit2.Response<okhttp3.ResponseBody>,
+    ): ApiResult<ByteArray> =
         try {
-            val response = api.documentFile(documentId)
+            val response = call()
             val body = response.body()
             if (response.isSuccessful && body != null) {
                 ApiResult.Success(body.use { it.bytes() })
@@ -156,4 +162,13 @@ class DocumentRepository @Inject constructor(
         val kind = documentTypeCode.toRequestBody("text/plain".toMediaTypeOrNull())
         return mapper.call { api.uploadVehicleDocument(vehicleId, part, kind) }.map { }
     }
+
+    /**
+     * The bytes of a permit the driver already sent for one of his cars.
+     *
+     * Same contract as [file]: raw bytes, decoded bounded by the screen and
+     * never here. The server has already checked that the car is his.
+     */
+    suspend fun vehicleFile(documentId: String): ApiResult<ByteArray> =
+        bytesOf { api.vehicleDocumentFile(documentId) }
 }

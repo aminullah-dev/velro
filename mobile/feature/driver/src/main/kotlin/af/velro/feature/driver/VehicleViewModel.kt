@@ -30,6 +30,16 @@ data class VehicleUiState(
     /** The car's own papers -- جواز سیر. Null until a car exists to hold them. */
     val papers: VehicleChecklist? = null,
     val uploadingPaper: String? = null,
+    /**
+     * Thumbnails of the permits he actually sent, by document id.
+     *
+     * The same gap the driver's own papers had: a row said "sent" or
+     * "rejected" about a photograph the driver could not see, so a wrong page
+     * or a hand over the permit was only found when the office refused it.
+     * An absent entry means "not fetched yet" and draws as a placeholder --
+     * the status beside it is the load-bearing part.
+     */
+    val thumbnails: Map<String, ByteArray> = emptyMap(),
     val types: List<VehicleType> = emptyList(),
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
@@ -125,6 +135,29 @@ class VehicleViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Fetch the images behind the papers, after the papers.
+     *
+     * Never awaited by the list: a permit download on a Ghorband connection
+     * must not hold back the status the screen is for. Only current papers,
+     * and only those not already held. A failure is silent on purpose -- a
+     * missing picture beside a correct status is a smaller problem than an
+     * error banner that reads as the permit being refused.
+     */
+    private fun loadThumbnails(papers: VehicleChecklist) {
+        val wanted = papers.documents
+            .filter { it.isCurrent && it.id !in _state.value.thumbnails }
+        for (document in wanted) {
+            viewModelScope.launch {
+                (documents.vehicleFile(document.id) as? ApiResult.Success)?.let { result ->
+                    _state.update {
+                        it.copy(thumbnails = it.thumbnails + (document.id to result.value))
+                    }
+                }
+            }
+        }
+    }
+
     private fun load() {
         _state.update { it.copy(isLoading = true, errorCode = null) }
         viewModelScope.launch {
@@ -158,6 +191,7 @@ class VehicleViewModel @Inject constructor(
                         it.copy(types = types.value, isLoading = false, papers = papers)
                             .formFrom(vehicle, editing = vehicle == null)
                     }
+                    papers?.let(::loadThumbnails)
                 }
                 is ApiResult.Failure -> _state.update { it.withError(types.error) }
             }
@@ -191,6 +225,7 @@ class VehicleViewModel @Inject constructor(
                         it.copy(isSaving = false, saved = true, papers = papers)
                             .formFrom(vehicle, editing = false)
                     }
+                    papers?.let(::loadThumbnails)
                 }
                 is ApiResult.Failure ->
                     _state.update { it.copy(isSaving = false).withError(result.error) }
@@ -219,6 +254,7 @@ class VehicleViewModel @Inject constructor(
                     _state.update {
                         it.copy(uploadingPaper = null, papers = papers, vehicle = vehicle)
                     }
+                    papers?.let(::loadThumbnails)
                 }
                 is ApiResult.Failure -> _state.update {
                     it.copy(uploadingPaper = null).withError(result.error)
