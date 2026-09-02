@@ -138,6 +138,21 @@ class OfferTripToDrivers:
         if not candidates:
             raise NotFoundError(error_codes.TRIP_NO_DRIVER_AVAILABLE, trip_id=trip.id)
 
+        # A driver who already has this trip on his screen is not offered it
+        # again. The dispatcher's button is pressed twice on a slow
+        # connection as a matter of course, and every press used to write a
+        # fresh row per driver -- three identical cards on a handset, and a
+        # board that counted them as three chances. Nobody left to offer to
+        # is answered with zero rather than an error: the offers exist, they
+        # are simply already out.
+        already = {
+            offer.driver_id
+            for offer in self._offers.open_for_trips([trip.id], at=now).get(trip.id, [])
+        }
+        candidates = [c for c in candidates if c.driver_id not in already]
+        if not candidates:
+            return OfferTripResult(trip_id=trip.id, offers_made=0, driver_ids=[])
+
         for candidate in candidates:
             self._offers.create(
                 id=self._new_id(),

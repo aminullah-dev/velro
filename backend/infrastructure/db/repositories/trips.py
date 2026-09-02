@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import func, select, update
 
@@ -81,6 +81,40 @@ class TripRepository(SqlRepository[TripRow]):
         )
         if ride_kind:
             stmt = stmt.where(TripRow.ride_kind == ride_kind)
+        return list(self.session.scalars(stmt).all())
+
+    def needing_driver(
+        self,
+        *,
+        now: datetime,
+        horizon: timedelta,
+        overdue: timedelta = timedelta(hours=1),
+        limit: int = 200,
+    ) -> list[TripRow]:
+        """The dispatcher's list: trips with nobody to drive them, soonest first.
+
+        Bounded in time at both ends. Ahead, by the horizon the dispatcher is
+        working to; behind, by an hour -- a trip that should have left a
+        little while ago and still has no driver is still a trip somebody is
+        waiting for, but one from last week is a record, not a job. Filtered
+        and ordered in SQL: the previous version fetched "the first hundred
+        driverless trips" in no particular order and filtered in Python, so
+        once a hundred cancelled or completed trips existed the real ones
+        fell off the end of the page.
+        """
+        stmt = (
+            self._base()
+            .where(
+                TripRow.driver_id.is_(None),
+                TripRow.status.in_(
+                    (TripStatus.SCHEDULED.value, TripStatus.REQUESTED.value)
+                ),
+                TripRow.scheduled_departure_at >= now - overdue,
+                TripRow.scheduled_departure_at <= now + horizon,
+            )
+            .order_by(TripRow.scheduled_departure_at)
+            .limit(min(limit, 200))
+        )
         return list(self.session.scalars(stmt).all())
 
     def active_for_driver(self, driver_id: str) -> TripRow | None:
@@ -459,6 +493,25 @@ class DispatchOfferRepository(SqlRepository[DispatchOfferRow]):
             .order_by(DispatchOfferRow.offered_at)
         )
         return list(self.session.scalars(stmt).all())
+
+    def open_for_trips(
+        self, trip_ids: list[str], *, at: datetime
+    ) -> dict[str, list[DispatchOfferRow]]:
+        """Every offer still on a driver's screen, per trip, in one query."""
+        wanted = [i for i in set(trip_ids) if i]
+        if not wanted:
+            return {}
+        rows = self.session.scalars(
+            self._base().where(
+                DispatchOfferRow.trip_id.in_(wanted),
+                DispatchOfferRow.responded_at.is_(None),
+                DispatchOfferRow.expires_at > at,
+            )
+        ).all()
+        out: dict[str, list[DispatchOfferRow]] = {}
+        for row in rows:
+            out.setdefault(row.trip_id, []).append(row)
+        return out
 
     def find_open(self, trip_id: str, driver_id: str, *, at: datetime) -> DispatchOfferRow | None:
         stmt = self._base().where(

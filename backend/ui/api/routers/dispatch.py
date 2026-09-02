@@ -22,7 +22,6 @@ from application.use_cases.dispatch import (
     OfferTripCommand,
     OfferTripToDrivers,
 )
-from domain.enums import TripStatus
 from ui.api import deps
 from ui.api.errors import ok
 from ui.api.schemas.common import Schema
@@ -40,56 +39,97 @@ class UnassignedTripOut(Schema):
     id: str
     number: str
     status: str
+    ride_kind: str
     scheduled_departure_at: datetime
+    #: Negative once the departure has passed. The board shows a trip a
+    #: little while past its time because somebody is still waiting for it.
+    minutes_to_departure: int
+    #: Leaving within the at-risk window with nobody to drive it.
+    at_risk: bool
     origin_station_id: str
+    origin_station_name: str | None
     destination_id: str
+    destination_name: str | None
     seat_capacity: int
     seats_available: int
     booked_seats: int
+    #: Offers still on drivers' screens, and when the last of them lapses.
+    open_offers: int
+    offers_expire_at: datetime | None
+    #: Drivers online right now with an active car big enough. Zero means
+    #: pressing Offer would achieve nothing, and the button says so.
+    candidates: int
 
 
 @router.get("/unassigned")
 def unassigned_trips(
     actor: Annotated[deps.Actor, Depends(deps.require_operations)],
     trips: Annotated[object, Depends(deps.trips)],
+    offers: Annotated[object, Depends(deps.offers)],
+    drivers: Annotated[object, Depends(deps.drivers)],
+    vehicles: Annotated[object, Depends(deps.vehicles)],
+    settings: Annotated[object, Depends(deps.app_settings)],
     within_hours: Annotated[int, Query(ge=1, le=72)] = 12,
 ) -> dict:
-    """Trips that need a driver, soonest first.
+    """Trips that need a driver, soonest first -- and what can be done about each.
 
-    The dispatcher's working list: what is departing and has nobody to drive it.
+    The dispatcher's working list. A trip number and a departure time were
+    never enough to act on: the operator needs to know where it leaves from,
+    how many people are already on it, whether drivers have been asked and
+    are still deciding, and whether there is anybody online to ask at all.
     """
     now = deps.clock().now()
-    rows = trips.list(
-        limit=100,
-        driver_id=None,
-    )
-    horizon = now + timedelta(hours=within_hours)
-    pending = [
-        row
-        for row in rows
-        if row.driver_id is None
-        and row.status in (TripStatus.SCHEDULED.value, TripStatus.REQUESTED.value)
-        and row.scheduled_departure_at <= horizon
-    ]
-    pending.sort(key=lambda row: row.scheduled_departure_at)
+    at_risk_within = timedelta(minutes=settings.get_int("dispatch.at_risk_minutes", 60))
 
-    availability = trips.seats_available_map([row.id for row in pending])
-    return ok(
-        [
+    pending = trips.needing_driver(now=now, horizon=timedelta(hours=within_hours))
+    ids = [row.id for row in pending]
+    availability = trips.seats_available_map(ids)
+    names = trips.place_names(ids)
+    open_offers = offers.open_for_trips(ids, at=now)
+
+    # The supply, once: every online approved driver and the car he would
+    # drive, then a count per trip of those big enough for it.
+    pool = drivers.available_for(limit=100)
+    cars = vehicles.active_by_driver([d.id for d in pool])
+    capacities = sorted(car.seat_capacity for car in cars.values())
+
+    board = []
+    at_risk_count = 0
+    for row in pending:
+        minutes = int((row.scheduled_departure_at - now).total_seconds() // 60)
+        at_risk = row.scheduled_departure_at <= now + at_risk_within
+        at_risk_count += int(at_risk)
+        offered = open_offers.get(row.id, [])
+        free = availability.get(row.id, 0)
+        origin, destination = names.get(row.id, (None, None))
+        board.append(
             UnassignedTripOut(
                 id=row.id,
                 number=row.number,
                 status=row.status,
+                ride_kind=row.ride_kind,
                 scheduled_departure_at=row.scheduled_departure_at,
+                minutes_to_departure=minutes,
+                at_risk=at_risk,
                 origin_station_id=row.origin_station_id,
+                origin_station_name=origin,
                 destination_id=row.destination_id,
+                destination_name=destination,
                 seat_capacity=row.seat_capacity,
-                seats_available=availability.get(row.id, 0),
-                booked_seats=row.seat_capacity - availability.get(row.id, 0),
+                seats_available=free,
+                booked_seats=row.seat_capacity - free,
+                open_offers=len(offered),
+                offers_expire_at=max((o.expires_at for o in offered), default=None),
+                candidates=sum(1 for c in capacities if c >= row.seat_capacity),
             ).model_dump()
-            for row in pending
-        ],
-        meta={"count": len(pending)},
+        )
+    return ok(
+        board,
+        meta={
+            "count": len(board),
+            "at_risk": at_risk_count,
+            "drivers_available": len(cars),
+        },
     )
 
 

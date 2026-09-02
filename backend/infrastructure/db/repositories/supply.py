@@ -176,6 +176,30 @@ class VehicleRepository(SqlRepository[VehicleRow]):
         )
         return self.session.scalars(stmt).one_or_none()
 
+    def active_by_driver(self, driver_ids) -> dict[str, VehicleRow]:
+        """The active vehicle of each driver, in one query.
+
+        The same choice primary_for_driver makes -- the earliest active car --
+        for a list of drivers at once: the dispatch board asks this for
+        everyone online, and one query per driver is how a board on a slow
+        connection stops being a board.
+        """
+        wanted = [i for i in set(driver_ids) if i]
+        if not wanted:
+            return {}
+        rows = self.session.scalars(
+            self._base()
+            .where(
+                VehicleRow.driver_id.in_(wanted),
+                VehicleRow.status == VehicleStatus.ACTIVE.value,
+            )
+            .order_by(VehicleRow.created_at)
+        ).all()
+        chosen: dict[str, VehicleRow] = {}
+        for vehicle in rows:
+            chosen.setdefault(vehicle.driver_id, vehicle)
+        return chosen
+
     def find_by_plate_key(self, plate_key: str) -> VehicleRow | None:
         """Uniqueness is decided on the normalised key, never the raw text."""
         return self.find_by(plate_key=plate_key)

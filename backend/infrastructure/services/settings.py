@@ -45,6 +45,17 @@ DEFAULTS: dict[str, Any] = {
     # on; zero turns the fence off entirely. ui/api/geofence.py is the reader.
     "geofence.radius_m": 20_000,
     "dispatch.max_offers_per_trip": 10,
+    # A trip leaving within this many minutes with nobody to drive it is the
+    # board's red row and the dashboard's "departures at risk".
+    "dispatch.at_risk_minutes": 60,
+    # A driver who is online but whose last position is older than this is
+    # counted as "no fix": dispatch ranks him last, and the dashboard says
+    # so, because a car the office cannot place is a car it cannot send.
+    # The handset pings every location_ping_seconds; fifteen missed pings.
+    "dispatch.stale_gps_seconds": 300,
+    # A passenger's request with no offer after this long is one the office
+    # should be ringing drivers about.
+    "dispatch.unanswered_after_minutes": 10,
     # SELFIE sits beside NATIONAL_ID deliberately. A tazkira proves a document
     # exists; it does not prove the person holding the account is the person on
     # it. A passenger getting into a stranger's car in a valley at night is

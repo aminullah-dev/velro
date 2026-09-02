@@ -28,7 +28,6 @@ from application.use_cases.generate_routes import (
 )
 from application.use_cases.record_name import RecordName, RecordNameCommand
 from domain.enums import (
-    DriverApprovalStatus,
     Locale,
     TripStatus,
     UserStatus,
@@ -46,13 +45,13 @@ from infrastructure.db.models.geography import (
 )
 from infrastructure.db.models.identity import UserRow
 from infrastructure.db.models.money import CommissionRow, PaymentRow
-from infrastructure.db.models.ops import AuditLogRow, CancellationRow, SettingRow
+from infrastructure.db.models.ops import AuditLogRow, SettingRow
 from infrastructure.db.models.routing import FareRuleRow, RouteRow
 from infrastructure.db.models.supply import DriverRow, VehicleRow
 from infrastructure.db.models.trips import BookingRow, TripRow
 from shared import error_codes
 from shared.errors import ConflictError, NotFoundError, ValidationError
-from ui.api import deps
+from ui.api import deps, opscentre
 from ui.api.errors import ok
 from ui.api.schemas.common import Schema
 
@@ -75,89 +74,22 @@ _ACTIVE_TRIP_STATUSES = (
 )
 
 
-def _business_day(now: datetime) -> tuple[datetime, datetime]:
-    local = now.astimezone(KABUL)
-    start = local.replace(hour=0, minute=0, second=0, microsecond=0)
-    return start, start + timedelta(days=1)
-
-
 # -- dashboard -----------------------------------------------------------
-
-class DashboardOut(Schema):
-    active_trips: int
-    trips_today: int
-    bookings_today: int
-    passengers: int
-    drivers_total: int
-    drivers_pending: int
-    drivers_online: int
-    vehicles: int
-    revenue_today_minor: int
-    commission_today_minor: int
-    driver_earnings_today_minor: int
-    currency: str
-    cancellations_today: int
-    unassigned_trips: int
-
 
 @router.get("/dashboard")
 def dashboard(
     actor: Annotated[deps.Actor, Depends(deps.require_staff)],
     session: deps.SessionDep,
+    settings: Annotated[object, Depends(deps.app_settings)],
 ) -> dict:
-    """Section 47. One screen an operator can read in ten seconds."""
-    now = deps.clock().now()
-    start, end = _business_day(now)
+    """Section 47: one screen an operator can read in ten seconds.
 
-    def count(model, *where) -> int:
-        stmt = select(func.count()).select_from(model).where(model.deleted_at.is_(None), *where)
-        return int(session.scalar(stmt) or 0)
-
-    def total(column, *where) -> int:
-        stmt = select(func.coalesce(func.sum(column), 0)).where(*where)
-        return int(session.scalar(stmt) or 0)
-
-    trips_today_window = (
-        TripRow.scheduled_departure_at >= start,
-        TripRow.scheduled_departure_at < end,
-    )
-    settled_today = (
-        CommissionRow.created_at >= start,
-        CommissionRow.created_at < end,
-        CommissionRow.deleted_at.is_(None),
-    )
-
-    return ok(
-        DashboardOut(
-            active_trips=count(TripRow, TripRow.status.in_(_ACTIVE_TRIP_STATUSES)),
-            trips_today=count(TripRow, *trips_today_window),
-            bookings_today=count(
-                BookingRow, BookingRow.created_at >= start, BookingRow.created_at < end
-            ),
-            passengers=count(UserRow),
-            drivers_total=count(DriverRow),
-            drivers_pending=count(
-                DriverRow,
-                DriverRow.approval_status == DriverApprovalStatus.PENDING.value,
-            ),
-            drivers_online=count(DriverRow, DriverRow.availability.in_(("ONLINE", "ON_TRIP"))),
-            vehicles=count(VehicleRow),
-            revenue_today_minor=total(CommissionRow.gross_minor, *settled_today),
-            commission_today_minor=total(CommissionRow.platform_minor, *settled_today),
-            driver_earnings_today_minor=total(CommissionRow.driver_minor, *settled_today),
-            currency="AFN",
-            cancellations_today=count(
-                CancellationRow,
-                CancellationRow.created_at >= start,
-                CancellationRow.created_at < end,
-            ),
-            unassigned_trips=count(
-                TripRow,
-                TripRow.driver_id.is_(None),
-                TripRow.status.in_((TripStatus.SCHEDULED.value, TripStatus.REQUESTED.value)),
-            ),
-        ).model_dump()
-    )
+    Not a row of counters. What is happening now, what needs somebody, what
+    is about to go wrong, and how today went -- see ui/api/opscentre.py,
+    which also owns the clauses the filtered lists below share, so a number
+    on a card and the rows behind it are one definition.
+    """
+    return ok(opscentre.snapshot(session, settings, deps.clock().now()))
 
 
 # -- locations -----------------------------------------------------------
@@ -271,6 +203,9 @@ def villages(
     session: deps.SessionDep,
     district_id: str | None = None,
     q: Annotated[str | None, Query(max_length=80)] = None,
+    #: The dashboard's network cards: villages the map cannot place, and
+    #: villages nobody can travel from.
+    without: Annotated[str | None, Query(pattern=r"^(coordinates|stations)$")] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
@@ -293,6 +228,10 @@ def villages(
         from domain.text import comparison_key
 
         stmt = stmt.where(VillageRow.name_key.like(f"%{comparison_key(q)}%"))
+    if without == "coordinates":
+        stmt = stmt.where(VillageRow.latitude.is_(None))
+    elif without == "stations":
+        stmt = stmt.where(func.coalesce(stations.c.n, 0) == 0)
 
     total = session.scalar(
         select(func.count()).select_from(stmt.subquery())
@@ -487,9 +426,12 @@ def stations(
     session: deps.SessionDep,
     village_id: str | None = None,
     q: Annotated[str | None, Query(max_length=80)] = None,
+    #: Stations no active route leaves from: on the map, off the network.
+    without_routes: bool = False,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
-    """Stations, filtered.
+    """Stations, filtered, with the total so a page knows it is a page.
 
     The search is not decoration: there are 427 of them and this listing
     pages at a hundred, so without it the only way to find one is to know
@@ -502,7 +444,6 @@ def stations(
         .join(DistrictRow, DistrictRow.id == StationRow.district_id)
         .where(StationRow.deleted_at.is_(None))
         .order_by(StationRow.code)
-        .limit(limit)
     )
     if village_id:
         stmt = stmt.where(StationRow.village_id == village_id)
@@ -513,6 +454,22 @@ def stations(
         stmt = stmt.where(
             or_(StationRow.name_key.like(f"%{needle}%"), StationRow.code.like(f"%{q}%"))
         )
+    if without_routes:
+        from sqlalchemy import exists
+
+        from domain.enums import RouteStatus
+
+        stmt = stmt.where(
+            ~exists(
+                select(RouteRow.id).where(
+                    RouteRow.origin_station_id == StationRow.id,
+                    RouteRow.status == RouteStatus.ACTIVE.value,
+                    RouteRow.deleted_at.is_(None),
+                )
+            )
+        )
+    total = session.scalar(select(func.count()).select_from(stmt.subquery()))
+    rows = session.execute(stmt.limit(limit).offset(offset)).all()
     return ok(
         [
             StationAdminOut(
@@ -522,8 +479,9 @@ def stations(
                 latitude=float(s.latitude) if s.latitude is not None else None,
                 longitude=float(s.longitude) if s.longitude is not None else None,
             ).model_dump()
-            for s, village_name, district_name in session.execute(stmt).all()
-        ]
+            for s, village_name, district_name in rows
+        ],
+        meta={"total": int(total or 0), "limit": limit, "offset": offset},
     )
 
 
@@ -813,32 +771,47 @@ class DriverAdminOut(Schema):
     completed_trips: int
     plate_number: str | None
     vehicle_status: str | None
+    #: Seconds since the handset last reported a position; null when it
+    #: never has. A working driver with no recent fix is a car the office
+    #: cannot send anywhere, which is why the dashboard counts them.
+    location_age_seconds: int | None = None
 
 
 @router.get("/drivers")
 def drivers(
     actor: Annotated[deps.Actor, Depends(deps.require_staff)],
     session: deps.SessionDep,
+    settings: Annotated[object, Depends(deps.app_settings)],
     approval_status: str | None = None,
+    #: Only working drivers whose last fix is stale or missing -- the
+    #: dashboard's "without a fix" card.
+    stale_gps: bool = False,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> dict:
+    from infrastructure.db.models.supply import DriverLocationRow
+
+    now = deps.clock().now()
     # Vehicles are fetched separately rather than joined. A driver may own more
     # than one, and an outer join then returns that driver once per vehicle: the
     # operator sees the same person twice in the approvals queue and cannot tell
     # the copies apart, and `limit` counts the duplicates, so a real driver falls
     # off the end of the list to make room for a repeat.
     stmt = (
-        select(DriverRow, UserRow)
+        select(DriverRow, UserRow, DriverLocationRow.recorded_at)
         .join(UserRow, UserRow.id == DriverRow.user_id)
+        .outerjoin(DriverLocationRow, DriverLocationRow.driver_id == DriverRow.id)
         .where(DriverRow.deleted_at.is_(None))
         .order_by(DriverRow.created_at.desc())
         .limit(limit)
     )
     if approval_status:
         stmt = stmt.where(DriverRow.approval_status == approval_status)
+    if stale_gps:
+        stale_after = timedelta(seconds=settings.get_int("dispatch.stale_gps_seconds", 300))
+        stmt = stmt.where(*opscentre.stale_gps_clause(now, stale_after))
 
     rows = session.execute(stmt).all()
-    vehicles = _one_vehicle_each(session, [d.id for d, _ in rows])
+    vehicles = _one_vehicle_each(session, [d.id for d, _, _ in rows])
 
     return ok(
         [
@@ -850,8 +823,11 @@ def drivers(
                 rating_count=d.rating_count, completed_trips=d.completed_trips,
                 plate_number=(v := vehicles.get(d.id)) and v.plate_number,
                 vehicle_status=v.status if v else None,
+                location_age_seconds=(
+                    max(0, int((now - seen).total_seconds())) if seen else None
+                ),
             ).model_dump()
-            for d, u in rows
+            for d, u, seen in rows
         ]
     )
 
@@ -1247,10 +1223,16 @@ def trips_list(
     trips: Annotated[object, Depends(deps.trips)],
     status: str | None = None,
     active_only: bool = False,
+    #: The dashboard's cards, as filters: the same clauses opscentre counts
+    #: with, so the number on the card is the number of rows here.
+    unassigned: bool = False,
+    overdue: bool = False,
+    departing_within_hours: Annotated[int | None, Query(ge=1, le=72)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
     """The live board (section 53), newest departures first."""
+    now = deps.clock().now()
     stmt = (
         select(
             TripRow, StationRow.name, DestinationRow.name,
@@ -1268,6 +1250,18 @@ def trips_list(
         stmt = stmt.where(TripRow.status == status)
     if active_only:
         stmt = stmt.where(TripRow.status.in_(_ACTIVE_TRIP_STATUSES))
+    if unassigned:
+        stmt = stmt.where(*opscentre.needs_driver_clause(now))
+    if overdue:
+        stmt = stmt.where(*opscentre.overdue_clause(now))
+    if departing_within_hours is not None:
+        stmt = stmt.where(
+            TripRow.scheduled_departure_at >= now,
+            TripRow.scheduled_departure_at <= now + timedelta(hours=departing_within_hours),
+        )
+    if unassigned or departing_within_hours is not None:
+        # Soonest first when the question is "what is about to leave".
+        stmt = stmt.order_by(None).order_by(TripRow.scheduled_departure_at.asc())
 
     total = session.scalar(select(func.count()).select_from(stmt.subquery()))
     rows = session.execute(stmt.limit(limit).offset(offset)).all()
