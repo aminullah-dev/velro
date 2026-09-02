@@ -70,9 +70,15 @@ def assert_inside(
         )
 
     if latitude is None or longitude is None:
-        raise ValidationError(
-            error_codes.GEOFENCE_OUTSIDE, reason="location_required"
-        )
+        # No fix at all: the one refusal that is spoken plainly. This is not
+        # the cheater's exit -- a person sending nothing learns nothing from
+        # being told so -- it is the passenger in Kabul who tapped "don't
+        # allow" on one unexplained dialog, or whose phone has location off,
+        # or who is under a tin roof and the fix timed out. Handing her the
+        # same vague "outside the service area" sentence told her VELRO does
+        # not serve her, with no way to fix it. Her own code carries the
+        # fix: allow location and try again.
+        raise ValidationError(error_codes.GEOFENCE_LOCATION_REQUIRED)
 
     if not geo.nearby_stations(latitude, longitude, radius_m=radius, limit=1):
         raise ValidationError(

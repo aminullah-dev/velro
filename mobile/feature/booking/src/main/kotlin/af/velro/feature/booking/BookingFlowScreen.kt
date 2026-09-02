@@ -80,11 +80,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 
 @Composable
 fun BookingFlowRoute(
@@ -100,22 +109,54 @@ fun BookingFlowRoute(
     // Denial is not a wall: the event goes through regardless, without
     // coordinates, and the server's geofence answers in the passenger's own
     // language. Deciding here would duplicate the server's policy.
+    //
+    // What this screen does own is the permission itself. The OS dialog is
+    // unexplained, and a passenger who taps "don't allow" on it twice is
+    // never shown it again -- so the screen says why it asks before it asks,
+    // and once Android has stopped asking, points at the one place left
+    // where it can be turned back on: this app's page in Settings. Without
+    // that, the server's honest "we need your location" refusal would arrive
+    // on a screen with nothing to press.
     val context = LocalContext.current
+    var granted by remember { mutableStateOf(hasLocationPermission(context)) }
+    // Re-read whenever the screen comes back into view: the passenger who
+    // went to Settings and switched location on returns to a screen that
+    // must stop telling her it is off.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        granted = hasLocationPermission(context)
+    }
+    // Refusals so far. Android 11 and later stop showing the dialog after
+    // the second "don't allow"; older versions have a "don't ask again" box.
+    // Both leave the same trace: the launcher answers "denied" without a
+    // dialog, and shouldShowRequestPermissionRationale reads false. Counted
+    // as well as read, because the count is the one signal that does not
+    // depend on which Android this is.
+    var denials by rememberSaveable { mutableStateOf(0) }
+    var deniedForGood by rememberSaveable { mutableStateOf(false) }
     var awaitingPermission by remember { mutableStateOf<BookingEvent?>(null) }
     val permission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) {
+    ) { allowed ->
+        granted = allowed
+        if (allowed) {
+            denials = 0
+            deniedForGood = false
+        } else {
+            denials += 1
+            val activity = context.findActivity()
+            val willAskAgain = activity == null ||
+                ActivityCompat.shouldShowRequestPermissionRationale(activity, LOCATION_PERMISSION)
+            deniedForGood = denials >= 2 || !willAskAgain
+        }
         awaitingPermission?.let(viewModel::onEvent)
         awaitingPermission = null
     }
     val onEvent: (BookingEvent) -> Unit = { event ->
         val summons = event is BookingEvent.AskForRide || event is BookingEvent.TripChosen
-        val granted = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_COARSE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
+        if (summons) granted = hasLocationPermission(context)
         if (summons && !granted && awaitingPermission == null) {
             awaitingPermission = event
-            permission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+            permission.launch(LOCATION_PERMISSION)
         } else {
             viewModel.onEvent(event)
         }
@@ -127,7 +168,65 @@ fun BookingFlowRoute(
         onExit = onExit,
         onFinished = onFinished,
         onAsked = onAsked,
+        locationAccess = when {
+            granted -> LocationAccess.GRANTED
+            deniedForGood -> LocationAccess.DENIED
+            else -> LocationAccess.ASKABLE
+        },
+        onOpenLocationSettings = { openAppSettings(context) },
     )
+}
+
+/**
+ * Where the location permission stands, as the frame around the flow sees it.
+ *
+ * Not part of [BookingFlowUiState]: it is an Android fact read from the
+ * Activity, and the ViewModel -- built without one, and tested without one --
+ * has no business holding it.
+ */
+enum class LocationAccess {
+    /** Granted: nothing to explain, nothing to fix. */
+    GRANTED,
+    /** Not yet granted, and Android will still show its dialog when asked. */
+    ASKABLE,
+    /** Refused for good: Android has stopped asking, and only Settings can undo it. */
+    DENIED,
+}
+
+/** Coarse is enough for a fence twenty kilometres wide, and it is the gentler ask. */
+private const val LOCATION_PERMISSION = Manifest.permission.ACCESS_COARSE_LOCATION
+
+// Either grade counts, the same way LocationProvider reads it: a fine grant
+// implies coarse, and asking again for something already held is a dialog
+// the passenger has no reason to expect.
+private fun hasLocationPermission(context: Context): Boolean = listOf(
+    Manifest.permission.ACCESS_COARSE_LOCATION,
+    Manifest.permission.ACCESS_FINE_LOCATION,
+).any { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
+
+// Compose hands over whatever context it has -- usually the Activity, sometimes
+// a wrapper around it. shouldShowRequestPermissionRationale needs the Activity
+// itself.
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+/**
+ * This app's own page in Settings -- the one place a permission Android has
+ * stopped asking for can be switched back on. Never the whole Settings app:
+ * a passenger sent there has to find VELRO in a list of everything installed.
+ */
+private fun openAppSettings(context: Context) {
+    val page = Intent(
+        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+        Uri.fromParts("package", context.packageName, null),
+    )
+    if (context.findActivity() == null) page.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    // A handset with no Settings activity does not exist; a crash here would
+    // still be worse than a button that does nothing.
+    runCatching { context.startActivity(page) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -139,6 +238,8 @@ fun BookingFlowScreen(
     onFinished: (String) -> Unit,
     onAsked: () -> Unit = {},
     modifier: Modifier = Modifier,
+    locationAccess: LocationAccess = LocationAccess.GRANTED,
+    onOpenLocationSettings: () -> Unit = {},
 ) {
     val strings = LocalVelroStrings.current
     val animate = LocalAnimationsEnabled.current
@@ -183,6 +284,20 @@ fun BookingFlowScreen(
                 else -> {
                     if (state.errorCode != null) {
                         InlineError(state.errorCode!!, context = state.errorContext)
+                        // A refusal for a missing fix comes with its remedy
+                        // beside it: the reason VELRO asks, if Android will
+                        // still ask, or the Settings button if it will not.
+                        // Any other refusal stays a sentence on purpose --
+                        // "outside the service area" is deliberately vague,
+                        // and a button under it would read as a hint at how
+                        // to get round the fence.
+                        if (state.needsLocationAccess && locationAccess != LocationAccess.GRANTED) {
+                            LocationAccessNote(
+                                access = locationAccess,
+                                onOpenSettings = onOpenLocationSettings,
+                                modifier = Modifier.padding(bottom = Spacing.sm),
+                            )
+                        }
                     }
                     // CONFIRMED is not one of the steps counted: it is the
                     // receipt, not another thing to fill in, and a bar that
@@ -240,8 +355,10 @@ fun BookingFlowScreen(
                         BookingFlowUiState.Step.ORIGIN_VILLAGE -> VillageList(state, onEvent)
                         BookingFlowUiState.Step.ORIGIN_STATION -> StationList(state, onEvent)
                         BookingFlowUiState.Step.DESTINATION -> DestinationList(state, onEvent)
-                        BookingFlowUiState.Step.ASK -> AskFare(state, onEvent)
-                        BookingFlowUiState.Step.RESULTS -> ResultList(state, onEvent)
+                        BookingFlowUiState.Step.ASK ->
+                            AskFare(state, onEvent, locationAccess, onOpenLocationSettings)
+                        BookingFlowUiState.Step.RESULTS ->
+                            ResultList(state, onEvent, locationAccess, onOpenLocationSettings)
                         BookingFlowUiState.Step.CONFIRMED ->
                             Confirmation(state, onFinished)
                     }
@@ -381,8 +498,6 @@ private fun StationList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Un
  */
 @Composable
 private fun DestinationList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {
-    val strings = LocalVelroStrings.current
-
     if (state.destinationGroups.isEmpty()) {
         EmptyState(messageKey = "empty.search_results")
         return
@@ -405,6 +520,15 @@ private fun DestinationList(state: BookingFlowUiState, onEvent: (BookingEvent) -
                         onEvent(BookingEvent.GroupToggled(group.id))
                     }
                 },
+                // Choosing either kind of row fires DestinationChosen, which
+                // already carries the flow forward into ASK on its own -- see
+                // BookingFlowViewModel. There is deliberately no further
+                // action below the list: a "Search" button once stood here
+                // and led into the pre-ADR-0004 fixed-price trip search
+                // instead, reachable only by pressing Back from the ask step
+                // (ADR 0009 item 3). Nothing else in the app reaches that
+                // search path, so the button had no honest use left -- only a
+                // way to silently leave the negotiated-fare journey mid-ask.
                 onChildClick = { onEvent(BookingEvent.DestinationChosen(it)) },
             )
         }
@@ -412,12 +536,6 @@ private fun DestinationList(state: BookingFlowUiState, onEvent: (BookingEvent) -
         item {
             Spacer(Modifier.height(Spacing.lg))
             SeatCountPicker(state.seatCount) { onEvent(BookingEvent.SeatCountChanged(it)) }
-            Spacer(Modifier.height(Spacing.lg))
-            PrimaryAction(
-                label = strings["home.action.search"],
-                onClick = { onEvent(BookingEvent.Search) },
-                enabled = state.canSearch,
-            )
             Spacer(Modifier.height(Spacing.xl))
         }
     }
@@ -669,7 +787,12 @@ private fun SeatCountPicker(selected: Int, onSelect: (Int) -> Unit) {
 }
 
 @Composable
-private fun ResultList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {
+private fun ResultList(
+    state: BookingFlowUiState,
+    onEvent: (BookingEvent) -> Unit,
+    locationAccess: LocationAccess,
+    onOpenLocationSettings: () -> Unit,
+) {
     if (state.options.isEmpty()) {
         EmptyState(
             messageKey = "empty.search_results",
@@ -681,6 +804,14 @@ private fun ResultList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Uni
     LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         state.journeyMap?.let { drawn ->
             item(key = "journey-map") { JourneyMap(drawn) }
+        }
+        // Tapping a trip is the other event that summons drivers, so the same
+        // word about location goes above the list as goes above the ask
+        // button -- unless it is already sitting under a refusal at the top.
+        if (!state.needsLocationAccess && locationAccess != LocationAccess.GRANTED) {
+            item(key = "location-note") {
+                LocationAccessNote(locationAccess, onOpenLocationSettings)
+            }
         }
         items(state.options, key = { it.tripId }) { option ->
             TripOptionCard(
@@ -768,7 +899,12 @@ private fun Confirmation(state: BookingFlowUiState, onFinished: (String) -> Unit
  * negotiation in Ghorband to a guess made in a database.
  */
 @Composable
-private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {
+private fun AskFare(
+    state: BookingFlowUiState,
+    onEvent: (BookingEvent) -> Unit,
+    locationAccess: LocationAccess,
+    onOpenLocationSettings: () -> Unit,
+) {
     val strings = LocalVelroStrings.current
 
     // Scrolls, because this step is a form and forms grow.
@@ -859,6 +995,13 @@ private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) 
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // Why the OS is about to ask, said before it asks -- or, once it has
+        // stopped asking, where the switch went. Skipped when the same note
+        // is already sitting under a refusal at the top of the screen.
+        if (!state.needsLocationAccess && locationAccess != LocationAccess.GRANTED) {
+            LocationAccessNote(locationAccess, onOpenLocationSettings)
+        }
+
         PrimaryAction(
             label = strings["ride.ask.action"],
             onClick = { onEvent(BookingEvent.AskForRide) },
@@ -866,6 +1009,49 @@ private fun AskFare(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) 
             loading = state.isSubmitting,
             modifier = Modifier.fillMaxWidth(),
         )
+    }
+}
+
+/**
+ * The word about location, in the passenger's own language before the OS
+ * speaks in its own.
+ *
+ * Three states, one element. Before the permission has been asked for, one
+ * sentence saying why VELRO wants it -- the OS dialog explains nothing, and a
+ * person who has never been told why an app wants to know where she is taps
+ * "don't allow". Once Android has stopped asking, the sentence changes to
+ * where the switch now lives, with the button that opens it. Granted, there
+ * is nothing to explain and nothing to fix, and callers do not draw this.
+ */
+@Composable
+private fun LocationAccessNote(
+    access: LocationAccess,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val strings = LocalVelroStrings.current
+    when (access) {
+        LocationAccess.GRANTED -> Unit
+        LocationAccess.ASKABLE -> Text(
+            strings["location.permission.rationale"],
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = modifier,
+        )
+        LocationAccess.DENIED -> Column(
+            modifier,
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Text(
+                strings["location.permission.denied"],
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SecondaryAction(
+                label = strings["location.action.open_settings"],
+                onClick = onOpenSettings,
+            )
+        }
     }
 }
 

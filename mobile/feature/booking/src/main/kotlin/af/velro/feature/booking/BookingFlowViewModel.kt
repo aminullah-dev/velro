@@ -54,6 +54,17 @@ private const val DEFAULT_DEPARTURE_HOUR = 6
 // Coming back is an afternoon thing far more often than a dawn one.
 private const val DEFAULT_RETURN_HOUR = 14
 
+/**
+ * The server's code for an ask or booking that arrived without coordinates.
+ *
+ * Its own code, distinct from GEOFENCE_OUTSIDE, because the two need different
+ * screens: outside is deliberately vague and offers nothing, while this one is
+ * a passenger in Kabul whose handset sent no fix -- a permission tapped away,
+ * location switched off, a tin roof -- and what she needs is the location
+ * permission, not a sentence saying VELRO does not serve her.
+ */
+internal const val GEOFENCE_LOCATION_REQUIRED = "GEOFENCE_LOCATION_REQUIRED"
+
 data class BookingFlowUiState(
     val step: Step = Step.ORIGIN_DISTRICT,
 
@@ -138,6 +149,16 @@ data class BookingFlowUiState(
     }
 
     val canSearch: Boolean get() = selectedStation != null && selectedDestination != null
+
+    /**
+     * The last refusal was for a missing location, not for being outside the
+     * service area. The screen reads this to put the way to fix it -- the
+     * location permission, or the phone's settings page -- beside the error,
+     * rather than leaving the passenger with a sentence and no button. Any
+     * other refusal, GEOFENCE_OUTSIDE above all, gets no such button: its
+     * vagueness is deliberate, and a remedy under it would read as a hint.
+     */
+    val needsLocationAccess: Boolean get() = errorCode == GEOFENCE_LOCATION_REQUIRED
 
     /** Whole afghani as typed; converted to minor units only when sent. */
     val fareMinor: Long? get() = offeredFare.toLongOrNull()?.takeIf { it > 0 }?.times(100)
@@ -276,6 +297,44 @@ data class BookingFlowUiState(
             // says so; this is what stops the button sending it anyway.
             (departureDay == null || departureHours.isNotEmpty()) &&
             (returnAfterDays == null || returnHours.isNotEmpty())
+
+    /**
+     * One step back in the flow.
+     *
+     * A pure transform of the state, so the ViewModel's `goBack()` is a
+     * one-line call into it -- and, more to the point, so the leftover-answer
+     * class of bug that lives here (an earlier step's data surviving into a
+     * step it no longer belongs to) can be asserted directly in a test, rather
+     * than through a ViewModel wired to five repositories that need a live
+     * database to construct.
+     *
+     * ASK deliberately clears the ask's own answers -- a fare typed for one
+     * destination must not silently become the offer for another -- but keeps
+     * [selectedDestination] itself: DESTINATION shows it highlighted, and
+     * re-tapping it fires [BookingEvent.DestinationChosen] straight back into
+     * a blank ask. That is also why [canSearch] reads true again immediately
+     * after this: it was never meant to gate anything on DESTINATION by
+     * itself, only to feed [canAsk] once the ask step is reached. DESTINATION
+     * used to also read it to enable a "Search" button that led into the
+     * pre-ADR-0004 fixed-price trip search -- reachable, silently, by pressing
+     * Back from the ask step and nowhere else (ADR 0009 item 3). That button
+     * is gone; nothing on DESTINATION reads [canSearch] any more.
+     */
+    fun steppedBack(): BookingFlowUiState = when (step) {
+        Step.ORIGIN_DISTRICT -> this
+        Step.ORIGIN_VILLAGE -> copy(step = Step.ORIGIN_DISTRICT)
+        Step.ORIGIN_STATION -> copy(step = Step.ORIGIN_VILLAGE)
+        Step.DESTINATION -> copy(step = Step.ORIGIN_STATION)
+        Step.ASK -> copy(
+            step = Step.DESTINATION,
+            offeredFare = "",
+            note = "",
+            returnFare = "",
+            returnAfterDays = null,
+        )
+        Step.RESULTS -> copy(step = Step.ASK)
+        Step.CONFIRMED -> this
+    }.copy(errorCode = null)
 }
 
 sealed interface BookingEvent {
@@ -597,35 +656,12 @@ class BookingFlowViewModel @Inject constructor(
         }
     }
 
+    // See BookingFlowUiState.steppedBack() for what actually happens on each
+    // step -- kept there, not here, so it is a pure function a test can call
+    // directly rather than a ViewModel this module cannot construct without a
+    // live database.
     private fun goBack() {
-        _state.update { current ->
-            when (current.step) {
-                BookingFlowUiState.Step.ORIGIN_DISTRICT -> current
-                BookingFlowUiState.Step.ORIGIN_VILLAGE ->
-                    current.copy(step = BookingFlowUiState.Step.ORIGIN_DISTRICT)
-                BookingFlowUiState.Step.ORIGIN_STATION ->
-                    current.copy(step = BookingFlowUiState.Step.ORIGIN_VILLAGE)
-                BookingFlowUiState.Step.DESTINATION ->
-                    current.copy(step = BookingFlowUiState.Step.ORIGIN_STATION)
-                BookingFlowUiState.Step.ASK ->
-                    // Back clears the price: a number typed for one destination
-                    // must not silently become the offer for another.
-                    //
-                    // The return was left behind when it was added -- so a
-                    // fare typed for the way back from Kabul survived onto a
-                    // journey to Charikar, and so did the day it was for.
-                    current.copy(
-                        step = BookingFlowUiState.Step.DESTINATION,
-                        offeredFare = "",
-                        note = "",
-                        returnFare = "",
-                        returnAfterDays = null,
-                    )
-                BookingFlowUiState.Step.RESULTS ->
-                    current.copy(step = BookingFlowUiState.Step.ASK)
-                BookingFlowUiState.Step.CONFIRMED -> current
-            }.copy(errorCode = null)
-        }
+        _state.update { it.steppedBack() }
     }
 
     private fun retry() {

@@ -94,13 +94,28 @@ class TestOutside:
         assert geo.calls == []
 
     @pytest.mark.parametrize("lat,lon", [(None, None), (KABUL_ISH[0], None), (None, KABUL_ISH[1])])
-    def test_missing_coordinates_are_refused_not_waved_through(self, lat, lon):
+    def test_missing_coordinates_are_refused_under_their_own_code(self, lat, lon):
+        # Refused, still -- a fence with a "GPS off" gate is a fence with a
+        # gate -- but not with the vague sentence a cheater gets. A passenger
+        # in Kabul who tapped "don't allow" on one dialog was being told VELRO
+        # does not serve her; her code now says allow location and try again.
         geo = FakeGeo(stations=[object()])
         with pytest.raises(ValidationError) as caught:
             check(geo=geo, lat=lat, lon=lon)
-        assert caught.value.code == error_codes.GEOFENCE_OUTSIDE
-        assert caught.value.context == {"reason": "location_required"}
+        assert caught.value.code == error_codes.GEOFENCE_LOCATION_REQUIRED
+        assert caught.value.context == {}
         assert geo.calls == []
+
+    def test_the_honest_code_never_leaks_to_an_outside_or_mock_refusal(self):
+        # The vagueness of the other two exits is deliberate, and the new code
+        # must not blur it: a liar with coordinates, real or invented, still
+        # gets the sentence that explains nothing.
+        with pytest.raises(ValidationError) as outside:
+            check(geo=FakeGeo(stations=[]), lat=HERAT_ISH[0], lon=HERAT_ISH[1])
+        with pytest.raises(ValidationError) as mock:
+            check(is_mock=True)
+        assert outside.value.code == mock.value.code == error_codes.GEOFENCE_OUTSIDE
+        assert error_codes.GEOFENCE_LOCATION_REQUIRED != error_codes.GEOFENCE_OUTSIDE
 
 
 class TestExits:

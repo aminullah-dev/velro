@@ -75,11 +75,17 @@ class TestAskFence:
         assert refused.status_code == 422, refused.text
         assert refused.json()["error"]["code"] == "GEOFENCE_OUTSIDE"
 
-    def test_no_location_is_refused_not_waved_through(self, client: TestClient, fenced_rider: dict):
+    def test_no_location_is_refused_under_its_own_code(
+        self, client: TestClient, fenced_rider: dict
+    ):
+        # Refused, but not as Herat is: a passenger whose handset sent no fix
+        # is told to allow location and try again, not that VELRO does not
+        # serve her. The vague sentence is reserved for coordinates that
+        # place the caller elsewhere.
         rider = fenced_rider
         refused = _ask(client, rider, _first_journey(client, rider))
         assert refused.status_code == 422, refused.text
-        assert refused.json()["error"]["code"] == "GEOFENCE_OUTSIDE"
+        assert refused.json()["error"]["code"] == "GEOFENCE_LOCATION_REQUIRED"
 
     def test_a_mock_branded_fix_is_refused_even_at_the_station(
         self, client: TestClient, fenced_rider: dict
@@ -103,39 +109,52 @@ class TestAskFence:
         assert done.status_code == 200, done.text
 
 
+def _book(client: TestClient, headers: dict, **coords):
+    # Not every pair has a scheduled trip; walk until one does, the way the
+    # concurrency module does.
+    origin = destination = None
+    options = []
+    for origin, destination in _journeys(client, headers):
+        options = client.post(
+            "/api/v1/trips/search",
+            json={
+                "origin_station_id": origin,
+                "destination_id": destination,
+                "seat_count": 1,
+            },
+            headers=headers,
+        ).json()["data"]
+        if options:
+            break
+    assert options, "seed must offer at least one bookable option"
+    return client.post(
+        "/api/v1/bookings",
+        json={
+            "trip_id": options[0]["trip_id"],
+            "seat_count": 1,
+            "pickup_station_id": origin,
+            "dropoff_destination_id": destination,
+            **coords,
+        },
+        headers=headers,
+    )
+
+
 class TestBookingFence:
     def test_herat_cannot_take_a_seat_either(self, client: TestClient, fenced_rider: dict):
-        rider = fenced_rider
-        # Not every pair has a scheduled trip; walk until one does, the way
-        # the concurrency module does.
-        origin = destination = None
-        options = []
-        for origin, destination in _journeys(client, rider):
-            options = client.post(
-                "/api/v1/trips/search",
-                json={
-                    "origin_station_id": origin,
-                    "destination_id": destination,
-                    "seat_count": 1,
-                },
-                headers=rider,
-            ).json()["data"]
-            if options:
-                break
-        assert options, "seed must offer at least one bookable option"
-        refused = client.post(
-            "/api/v1/bookings",
-            json={
-                "trip_id": options[0]["trip_id"],
-                "seat_count": 1,
-                "pickup_station_id": origin,
-                "dropoff_destination_id": destination,
-                **HERAT,
-            },
-            headers=rider,
-        )
+        refused = _book(client, fenced_rider, **HERAT)
         assert refused.status_code == 422, refused.text
         assert refused.json()["error"]["code"] == "GEOFENCE_OUTSIDE"
+
+    def test_no_location_cannot_take_a_seat_but_is_told_why(
+        self, client: TestClient, fenced_rider: dict
+    ):
+        # The booking path passes the same fence as the ask, so a missing fix
+        # gets the same honest code there -- the app renders both through one
+        # error banner, and offers the location permission under it.
+        refused = _book(client, fenced_rider)
+        assert refused.status_code == 422, refused.text
+        assert refused.json()["error"]["code"] == "GEOFENCE_LOCATION_REQUIRED"
 
 
 class TestExemption:

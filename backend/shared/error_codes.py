@@ -96,6 +96,15 @@ TRIP_SEATS_UNAVAILABLE: Final = "TRIP_SEATS_UNAVAILABLE"
 TRIP_CAPACITY_EXCEEDED: Final = "TRIP_CAPACITY_EXCEEDED"
 TRIP_DEPARTED: Final = "TRIP_DEPARTED"
 GEOFENCE_OUTSIDE: Final = "GEOFENCE_OUTSIDE"
+# The ask or booking arrived with no coordinates at all. Distinct from OUTSIDE
+# on purpose: that one is deliberately vague, because the person it refuses
+# may be a cheater and the geography must not be explained to him. This one
+# refuses a passenger standing in Kabul whose handset simply did not send a
+# fix -- a permission tapped away, location switched off, a tin roof -- and
+# what she needs is to be told to allow location and try again, not that
+# VELRO does not serve her. Saying "we have no location" gives a liar
+# nothing: he already knows he sent none.
+GEOFENCE_LOCATION_REQUIRED: Final = "GEOFENCE_LOCATION_REQUIRED"
 TRIP_CANCELLED: Final = "TRIP_CANCELLED"
 TRIP_NO_DRIVER_AVAILABLE: Final = "TRIP_NO_DRIVER_AVAILABLE"
 TRIP_DRIVER_ALREADY_ASSIGNED: Final = "TRIP_DRIVER_ALREADY_ASSIGNED"
