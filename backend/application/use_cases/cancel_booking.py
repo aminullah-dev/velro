@@ -56,7 +56,17 @@ class CancelBookingResult:
 
 class CancelBooking:
     def __init__(
-        self, *, bookings, trips, seats, cancellations, settings, audit, clock, new_id
+        self,
+        *,
+        bookings,
+        trips,
+        seats,
+        cancellations,
+        settings,
+        audit,
+        clock,
+        new_id,
+        drivers,
     ) -> None:
         self._bookings = bookings
         self._trips = trips
@@ -66,6 +76,7 @@ class CancelBooking:
         self._audit = audit
         self._clock = clock
         self._new_id = new_id
+        self._drivers = drivers
 
     def execute(self, cmd: CancelBookingCommand) -> CancelBookingResult:
         now = self._clock.now()
@@ -102,6 +113,19 @@ class CancelBooking:
 
         booking = _to_booking(row)
         trip = self._trips.get(row.trip_id)
+
+        # A driver may cancel only a booking on their own trip. Staff may
+        # cancel any, and the audit entry records which happened -- staff-wide
+        # cancel authority is existing, intentional behaviour and is left
+        # alone here.
+        if cmd.actor_role is ActorRole.DRIVER:
+            driver = self._drivers.find_by_user(cmd.actor_id)
+            if driver is None or trip is None or trip.driver_id != driver.id:
+                raise PermissionError(
+                    error_codes.PERMISSION_DENIED,
+                    booking_id=cmd.booking_id,
+                    actor_id=cmd.actor_id,
+                )
 
         fee = self._cancellation_fee(booking, trip, now, cmd.actor_role)
 

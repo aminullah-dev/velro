@@ -381,8 +381,6 @@ private fun StationList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Un
  */
 @Composable
 private fun DestinationList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {
-    val strings = LocalVelroStrings.current
-
     if (state.destinationGroups.isEmpty()) {
         EmptyState(messageKey = "empty.search_results")
         return
@@ -405,6 +403,15 @@ private fun DestinationList(state: BookingFlowUiState, onEvent: (BookingEvent) -
                         onEvent(BookingEvent.GroupToggled(group.id))
                     }
                 },
+                // Choosing either kind of row fires DestinationChosen, which
+                // already carries the flow forward into ASK on its own -- see
+                // BookingFlowViewModel. There is deliberately no further
+                // action below the list: a "Search" button once stood here
+                // and led into the pre-ADR-0004 fixed-price trip search
+                // instead, reachable only by pressing Back from the ask step
+                // (ADR 0009 item 3). Nothing else in the app reaches that
+                // search path, so the button had no honest use left -- only a
+                // way to silently leave the negotiated-fare journey mid-ask.
                 onChildClick = { onEvent(BookingEvent.DestinationChosen(it)) },
             )
         }
@@ -412,12 +419,6 @@ private fun DestinationList(state: BookingFlowUiState, onEvent: (BookingEvent) -
         item {
             Spacer(Modifier.height(Spacing.lg))
             SeatCountPicker(state.seatCount) { onEvent(BookingEvent.SeatCountChanged(it)) }
-            Spacer(Modifier.height(Spacing.lg))
-            PrimaryAction(
-                label = strings["home.action.search"],
-                onClick = { onEvent(BookingEvent.Search) },
-                enabled = state.canSearch,
-            )
             Spacer(Modifier.height(Spacing.xl))
         }
     }

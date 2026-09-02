@@ -48,12 +48,13 @@ from infrastructure.db.models.trips import BookingRow, BookingSeatRow, TripRow, 
 from infrastructure.db.repositories.money import SettlementRepository, WalletRepository
 from infrastructure.db.repositories.ops import CancellationRepository
 from infrastructure.db.repositories.seats import TripSeatRepository
+from infrastructure.db.repositories.supply import DriverRepository
 from infrastructure.db.repositories.trips import BookingRepository, TripRepository
 from infrastructure.db.session import UnitOfWork
 from infrastructure.services.audit import SqlAuditLog
 from infrastructure.services.settings import SqlSettingsProvider
 from shared.clock import SystemClock
-from shared.errors import ConflictError
+from shared.errors import ConflictError, PermissionError
 from shared.ids import new_id
 
 pytestmark = pytest.mark.integration
@@ -136,7 +137,22 @@ def test_a_payout_cannot_be_paid_twice(engine: Engine, session_factory) -> None:
 
 # -- a booking being cancelled -------------------------------------------------
 
-def _confirmed_booking(session) -> tuple[str, str]:
+def _a_driver(session) -> tuple[str, str]:
+    """An approved driver with nothing else attached. Returns
+    (driver_id, user_id) -- the use case's ActorRole.DRIVER commands carry the
+    user id, not the driver id, so tests need both."""
+    user = UserRow(id=new_id(), phone=f"+9370{new_id()[-7:]}", full_name="راننده")
+    session.add(user)
+    session.flush()
+    driver = DriverRow(
+        id=new_id(), user_id=user.id, approval_status=DriverApprovalStatus.APPROVED.value,
+    )
+    session.add(driver)
+    session.flush()
+    return driver.id, user.id
+
+
+def _confirmed_booking(session, *, driver_id: str | None = None) -> tuple[str, str]:
     """One passenger holding one seat on a scheduled trip. Returns
     (booking_id, passenger_id)."""
     province = ProvinceRow(id=new_id(), code="AF-PAR", name="پروان")
@@ -162,7 +178,7 @@ def _confirmed_booking(session) -> tuple[str, str]:
         ride_kind=RideKind.SHARED.value, seat_capacity=4,
         scheduled_departure_at=datetime.now(UTC) + timedelta(hours=6),
         status=TripStatus.SCHEDULED.value, origin_station_id=station.id,
-        destination_id=destination.id,
+        destination_id=destination.id, driver_id=driver_id,
     )
     passenger = UserRow(id=new_id(), phone=f"+9370{new_id()[-7:]}", full_name="احمد")
     for row in (province, district, village, station, destination, route, trip, passenger):
@@ -199,7 +215,7 @@ def _cancel(session_factory, booking_id: str, passenger_id: str, barrier) -> str
                 bookings=BookingRepository(s), trips=TripRepository(s),
                 seats=TripSeatRepository(s), cancellations=CancellationRepository(s),
                 settings=SqlSettingsProvider(s), audit=SqlAuditLog(s, SystemClock()),
-                clock=SystemClock(), new_id=new_id,
+                clock=SystemClock(), new_id=new_id, drivers=DriverRepository(s),
             )
             barrier.wait(timeout=10)
             use_case.execute(CancelBookingCommand(
@@ -232,3 +248,72 @@ def test_a_booking_cannot_be_cancelled_twice(engine: Engine, session_factory) ->
             select(TripSeatRow).where(TripSeatRow.status == SeatStatus.AVAILABLE.value)
         ).all()
         assert len(freed) == 4, "the seat went back to the pool, once"
+
+
+# -- a booking being cancelled by someone with no claim to it ----------------
+#
+# The only ownership check used to be for passengers: a driver's bearer token
+# -- any driver, on any trip -- passed straight through and could cancel a
+# booking system-wide, the same way AdvanceTrip's driver check (trip_lifecycle
+# .py) stops a driver from advancing a trip that is not theirs.
+
+def _cancel_as(session_factory, booking_id: str, actor_id: str, actor_role: ActorRole) -> None:
+    with UnitOfWork(session_factory) as uow:
+        s = uow.session
+        use_case = CancelBooking(
+            bookings=BookingRepository(s), trips=TripRepository(s),
+            seats=TripSeatRepository(s), cancellations=CancellationRepository(s),
+            settings=SqlSettingsProvider(s), audit=SqlAuditLog(s, SystemClock()),
+            clock=SystemClock(), new_id=new_id, drivers=DriverRepository(s),
+        )
+        use_case.execute(CancelBookingCommand(
+            booking_id=booking_id, actor_id=actor_id, actor_role=actor_role,
+        ))
+
+
+@pytest.mark.usefixtures("clean_database")
+def test_a_driver_not_on_the_trip_cannot_cancel_its_booking(session_factory) -> None:
+    """A driver with no connection to this trip must be refused exactly as a
+    stranger would be -- not waved through because the role is DRIVER."""
+    with session_factory() as session:
+        booking_id, _passenger_id = _confirmed_booking(session)
+        _stranger_driver_id, stranger_user_id = _a_driver(session)
+        session.commit()
+
+    with pytest.raises(PermissionError):
+        _cancel_as(session_factory, booking_id, stranger_user_id, ActorRole.DRIVER)
+
+    with session_factory() as session:
+        assert session.get(BookingRow, booking_id).status == BookingStatus.CONFIRMED.value, (
+            "a driver with no claim on this trip cancelled it anyway"
+        )
+
+
+@pytest.mark.usefixtures("clean_database")
+def test_the_driver_assigned_to_the_trip_can_cancel_its_booking(session_factory) -> None:
+    """The new check must not catch the one driver who really is assigned to
+    this trip -- whether or not that path is reached from the app today (see
+    trip_lifecycle.AdvanceTrip for the driver-cancels-the-whole-trip route),
+    the use case itself must keep working for its rightful owner."""
+    with session_factory() as session:
+        driver_id, driver_user_id = _a_driver(session)
+        booking_id, _passenger_id = _confirmed_booking(session, driver_id=driver_id)
+        session.commit()
+
+    _cancel_as(session_factory, booking_id, driver_user_id, ActorRole.DRIVER)
+
+    with session_factory() as session:
+        assert session.get(BookingRow, booking_id).status == BookingStatus.CANCELLED.value
+
+
+@pytest.mark.usefixtures("clean_database")
+def test_the_passenger_can_still_cancel_their_own_booking(session_factory) -> None:
+    """The pre-existing, correct path: unaffected by the added driver check."""
+    with session_factory() as session:
+        booking_id, passenger_id = _confirmed_booking(session)
+        session.commit()
+
+    _cancel_as(session_factory, booking_id, passenger_id, ActorRole.PASSENGER)
+
+    with session_factory() as session:
+        assert session.get(BookingRow, booking_id).status == BookingStatus.CANCELLED.value
