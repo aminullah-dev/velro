@@ -219,10 +219,10 @@ def _bucketise(rows, period: str, starts: list[datetime]):
     disagree with the split that was actually recorded. One row is one
     journey, whoever held the cash.
     """
-    earned = {s: 0 for s in starts}
-    commission = {s: 0 for s in starts}
-    net = {s: 0 for s in starts}
-    trips = {s: 0 for s in starts}
+    earned = dict.fromkeys(starts, 0)
+    commission = dict.fromkeys(starts, 0)
+    net = dict.fromkeys(starts, 0)
+    trips = dict.fromkeys(starts, 0)
     for row in rows:
         start = _bucket_for(row.created_at, period, starts)
         if start is None:

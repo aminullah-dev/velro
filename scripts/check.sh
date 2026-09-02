@@ -34,6 +34,15 @@ backend() {
   local py=.venv/bin
   [ -x "$py/python" ] || { echo "backend/.venv missing -- see README"; return 1; }
   step "backend lint"        "$py/ruff" check .
+  # The migrations, walked from nothing to head, then the seed and the
+  # geography file on top of them. The test suites build their tables with
+  # create_all, so nothing else here ever runs a migration -- a revision
+  # that drifts from the models is invisible until a real deploy applies it.
+  # Against the test database, which the suites below drop and rebuild anyway.
+  step "backend migrations"  env VELRO_DATABASE_URL="$VELRO_TEST_DATABASE_URL" PYTHONPATH=. \
+    bash -c "$py/python scripts/drop-schema.py && $py/alembic upgrade head \
+      && $py/python scripts/seed.py >/dev/null \
+      && $py/python scripts/geography.py import >/dev/null"
   # The domain must be testable with no database and no fixtures. If this needs
   # PostgreSQL, the layering has been broken.
   step "backend unit"        "$py/pytest" tests/unit -q
@@ -83,20 +92,26 @@ nested_lazy_lists() {
 mobile() {
 
   cd "$ROOT/mobile"
-  command -v gradle >/dev/null || { echo "gradle not found; skipping mobile"; return 0; }
+  # The wrapper, never a system Gradle: it pins the version the laptops and
+  # Android Studio build with, and a runner's preinstalled Gradle is whatever
+  # the image shipped. Which JDK runs it is the machine's business
+  # (~/.gradle/gradle.properties locally, setup-java in CI) -- see
+  # mobile/gradle.properties for why it is not pinned in the repository.
+  local gradle=./gradlew
   # :domain is a plain Kotlin module, so this also proves it stayed free of
   # Android -- an android.* import there fails to compile.
-  step "mobile domain"  gradle :domain:test --console=plain -q
-  step "mobile data"    gradle :data:test --console=plain -q
-  step "mobile core:ui" gradle :core:ui:testDebugUnitTest --console=plain -q
+  step "mobile domain"  $gradle :domain:test --console=plain -q
+  step "mobile data"    $gradle :data:test --console=plain -q
+  step "mobile core:ui" $gradle :core:ui:testDebugUnitTest --console=plain -q
   # Calendar and numerals. Without this line the Nowruz fixtures never run.
-  step "mobile core:i18n" gradle :core:i18n:testDebugUnitTest --console=plain -q
-  step "mobile driver"  gradle :feature:driver:testDebugUnitTest --console=plain -q
+  step "mobile core:i18n" $gradle :core:i18n:testDebugUnitTest --console=plain -q
+  step "mobile driver"  $gradle :feature:driver:testDebugUnitTest --console=plain -q
   # The emergency numbers and the categories the sheet ships compiled in.
-  step "mobile safety"  gradle :feature:safety:testDebugUnitTest --console=plain -q
-  step "mobile auth"    gradle :feature:auth:testDebugUnitTest --console=plain -q
+  step "mobile safety"  $gradle :feature:safety:testDebugUnitTest --console=plain -q
+  step "mobile auth"    $gradle :feature:auth:testDebugUnitTest --console=plain -q
+  step "mobile booking" $gradle :feature:booking:testDebugUnitTest --console=plain -q
   step "mobile nesting" nested_lazy_lists
-  step "mobile build"   gradle :app-driver:assembleDebug :app-passenger:assembleDebug --console=plain -q
+  step "mobile build"   $gradle :app-driver:assembleDebug :app-passenger:assembleDebug --console=plain -q
 
   # Room migrations and the sign-out path, on a real device.
   #
@@ -109,7 +124,7 @@ mobile() {
   command -v adb >/dev/null && adb=adb
   if [ -x "$adb" ] || command -v "$adb" >/dev/null 2>&1; then
     if "$adb" devices 2>/dev/null | grep -q "	device$"; then
-      step "mobile device" gradle :data:connectedDebugAndroidTest --console=plain -q
+      step "mobile device" $gradle :data:connectedDebugAndroidTest --console=plain -q
     else
       printf '  \033[33m- mobile device (nothing attached; migrations unverified)\033[0m\n'
     fi

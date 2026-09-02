@@ -21,6 +21,7 @@ import json
 import math
 import threading
 from functools import lru_cache
+from itertools import pairwise
 from pathlib import Path
 
 from pmtiles.reader import MmapSource, Reader
@@ -38,7 +39,9 @@ class _Tiles:
     the reader object itself is not documented thread-safe."""
 
     def __init__(self, path: Path) -> None:
-        self._file = open(path, "rb")
+        # Held open for the life of the process: the reader mmaps it, and
+        # every tile request reads through that mapping.
+        self._file = open(path, "rb")  # noqa: SIM115
         self._reader = Reader(MmapSource(self._file))
         self._lock = threading.Lock()
 
@@ -103,7 +106,7 @@ CAUTION_ZONES: list[dict] = [
 
 def _headings(points: list[list[float]]) -> list[float]:
     out = []
-    for a, b in zip(points, points[1:]):
+    for a, b in pairwise(points):
         dx = (b[0] - a[0]) * math.cos(math.radians((a[1] + b[1]) / 2))
         out.append(math.degrees(math.atan2(b[1] - a[1], dx)))
     return out
@@ -126,7 +129,7 @@ def curve_zones(
     if len(points) < 3:
         return []
     headings = _headings(points)
-    seg_len = [_metres(tuple(a), tuple(b)) for a, b in zip(points, points[1:])]
+    seg_len = [_metres(tuple(a), tuple(b)) for a, b in pairwise(points)]
 
     hot: list[int] = []
     for i in range(len(headings)):

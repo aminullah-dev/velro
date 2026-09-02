@@ -26,6 +26,7 @@ import argparse
 import math
 import os
 import sys
+from itertools import pairwise
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
@@ -35,7 +36,7 @@ from ui.api import mapdata
 
 def _length_m(points: list[list[float]]) -> float:
     total = 0.0
-    for (lon_a, lat_a), (lon_b, lat_b) in zip(points, points[1:]):
+    for (lon_a, lat_a), (lon_b, lat_b) in pairwise(points):
         dx = (lon_a - lon_b) * 111_320 * math.cos(math.radians((lat_a + lat_b) / 2))
         dy = (lat_a - lat_b) * 110_574
         total += math.hypot(dx, dy)

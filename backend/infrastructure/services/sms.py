@@ -274,7 +274,7 @@ class TelegramGatewaySender:
             )
             latency = int((time.monotonic() - started) * 1000)
             body = reply.json() if reply.content else {}
-        except Exception as exc:  # noqa: BLE001 -- a refusal, not a crash
+        except Exception as exc:
             latency = int((time.monotonic() - started) * 1000)
             log.warning(
                 "sms.telegram.failed", phone=phone.masked,

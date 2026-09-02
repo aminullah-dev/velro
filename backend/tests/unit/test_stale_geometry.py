@@ -9,7 +9,7 @@ prefers an honest corridor slice over a confident wrong line.
 
 from __future__ import annotations
 
-from ui.api.mapdata import _leg_matches, _STALE_ENDPOINT_M
+from ui.api.mapdata import _STALE_ENDPOINT_M, _leg_matches
 
 KHISHKI = (68.79793, 35.00118)      # where the operator says it is
 OLD_KHISHKI = (68.770, 35.125)      # where the seed guessed

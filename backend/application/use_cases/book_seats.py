@@ -36,9 +36,8 @@ from application.ports.services import (
 )
 from application.pricing.fixed import FareRequest
 from domain.booking import Booking
-from domain.trip import BOOKABLE_TRIP_STATUSES
 from domain.enums import ActorRole, BookingStatus, PaymentMethod, RideKind, TripStatus
-from domain.trip import Trip, TripSeat
+from domain.trip import BOOKABLE_TRIP_STATUSES, Trip, TripSeat
 from shared import error_codes
 from shared.clock import Clock
 from shared.errors import ConflictError, ValidationError

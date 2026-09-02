@@ -9,8 +9,7 @@ months apart.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request, Response
-from typing import Annotated
+from fastapi import APIRouter, Request, Response
 
 from ui.api import deps, mapdata
 from ui.api.errors import ok

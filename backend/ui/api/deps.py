@@ -11,6 +11,7 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, Header, Request
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from application.pricing.fixed import FixedRouteFare
@@ -81,10 +82,6 @@ from infrastructure.db.repositories.trips import (
     RideRequestRepository,
     TripRepository,
 )
-from shared.logging import get_logger
-from sqlalchemy import update
-log = get_logger(__name__)
-
 from infrastructure.db.session import build_engine, build_session_factory
 from infrastructure.services.audit import SqlAuditLog
 from infrastructure.services.codes import SecretsOtpGenerator, SecretsVerificationCodeGenerator
@@ -99,7 +96,10 @@ from shared.clock import SystemClock
 from shared.config import ConfigurationError
 from shared.errors import AuthenticationError, PermissionError
 from shared.ids import new_id
+from shared.logging import get_logger
 from ui.api.session_scope import current_session
+
+log = get_logger(__name__)
 
 
 @lru_cache(maxsize=1)
@@ -192,7 +192,7 @@ def otp_attempt_recorder():
                     .values(attempts=attempts, consumed_at=consumed_at)
                 )
                 own.commit()
-        except Exception as exc:  # noqa: BLE001 - never break the response
+        except Exception as exc:
             log.error(
                 "otp.attempt_not_recorded",
                 challenge_id=challenge_id,

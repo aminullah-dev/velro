@@ -2,9 +2,14 @@ name: check
 
 # Three jobs rather than one, so a Kotlin failure does not hide a Python one and
 # the slowest (mobile) never gates feedback on the fastest (admin).
+# Every push, every branch. A second workflow (ci.yml) used to run on
+# branches while this one waited for main; it set the wrong database variable
+# and had been red on every single push of the feature branch without anyone
+# noticing -- a red tick nobody reads is worse than no tick, because it
+# teaches people to ignore it. One workflow, one script, everywhere.
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
 
 concurrency:
@@ -65,9 +70,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
-          # Kotlin does not run on the newest JDKs; 21 is what the project pins.
+          # Kotlin 2.0.x does not run on the newest JDKs; 21 is what every
+          # laptop pins in its own ~/.gradle/gradle.properties.
           java-version: "21"
           distribution: temurin
       - uses: gradle/actions/setup-gradle@v4

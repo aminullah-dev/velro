@@ -18,8 +18,8 @@ from shared import error_codes
 from shared.errors import NotFoundError, PermissionError
 from shared.money import Money
 from ui.api import deps
-from ui.api.geofence import assert_inside
 from ui.api.errors import ok
+from ui.api.geofence import assert_inside
 from ui.api.idempotency import idempotent
 from ui.api.schemas.booking import (
     BookingOut,

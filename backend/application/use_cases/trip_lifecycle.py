@@ -26,7 +26,7 @@ from domain.lifecycles import TRIP_TO_BOOKING_STATUS
 from domain.trip import Trip, TripSeat
 from shared import error_codes
 from shared.clock import Clock
-from shared.errors import NotFoundError, ConflictError, PermissionError
+from shared.errors import ConflictError, NotFoundError, PermissionError
 from shared.ids import IdGenerator
 from shared.logging import get_logger
 from shared.money import DEFAULT_CURRENCY, Money

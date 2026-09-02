@@ -13,6 +13,7 @@ None of those raise. They just draw a picture the driver believes.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from itertools import pairwise
 
 from ui.api.routers.settlements import _bucket_for, _bucket_starts
 
@@ -64,7 +65,7 @@ class TestMonths:
         # Consecutive months, no repeats and no gaps.
         as_pairs = [(s.year, s.month) for s in starts]
         assert len(set(as_pairs)) == 12
-        for (y1, m1), (y2, m2) in zip(as_pairs, as_pairs[1:]):
+        for (y1, m1), (y2, m2) in pairwise(as_pairs):
             expected = (y1 + 1, 1) if m1 == 12 else (y1, m1 + 1)
             assert (y2, m2) == expected
 

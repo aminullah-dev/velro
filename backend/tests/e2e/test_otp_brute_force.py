@@ -12,7 +12,6 @@ guessable, and sign-in is the whole product.
 
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
 
 #: A number per test, and none of them shared with another module.

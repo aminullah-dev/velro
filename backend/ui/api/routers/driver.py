@@ -28,8 +28,7 @@ from domain.enums import (
 from shared import error_codes
 from shared.errors import ConflictError, NotFoundError
 from shared.money import Money
-from ui.api import deps
-from ui.api import mapdata
+from ui.api import deps, mapdata
 from ui.api.errors import ok
 from ui.api.idempotency import idempotent
 from ui.api.schemas.common import MoneyOut
@@ -425,7 +424,7 @@ def trip_map(
     # whose name says so. The handset announces each as he enters it; the
     # server just knows where they are.
     alerts = list(mapdata.road_alerts())
-    for name, lat, lon in session.execute(sql(
+    for _name, lat, lon in session.execute(sql(
         "SELECT name, latitude, longitude FROM stations "
         "WHERE latitude IS NOT NULL AND deleted_at IS NULL "
         "AND status = 'ACTIVE' AND name LIKE '%بازار%'"

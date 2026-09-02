@@ -21,6 +21,7 @@ from ui.api import errors
 from ui.api.errors import ok
 from ui.api.routers import (
     admin,
+    app_release,
     auth,
     bookings,
     dispatch,
@@ -28,15 +29,14 @@ from ui.api.routers import (
     driver,
     geography,
     imports,
+    maps,
     negotiation,
     notifications,
     settlements,
     support,
+    tools,
     vehicle_documents,
     vehicles,
-    maps,
-    app_release,
-    tools,
 )
 from ui.api.session_scope import DatabaseSessionMiddleware
 

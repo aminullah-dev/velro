@@ -21,9 +21,8 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import Field
 

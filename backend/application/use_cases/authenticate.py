@@ -215,12 +215,15 @@ class RequestOtp:
             # A cent instead of forty-five, and it reaches a phone that is
             # online -- which is why the person choosing is the right person
             # to decide: they know whether they use Telegram, and we do not.
-            if cmd.channel == "telegram" and self._telegram is not None:
-                if self._telegram.send(
+            if (
+                cmd.channel == "telegram"
+                and self._telegram is not None
+                and self._telegram.send(
                     phone=phone, message_key="auth.sms.otp",
                     payload=payload, locale=cmd.locale,
-                ):
-                    channel = "telegram"
+                )
+            ):
+                channel = "telegram"
 
             if channel != "telegram":
                 # Either they asked for SMS, or Telegram would not carry it --

@@ -12,8 +12,8 @@ and never profiled, and the tables they read grow fastest.
 from __future__ import annotations
 
 from dataclasses import asdict
-from decimal import Decimal
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
@@ -27,10 +27,6 @@ from application.use_cases.generate_routes import (
     GenerateRoutesCommand,
 )
 from application.use_cases.record_name import RecordName, RecordNameCommand
-from domain.identity import DRIVER as DRIVER_ROLE
-from domain.identity import PhoneNumber
-from domain.identity import User as DomainUser
-from domain.geography import PLACED_SOURCE_NOTE, SEED_SOURCE_NOTE
 from domain.enums import (
     DriverApprovalStatus,
     Locale,
@@ -38,6 +34,10 @@ from domain.enums import (
     UserStatus,
     VehicleStatus,
 )
+from domain.geography import PLACED_SOURCE_NOTE, SEED_SOURCE_NOTE
+from domain.identity import DRIVER as DRIVER_ROLE
+from domain.identity import PhoneNumber
+from domain.identity import User as DomainUser
 from infrastructure.db.models.geography import (
     DestinationRow,
     DistrictRow,

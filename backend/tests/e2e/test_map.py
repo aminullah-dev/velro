@@ -61,7 +61,6 @@ class TestJourneyPreview:
     ):
         # Any journey the search can produce, previewed with the same shape
         # the driver later gets. خیشکی→چاریکار is the pair with coordinates.
-        stations = client.get("/api/v1/admin/stations", headers=admin_session)
         journey = client.get(
             "/api/v1/geo/map/journey",
             params={

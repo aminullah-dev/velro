@@ -13,7 +13,6 @@ look in.
 
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
 
 #: Numbers of their own: these ask for codes repeatedly and the request

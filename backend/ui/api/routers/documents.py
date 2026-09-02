@@ -25,7 +25,7 @@ from application.use_cases.driver_documents import (
     UploadDriverDocument,
 )
 from application.use_cases.record_name import RecordName, RecordNameCommand
-from domain.enums import BookingStatus, ActorRole, DocumentStatus
+from domain.enums import ActorRole, BookingStatus, DocumentStatus
 from shared import error_codes
 from shared.errors import NotFoundError
 from ui.api import deps

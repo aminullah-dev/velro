@@ -7,9 +7,8 @@ means.
 
 from __future__ import annotations
 
-from decimal import Decimal
-
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -30,8 +29,8 @@ from shared import error_codes
 from shared.errors import ConflictError, NotFoundError
 from shared.money import Money
 from ui.api import deps
-from ui.api.geofence import assert_inside
 from ui.api.errors import ok
+from ui.api.geofence import assert_inside
 from ui.api.schemas.common import MoneyOut, Schema
 
 
