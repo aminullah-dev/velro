@@ -835,13 +835,31 @@ private fun CurrentTrip(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> 
 
     val next = state.nextStep
     if (next != null) {
+        // Pulling away is the one step that asks first, and only when
+        // somebody on the manifest was never checked. Every other step --
+        // and this one, once he has answered -- is the same event it was.
+        var confirmingStart by remember { mutableStateOf(false) }
         Spacer(Modifier.height(Spacing.lg))
         PrimaryAction(
             label = strings[next.actionKey()],
-            onClick = { onEvent(DriverHomeEvent.AdvanceTrip) },
+            onClick = {
+                if (state.startsWithUnverified) confirmingStart = true
+                else onEvent(DriverHomeEvent.AdvanceTrip)
+            },
             enabled = !state.isBusy,
             loading = state.isBusy,
         )
+        if (confirmingStart) {
+            StartUnverifiedDialog(
+                unverified = state.unverifiedPassengers,
+                total = state.manifestPassengers,
+                onDismiss = { confirmingStart = false },
+                onConfirm = {
+                    confirmingStart = false
+                    onEvent(DriverHomeEvent.AdvanceTrip)
+                },
+            )
+        }
     }
 
     // The way out. A driver whose car breaks down at a pickup point had no
@@ -917,6 +935,49 @@ private fun CancelTripDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit)
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(strings["common.action.cancel"]) }
+        },
+    )
+}
+
+/**
+ * The car is about to pull away with somebody whose code was never entered.
+ *
+ * Soft on purpose. Once the trip is IN_TRANSIT the server marks every active
+ * booking on board whether or not it was checked, so this is the last moment
+ * the app can point at the difference -- but it is a question, not a wall. It
+ * says how many of how many, and "start" does exactly what the button did
+ * before the dialog existed. Nothing about the trip, the no-shows or the
+ * commission changes on either answer.
+ */
+@Composable
+private fun StartUnverifiedDialog(
+    unverified: Int,
+    total: Int,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val strings = LocalVelroStrings.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(strings["driver.trip.start_unverified_title"]) },
+        text = {
+            Text(
+                strings[
+                    "driver.trip.start_unverified_body",
+                    "unverified" to unverified,
+                    "total" to total,
+                ],
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(strings["driver.trip.start_unverified_confirm"])
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(strings["driver.trip.start_unverified_back"])
+            }
         },
     )
 }

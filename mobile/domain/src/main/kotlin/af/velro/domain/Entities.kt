@@ -290,13 +290,21 @@ data class Earnings(
     /**
      * The figure to headline, always positive.
      *
-     * What he can take out, or what he is holding for us -- the label beside
-     * it says which, and the sign never reaches the screen.
+     * What he is owed, or what he is holding for us -- the label beside it
+     * says which, and the sign never reaches the screen.
+     *
+     * Both branches read [owed], the same netted position [owesPlatform]
+     * decides from. The non-owing branch used to return raw `available`, and
+     * an ordinary shift split the two: request a full payout, then complete
+     * one more cash trip before the office marks it PAID. `available` is now
+     * the commission on that trip, below zero; `pending` is the payout, well
+     * above it. The wallet as a whole is his, so the label said "available"
+     * -- over a negative number in the take-your-money green.
      */
     val headlineAmount: MoneyValue
         get() =
             if (owesPlatform) MoneyValue(-owed.amountMinor, owed.currency)
-            else available
+            else owed
 }
 
 /**

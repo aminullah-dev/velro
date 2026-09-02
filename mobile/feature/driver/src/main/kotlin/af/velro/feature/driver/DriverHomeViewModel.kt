@@ -5,7 +5,10 @@ import af.velro.data.repository.BookingRepository
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
 import af.velro.data.repository.CurrentAssignment
+import af.velro.data.repository.ManifestEntry
 import af.velro.data.repository.NegotiationRepository
+import af.velro.domain.BookingStatus
+import af.velro.domain.enumOrNull
 import af.velro.domain.RideRequest
 import af.velro.data.repository.NotificationRepository
 import af.velro.data.repository.DriverRepository
@@ -138,7 +141,54 @@ data class DriverHomeUiState(
         get() = assignment?.trip?.status in setOf(
             TripStatus.ARRIVED_AT_PICKUP, TripStatus.BOARDING,
         )
+
+    /** Everybody still expected in the car, whether or not he has checked them. */
+    val manifestPassengers: Int
+        get() = assignment?.manifest.orEmpty().count { it.isRiding() }
+
+    /**
+     * Passengers on the manifest whose boarding code was never entered.
+     *
+     * Verifying a code is what moves a booking to ONBOARD. When the trip
+     * itself moves to IN_TRANSIT the server walks every active booking there
+     * regardless, so this is the last moment the difference is visible to
+     * anyone. A cancelled or no-show row is not a passenger and is on neither
+     * side of the count.
+     */
+    val unverifiedPassengers: Int
+        get() = assignment?.manifest.orEmpty().count { it.isRiding() && !it.isVerified() }
+
+    /**
+     * Whether the next tap pulls away with somebody unchecked.
+     *
+     * A question, not a wall. The code is how a driver tells the person he
+     * agreed to carry from a stranger in the same seat -- but a passenger with
+     * a dead phone, or a driver with no signal to check, are ordinary on this
+     * road. So he is told the count and asked, and if he says go the trip
+     * advances exactly as it always did.
+     */
+    val startsWithUnverified: Boolean
+        get() = nextStep == TripStatus.IN_TRANSIT && unverifiedPassengers > 0
 }
+
+/** A row that still stands for somebody expected in the car. */
+private fun ManifestEntry.isRiding(): Boolean =
+    when (enumOrNull<BookingStatus>(status)) {
+        BookingStatus.CANCELLED, BookingStatus.NO_SHOW -> false
+        else -> true
+    }
+
+/**
+ * Whether this passenger's code has been entered: ONBOARD or beyond.
+ *
+ * A status the app does not recognise counts as unchecked. Asking once too
+ * often costs the driver a tap; assuming costs a booked passenger her seat.
+ */
+private fun ManifestEntry.isVerified(): Boolean =
+    when (enumOrNull<BookingStatus>(status)) {
+        BookingStatus.ONBOARD, BookingStatus.COMPLETED -> true
+        else -> false
+    }
 
 sealed interface DriverHomeEvent {
     data object Refresh : DriverHomeEvent
