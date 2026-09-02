@@ -53,9 +53,12 @@ class UnassignedTripOut(Schema):
     seat_capacity: int
     seats_available: int
     booked_seats: int
-    #: Offers still on drivers' screens, and when the last of them lapses.
+    #: Offers still on drivers' screens, and when the last of them lapses --
+    #: as an instant, and as minutes from the snapshot so the browser never
+    #: has to consult its own clock against the server's.
     open_offers: int
     offers_expire_at: datetime | None
+    offers_expire_in_minutes: int | None
     #: Drivers online right now with an active car big enough. Zero means
     #: pressing Offer would achieve nothing, and the button says so.
     candidates: int
@@ -100,6 +103,7 @@ def unassigned_trips(
         at_risk = row.scheduled_departure_at <= now + at_risk_within
         at_risk_count += int(at_risk)
         offered = open_offers.get(row.id, [])
+        last_offer = max((o.expires_at for o in offered), default=None)
         free = availability.get(row.id, 0)
         origin, destination = names.get(row.id, (None, None))
         board.append(
@@ -119,7 +123,11 @@ def unassigned_trips(
                 seats_available=free,
                 booked_seats=row.seat_capacity - free,
                 open_offers=len(offered),
-                offers_expire_at=max((o.expires_at for o in offered), default=None),
+                offers_expire_at=last_offer,
+                offers_expire_in_minutes=(
+                    max(0, int((last_offer - now).total_seconds() // 60))
+                    if last_offer else None
+                ),
                 candidates=sum(1 for c in capacities if c >= row.seat_capacity),
             ).model_dump()
         )

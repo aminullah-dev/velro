@@ -278,7 +278,14 @@ class DecideSettlement:
         self._clock = clock
 
     def execute(self, cmd: DecideSettlementCommand) -> Settlement:
-        row = self._settlements.find(cmd.settlement_id)
+        # Locked, because this is where money moves. Two operators -- or one
+        # operator's double-click on a slow connection -- marking the same
+        # payout paid in the same instant both read PROCESSING on an
+        # unlocked row, both pass the transition, and both drain the hold:
+        # the wallet's pending balance went negative by the amount and the
+        # lifetime total counted the payout twice. The lock makes the second
+        # wait, then read PAID, and be refused by the state machine.
+        row = self._settlements.lock(cmd.settlement_id)
         if row is None:
             raise NotFoundError(
                 error_codes.SETTLEMENT_NOT_FOUND, settlement_id=cmd.settlement_id
@@ -292,8 +299,9 @@ class DecideSettlement:
         else:
             settlement.advance(cmd.to, at=now, by=cmd.actor_id)
 
-        # Only now that the transition is legal does money move.
-        wallet = self._wallets.find(row.wallet_id)
+        # Only now that the transition is legal does money move -- on a
+        # wallet held FOR UPDATE, the same way every other writer holds it.
+        wallet = self._wallets.lock(row.wallet_id)
         if wallet is None:
             raise NotFoundError(error_codes.WALLET_NOT_FOUND, wallet_id=row.wallet_id)
 

@@ -17,7 +17,7 @@ from datetime import timedelta
 from domain.enums import ActorRole, BookingStatus, TripStatus
 from domain.lifecycles import BOOKING_LIFECYCLE
 from shared import error_codes
-from shared.errors import ConflictError, PermissionError
+from shared.errors import ConflictError, NotFoundError, PermissionError
 from shared.money import Money
 
 # Reason codes are a closed set so that reporting can group them; the sentence
@@ -74,7 +74,15 @@ class CancelBooking:
                 error_codes.VALIDATION_FAILED, field="reason_code", value=cmd.reason_code
             )
 
-        row = self._bookings.get(cmd.booking_id)
+        # Locked. A cancellation writes a financial record -- the fee, even
+        # when it is zero -- and releases seats, and two taps on a slow
+        # connection are two requests. On an unlocked row both read
+        # CONFIRMED, both cancel, and the booking ends up with two
+        # cancellation records for one journey. The second now waits, reads
+        # CANCELLED, and is refused as already cancelled.
+        row = self._bookings.lock(cmd.booking_id)
+        if row is None:
+            raise NotFoundError(self._bookings.not_found_code, id=cmd.booking_id)
 
         # A passenger may cancel only their own booking. Staff may cancel any,
         # and the audit entry records which happened.
