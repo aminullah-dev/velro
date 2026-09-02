@@ -3,32 +3,34 @@ package af.velro.feature.trip
 import af.velro.core.i18n.Numerals
 import af.velro.core.map.JourneyMap
 import af.velro.core.ui.component.PhotoAvatar
+import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
+import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Sizing
 import af.velro.core.ui.theme.Spacing
 import af.velro.data.repository.RideDriver
+import af.velro.feature.safety.HelpSheet
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -61,58 +63,79 @@ fun TrackRideRoute(
     val strings = LocalVelroStrings.current
     val context = LocalContext.current
 
-    Scaffold(
-        topBar = {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                }
-                Text(
-                    strings["track.title"],
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            state.journeyMap?.let { drawn ->
-                JourneyMap(
-                    drawn,
-                    vehicle = state.vehicle,
-                    modifier = Modifier.weight(1f),
-                )
-            } ?: Spacer(Modifier.weight(1f))
+    // The shared frame, like every other screen. This one used to roll its
+    // own bar: an unlabelled arrow a screen reader announced as nothing, and
+    // no BackHandler, so the system gesture and the arrow were two different
+    // ways out. The frame is also where the help door below gets its gutter.
+    VelroScreen(
+        title = strings["track.title"],
+        onBack = onBack,
+        // The map takes whatever the cards beneath it leave, which needs a
+        // column of fixed height: a scrolling one has no height to give.
+        scrollable = false,
+    ) {
+        state.journeyMap?.let { drawn ->
+            JourneyMap(
+                drawn,
+                vehicle = state.vehicle,
+                modifier = Modifier.weight(1f),
+            )
+        } ?: Spacer(Modifier.weight(1f))
 
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(Spacing.md),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                Eta(state)
-                state.driver?.let { DriverCard(it, state.driverPhoto) { number ->
-                    // DIAL, not CALL: the dialer opens with the number and the
-                    // passenger presses the green button herself. No
-                    // permission, no surprise call from a pocket.
-                    runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number"))
-                        )
-                    }
-                } } ?: Text(
-                    strings["track.awaiting_driver"],
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                JourneyEnds(state)
-            }
+        Column(
+            Modifier
+                .fillMaxWidth()
+                // Sides and foot come from the frame.
+                .padding(top = Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            GetHelp(state)
+            Eta(state)
+            state.driver?.let { DriverCard(it, state.driverPhoto) { number ->
+                // DIAL, not CALL: the dialer opens with the number and the
+                // passenger presses the green button herself. No
+                // permission, no surprise call from a pocket.
+                runCatching {
+                    context.startActivity(
+                        Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number"))
+                    )
+                }
+            } } ?: Text(
+                strings["track.awaiting_driver"],
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            JourneyEnds(state)
         }
+    }
+}
+
+/**
+ * Get help, under the map: the same place the booking page puts it, so the
+ * door is where the passenger last saw it -- and this is the screen she is
+ * looking at while in the car, which is the case ADR 0010 was written for.
+ *
+ * Shown only while the ride is live, as on the booking page. An emergency
+ * control on a journey that is over is noise, and noise is what makes a
+ * real one get ignored.
+ */
+@Composable
+private fun GetHelp(state: TrackRideUiState) {
+    val booking = state.booking?.takeIf { it.isActive } ?: return
+    val strings = LocalVelroStrings.current
+    var helpOpen by remember { mutableStateOf(false) }
+    SecondaryAction(
+        label = strings["safety.title"],
+        onClick = { helpOpen = true },
+        modifier = Modifier.fillMaxWidth(),
+    )
+    if (helpOpen) {
+        HelpSheet(
+            ride = state.helpFacts,
+            tripId = booking.tripId,
+            bookingId = booking.id,
+            onDismiss = { helpOpen = false },
+        )
     }
 }
 

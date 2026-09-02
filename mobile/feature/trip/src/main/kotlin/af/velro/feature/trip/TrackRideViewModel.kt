@@ -10,6 +10,7 @@ import af.velro.data.repository.TripMapData
 import af.velro.data.tracking.Eta
 import af.velro.domain.Booking
 import af.velro.domain.BookingStatus
+import af.velro.feature.safety.RideFacts
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -31,7 +32,40 @@ data class TrackRideUiState(
     val vehicle: MapPlace? = null,
     val vehicleAgeSeconds: Int? = null,
     val etaMinutes: Int? = null,
-)
+) {
+    /**
+     * What the help sheet reads down a phone line (ADR 0010), from whichever
+     * copy this screen holds is freshest.
+     *
+     * The live driver card wins when it has arrived: a driver assigned or
+     * changed mid-wait reaches it on the next poll, while the cached booking
+     * row keeps saying what it said until something refreshes it. Until the
+     * card arrives the booking's own copy stands in, so the sheet never knows
+     * less than the booking page the passenger just came from.
+     *
+     * One car, one source. When the live card is present its name, number
+     * and plate are taken together, gaps included, rather than patched from
+     * the booking: after a reassignment those are a different man's name
+     * beside a different car's plate, and a relative sent that pair would be
+     * looking for a car that is not coming.
+     *
+     * The journey's ends come off the drawn map, and off the booking when
+     * there is no map to draw. They are the same two places either way.
+     */
+    val helpFacts: RideFacts?
+        get() {
+            val b = booking ?: return null
+            val live = driver
+            return RideFacts(
+                bookingNumber = b.number,
+                driverName = if (live == null) b.driverName else live.name,
+                driverPhone = live?.phone ?: b.driverPhone,
+                plate = if (live == null) b.vehiclePlate else live.vehicle?.plateNumber,
+                origin = journeyMap?.origin?.name ?: b.pickupStationName,
+                destination = journeyMap?.destination?.name ?: b.dropoffDestinationName,
+            )
+        }
+}
 
 /** Faster than the booking page: this screen exists to watch a dot move. */
 private const val POLL_SECONDS = 15L
