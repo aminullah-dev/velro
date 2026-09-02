@@ -793,6 +793,9 @@ notif.duty.on_trip	On a trip — map and road warnings active.	در سفر — �
 notif.ask.title	New ride request!	درخواست سفر نو!	د سفر نوې غوښتنه!	new — please check the Pashto
 notif.ask.body	A passenger is asking for a car. Open VELRO to answer.	مسافری موتر می‌خواهد. ولرو را باز کنید و جواب بدهید.	یو مسافر موټر غواړي. ولرو پرانیزئ او ځواب ورکړئ.	new — please check the Pashto
 notif.road.title	Road warning	هشدار جاده	د سړک خبرداری	new — please check the Pashto
+notif.offer.title	A trip is offered to you!	سفری برای شما پیشنهاد شد!	یو سفر تاسو ته وړاندیز شو!	new — please check the Pashto
+notif.offer.body	The office has a trip for you. Open VELRO to take it before the offer runs out.	دفتر یک سفر برای شما دارد. ولرو را باز کنید و پیش از ختم مهلت آن را بگیرید.	دفتر تاسو لپاره یو سفر لري. ولرو پرانیزئ او مخکې له دې چې مهلت یې پای ته ورسېږي، ویې نیسئ.	new — please check the Pashto
+notify.trip.offered	The office offered you trip {trip_number}. Open VELRO to take it.	دفتر سفر {trip_number} را به شما پیشنهاد کرد. ولرو را باز کنید و آن را بگیرید.	دفتر سفر {trip_number} تاسو ته وړاندیز کړ. ولرو پرانیزئ او ویې نیسئ.	new — please check the Pashto
 track.title	Track your ride	ردیابی سفر	د سفر څارنه	new — please check the Pashto
 track.eta	Arriving in about {minutes} min	رسیدن حدود {minutes} دقیقهٔ دیگر	شاوخوا {minutes} دقیقې وروسته رسېږي	new — please check the Pashto
 track.eta_now	The car is nearly there	موتر همین نزدیکی‌هاست	موټر همدا نږدې دی	new — please check the Pashto
@@ -872,3 +875,11 @@ common.value.never	Never	هرگز	هېڅکله
 common.value.minutes_ago	{minutes} min ago	{minutes} دقیقه پیش	{minutes} دقیقې مخکې	
 common.value.hours_ago	{hours} h ago	{hours} ساعت پیش	{hours} ساعته مخکې	
 common.value.days_ago	{days} days ago	{days} روز پیش	{days} ورځې مخکې	
+driver.trip.start_unverified_title	Start anyway?	با این حال شروع شود؟	بیا هم پیل شي؟	review
+driver.trip.start_unverified_body	{unverified} of {total} passengers not yet verified.	{unverified} از {total} مسافر هنوز تأیید نشده است.	له {total} مسافرو څخه {unverified} لا تر اوسه تایید شوي نه دي.	review
+driver.trip.start_unverified_confirm	Start	شروع شود	پیل شي	review
+driver.trip.start_unverified_back	Go back	برگردید	بېرته ولاړ شئ	review
+error.geofence_location_required	We need your location to confirm you are in a VELRO area. Please allow location access and try again.	برای تأیید اینکه در ساحهٔ پوشش ولرو هستید، به موقعیت شما نیاز داریم. لطفاً اجازهٔ دسترسی به موقعیت را بدهید و دوباره تلاش کنید.	د دې لپاره چې ډاډ ترلاسه کړو تاسو د ولرو په پوښښ سیمه کې یاست، ستاسو موقعیت ته اړتیا لرو. مهرباني وکړئ موقعیت ته د لاسرسي اجازه ورکړئ او بیا هڅه وکړئ.	review — new; check Dari and Pashto
+location.permission.rationale	VELRO asks for your location only to confirm you are inside the service area.	ولرو موقعیت شما را فقط برای تأیید اینکه در ساحهٔ پوشش هستید می‌پرسد.	ولرو ستاسو موقعیت یوازې د دې لپاره غواړي چې ډاډ ترلاسه کړي تاسو په پوښښ سیمه کې یاست.	review — new; check Dari and Pashto
+location.permission.denied	Location access is off for VELRO. Turn it on in your phone's settings, then try again.	دسترسی ولرو به موقعیت خاموش است. آن را در تنظیمات تیلفون خود روشن کنید و دوباره تلاش کنید.	د ولرو لپاره موقعیت ته لاسرسی بند دی. په خپل تلیفون کې یې د تنظیماتو له لارې فعال کړئ او بیا هڅه وکړئ.	review — new; check Dari and Pashto
+location.action.open_settings	Open settings	باز کردن تنظیمات	تنظیمات پرانیستل	review — new; check Dari and Pashto

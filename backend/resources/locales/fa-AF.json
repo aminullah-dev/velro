@@ -57,6 +57,10 @@
   "error.trip_capacity_exceeded": "این موتر این تعداد چوکی ندارد.",
   "error.trip_departed": "این سفر قبلاً حرکت کرده است.",
   "error.geofence_outside": "ولرو فعلاً در کابل، پروان و غوربند خدمات می‌دهد. به نظر می‌رسد بیرون از ساحهٔ پوشش هستید، بنابراین درخواست شما به راننده‌ها فرستاده نمی‌شود.",
+  "error.geofence_location_required": "برای تأیید اینکه در ساحهٔ پوشش ولرو هستید، به موقعیت شما نیاز داریم. لطفاً اجازهٔ دسترسی به موقعیت را بدهید و دوباره تلاش کنید.",
+  "location.permission.rationale": "ولرو موقعیت شما را فقط برای تأیید اینکه در ساحهٔ پوشش هستید می‌پرسد.",
+  "location.permission.denied": "دسترسی ولرو به موقعیت خاموش است. آن را در تنظیمات تیلفون خود روشن کنید و دوباره تلاش کنید.",
+  "location.action.open_settings": "باز کردن تنظیمات",
   "error.trip_cancelled": "این سفر لغو شده است.",
   "error.trip_no_driver_available": "فعلاً راننده موجود نیست. کمی بعد دوباره کوشش کنید.",
   "error.trip_driver_already_assigned": "راننده دیگری این سفر را گرفته است.",
@@ -875,9 +879,16 @@
   "notif.ask.title": "درخواست سفر نو!",
   "notif.ask.body": "مسافری موتر می‌خواهد. ولرو را باز کنید و جواب بدهید.",
   "notif.road.title": "هشدار جاده",
+  "notif.offer.title": "سفری برای شما پیشنهاد شد!",
+  "notif.offer.body": "دفتر یک سفر برای شما دارد. ولرو را باز کنید و پیش از ختم مهلت آن را بگیرید.",
+  "notify.trip.offered": "دفتر سفر {trip_number} را به شما پیشنهاد کرد. ولرو را باز کنید و آن را بگیرید.",
   "error.ride_request_departure_past": "آن وقت گذشته است. وقت دیرتری انتخاب کنید.",
   "error.ride_request_departure_too_far": "تا {horizon_days} روز پیشتر می‌توانید موتر بگیرید.",
   "error.ride_request_return_before_departure": "برگشت باید بعد از رفتن باشد.",
   "error.fare_offer_return_mismatch": "برای برگشت هم قیمت بدهید.",
-  "error.currency_mismatch": "این قیمت‌ها به پول‌های مختلف است."
+  "error.currency_mismatch": "این قیمت‌ها به پول‌های مختلف است.",
+  "driver.trip.start_unverified_title": "با این حال شروع شود؟",
+  "driver.trip.start_unverified_body": "{unverified} از {total} مسافر هنوز تأیید نشده است.",
+  "driver.trip.start_unverified_confirm": "شروع شود",
+  "driver.trip.start_unverified_back": "برگردید"
 }

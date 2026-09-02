@@ -57,6 +57,10 @@
   "error.trip_capacity_exceeded": "دا موټر دومره چوکۍ نه لري.",
   "error.trip_departed": "دا سفر مخکې روان شوی دی.",
   "error.geofence_outside": "ولرو اوس مهال په کابل، پروان او غوربند کې خدمت کوي. داسې ښکاري چې تاسو له پوښښ سیمې بهر یاست، نو ستاسو غوښتنه چلوونکو ته نه لېږل کېږي.",
+  "error.geofence_location_required": "د دې لپاره چې ډاډ ترلاسه کړو تاسو د ولرو په پوښښ سیمه کې یاست، ستاسو موقعیت ته اړتیا لرو. مهرباني وکړئ موقعیت ته د لاسرسي اجازه ورکړئ او بیا هڅه وکړئ.",
+  "location.permission.rationale": "ولرو ستاسو موقعیت یوازې د دې لپاره غواړي چې ډاډ ترلاسه کړي تاسو په پوښښ سیمه کې یاست.",
+  "location.permission.denied": "د ولرو لپاره موقعیت ته لاسرسی بند دی. په خپل تلیفون کې یې د تنظیماتو له لارې فعال کړئ او بیا هڅه وکړئ.",
+  "location.action.open_settings": "تنظیمات پرانیستل",
   "error.trip_cancelled": "دا سفر لغوه شوی دی.",
   "error.trip_no_driver_available": "اوس چلوونکی نشته. لږ وروسته بیا هڅه وکړئ.",
   "error.trip_driver_already_assigned": "بل چلوونکي دا سفر نیولی دی.",
@@ -875,9 +879,16 @@
   "notif.ask.title": "د سفر نوې غوښتنه!",
   "notif.ask.body": "یو مسافر موټر غواړي. ولرو پرانیزئ او ځواب ورکړئ.",
   "notif.road.title": "د سړک خبرداری",
+  "notif.offer.title": "یو سفر تاسو ته وړاندیز شو!",
+  "notif.offer.body": "دفتر تاسو لپاره یو سفر لري. ولرو پرانیزئ او مخکې له دې چې مهلت یې پای ته ورسېږي، ویې نیسئ.",
+  "notify.trip.offered": "دفتر سفر {trip_number} تاسو ته وړاندیز کړ. ولرو پرانیزئ او ویې نیسئ.",
   "error.ride_request_departure_past": "هغه وخت تېر شوی. وروسته وخت وټاکئ.",
   "error.ride_request_departure_too_far": "تر {horizon_days} ورځو پورې مخکې موټر نیولی شئ.",
   "error.ride_request_return_before_departure": "بېرته راتګ باید د تګ نه وروسته وي.",
   "error.fare_offer_return_mismatch": "د بېرته راتګ لپاره هم بیه ورکړئ.",
-  "error.currency_mismatch": "دا بیې په بېلابېلو پیسو دي."
+  "error.currency_mismatch": "دا بیې په بېلابېلو پیسو دي.",
+  "driver.trip.start_unverified_title": "بیا هم پیل شي؟",
+  "driver.trip.start_unverified_body": "له {total} مسافرو څخه {unverified} لا تر اوسه تایید شوي نه دي.",
+  "driver.trip.start_unverified_confirm": "پیل شي",
+  "driver.trip.start_unverified_back": "بېرته ولاړ شئ"
 }
