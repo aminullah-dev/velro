@@ -24,6 +24,9 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
 import android.os.IBinder
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -48,9 +51,9 @@ import kotlinx.coroutines.launch
  *
  * Every duty this product owes a working driver used to live in a ViewModel,
  * which is to say it died the moment the phone went in his pocket: no new
- * ride requests heard, no position pings for the passenger's map, no road
- * warnings on the switchbacks. This service is those three duties moved
- * somewhere the screen's fate cannot touch.
+ * ride requests or dispatcher's offers heard, no position pings for the
+ * passenger's map, no road warnings on the switchbacks. This service is
+ * those duties moved somewhere the screen's fate cannot touch.
  *
  * It runs exactly while the driver is on duty -- online, or carrying a trip
  * -- under a persistent notification, which is the honest price Android
@@ -97,6 +100,7 @@ class DriverDutyService : Service() {
         )
         val announced = HashMap<String, Long>()
         var knownAsks: Set<String>? = null
+        var knownOffers: Set<String>? = null
         var alerts: List<RoadAlert> = emptyList()
         var alertsForTrip: String? = null
 
@@ -125,6 +129,7 @@ class DriverDutyService : Service() {
                 signals.roadAlert(null)
                 notifyDuty(strings["notif.duty.waiting"])
                 knownAsks = watchAsks(knownAsks, strings)
+                knownOffers = watchOffers(knownOffers, strings)
                 delay(WAITING_TICK_MS)
             }
         }
@@ -142,6 +147,31 @@ class DriverDutyService : Service() {
                 ASK_NOTIFICATION_ID, CHANNEL_ASKS,
                 strings["notif.ask.title"], strings["notif.ask.body"],
             )
+            vibrateOnce()
+        }
+        return current
+    }
+
+    /**
+     * A dispatcher's offer becomes the same audible notification -- pocket only.
+     *
+     * The office presses Offer and the row waits at GET driver/offers, which
+     * only the home screen's ten-second poll ever read. With the screen dark
+     * the offer expired unheard, and a scheduled departure went undriven
+     * because the one man who could take it was told nothing. The ids kept
+     * between ticks are exactly the offers open right now, so the set shrinks
+     * as offers lapse or are taken and never grows past what the server holds.
+     */
+    private suspend fun watchOffers(known: Set<String>?, strings: Strings): Set<String> {
+        val current = (drivers.offers() as? ApiResult.Success)
+            ?.value?.map { it.id }?.toSet()
+            ?: return known ?: emptySet()
+        if (known != null && (current - known).isNotEmpty() && !appVisible()) {
+            notify(
+                OFFER_NOTIFICATION_ID, CHANNEL_ASKS,
+                strings["notif.offer.title"], strings["notif.offer.body"],
+            )
+            vibrateOnce()
         }
         return current
     }
@@ -167,6 +197,11 @@ class DriverDutyService : Service() {
         }
         announced["${hit.latitude}:${hit.longitude}"] = now
         signals.roadAlert(hit.messageKey)
+        // The buzz is the service's, on every screen and in the pocket alike:
+        // the on-screen banner chimes but never vibrates, and on a ringer set
+        // to vibrate the chime was the whole warning gone. Same cue as a ride
+        // request, so it is felt as VELRO wanting attention.
+        vibrateOnce()
         if (!appVisible()) {
             notify(
                 ROAD_NOTIFICATION_ID, CHANNEL_ROAD,
@@ -191,6 +226,35 @@ class DriverDutyService : Service() {
 
     private fun appVisible(): Boolean =
         ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+
+    /**
+     * The vibration half of the home screen's `ringOnce`, for the service.
+     *
+     * The sound half is the channel's own -- a notification on CHANNEL_ASKS
+     * or CHANNEL_ROAD already plays the notification sound, and ringing the
+     * ringtone on top of it would be the same sound twice. The buzz is what
+     * a silenced ringer leaves as the only cue, and what the road banner on
+     * screen does not give at all.
+     */
+    private fun vibrateOnce() {
+        runCatching {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager)
+                    .defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(
+                    VibrationEffect.createOneShot(VIBRATE_MS, VibrationEffect.DEFAULT_AMPLITUDE)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(VIBRATE_MS)
+            }
+        }
+    }
 
     // -- notifications ----------------------------------------------------
 
@@ -264,6 +328,14 @@ class DriverDutyService : Service() {
         )
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_ROAD, "هشدارهای جاده", NotificationManager.IMPORTANCE_HIGH)
+                .apply {
+                    // A hazard must be felt as well as heard. Android keeps a
+                    // channel's first settings, so on a phone that already
+                    // has this channel the buzz comes from vibrateOnce() and
+                    // this only reaches fresh installs.
+                    enableVibration(true)
+                    vibrationPattern = longArrayOf(0L, VIBRATE_MS)
+                }
         )
     }
 
@@ -277,9 +349,11 @@ class DriverDutyService : Service() {
         private const val DUTY_NOTIFICATION_ID = 100
         private const val ASK_NOTIFICATION_ID = 101
         private const val ROAD_NOTIFICATION_ID = 102
+        private const val OFFER_NOTIFICATION_ID = 103
         private const val TRIP_TICK_MS = 30_000L
         private const val WAITING_TICK_MS = 45_000L
         private const val COOLDOWN_MS = 10L * 60 * 1000
+        private const val VIBRATE_MS = 400L
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(

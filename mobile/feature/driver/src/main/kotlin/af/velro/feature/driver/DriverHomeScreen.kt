@@ -1249,9 +1249,17 @@ private fun PassengerStars(rated: Boolean, onRate: (Int) -> Unit) {
     }
 }
 
-/** A road advisory, styled to be read at arm's length on a dashboard. */
+/**
+ * A road advisory, styled to be read at arm's length on a dashboard.
+ *
+ * Public because Home is not the only screen a driver has open on the road:
+ * the app's navigation host draws this same banner over Vehicle, Earnings,
+ * Documents, Board and Reports, from the same [af.velro.data.duty.DutySignals]
+ * key, so a curve announced while he glances at his earnings is still
+ * announced. Home keeps its own placement; the host skips Home.
+ */
 @Composable
-private fun RoadAlertBanner(messageKey: String) {
+fun RoadAlertBanner(messageKey: String) {
     val strings = LocalVelroStrings.current
 
     // One chime per appearance of a zone's message, from the notification

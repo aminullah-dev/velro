@@ -153,6 +153,7 @@ def offer_trip(
     geo: Annotated[object, Depends(deps.geography)],
     settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
+    notifier: Annotated[object, Depends(deps.notifier)],
 ) -> dict:
     """Offer a trip to the drivers who could take it.
 
@@ -171,6 +172,7 @@ def offer_trip(
         audit=audit,
         clock=deps.clock(),
         new_id=deps.new_id,
+        notifier=notifier,
     )
     result = use_case.execute(
         OfferTripCommand(trip_id=trip_id, actor_id=actor.user_id, actor_role=actor.role)

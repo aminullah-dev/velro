@@ -17,6 +17,9 @@ from domain.enums import ActorRole, DriverApprovalStatus, DriverAvailability, Tr
 from shared import error_codes
 from shared.clock import Clock
 from shared.errors import ConflictError, NotFoundError
+from shared.logging import get_logger
+
+log = get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,9 +131,10 @@ class OfferTripToDrivers:
         limit = self._settings.get_int("dispatch.max_offers_per_trip", 10)
         ttl = self._settings.get_int("dispatch.offer_ttl_seconds", 30)
 
+        pool = self._drivers.available_for(limit=limit * 3)
         candidates = self._matching.rank(
             trip=trip,
-            drivers=self._drivers.available_for(limit=limit * 3),
+            drivers=pool,
             vehicles=self._vehicles,
             locations=self._locations,
             limit=limit,
@@ -163,6 +167,29 @@ class OfferTripToDrivers:
                 rank=candidate.rank,
             )
 
+        # Every driver offered is told, the way a passenger's ask tells the
+        # drivers it concerns: an inbox row inside this transaction, then a
+        # best-effort push (ADR 0005). Until now the offer existed only as a
+        # row the handset polled while its home screen was open -- a phone in
+        # a pocket, or on any other screen, never heard of it and the offer
+        # expired unread.
+        accounts = {driver.id: driver.user_id for driver in pool}
+        for candidate in candidates:
+            user_id = accounts.get(candidate.driver_id)
+            if user_id is None:
+                continue
+            _tell(
+                self._notifier,
+                user_id=user_id,
+                message_key="notify.trip.offered",
+                payload={
+                    "trip_id": trip.id,
+                    "trip_number": trip.number,
+                    "expires_in_seconds": ttl,
+                },
+                trip_id=trip.id,
+            )
+
         self._audit.write(
             "trip.offered",
             actor_id=cmd.actor_id,
@@ -177,6 +204,22 @@ class OfferTripToDrivers:
             offers_made=len(candidates),
             driver_ids=[c.driver_id for c in candidates],
         )
+
+
+def _tell(notifier, **kwargs) -> None:
+    """Best effort, always.
+
+    An offer that cannot be announced is still an offer: its row is written
+    inside this transaction whether or not any channel delivered, so the trip
+    is on the driver's screen the next time he looks. Telling him must never
+    be what undoes it.
+    """
+    if notifier is None:
+        return
+    try:
+        notifier.notify(**kwargs)
+    except Exception:
+        log.warning("notify.failed", message_key=kwargs.get("message_key"))
 
 
 @dataclass(frozen=True, slots=True)

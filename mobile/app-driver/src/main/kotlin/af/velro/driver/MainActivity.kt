@@ -2,6 +2,7 @@ package af.velro.driver
 
 import af.velro.core.i18n.Strings
 import af.velro.core.ui.theme.VelroTheme
+import af.velro.data.duty.DutySignals
 import af.velro.data.repository.AuthRepository
 import af.velro.domain.Locale
 import android.os.Bundle
@@ -22,6 +23,7 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var auth: AuthRepository
+    @Inject lateinit var signals: DutySignals
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +31,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val locale by auth.locale.collectAsStateWithLifecycle(initialValue = Locale.DARI)
             val signedIn by auth.isSignedIn.collectAsStateWithLifecycle(initialValue = false)
+            // The road's word, from the duty service, for whichever screen is
+            // up: Home draws its own banner, every other screen gets the
+            // host's. Read here rather than in a ViewModel because it belongs
+            // to no one screen.
+            val roadAlertKey by signals.roadAlertKey.collectAsStateWithLifecycle()
             val scope = rememberCoroutineScope()
 
             // Strings are reloaded when the language changes, and the theme
@@ -39,6 +46,7 @@ class MainActivity : ComponentActivity() {
                 VelroTheme(strings) {
                     DriverNavHost(
                         isSignedIn = signedIn,
+                        roadAlertKey = roadAlertKey,
                         // Clears the local session and wipes the cache before
                         // telling the server. A shared handset is common here,
                         // and the next person must not see the last one's

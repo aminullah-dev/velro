@@ -10,8 +10,21 @@ import af.velro.feature.driver.BoardRoute
 import af.velro.feature.driver.DriverHomeRoute
 import af.velro.feature.driver.EarningsRoute
 import af.velro.feature.driver.VehicleRoute
+import af.velro.core.ui.theme.Spacing
+import af.velro.feature.driver.RoadAlertBanner
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -39,6 +52,8 @@ private object Routes {
 fun DriverNavHost(
     isSignedIn: Boolean,
     onSignOut: () -> Unit = {},
+    /** The road advisory the duty service is showing right now, if any. */
+    roadAlertKey: String? = null,
     navController: NavHostController = rememberNavController(),
 ) {
     LaunchedEffect(isSignedIn) {
@@ -51,53 +66,82 @@ fun DriverNavHost(
     // left system animation on -- see LocalAnimationsEnabled.
     val animate = LocalAnimationsEnabled.current
 
-    NavHost(
-        navController = navController,
-        startDestination = if (isSignedIn) Routes.HOME else Routes.SIGN_IN,
-        enterTransition = { NavMotion.enter(this, animate) },
-        exitTransition = { NavMotion.exit(this, animate) },
-        popEnterTransition = { NavMotion.popEnter(this, animate) },
-        popExitTransition = { NavMotion.popExit(this, animate) },
-    ) {
-        composable(Routes.SIGN_IN) {
-            SignInRoute(
-                taglineKey = "app.tagline.driver",
-                onSignedIn = { _, _ ->
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.SIGN_IN) { inclusive = true }
-                    }
-                }
-            )
-        }
-        composable(Routes.HOME) {
-            DriverHomeRoute(
-                onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
-                onOpenVehicle = { navController.navigate(Routes.VEHICLE) },
-                onOpenEarnings = { navController.navigate(Routes.EARNINGS) },
-                onOpenBoard = { navController.navigate(Routes.BOARD) },
-                onOpenReports = { navController.navigate(Routes.REPORTS) },
-                onSignOut = onSignOut,
-                onOpenProfile = { navController.navigate(Routes.PROFILE) },
-            )
-        }
-        // Every pushed destination is given a way back. Until now none of
-        // them had one: no bar, no arrow, and BackHandler appeared nowhere in
-        // the codebase, so the only route out was a system gesture many people
-        // on a cheap handset do not use.
-        val back: () -> Unit = { navController.popBackStack() }
+    // Which screen is up. Home draws the road banner itself, in its own
+    // place, and sign-in has no driver on the road; everywhere else the host
+    // draws it, above the screen, so a curve is announced whether he is
+    // looking at his earnings or his papers. Same key, same banner, same
+    // chime as Home -- the service owns the cooldown, not the screen.
+    val entry by navController.currentBackStackEntryAsState()
+    val route = entry?.destination?.route
+    val banner = roadAlertKey?.takeIf {
+        route != null && route != Routes.HOME && route != Routes.SIGN_IN
+    }
 
-        composable(Routes.PROFILE) {
-            ProfileRoute(
-                onSignOut = onSignOut,
-                onBack = back,
-                onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
-                onOpenVehicle = { navController.navigate(Routes.VEHICLE) },
-            )
+    Column(Modifier.fillMaxSize()) {
+        if (banner != null) {
+            Box(
+                Modifier
+                    .statusBarsPadding()
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            ) {
+                RoadAlertBanner(banner)
+            }
         }
-        composable(Routes.DOCUMENTS) { DocumentsRoute(onBack = back) }
-        composable(Routes.VEHICLE) { VehicleRoute(onBack = back) }
-        composable(Routes.EARNINGS) { EarningsRoute(onBack = back) }
-        composable(Routes.REPORTS) { ReportsRoute(onBack = back) }
-        composable(Routes.BOARD) { BoardRoute(onBack = back) }
+        NavHost(
+            // The banner has already spent the status bar's height; the
+            // screens beneath must not pad for it a second time.
+            modifier = if (banner != null) {
+                Modifier.consumeWindowInsets(WindowInsets.statusBars)
+            } else {
+                Modifier
+            },
+            navController = navController,
+            startDestination = if (isSignedIn) Routes.HOME else Routes.SIGN_IN,
+            enterTransition = { NavMotion.enter(this, animate) },
+            exitTransition = { NavMotion.exit(this, animate) },
+            popEnterTransition = { NavMotion.popEnter(this, animate) },
+            popExitTransition = { NavMotion.popExit(this, animate) },
+        ) {
+            composable(Routes.SIGN_IN) {
+                SignInRoute(
+                    taglineKey = "app.tagline.driver",
+                    onSignedIn = { _, _ ->
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.SIGN_IN) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            composable(Routes.HOME) {
+                DriverHomeRoute(
+                    onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
+                    onOpenVehicle = { navController.navigate(Routes.VEHICLE) },
+                    onOpenEarnings = { navController.navigate(Routes.EARNINGS) },
+                    onOpenBoard = { navController.navigate(Routes.BOARD) },
+                    onOpenReports = { navController.navigate(Routes.REPORTS) },
+                    onSignOut = onSignOut,
+                    onOpenProfile = { navController.navigate(Routes.PROFILE) },
+                )
+            }
+            // Every pushed destination is given a way back. Until now none of
+            // them had one: no bar, no arrow, and BackHandler appeared nowhere in
+            // the codebase, so the only route out was a system gesture many people
+            // on a cheap handset do not use.
+            val back: () -> Unit = { navController.popBackStack() }
+
+            composable(Routes.PROFILE) {
+                ProfileRoute(
+                    onSignOut = onSignOut,
+                    onBack = back,
+                    onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
+                    onOpenVehicle = { navController.navigate(Routes.VEHICLE) },
+                )
+            }
+            composable(Routes.DOCUMENTS) { DocumentsRoute(onBack = back) }
+            composable(Routes.VEHICLE) { VehicleRoute(onBack = back) }
+            composable(Routes.EARNINGS) { EarningsRoute(onBack = back) }
+            composable(Routes.REPORTS) { ReportsRoute(onBack = back) }
+            composable(Routes.BOARD) { BoardRoute(onBack = back) }
+        }
     }
 }
