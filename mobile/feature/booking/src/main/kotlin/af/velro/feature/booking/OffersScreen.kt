@@ -64,6 +64,16 @@ fun OffersRoute(
     LaunchedEffect(state.accepted) {
         state.accepted?.let { onRideAgreed(it.bookingId) }
     }
+    // The same destination, reached the other way: a request read back as
+    // MATCHED with a booking already on it. This is what a passenger whose
+    // accept succeeded but whose response never arrived sees on the next
+    // poll or the next time this screen opens -- her tap worked, the server
+    // just never got to say so, and she must land on her booking exactly as
+    // if the reply had come back the first time, not on a screen calling her
+    // request cancelled.
+    LaunchedEffect(state.request?.let { if (!it.isOpen) it.bookingId else null }) {
+        state.request?.takeIf { !it.isOpen }?.bookingId?.let(onRideAgreed)
+    }
     LaunchedEffect(state.cancelled) {
         if (state.cancelled) onFinished()
     }
@@ -121,13 +131,21 @@ fun OffersScreen(
         // view model stops polling because the request is no longer open. The
         // passenger is left watching an animation for something that already
         // finished without them.
-        if (!request.isOpen) {
+        if (!request.isOpen && request.bookingId == null) {
             Spacer(Modifier.weight(1f))
             RequestClosed(
                 status = request.status,
                 onAskAgain = onAskAgain,
             )
             Spacer(Modifier.weight(1f))
+        } else if (!request.isOpen) {
+            // Matched, with a booking already made: the accept succeeded,
+            // whether in this session or discovered on reopen. This must
+            // never fall into RequestClosed and read as "cancelled" -- the
+            // LaunchedEffect above is already carrying the passenger to her
+            // booking, and this is only ever on screen for the instant that
+            // takes.
+            LoadingState(Modifier.weight(1f))
         } else if (offers.isEmpty()) {
             Spacer(Modifier.weight(1f))
             Waiting()

@@ -93,6 +93,16 @@ data class RideRequest(
     val expiresAt: Instant? = null,
     val createdAt: Instant? = null,
     val tripId: String? = null,
+    /**
+     * Set only once matched: a trip, a booking and a verification code
+     * already exist.
+     *
+     * What tells a passenger whose accept succeeded but whose response was
+     * lost "you are booked" from a request that is merely closed -- the
+     * status alone cannot, since a lost response leaves the screen no
+     * different from one genuinely cancelled or expired.
+     */
+    val bookingId: String? = null,
     val offers: List<FareOffer> = emptyList(),
     val passengerName: String? = null,
     /** Set on the driver's board: this driver has already named a price. */

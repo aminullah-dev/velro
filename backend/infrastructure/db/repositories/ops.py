@@ -111,9 +111,18 @@ class IdempotencyRepository(SqlRepository[IdempotencyRow]):
     model = IdempotencyRow
     not_found_code = error_codes.IDEMPOTENCY_KEY_REUSED
 
-    def find(self, key: str, endpoint: str) -> IdempotencyRow | None:
+    def find(self, key: str, endpoint: str, *, user_id: str) -> IdempotencyRow | None:
+        """The stored answer for this user's key on this endpoint, if any.
+
+        ``user_id`` is required, not optional: a lookup that could match any
+        user's row would hand one account another's stored response. A row
+        with no user (written before the scope existed) matches nobody and
+        simply expires.
+        """
         stmt = select(IdempotencyRow).where(
-            IdempotencyRow.key == key, IdempotencyRow.endpoint == endpoint
+            IdempotencyRow.user_id == user_id,
+            IdempotencyRow.key == key,
+            IdempotencyRow.endpoint == endpoint,
         )
         return self.session.scalars(stmt).one_or_none()
 

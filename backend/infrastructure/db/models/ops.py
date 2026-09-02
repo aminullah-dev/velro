@@ -88,9 +88,15 @@ class AuditLogRow(Auditable, Base):
 class IdempotencyRow(Auditable, Base):
     """Offline clients retry; assume every mutation arrives more than once.
 
-    The key plus a hash of the request body plus the stored response. A repeat
-    with the same key returns the stored response; a repeat with the same key
-    and a different body is a client bug and returns 409.
+    The user, the key, a hash of the request and the stored response. A repeat
+    by the same user with the same key and the same request returns the stored
+    response; the same key with a different request is a client bug and
+    returns 409; another user's key never finds this row at all.
+
+    The user is part of the identity, not an annotation. A stored response
+    holds whatever the handler returned to the person who earned it -- for an
+    accepted offer, the boarding code -- and the only account that may read
+    it back is that person's (ADR 0013).
     """
 
     __tablename__ = "idempotency_keys"
@@ -104,7 +110,9 @@ class IdempotencyRow(Auditable, Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("key", "endpoint", name="uq_idempotency_keys_key_endpoint"),
+        UniqueConstraint(
+            "user_id", "key", "endpoint", name="uq_idempotency_keys_user_key_endpoint"
+        ),
         Index("ix_idempotency_keys_expires_at", "expires_at"),
     )
 

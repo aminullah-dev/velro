@@ -165,6 +165,11 @@ interface VelroApi {
     @POST("fare-offers/{id}/accept")
     suspend fun acceptOffer(
         @Path("id") id: String,
+        // The tap that makes the journey. A retry after a dropped connection
+        // must be the same accept, answered the same way -- and the answer
+        // carries the boarding code, so the server keeps it under this
+        // passenger's account alone.
+        @Header("Idempotency-Key") idempotencyKey: String,
     ): Response<Envelope<AcceptedOfferDto>>
 
     @GET("driver/ride-requests")

@@ -3,6 +3,7 @@ package af.velro.feature.booking
 import af.velro.data.repository.DocumentRepository
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
+import af.velro.data.api.IdempotencyKeys
 import af.velro.data.repository.NegotiationRepository
 import af.velro.domain.RideRequest
 import androidx.lifecycle.ViewModel
@@ -44,6 +45,13 @@ data class OffersUiState(
      */
     val driverPhotos: Map<String, ByteArray> = emptyMap(),
     val errorContext: Map<String, Any?> = emptyMap(),
+    /**
+     * Held for the whole visit to this screen, so a retry of the same Accept
+     * after a dropped connection carries the same idempotency key and gets
+     * the same journey back -- never a second one. The same contract the ask
+     * and the booking have carried from the start.
+     */
+    val attemptId: String = IdempotencyKeys.newAttemptId(),
 )
 
 sealed interface OffersEvent {
@@ -158,7 +166,7 @@ class OffersViewModel @Inject constructor(
         if (_state.value.acceptingOfferId != null) return
         _state.update { it.copy(acceptingOfferId = offerId, errorCode = null) }
         viewModelScope.launch {
-            when (val result = negotiation.accept(offerId)) {
+            when (val result = negotiation.accept(offerId, _state.value.attemptId)) {
                 is ApiResult.Success ->
                     _state.update { it.copy(acceptingOfferId = null, accepted = result.value) }
                 is ApiResult.Failure -> {

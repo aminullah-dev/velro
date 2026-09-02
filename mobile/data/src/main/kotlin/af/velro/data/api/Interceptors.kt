@@ -114,6 +114,18 @@ object IdempotencyKeys {
 
     fun forAccept(tripId: String, driverId: String): String = "accept:$tripId:$driverId"
 
+    /**
+     * One accept per attempt, bound to the offer it was for.
+     *
+     * The offer id alone is not a key: it is printed on the driver's own
+     * screen, and a key another account can name is a key another account can
+     * try. The server refuses that regardless -- a stored answer only ever
+     * opens for the account that earned it -- but the attempt id keeps the key
+     * private from this end too, exactly as an ask's and a booking's are.
+     */
+    fun forAcceptOffer(offerId: String, attemptId: String): String =
+        "accept_offer:$offerId:$attemptId"
+
     /** One ask per attempt: the same journey, seats and attempt id replay as one request. */
     fun forAsk(originStationId: String, destinationId: String, seats: Int, attemptId: String): String =
         "ask:$originStationId:$destinationId:$seats:$attemptId"

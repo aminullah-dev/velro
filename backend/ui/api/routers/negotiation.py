@@ -114,6 +114,11 @@ class RideRequestOut(Schema):
     expires_at: str
     created_at: str
     trip_id: str | None
+    # Populated only once a driver has actually been accepted -- MATCHED, with
+    # a trip, a booking and a verification code already made. A passenger whose
+    # accept succeeded but whose response never arrived reads this, not the
+    # status, to tell "you are booked" from "this died".
+    booking_id: str | None = None
     offers: list[FareOfferOut] = Field(default_factory=list)
     passenger_name: str | None = None
 
@@ -132,6 +137,7 @@ def request_ride(
     geo: Annotated[object, Depends(deps.geography)],
     app_settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
+    bookings: Annotated[object, Depends(deps.bookings)],
     idem: Annotated[object, Depends(deps.idempotency)] = None,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> dict:
@@ -171,7 +177,7 @@ def request_ride(
             return_for=body.return_for,
         )
     )
-    return ok(_request_out(row, [], geo=geo).model_dump())
+    return ok(_request_out(row, [], geo=geo, bookings=bookings).model_dump())
 
 
 @router.get("/ride-requests")
@@ -183,6 +189,7 @@ def my_ride_requests(
     users: Annotated[object, Depends(deps.users)],
     vehicles: Annotated[object, Depends(deps.vehicles)],
     geo: Annotated[object, Depends(deps.geography)],
+    bookings: Annotated[object, Depends(deps.bookings)],
 ) -> dict:
     # Reading closes what ran out of time: the passenger's own screen is the
     # most reliable moment to notice, and it is where a stale "waiting for
@@ -193,7 +200,8 @@ def my_ride_requests(
     return ok(
         [
             _request_out(
-                row, enricher.decorate(offers.for_request(row.id)), geo=geo
+                row, enricher.decorate(offers.for_request(row.id)),
+                geo=geo, bookings=bookings,
             ).model_dump()
             for row in rows
         ]
@@ -201,6 +209,7 @@ def my_ride_requests(
 
 
 @router.post("/fare-offers/{offer_id}/accept")
+@idempotent("fare_offers.accept")
 def accept_offer(
     offer_id: str,
     actor: deps.ActorDep,
@@ -218,8 +227,20 @@ def accept_offer(
     audit: Annotated[object, Depends(deps.audit)],
     users: Annotated[object, Depends(deps.users)],
     notifier: Annotated[object, Depends(deps.notifier)],
+    idem: Annotated[object, Depends(deps.idempotency)] = None,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> dict:
-    """Take one driver's price. The journey exists from here."""
+    """Take one driver's price. The journey exists from here.
+
+    Idempotent like the booking and the ask: a tap that timed out at the
+    handset very often reached the server, and the passenger's retry must be
+    the same accept, answered the same way, not a second one. The stored
+    answer carries the boarding code, so it is kept under this passenger's
+    own account and opens for nobody else -- the driver holds the offer id
+    too, and an offer id alone was once enough to read it (ADR 0013). The
+    request's identity includes the offer id, so one key cannot be carried
+    from one offer to another.
+    """
     use_case = AcceptOffer(
         requests=requests, offers=offers, trips=trips, bookings=bookings,
         seats=seats, drivers=drivers, vehicles=vehicles, routes=routes,
@@ -299,6 +320,7 @@ def open_requests(
     users: Annotated[object, Depends(deps.users)],
     geo: Annotated[object, Depends(deps.geography)],
     offers: Annotated[object, Depends(deps.fare_offers)],
+    bookings: Annotated[object, Depends(deps.bookings)],
     station_id: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> dict:
@@ -316,7 +338,7 @@ def open_requests(
     return ok(
         [
             {
-                **_request_out(row, [], geo=geo).model_dump(),
+                **_request_out(row, [], geo=geo, bookings=bookings).model_dump(),
                 "passenger_name": getattr(
                     passengers.get(row.passenger_id), "full_name", None
                 ),
@@ -424,6 +446,7 @@ def live_negotiations(
     users: Annotated[object, Depends(deps.users)],
     vehicles: Annotated[object, Depends(deps.vehicles)],
     geo: Annotated[object, Depends(deps.geography)],
+    bookings: Annotated[object, Depends(deps.bookings)],
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> dict:
     """Who is waiting, and what they have been offered.
@@ -439,7 +462,7 @@ def live_negotiations(
     out = []
     for row in rows:
         made = enricher.decorate(offers.for_request(row.id))
-        body = _request_out(row, made, geo=geo).model_dump()
+        body = _request_out(row, made, geo=geo, bookings=bookings).model_dump()
         user = passengers.get(row.passenger_id)
         body["passenger_name"] = user.full_name if user else None
         body["passenger_phone"] = user.phone if user else None
@@ -512,9 +535,20 @@ def _described(vehicle) -> str | None:
     return " ".join(p for p in parts if p) or None
 
 
-def _request_out(row, offers, *, geo) -> RideRequestOut:
+def _request_out(row, offers, *, geo, bookings) -> RideRequestOut:
     station = geo.find_station(row.origin_station_id)
     destination = geo.find_destination(row.destination_id)
+    # Matched only: an open request has no trip yet, and looking one up for
+    # every row on a board of thirty waiting passengers would be thirty queries
+    # for a field that is null on every one of them.
+    booking_id = None
+    if row.trip_id is not None:
+        mine = [
+            b for b in bookings.list_for_trip(row.trip_id)
+            if b.passenger_id == row.passenger_id
+        ]
+        if mine:
+            booking_id = mine[0].id
     return RideRequestOut(
         id=row.id,
         status=row.status,
@@ -542,5 +576,6 @@ def _request_out(row, offers, *, geo) -> RideRequestOut:
         expires_at=row.expires_at.isoformat(),
         created_at=row.created_at.isoformat() if row.created_at else "",
         trip_id=row.trip_id,
+        booking_id=booking_id,
         offers=offers,
     )

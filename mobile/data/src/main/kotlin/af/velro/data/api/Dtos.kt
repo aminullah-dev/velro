@@ -650,6 +650,8 @@ data class RideRequestDto(
     val expires_at: String = "",
     val created_at: String = "",
     val trip_id: String? = null,
+    /** Set only once matched: a trip, a booking and a verification code already exist. */
+    val booking_id: String? = null,
     val offers: List<FareOfferDto> = emptyList(),
     val passenger_name: String? = null,
     val already_offered: Boolean = false,

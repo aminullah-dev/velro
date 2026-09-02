@@ -2,6 +2,7 @@ package af.velro.data.repository
 
 import af.velro.data.api.ApiResult
 import af.velro.data.api.FareOfferDto
+import af.velro.data.api.IdempotencyKeys
 import af.velro.data.api.OfferFareRequest
 import af.velro.data.api.RequestRideRequest
 import af.velro.data.api.ResponseMapper
@@ -74,8 +75,17 @@ class NegotiationRepository @Inject constructor(
     suspend fun cancel(requestId: String): ApiResult<Unit> =
         mapper.call { api.cancelRideRequest(requestId) }.map { }
 
-    suspend fun accept(offerId: String): ApiResult<AcceptedRide> =
-        mapper.call { api.acceptOffer(offerId) }.map {
+    /**
+     * Take a driver's price.
+     *
+     * [attemptId] is held by the screen for as long as the passenger is
+     * choosing, so a retry of the same tap carries the same key and the server
+     * answers it with the same journey rather than a second one.
+     */
+    suspend fun accept(offerId: String, attemptId: String): ApiResult<AcceptedRide> =
+        mapper.call {
+            api.acceptOffer(offerId, IdempotencyKeys.forAcceptOffer(offerId, attemptId))
+        }.map {
             AcceptedRide(
                 tripId = it.trip_id,
                 bookingId = it.booking_id,
@@ -155,6 +165,7 @@ class NegotiationRepository @Inject constructor(
         expiresAt = dto.expires_at.toInstantOrNull(),
         createdAt = dto.created_at.toInstantOrNull(),
         tripId = dto.trip_id,
+        bookingId = dto.booking_id,
         offers = dto.offers.map(::toDomain),
         passengerName = dto.passenger_name,
         alreadyOffered = dto.already_offered,
