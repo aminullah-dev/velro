@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { api, query } from "../api/client";
 import { Empty, Loading, Ltr, PageHeader, Pager, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
@@ -30,6 +31,9 @@ export function LocationsPage() {
   const [districtId, setDistrictId] = useState("");
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
+  const [params, setParams] = useSearchParams();
+  // The dashboard's network cards open this page on the gap they counted.
+  const without = params.get("without") ?? "";
 
   const districts = useQuery({
     queryKey: ["districts"],
@@ -37,10 +41,10 @@ export function LocationsPage() {
   });
 
   const villages = useQuery({
-    queryKey: ["villages", districtId, search, offset],
+    queryKey: ["villages", districtId, search, without, offset],
     queryFn: () =>
       api.list<Village[]>(
-        `/admin/villages${query({ district_id: districtId, q: search, limit: LIMIT, offset })}`,
+        `/admin/villages${query({ district_id: districtId, q: search, without, limit: LIMIT, offset })}`,
       ),
   });
 
@@ -119,6 +123,18 @@ export function LocationsPage() {
             setOffset(0);
           }}
         />
+        <select
+          value={without}
+          aria-label={t("admin.section.villages")}
+          onChange={(event) => {
+            setParams(event.target.value ? { without: event.target.value } : {});
+            setOffset(0);
+          }}
+        >
+          <option value="">{t("admin.filter.all")}</option>
+          <option value="coordinates">{t("admin.filter.without_coordinates")}</option>
+          <option value="stations">{t("admin.filter.without_stations")}</option>
+        </select>
       </div>
 
       {villages.isLoading ? (

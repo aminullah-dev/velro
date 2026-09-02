@@ -6,6 +6,7 @@
  * path is a page that shows a blank rectangle in the field.
  */
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { useStrings } from "../i18n/strings";
 
@@ -260,6 +261,54 @@ export function Stat({ labelKey, value, note, attention }: {
       <div className={`stat-value${attention ? " attention" : ""}`}>{value}</div>
       {note && <div className="stat-note">{note}</div>}
     </div>
+  );
+}
+
+/**
+ * A number that is also the way to the rows behind it.
+ *
+ * The dashboard's rule: anything that means "act" opens the filtered list
+ * it was counted from. The whole card is the link, so the target is the
+ * size of the card and reachable from the keyboard; the word "Open" is
+ * always rendered, so the affordance is not carried by hover alone; and a
+ * count of zero is muted rather than hidden, because an operator scanning
+ * for what is wrong needs to see what is right as well.
+ */
+export function ActionStat({ labelKey, value, to, attention, hintKey }: {
+  labelKey: string;
+  value: number;
+  to: string;
+  /** Colour and a border, never colour alone: the number itself changes weight. */
+  attention?: boolean;
+  hintKey?: string;
+}) {
+  const { t, num } = useStrings();
+  const hot = Boolean(attention) && value > 0;
+  return (
+    <Link
+      to={to}
+      className={`card card-link${hot ? " attention" : ""}`}
+      aria-label={`${t(labelKey)}: ${num(value)}`}
+    >
+      <div className="stat-label">{t(labelKey)}</div>
+      <div className={`stat-value${hot ? " attention" : ""}${value === 0 ? " zero" : ""}`}>
+        {num(value)}
+      </div>
+      {hintKey && <div className="stat-note">{t(hintKey)}</div>}
+      <div className="stat-go" aria-hidden="true">{t("admin.ops.open")}</div>
+    </Link>
+  );
+}
+
+/** A heading between groups of cards. The dashboard reads top to bottom
+ * in the order an operator's questions come: now, then what needs me. */
+export function Section({ titleKey, children }: { titleKey: string; children: ReactNode }) {
+  const { t } = useStrings();
+  return (
+    <section aria-labelledby={`section-${titleKey}`}>
+      <h2 className="section" id={`section-${titleKey}`}>{t(titleKey)}</h2>
+      {children}
+    </section>
   );
 }
 

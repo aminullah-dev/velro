@@ -158,6 +158,29 @@ html[dir="ltr"] body { line-height: var(--line-latin); }
 .stat-value.money { font-size: 22px; }
 .stat-note { color: var(--text-muted); font-size: 12px; margin-top: var(--s-1); }
 .stat-value.attention { color: var(--amber-600); }
+.stat-value.zero { color: var(--text-muted); font-weight: 500; }
+
+/* A card that opens the list it was counted from. The border carries the
+   "needs you" state alongside the number's colour, so it survives a
+   colour-blind reading; focus is the same ring every control gets. */
+.card-link { display: block; color: inherit; text-decoration: none; transition: border-color 120ms; }
+.card-link:hover { border-color: var(--accent); }
+.card-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card-link.attention { border-color: var(--amber-500); border-inline-start-width: 4px; }
+.stat-go { color: var(--accent); font-size: 12px; font-weight: 600; margin-top: var(--s-2); }
+.grid.stats.dense { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+
+/* The dispatcher's red row: a tint and a thicker start border, plus the chip
+   in the departure cell that says the same thing in words. */
+tbody tr.at-risk td { background: var(--amber-100); }
+tbody tr.at-risk td:first-child { border-inline-start: 4px solid var(--amber-500); }
+@media (prefers-color-scheme: dark) { tbody tr.at-risk td { background: #2a2210; } }
+.muted { color: var(--text-muted); }
+.filters { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-bottom: var(--s-4); }
+.filters button.on { background: var(--green-50); border-color: var(--green-200); color: var(--green-700); font-weight: 600; }
+@media (prefers-color-scheme: dark) {
+  .filters button.on { background: var(--green-800); color: var(--green-100); border-color: var(--green-700); }
+}
 
 /* -- tables ------------------------------------------------------------ */
 

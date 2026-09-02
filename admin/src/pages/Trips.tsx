@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { api, query } from "../api/client";
 import { Empty, Ltr, PageHeader, Pager, Phone, StatusChip, Table, gate } from "../components/ui";
 import { useStrings } from "../i18n/strings";
@@ -22,18 +23,48 @@ interface Trip {
 
 const LIMIT = 25;
 
+/**
+ * Which slice of the trips this page shows. In the URL, not in state, so a
+ * dashboard card can open exactly the rows it counted and the operator can
+ * send a colleague the same view.
+ */
+type Slice = "all" | "active" | "unassigned" | "overdue" | "soon";
+
+const SLICES: { key: Slice; labelKey: string; params: Record<string, string | number | boolean> }[] = [
+  { key: "all", labelKey: "admin.filter.all", params: {} },
+  { key: "active", labelKey: "admin.filter.active_only", params: { active_only: true } },
+  { key: "unassigned", labelKey: "admin.filter.needs_driver", params: { unassigned: true } },
+  { key: "overdue", labelKey: "admin.filter.overdue", params: { overdue: true } },
+  { key: "soon", labelKey: "admin.filter.departing_soon", params: { departing_within_hours: 2 } },
+];
+
+function sliceFrom(search: URLSearchParams): { slice: Slice; hours: number | null } {
+  if (search.get("overdue")) return { slice: "overdue", hours: null };
+  if (search.get("unassigned")) return { slice: "unassigned", hours: null };
+  if (search.get("active_only")) return { slice: "active", hours: null };
+  const hours = Number(search.get("departing_within_hours"));
+  if (hours > 0) return { slice: "soon", hours };
+  return { slice: "all", hours: null };
+}
+
 export function TripsPage() {
   const { t, num, dateTime } = useStrings();
-  const [activeOnly, setActiveOnly] = useState(false);
+  const [search, setSearch] = useSearchParams();
+  const { slice, hours } = sliceFrom(search);
   const [offset, setOffset] = useState(0);
 
+  const params = {
+    ...SLICES.find((s) => s.key === slice)!.params,
+    // A card may ask for a window the chip row does not offer (24 h for
+    // "nearly full"); honour what the URL says over the chip's default.
+    ...(slice === "soon" && hours ? { departing_within_hours: hours } : {}),
+  };
+
   const listQuery = useQuery({
-    queryKey: ["trips", activeOnly, offset],
-    queryFn: () =>
-      api.list<Trip[]>(
-        `/admin/trips${query({ active_only: activeOnly, limit: LIMIT, offset })}`,
-      ),
-    refetchInterval: activeOnly ? 20_000 : false,
+    queryKey: ["trips", slice, hours, offset],
+    queryFn: () => api.list<Trip[]>(`/admin/trips${query({ ...params, limit: LIMIT, offset })}`),
+    // The live slices move; the archive does not.
+    refetchInterval: slice === "all" ? false : 20_000,
   });
   const { data } = listQuery;
 
@@ -45,23 +76,26 @@ export function TripsPage() {
 
   return (
     <>
-      <PageHeader
-        title={t("admin.nav.trips")}
-        actions={
-          <label className="row" style={{ gap: "var(--s-2)" }}>
-            <input
-              type="checkbox"
-              checked={activeOnly}
-              style={{ minHeight: "auto" }}
-              onChange={(event) => {
-                setActiveOnly(event.target.checked);
-                setOffset(0);
-              }}
-            />
-            <span>{t("admin.filter.active_only")}</span>
-          </label>
-        }
-      />
+      <PageHeader title={t("admin.nav.trips")} />
+
+      <div className="filters" role="group" aria-label={t("admin.col.status")}>
+        {SLICES.map((entry) => (
+          <button
+            key={entry.key}
+            type="button"
+            className={`small${entry.key === slice ? " on" : ""}`}
+            aria-pressed={entry.key === slice}
+            onClick={() => {
+              const next = new URLSearchParams();
+              for (const [k, v] of Object.entries(entry.params)) next.set(k, String(v));
+              setSearch(next);
+              setOffset(0);
+            }}
+          >
+            {t(entry.labelKey)}
+          </button>
+        ))}
+      </div>
 
       {trips.length === 0 ? (
         <Empty messageKey="admin.empty.trips" />

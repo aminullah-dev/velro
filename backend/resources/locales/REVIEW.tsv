@@ -810,3 +810,65 @@ auth.channel.email	Email	ایمیل	برېښنالیک
 auth.hint.code_sent_email	A verification code was sent to your email	کود تأیید به ایمیل شما فرستاده شد	د تأیید کوډ ستاسو برېښنالیک ته ولېږل شو	
 auth.email.otp_subject	Your VELRO sign-in code	کود ورود ولرو	د ولرو د ننوتلو کوډ	
 auth.email.otp	Your VELRO code is {code}. It expires in {ttl_minutes} minutes.\n\nIf you did not ask for this code, ignore this message.	کود ولرو شما {code} است. تا {ttl_minutes} دقیقه اعتبار دارد.\n\nاگر شما این کود را درخواست نکرده‌اید، این پیام را نادیده بگیرید.	ستاسو د ولرو کوډ {code} دی. تر {ttl_minutes} دقیقو پورې اعتبار لري.\n\nکه تاسو دا کوډ نه وي غوښتی، دا پیغام له پامه وغورځوئ.	
+admin.ops.now	Right now	همین حالا	همدا اوس	
+admin.ops.attention	Needs attention	نیاز به توجه	پاملرنې ته اړتیا	
+admin.ops.all_clear	Nothing needs you right now.	فعلاً چیزی به شما نیاز ندارد.	اوس مهال هیڅ شی ستاسو پاملرنې ته اړتیا نلري.	
+admin.ops.today	Today	امروز	نن	
+admin.ops.money	Money today	پول امروز	د نن پیسې	
+admin.ops.network	The network	شبکه	شبکه	
+admin.ops.updated	Updated {time} · refreshes every half minute	به‌روز شده {time} · هر نیم دقیقه تازه می‌شود	تازه شوی {time} · هر نیمه دقیقه تازه کېږي	
+admin.ops.open	Open	باز کردن	پرانیستل	
+admin.stat.on_the_way	On the way to pick up	در راه به ایستگاه	د ایستګاه په لور	
+admin.stat.at_the_station	At the station	در ایستگاه	په ایستګاه کې	
+admin.stat.moving	In transit	در حال سفر	په سفر کې	
+admin.stat.departing_soon	Departing within 2 hours	حرکت تا ۲ ساعت دیگر	تر ۲ ساعتونو پورې حرکت	
+admin.stat.departures_at_risk	Departures at risk	حرکت‌های در خطر	په خطر کې حرکتونه	
+admin.stat.at_risk_hint	Leaving within the hour with no driver	تا یک ساعت دیگر حرکت می‌کند و راننده ندارد	تر یو ساعت پورې حرکت کوي او موټروان نلري	
+admin.stat.overdue	Overdue trips	سفرهای عقب‌افتاده	ځنډېدلي سفرونه	
+admin.stat.overdue_hint	Departure time passed, nobody moved it	وقت حرکت گذشته و کسی آن را پیش نبرده	د حرکت وخت تېر شوی او چا نه دی پرمخ وړی	
+admin.stat.open_requests	Passengers waiting for offers	مسافران منتظر پیشنهاد	د وړاندیز په تمه مسافر	
+admin.stat.unanswered_requests	Requests with no offer yet	درخواست‌های بی‌پاسخ	بې ځوابه غوښتنې	
+admin.stat.pending_documents	Documents to review	اسناد در انتظار بررسی	د کتنې په تمه اسناد	
+admin.stat.expiring_documents	Documents expiring within 30 days	اسنادی که تا ۳۰ روز دیگر منقضی می‌شوند	اسناد چې تر ۳۰ ورځو پورې پای ته رسېږي	
+admin.stat.open_tickets	Open support requests	درخواست‌های پشتیبانی باز	پرانیستې د ملاتړ غوښتنې	
+admin.stat.stale_gps	Working drivers without a GPS fix	راننده‌های فعال بدون موقعیت	فعال موټروان چې موقعیت نلري	
+admin.stat.completed_today	Completed today	تکمیل‌شده امروز	نن بشپړ شوي	
+admin.stat.utilisation	Seats sold today	چوکی‌های فروخته‌شده امروز	نن پلورل شوې چوکۍ	
+admin.stat.nearly_full	Nearly full departures	حرکت‌های تقریباً پر	نږدې ډک حرکتونه	
+admin.stat.empty_departures	Leaving within 3 hours with nobody booked	تا ۳ ساعت دیگر حرکت می‌کند و کسی رزرو نکرده	تر ۳ ساعتونو پورې حرکت کوي او چا نه دی نیولی	
+admin.stat.drivers_on_trip	On a trip	در سفر	په سفر کې	
+admin.stat.drivers_offline	Approved, offline	تأییدشده، آفلاین	تایید شوي، آفلاین	
+admin.stat.drivers_suspended	Suspended	معلق	ځنډول شوي	
+admin.stat.cash_owed	Cash held by drivers, owed to VELRO	پول نقد نزد راننده‌ها، بدهی به ولرو	د موټروانانو سره نغدې پیسې، ولرو ته پور	
+admin.stat.settlements_open	Settlements waiting	تسویه‌های در انتظار	د تصفیې په تمه	
+admin.stat.routes_active	Active routes	مسیرهای فعال	فعالې لارې	
+admin.stat.villages_without_coordinates	Villages the map cannot place	قریه‌های بدون مختصات	بې موقعیته کلي	
+admin.stat.villages_without_stations	Villages with no station	قریه‌های بدون ایستگاه	بې ایستګاه کلي	
+admin.stat.stations_without_routes	Stations with no route	ایستگاه‌های بدون مسیر	بې لارې ایستګاهونه	
+admin.stat.routes_without_trips	Routes with no upcoming trip	مسیرهای بدون سفر آینده	لارې چې راتلونکی سفر نلري	
+admin.dispatch.at_risk	At risk	در خطر	په خطر کې	
+admin.dispatch.in_minutes	in {minutes} min	{minutes} دقیقه دیگر	{minutes} دقیقې وروسته	
+admin.dispatch.minutes_ago	{minutes} min ago	{minutes} دقیقه پیش	{minutes} دقیقې مخکې	
+admin.dispatch.in_hours	in {hours} h {minutes} min	{hours} ساعت و {minutes} دقیقه دیگر	{hours} ساعته او {minutes} دقیقې وروسته	
+admin.dispatch.offers_open	{count} waiting for an answer	{count} در انتظار پاسخ	{count} د ځواب په تمه	
+admin.dispatch.expires_in	expire in {minutes} min	تا {minutes} دقیقه دیگر منقضی می‌شود	تر {minutes} دقیقو پورې پای ته رسېږي	
+admin.dispatch.no_offers	Nobody asked yet	هنوز به کسی پیشنهاد نشده	تر اوسه چا ته وړاندیز نه دی شوی	
+admin.dispatch.candidates	{count} online with room	{count} آنلاین با جای کافی	{count} آنلاین چې ځای لري	
+admin.dispatch.nobody_online	Nobody online with room	هیچ‌کس آنلاین با جای کافی نیست	هیڅوک آنلاین نه دی چې ځای ولري	
+admin.dispatch.summary	{at_risk} at risk · {drivers} drivers available	{at_risk} در خطر · {drivers} راننده در دسترس	{at_risk} په خطر کې · {drivers} موټروان شته	
+admin.dispatch.offered	Offered to {count} drivers	به {count} راننده پیشنهاد شد	{count} موټروانانو ته وړاندیز وشو	
+admin.dispatch.already_offered	Every driver who could take it already has the offer.	همه راننده‌هایی که می‌توانند، قبلاً پیشنهاد را دارند.	هر موټروان چې کولی شي، مخکې له مخکې وړاندیز لري.	
+admin.action.offer_again	Offer again	پیشنهاد دوباره	بیا وړاندیز	
+admin.col.offers	Offers	پیشنهادها	وړاندیزونه	
+admin.col.available	Available	در دسترس	شته	
+admin.col.last_seen	Last seen	آخرین موقعیت	وروستی موقعیت	
+admin.filter.needs_driver	Needs a driver	راننده ندارد	موټروان نلري	
+admin.filter.overdue	Overdue	عقب‌افتاده	ځنډېدلي	
+admin.filter.departing_soon	Departing within 2 h	حرکت تا ۲ ساعت	تر ۲ ساعتونو حرکت	
+admin.filter.stale_gps	Without a fix	بدون موقعیت	بې موقعیته	
+admin.filter.without_coordinates	Without coordinates	بدون مختصات	بې موقعیته	
+admin.filter.without_stations	Without a station	بدون ایستگاه	بې ایستګاه	
+common.value.never	Never	هرگز	هېڅکله	
+common.value.minutes_ago	{minutes} min ago	{minutes} دقیقه پیش	{minutes} دقیقې مخکې	
+common.value.hours_ago	{hours} h ago	{hours} ساعت پیش	{hours} ساعته مخکې	
+common.value.days_ago	{days} days ago	{days} روز پیش	{days} ورځې مخکې	
