@@ -75,6 +75,7 @@ _PAGE = """<!doctype html>
 {buttons}
 <p class="muted">نسخه {version} · پس از دانلود، نصب از «منابع نامعلوم» را اجازه دهید<br>
 له ښکته کولو وروسته د «نامعلومو سرچینو» نصب ته اجازه ورکړئ</p>
+<p class="muted"><a href="/privacy" style="color:#9dbdb2">سیاست حریم خصوصی · Privacy policy</a></p>
 </body>
 </html>"""
 
