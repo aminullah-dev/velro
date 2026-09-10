@@ -63,7 +63,13 @@ object MoneyFormatter {
     fun format(amountMinor: Long, currency: String, strings: Strings): String =
         format(MoneyValue(amountMinor, currency), strings)
 
-    fun format(money: MoneyValue, strings: Strings): String {
+    /**
+     * [showPlus] marks a gain the same way a loss is marked: "+۵۰ افغانی"
+     * beside a driver's price that is above the ask. A "+" glued on in front
+     * of the formatted string sits outside the isolate, and in a Dari line it
+     * drifts to the far side of the digits -- the offer card showed "۵۰+".
+     */
+    fun format(money: MoneyValue, strings: Strings, showPlus: Boolean = false): String {
         val digits = minorDigits(money.currency)
         val negative = money.amountMinor < 0
         // The sign is applied here, not left to BigDecimal, so that the digits
@@ -78,7 +84,7 @@ object MoneyFormatter {
         val grouped = group(plain)
         val symbol = strings["common.label.currency_afn"]
         val number = Numerals.localise(grouped, strings.locale)
-        return "${signed(number, negative = negative)} $symbol"
+        return "${signed(number, negative = negative, showPlus = showPlus && money.amountMinor > 0)} $symbol"
     }
 
     /**

@@ -133,3 +133,38 @@ class DeparturePickerTest {
         assertEquals(null, now.requestedFor())
     }
 }
+
+/**
+ * The same rule, through the step the chips actually take.
+ *
+ * DeparturePickerTest called withHoursInRange itself and stayed green while
+ * the screen's day chips went round it: at six in the evening "today" still
+ * sent six in the morning. These go through withDeparture and withReturn,
+ * which is what the ViewModel now calls.
+ */
+class DepartureChipTest {
+    private val base = BookingFlowUiState(step = BookingFlowUiState.Step.ASK, offeredFare = "300", nowHour = 18)
+
+    @Test
+    fun `tapping today in the evening moves the held hour`() {
+        val today = base.withDeparture(day = 0, hour = base.departureHour)
+        assertEquals(listOf(19, 20), today.departureHours)
+        assertEquals(19, today.departureHour)
+    }
+
+    @Test
+    fun `a later departure drags a same-day return after it`() {
+        val state = base.withDeparture(day = 1, hour = 6)
+            .withReturn(afterDays = 0, hour = 14)
+            .withDeparture(day = 1, hour = 18)
+        assertEquals(listOf(19, 20), state.returnHours)
+        assertEquals(19, state.returnHour)
+    }
+
+    @Test
+    fun `now takes the return with it`() {
+        val state = base.withDeparture(day = 1, hour = 6).withReturn(afterDays = 2, hour = 14)
+            .withDeparture(day = null, hour = 6)
+        assertEquals(null, state.returnAfterDays)
+    }
+}

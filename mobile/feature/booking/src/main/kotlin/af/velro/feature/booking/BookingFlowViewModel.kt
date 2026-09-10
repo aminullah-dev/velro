@@ -250,6 +250,28 @@ data class BookingFlowUiState(
     }
 
     /**
+     * A day or hour chosen for the outbound, with both hours kept on offer.
+     *
+     * The chips carry the held hour through when only the day changes, so
+     * this is the step that must clamp. It used to be a bare copy in the
+     * ViewModel while [withHoursInRange] ran only when a destination was
+     * chosen -- which left the evening "today" bug alive on the screen while
+     * DeparturePickerTest, calling withHoursInRange itself, stayed green.
+     *
+     * A return is relative to the outbound, so moving the outbound to "now"
+     * takes the return with it.
+     */
+    fun withDeparture(day: Int?, hour: Int): BookingFlowUiState = copy(
+        departureDay = day,
+        departureHour = hour,
+        returnAfterDays = if (day == null) null else returnAfterDays,
+    ).withHoursInRange()
+
+    /** The same, for the way back. */
+    fun withReturn(afterDays: Int?, hour: Int): BookingFlowUiState =
+        copy(returnAfterDays = afterDays, returnHour = hour).withHoursInRange()
+
+    /**
      * The hours worth offering for the return leg.
      *
      * A same-day return must leave after the outbound does, so those hours
@@ -410,14 +432,7 @@ class BookingFlowViewModel @Inject constructor(
             is BookingEvent.NoteChanged -> _state.update { it.copy(note = event.text) }
 
             is BookingEvent.DepartureChanged -> _state.update {
-                // A return is relative to the outbound, so moving the outbound
-                // to "now" takes the return with it: "back two days after"
-                // means nothing once there is no departure day to count from.
-                it.copy(
-                    departureDay = event.day,
-                    departureHour = event.hour,
-                    returnAfterDays = if (event.day == null) null else it.returnAfterDays,
-                )
+                it.withDeparture(event.day, event.hour)
             }
 
             is BookingEvent.ReturnFareChanged -> _state.update {
@@ -425,7 +440,7 @@ class BookingFlowViewModel @Inject constructor(
             }
 
             is BookingEvent.ReturnChanged -> _state.update {
-                it.copy(returnAfterDays = event.afterDays, returnHour = event.hour)
+                it.withReturn(event.afterDays, event.hour)
             }
             BookingEvent.AskForRide -> ask()
             BookingEvent.Search -> search()

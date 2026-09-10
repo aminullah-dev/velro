@@ -14,6 +14,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -122,5 +123,81 @@ class TokenRefreshRaceTest {
             .protocol(Protocol.HTTP_1_1).code(401).message("Unauthorized")
             .body("".toResponseBody(null)).build()
         assertEquals(null, authenticator.authenticate(null, anonymous))
+    }
+}
+
+/**
+ * Only the server ends a session.
+ *
+ * Tokens expire wherever the phone happens to be, and in Ghorband that is
+ * often a valley with no signal. A refresh that could not reach the server
+ * used to clear the session exactly as a revoked token does, signing the
+ * passenger out of an app she then needed a connection to get back into.
+ */
+class TokenRefreshOutcomeTest {
+
+    private class Tokens : SessionTokens {
+        @Volatile var access: String? = "old-access"
+        @Volatile var refresh: String? = "refresh-1"
+        override suspend fun currentAccessToken() = access
+        override suspend fun currentRefreshToken() = refresh
+        override suspend fun deviceId() = "test-device"
+        override suspend fun save(session: SessionDto) {
+            access = session.access_token
+            refresh = session.refresh_token
+        }
+        override suspend fun clear() {
+            access = null
+            refresh = null
+        }
+    }
+
+    private fun expired() = Response.Builder()
+        .request(
+            Request.Builder().url("http://localhost/api/v1/bookings")
+                .header("Authorization", "Bearer old-access").build()
+        )
+        .protocol(Protocol.HTTP_1_1).code(401).message("Unauthorized")
+        .body("".toResponseBody(null)).build()
+
+    private fun answer(code: Int, body: String = "{}") = Response.Builder()
+        .request(Request.Builder().url("http://localhost/api/v1/auth/refresh").build())
+        .protocol(Protocol.HTTP_1_1).code(code).message("x")
+        .body(body.toResponseBody("application/json".toMediaType())).build()
+
+    private fun authenticator(tokens: Tokens, reply: () -> Response) =
+        TokenRefreshAuthenticator(tokens, Json { ignoreUnknownKeys = true }) { _, _ -> reply() }
+
+    @Test
+    fun `no signal keeps the session and fails the call as offline`() {
+        val tokens = Tokens()
+        val failure = runCatching {
+            authenticator(tokens) { throw java.io.IOException("no route to host") }
+                .authenticate(null, expired())
+        }.exceptionOrNull()
+        assertTrue("an offline refresh must surface as IOException, got $failure", failure is java.io.IOException)
+        assertEquals("refresh-1", tokens.refresh)
+    }
+
+    @Test
+    fun `server trouble keeps the session`() {
+        for (code in listOf(429, 502, 503)) {
+            val tokens = Tokens()
+            val failure = runCatching { authenticator(tokens) { answer(code) }.authenticate(null, expired()) }
+                .exceptionOrNull()
+            assertTrue("HTTP $code must not be read as a refusal", failure is java.io.IOException)
+            assertEquals("HTTP $code cleared the session", "refresh-1", tokens.refresh)
+        }
+    }
+
+    @Test
+    fun `a refusal ends the session`() {
+        val tokens = Tokens()
+        val retry = authenticator(tokens) {
+            answer(401, """{"success":false,"error":{"code":"REFRESH_TOKEN_REVOKED","context":{}}}""")
+        }.authenticate(null, expired())
+        assertEquals(null, retry)
+        assertEquals(null, tokens.refresh)
+        assertEquals(null, tokens.access)
     }
 }

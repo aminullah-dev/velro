@@ -1,5 +1,6 @@
 package af.velro.data.api
 
+import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -66,17 +67,32 @@ class TokenRefreshAuthenticator(
 
         val refreshToken = runBlocking { tokens.currentRefreshToken() } ?: return null
 
-        val refreshed: SessionDto? = runBlocking {
-            runCatching {
-                val deviceId = tokens.deviceId()
-                val raw = refreshCall(refreshToken, deviceId)
-                if (!raw.isSuccessful) {
-                    tokens.clear()
-                    return@runCatching null
-                }
-                val body = raw.body?.string() ?: return@runCatching null
-                json.decodeFromString<Envelope<SessionDto>>(body).data
-            }.getOrNull()
+        val raw = try {
+            runBlocking { refreshCall(refreshToken, tokens.deviceId()) }
+        } catch (e: IOException) {
+            // Only the server can end a session. A refresh that never reached
+            // it -- the valley with no signal, which is where tokens expire --
+            // used to land in the same branch as a revoked token and clear the
+            // session, signing the passenger out of an app she could not sign
+            // back into without the connection she did not have. The session
+            // is kept, and the call fails as a call does offline: the caller
+            // sees NETWORK_OFFLINE, and the next request, with signal, renews.
+            throw IOException("session renewal could not reach the server", e)
+        }
+
+        val refreshed: SessionDto? = raw.use {
+            when {
+                // Server trouble or a rate limit is not a verdict on the session.
+                it.code == 429 || it.code >= 500 ->
+                    throw IOException("session renewal refused for now (HTTP ${it.code})")
+                // A refusal -- revoked, expired, replayed -- is the end of it.
+                !it.isSuccessful -> null
+                else -> runCatching {
+                    json.decodeFromString<Envelope<SessionDto>>(it.body?.string().orEmpty()).data
+                }.getOrNull()
+                    // A 2xx nobody can read is a contract fault, not a refusal.
+                    ?: throw IOException("session renewal answer could not be read")
+            }
         }
 
         if (refreshed == null) {

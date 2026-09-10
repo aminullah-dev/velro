@@ -85,4 +85,17 @@ class SignedMoneyTest {
         val out = MoneyFormatter.signed("۲۵۰ افغانی", negative = false)
         assertEquals("۲۵۰ افغانی", out)
     }
+
+    @Test
+    fun `a gain keeps its plus in the isolate`() {
+        // The offer card's "+50 over what you asked", which rendered "۵۰+".
+        val out = MoneyFormatter.format(MoneyValue(5000, "AFN"), dari(), showPlus = true)
+        assertEquals("$LRI+۵۰$PDI افغانی", out)
+    }
+
+    @Test
+    fun `showPlus leaves zero and losses as they were`() {
+        assertEquals("۰ افغانی", MoneyFormatter.format(MoneyValue(0, "AFN"), dari(), showPlus = true))
+        assertTrue(MoneyFormatter.format(MoneyValue(-5000, "AFN"), dari(), showPlus = true).contains("$LRI$MINUS"))
+    }
 }

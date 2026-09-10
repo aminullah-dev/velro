@@ -343,16 +343,11 @@ private fun OfferCard(
                     // subtract one number from another at a roadside.
                     Text(
                         if (agrees) strings["ride.offers.same_as_asked"]
-                        else {
-                            val sign = if (difference.amountMinor > 0) "+" else "−"
-                            sign + MoneyFormatter.format(
-                                MoneyValue(
-                                    kotlin.math.abs(difference.amountMinor),
-                                    difference.currency,
-                                ),
-                                strings,
-                            )
-                        },
+                        // Signed by the formatter, sign and digits in one
+                        // isolate. Glued on in front, the "+" drifted to the
+                        // far side of Eastern digits in a Dari line ("۵۰+"),
+                        // and the "−" would have done the same.
+                        else MoneyFormatter.format(difference, strings, showPlus = true),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (agrees || difference.amountMinor < 0)
                             MaterialTheme.colorScheme.primary
