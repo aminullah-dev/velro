@@ -1,0 +1,3 @@
+/* Generated from backend/resources/locales ("location.permission.rationale");
+   LocaleCoverageTests fails if the two drift apart. */
+"NSLocationWhenInUseUsageDescription" = "ولرو موقعیت شما را فقط برای تأیید اینکه در ساحهٔ پوشش هستید می‌پرسد.";

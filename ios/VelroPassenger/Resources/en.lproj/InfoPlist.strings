@@ -1,0 +1,3 @@
+/* Generated from backend/resources/locales ("location.permission.rationale");
+   LocaleCoverageTests fails if the two drift apart. */
+"NSLocationWhenInUseUsageDescription" = "VELRO asks for your location only to confirm you are inside the service area.";

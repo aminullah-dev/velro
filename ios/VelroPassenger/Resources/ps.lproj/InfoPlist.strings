@@ -1,0 +1,3 @@
+/* Generated from backend/resources/locales ("location.permission.rationale");
+   LocaleCoverageTests fails if the two drift apart. */
+"NSLocationWhenInUseUsageDescription" = "ولرو ستاسو موقعیت یوازې د دې لپاره غواړي چې ډاډ ترلاسه کړي تاسو د خدمت په سیمه کې یاست.";
