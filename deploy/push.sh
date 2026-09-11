@@ -9,10 +9,12 @@
 # access, and giving a VPS read access to a private repository is a key to
 # manage, rotate and eventually forget about.
 #
-# What does NOT travel: the mobile app (the server never builds it), any
+# What does NOT travel: the mobile apps (the server builds neither), any
 # virtualenv or node_modules (the wrong operating system's binaries), the
 # signing key, and deploy/.env -- the server's secrets are the server's, and
 # a laptop overwriting them is how a deployment loses its database password.
+# Nor do the server's own backups of that file: --delete would remove any
+# deploy/.env.bak-* made on the server before a settings change.
 set -euo pipefail
 
 HOST="${VELRO_HOST:-62.238.0.71}"
@@ -26,7 +28,9 @@ rsync -az --delete \
   -e "ssh -i $KEY -o BatchMode=yes" \
   --exclude '.git/' \
   --exclude 'mobile/' \
+  --exclude 'ios/' \
   --exclude 'deploy/.env' \
+  --exclude 'deploy/.env.bak*' \
   --exclude '**/node_modules/' \
   --exclude '**/.venv/' \
   --exclude '**/build/' \
