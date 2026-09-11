@@ -11,6 +11,8 @@ struct JourneyMapView: View {
     let map: TripMap
     var vehicle: VehicleLocation?
     var height: CGFloat? = 180
+    /// Edge to edge, for the ride itself: no rounded card, no caption under it.
+    var fullBleed = false
     @Environment(\.strings) private var strings
 
     var body: some View {
@@ -46,10 +48,10 @@ struct JourneyMapView: View {
             .mapStyle(.standard(pointsOfInterest: .excludingAll))
             .frame(height: height)
             .frame(maxHeight: height == nil ? .infinity : nil)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: fullBleed ? 0 : Radius.card, style: .continuous))
             .accessibilityHidden(true)
 
-            if let attribution = map.attribution, !attribution.isEmpty {
+            if !fullBleed, let attribution = map.attribution, !attribution.isEmpty {
                 Text(attribution)
                     .font(.caption2)
                     .foregroundStyle(Palette.onSurfaceVariant)

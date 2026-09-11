@@ -44,6 +44,38 @@ struct LocalDriver {
         guard offered["success"] as? Bool == true else { throw Failure(description: "offer refused: \(offered)") }
     }
 
+    /// The trip he is on now, and where it starts.
+    func currentTrip(token: String) async throws -> (id: String, origin: (Double, Double)?) {
+        let current = try await call("driver/trips/current", token: token)
+        guard let trip = (current["data"] as? [String: Any])?["trip"] as? [String: Any],
+              let id = trip["id"] as? String else { throw Failure(description: "no current trip: \(current)") }
+        let map = try await call("driver/trips/\(id)/map", token: token)
+        let origin = ((map["data"] as? [String: Any])?["origin"] as? [String: Any]).flatMap { o -> (Double, Double)? in
+            guard let lat = o["latitude"] as? Double, let lon = o["longitude"] as? Double else { return nil }
+            return (lat, lon)
+        }
+        return (id, origin)
+    }
+
+    /// One step of the trip, as the driver's big button takes it.
+    func advance(token: String, tripId: String, to target: String) async throws {
+        let moved = try await call("driver/trips/\(tripId)/advance", body: ["target": target], token: token)
+        guard moved["success"] as? Bool == true else { throw Failure(description: "\(target) refused: \(moved)") }
+    }
+
+    /// The code the passenger shows him, checked.
+    func verify(token: String, tripId: String, code: String) async throws {
+        let checked = try await call("driver/trips/\(tripId)/verify-passenger", body: ["code": code], token: token)
+        guard checked["success"] as? Bool == true else { throw Failure(description: "code refused: \(checked)") }
+    }
+
+    /// Where the car is, as his duty service reports it.
+    func ping(token: String, at point: (Double, Double)) async throws {
+        _ = try await call("driver/location", body: [
+            "latitude": String(format: "%.6f", point.0), "longitude": String(format: "%.6f", point.1),
+        ], token: token)
+    }
+
     private func call(_ path: String, body: [String: Any]? = nil, token: String? = nil) async throws -> [String: Any] {
         var request = URLRequest(url: api.appending(path: path))
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

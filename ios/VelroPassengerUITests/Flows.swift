@@ -26,9 +26,11 @@ extension XCTestCase {
         return app
     }
 
-    func tapFirst(_ app: XCUIApplication, _ identifier: String, timeout: TimeInterval = 10) {
-        let element = app.buttons.matching(identifier: identifier).firstMatch
-        XCTAssertTrue(element.waitForExistence(timeout: timeout), "no \(identifier)")
+    /// The first button whose identifier starts with `prefix`: "ask.district"
+    /// is any district, "ask.district.GRB-SYG" is Siahgird.
+    func tapFirst(_ app: XCUIApplication, _ prefix: String, timeout: TimeInterval = 10) {
+        let element = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", prefix)).firstMatch
+        XCTAssertTrue(element.waitForExistence(timeout: timeout), "no \(prefix)")
         element.tap()
     }
 

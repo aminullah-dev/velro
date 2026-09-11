@@ -121,12 +121,14 @@ class DriverDutyService : Service() {
                         latitude = standing.latitude.toDouble(),
                         longitude = standing.longitude.toDouble(),
                     )
+                    signals.position(standing.latitude.toDouble(), standing.longitude.toDouble())
                     watchRoad(standing, alerts, announced, strings)
                 }
                 delay(TRIP_TICK_MS)
             } else {
                 alertsForTrip = null
                 signals.roadAlert(null)
+                signals.clearPosition()
                 notifyDuty(strings["notif.duty.waiting"])
                 knownAsks = watchAsks(knownAsks, strings)
                 knownOffers = watchOffers(knownOffers, strings)

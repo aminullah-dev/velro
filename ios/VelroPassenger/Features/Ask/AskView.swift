@@ -92,7 +92,7 @@ struct AskView: View {
             LazyVStack(spacing: Spacing.sm) {
                 ForEach(model.districts) { district in
                     PlaceRow(title: district.name, subtitle: district.alternativeName) { model.choose(district) }
-                        .accessibilityIdentifier("ask.district")
+                        .accessibilityIdentifier("ask.district.\(district.code)")
                 }
             }
             .padding(.bottom, Spacing.xl)
@@ -112,7 +112,7 @@ struct AskView: View {
                     LazyVStack(spacing: Spacing.sm) {
                         ForEach(model.shownVillages) { village in
                             PlaceRow(title: village.name) { model.choose(village) }
-                                .accessibilityIdentifier("ask.village")
+                                .accessibilityIdentifier("ask.village.\(village.code)")
                         }
                     }
                     .padding(.bottom, Spacing.xl)
@@ -136,7 +136,7 @@ struct AskView: View {
                         PlaceRow(title: station.name, subtitle: subtitle(for: station), systemImage: "mappin.circle.fill") {
                             Task { await model.choose(station) }
                         }
-                        .accessibilityIdentifier("ask.station")
+                        .accessibilityIdentifier("ask.station.\(station.code)")
                     }
                 }
                 .padding(.bottom, Spacing.xl)
@@ -187,14 +187,14 @@ struct AskView: View {
             }
         }
         .buttonStyle(PressStyle())
-        .accessibilityIdentifier("ask.destination")
+        .accessibilityIdentifier("ask.destination.\(group.code)")
         .accessibilityAddTraits(group.isChoosableItself ? [] : .isHeader)
 
         if expanded {
             ForEach(group.children) { child in
                 PlaceRow(title: child.name, emphasised: model.destination?.id == child.id) { model.choose(child) }
                     .padding(.leading, Spacing.xl)
-                    .accessibilityIdentifier("ask.destination.child")
+                    .accessibilityIdentifier("ask.destination.child.\(child.code)")
             }
         }
     }

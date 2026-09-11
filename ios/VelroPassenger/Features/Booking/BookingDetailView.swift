@@ -33,6 +33,9 @@ struct BookingDetailView: View {
             }
         }
         .task { await model.poll() }
+        .onChange(of: model.boarded) { _, boarded in
+            if boarded { app.router.open(.track(model.bookingId)) }
+        }
         .sheet(isPresented: $helpOpen, onDismiss: {
             if reportsAfterHelp {
                 reportsAfterHelp = false

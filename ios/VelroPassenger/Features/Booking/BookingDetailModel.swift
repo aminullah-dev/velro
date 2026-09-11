@@ -18,6 +18,11 @@ final class BookingDetailModel {
     private(set) var vehicle: VehicleLocation?
     private(set) var isCancelling = false
     private(set) var ratingSubmitted = false
+    /// Set once, the moment the booking is seen on board: the screen opens the
+    /// full ride map. Once per visit, so coming back from the map does not
+    /// throw her straight into it again.
+    private(set) var boarded = false
+    private var openedRide = false
 
     let bookingId: String
     private let app: AppModel
@@ -44,7 +49,11 @@ final class BookingDetailModel {
     func poll() async {
         await refresh(asked: true)
         while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(12))
+            // Every few seconds while the car is coming to her, so the map
+            // opens on her phone when the driver starts the trip on his --
+            // not twelve seconds later.
+            let waitingToBoard = [.driverAssigned, .ready].contains(booking?.status)
+            try? await Task.sleep(for: .seconds(waitingToBoard ? 4 : 12))
             if Task.isCancelled { return }
             guard booking?.isActive != false else { return }
             await refresh(asked: false)
@@ -58,6 +67,10 @@ final class BookingDetailModel {
         if asked { error = nil }
         let result = await app.client.send(API.booking(bookingId), caching: cacheKey, in: app.personal)
         if let fresh = result.value { booking = fresh }
+        if booking?.status == .onboard && !openedRide {
+            openedRide = true
+            boarded = true
+        }
         isStale = result.isStale
         if let failure = result.error, failure != .cancelled, booking == nil || failure != .offline {
             error = failure

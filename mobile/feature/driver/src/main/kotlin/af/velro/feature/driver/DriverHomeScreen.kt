@@ -4,6 +4,7 @@ import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.map.JourneyMap
+import af.velro.core.map.RideMap
 import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.MoneyFormatter
 import af.velro.core.i18n.Numerals
@@ -276,6 +277,13 @@ fun DriverHomeScreen(
                 )
             }
         }
+        return
+    }
+
+    // On the road with a passenger: the map, the road's next warning, who is
+    // in the car, and the one next step. Everything else waits for arrival.
+    if (state.isRiding) {
+        DriverRide(state, onEvent, onHelp = { helpOpen = true }, modifier = modifier)
         return
     }
 
@@ -883,6 +891,43 @@ private fun CurrentTrip(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> 
                     choosing = false
                     onEvent(DriverHomeEvent.CancelTrip(reason, null))
                 },
+            )
+        }
+    }
+}
+
+/**
+ * The ride map, on the driver's phone, from the moment he starts the trip.
+ *
+ * His one next step stays at the foot -- "arrived at destination" -- because
+ * a ride screen without it is a ride that cannot end. The chime is his: he
+ * is the one who has to slow down for the bend.
+ */
+@Composable
+private fun DriverRide(
+    state: DriverHomeUiState,
+    onEvent: (DriverHomeEvent) -> Unit,
+    onHelp: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val strings = LocalVelroStrings.current
+    val assignment = state.assignment ?: return
+    RideMap(
+        data = state.tripMap,
+        roadAhead = state.roadAhead,
+        driverName = state.profile?.fullName,
+        passengerNames = assignment.manifest.mapNotNull { it.passengerName },
+        onHelp = onHelp,
+        chime = true,
+        modifier = modifier,
+    ) {
+        state.nextStep?.let { next ->
+            Spacer(Modifier.height(Spacing.sm))
+            PrimaryAction(
+                label = strings[next.actionKey()],
+                onClick = { onEvent(DriverHomeEvent.AdvanceTrip) },
+                enabled = !state.isBusy,
+                loading = state.isBusy,
             )
         }
     }

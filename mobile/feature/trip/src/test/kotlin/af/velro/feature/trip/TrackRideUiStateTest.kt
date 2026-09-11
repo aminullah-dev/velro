@@ -129,4 +129,29 @@ class TrackRideUiStateTest {
         assertNull(undrawn.origin)
         assertNull(undrawn.destination)
     }
+
+    // -- the ride map, from the moment she is on board --------------------
+
+    @Test
+    fun `on board the screen is the ride map, and not before`() {
+        assertEquals(true, TrackRideUiState(booking = booking).isRiding)
+        assertEquals(false, TrackRideUiState(booking = booking.copy(status = BookingStatus.READY)).isRiding)
+        assertEquals(false, TrackRideUiState().isRiding)
+    }
+
+    @Test
+    fun `the warning at the top follows the car, not the phone`() {
+        // A straight road east along latitude 35, a bend three kilometres on.
+        val road = (0..20).map { 35.0 to 69.0 + it * 0.01 }
+        val drawn = map.copy(
+            geometry = road,
+            alerts = listOf(
+                af.velro.data.repository.RoadAlert(35.0, 69.05, 300, "curve", "road.alert.curve"),
+            ),
+        )
+        val riding = TrackRideUiState(booking = booking, journeyMap = drawn, vehicle = MapPlace("", 35.0, 69.02))
+        assertEquals("road.alert.curve", riding.roadAhead?.messageKey)
+        // No car on the map yet: no warning rather than a guess.
+        assertNull(riding.copy(vehicle = null).roadAhead)
+    }
 }

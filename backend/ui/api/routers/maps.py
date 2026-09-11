@@ -175,5 +175,9 @@ def journey(
         "geometry": [[lat, lon] for lon, lat in shape["points"]] if shape else None,
         "avg_speed_kmh": shape["avg_speed_kmh"] if shape else None,
         "stations": stations,
+        # The same advisories the driver is warned of. Once she is on board
+        # the passenger's full-screen map names the next one ahead, so the
+        # two phones in the car say the same thing about the road.
+        "alerts": mapdata.alerts_for(session),
         "attribution": "© OpenStreetMap",
     })

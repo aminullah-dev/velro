@@ -118,3 +118,35 @@ import Testing
         #expect(Eta.minutes(road: road, car: road[0], target: road[10], averageKmh: nil) == nil)
     }
 }
+
+/// The warning at the top of the trip map, on the Android test's road: a
+/// straight line at latitude 35, 0.01° of longitude (~912 m) between points.
+@Suite struct RoadAheadTests {
+    private let road: [(latitude: Double, longitude: Double)] = (0...20).map { (35.0, 68.0 + Double($0) * 0.01) }
+
+    private func alert(_ lon: Double, _ key: String, lat: Double = 35.0, radius: Int = 300) -> RoadAlert {
+        RoadAlert(latitude: lat, longitude: lon, radiusM: radius, messageKey: key)
+    }
+
+    @Test func theNearestWarningAheadAlongTheRoad() throws {
+        let next = try #require(RoadAhead.next(road: road, car: (35.0, 68.02),
+                                               alerts: [alert(68.10, "road.alert.caution"), alert(68.05, "road.alert.curve")]))
+        #expect(next.messageKey == "road.alert.curve")
+        #expect((2_600...2_900).contains(next.metres))
+        #expect(!next.inside)
+    }
+
+    @Test func aWarningPassedOrOnAnotherRoadIsNotNews() {
+        #expect(RoadAhead.next(road: road, car: (35.0, 68.12), alerts: [alert(68.05, "road.alert.curve")]) == nil)
+        #expect(RoadAhead.next(road: road, car: (35.0, 68.02), alerts: [alert(68.08, "road.alert.curve", lat: 35.045)]) == nil)
+    }
+
+    @Test func insideAZoneTheZoneItself() {
+        let next = RoadAhead.next(road: road, car: (35.0, 68.05), alerts: [alert(68.051, "road.alert.bazaar", radius: 400)])
+        #expect(next == RoadAhead.Next(messageKey: "road.alert.bazaar", metres: 0, inside: true))
+    }
+
+    @Test func aCarFarOffTheRoadGetsNoGuess() {
+        #expect(RoadAhead.next(road: road, car: (35.5, 69.5), alerts: [alert(68.10, "road.alert.curve")]) == nil)
+    }
+}

@@ -24,6 +24,22 @@ class DutySignals @Inject constructor() {
     fun roadAlert(key: String?) {
         _roadAlertKey.value = key
     }
+
+    private val _position = MutableStateFlow<Pair<Double, Double>?>(null)
+    /**
+     * Where he is, while a trip is his: the fix the service already takes for
+     * its location ping, shared so the ride map can say how far the next
+     * warning is. Null off-trip.
+     */
+    val position: StateFlow<Pair<Double, Double>?> = _position.asStateFlow()
+
+    fun position(latitude: Double, longitude: Double) {
+        _position.value = latitude to longitude
+    }
+
+    fun clearPosition() {
+        _position.value = null
+    }
 }
 
 /**

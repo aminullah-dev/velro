@@ -62,6 +62,7 @@ sealed interface BookingDetailEvent {
 
 /** Often enough to catch a driver arriving, cheap enough for a data bundle. */
 private const val POLL_SECONDS = 12L
+private const val BOARDING_POLL_MS = 4_000L
 
 @HiltViewModel
 class BookingDetailViewModel @Inject constructor(
@@ -97,7 +98,12 @@ class BookingDetailViewModel @Inject constructor(
     private fun poll() {
         viewModelScope.launch {
             while (isActive) {
-                delay(POLL_SECONDS * 1000)
+                // Every few seconds while the car is coming to her, so the ride
+                // map opens on her phone when the driver starts the trip on his.
+                val waitingToBoard = _state.value.booking?.status in setOf(
+                    BookingStatus.DRIVER_ASSIGNED, BookingStatus.READY,
+                )
+                delay(if (waitingToBoard) BOARDING_POLL_MS else POLL_SECONDS * 1000)
                 val booking = _state.value.booking ?: continue
                 if (!booking.isActive) return@launch
                 refresh(clearError = false)

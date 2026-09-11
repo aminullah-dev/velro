@@ -69,6 +69,17 @@ fun BookingDetailRoute(
     viewModel: BookingDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // On board: the ride map opens by itself, once. Saved across the trip to
+    // the map and back, so returning here does not throw her into it again.
+    var openedRide by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(state.booking?.status) {
+        if (state.booking?.status == af.velro.domain.BookingStatus.ONBOARD && !openedRide) {
+            openedRide = true
+            onTrack()
+        }
+    }
+
     BookingDetailScreen(state, viewModel::onEvent, onBack = onBack, onTrack = onTrack)
 }
 

@@ -32,7 +32,27 @@ data class TrackRideUiState(
     val vehicle: MapPlace? = null,
     val vehicleAgeSeconds: Int? = null,
     val etaMinutes: Int? = null,
+    /** Her own name, for the foot of the ride map. */
+    val passengerName: String? = null,
+    /** She was on board and is no longer: the ride is over. */
+    val rideEnded: Boolean = false,
 ) {
+    /**
+     * On board: the screen becomes the ride map, the same moment the
+     * driver's phone does.
+     */
+    val isRiding: Boolean get() = booking?.status == BookingStatus.ONBOARD
+
+    /** The road's next warning ahead of the car, for the top of the ride map. */
+    val roadAhead: af.velro.data.tracking.RoadAhead.Next?
+        get() {
+            val map = journeyMap ?: return null
+            val car = vehicle ?: return null
+            return af.velro.data.tracking.RoadAhead.next(
+                map.geometry.orEmpty(), car.latitude to car.longitude, map.alerts,
+            )
+        }
+
     /**
      * What the help sheet reads down a phone line (ADR 0010), from whichever
      * copy this screen holds is freshest.
@@ -69,12 +89,14 @@ data class TrackRideUiState(
 
 /** Faster than the booking page: this screen exists to watch a dot move. */
 private const val POLL_SECONDS = 15L
+private const val RIDING_POLL_MS = 8_000L
 
 @HiltViewModel
 class TrackRideViewModel @Inject constructor(
     private val bookings: BookingRepository,
     private val geography: GeographyRepository,
     private val documents: DocumentRepository,
+    private val auth: af.velro.data.repository.AuthRepository,
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -85,9 +107,18 @@ class TrackRideViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            (auth.profile() as? ApiResult.Success)?.value?.let { me ->
+                _state.update { it.copy(passengerName = me.fullName) }
+            }
+        }
+        viewModelScope.launch {
             bookings.booking(bookingId).collect { booking ->
                 val first = _state.value.booking == null
-                _state.update { it.copy(booking = booking) }
+                _state.update {
+                    val ended = it.booking?.status == BookingStatus.ONBOARD &&
+                        booking != null && booking.status != BookingStatus.ONBOARD
+                    it.copy(booking = booking, rideEnded = it.rideEnded || ended)
+                }
                 if (booking != null && first) {
                     // The cache emits a moment after this screen opens, and
                     // the poll below had already fired against a null
@@ -102,8 +133,14 @@ class TrackRideViewModel @Inject constructor(
         }
         viewModelScope.launch {
             while (isActive) {
-                delay(POLL_SECONDS * 1000)
-                _state.value.booking?.let { refreshLive(it) }
+                // Faster on board, where the warning at the top follows the car.
+                delay(if (_state.value.isRiding) RIDING_POLL_MS else POLL_SECONDS * 1000)
+                _state.value.booking?.let { booking ->
+                    // The cached row only moves when something refreshes it,
+                    // and the end of the ride is news this screen must hear.
+                    bookings.refreshBooking(booking.id)
+                    refreshLive(booking)
+                }
             }
         }
     }

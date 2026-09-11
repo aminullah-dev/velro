@@ -2,6 +2,7 @@ package af.velro.feature.trip
 
 import af.velro.core.i18n.Numerals
 import af.velro.core.map.JourneyMap
+import af.velro.core.map.RideMap
 import af.velro.core.ui.component.PhotoAvatar
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
@@ -62,6 +63,34 @@ fun TrackRideRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val strings = LocalVelroStrings.current
     val context = LocalContext.current
+
+    // The ride is over: back to the booking, where the rating is.
+    androidx.compose.runtime.LaunchedEffect(state.rideEnded) {
+        if (state.rideEnded) onBack()
+    }
+
+    // On board: the map, the road's next warning, and who is in the car.
+    if (state.isRiding) {
+        var helpOpen by remember { mutableStateOf(false) }
+        RideMap(
+            data = state.journeyMap,
+            vehicle = state.vehicle,
+            roadAhead = state.roadAhead,
+            driverName = state.driver?.name ?: state.booking?.driverName,
+            passengerNames = listOfNotNull(state.passengerName),
+            onHelp = { helpOpen = true },
+        )
+        if (helpOpen) {
+            val booking = state.booking
+            HelpSheet(
+                ride = state.helpFacts,
+                tripId = booking?.tripId,
+                bookingId = booking?.id,
+                onDismiss = { helpOpen = false },
+            )
+        }
+        return
+    }
 
     // The shared frame, like every other screen. This one used to roll its
     // own bar: an unlabelled arrow a screen reader announced as nothing, and

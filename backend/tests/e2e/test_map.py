@@ -76,6 +76,12 @@ class TestJourneyPreview:
         # The routing engine's own average for this road, for honest ETAs.
         assert 30 < body["avg_speed_kmh"] < 100
         assert body["attribution"] == "© OpenStreetMap"
+        # The road's advisories, as the driver's trip map carries them: the
+        # passenger's screen names the next one once she is on board.
+        assert isinstance(body["alerts"], list) and body["alerts"]
+        for alert in body["alerts"][:5]:
+            assert alert["message_key"].startswith("road.alert.")
+            assert alert["radius_m"] > 0
 
     def test_the_preview_needs_a_signed_in_user(self, client: TestClient):
         refused = client.get(

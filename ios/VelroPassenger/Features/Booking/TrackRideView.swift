@@ -16,6 +16,13 @@ final class TrackRideModel {
     private(set) var vehicle: VehicleLocation?
     /// From the road's own length and its routing average, or nil. Never a guess.
     private(set) var etaMinutes: Int?
+    /// Her own name, for the foot of the ride map.
+    private(set) var passengerName: String?
+    /// The next warning on the road ahead of the car, once she is on board.
+    private(set) var roadAhead: RoadAhead.Next?
+    /// She was on board and no longer is: the ride is over, and the screen
+    /// goes back to the booking, where the rating is.
+    private(set) var rideEnded = false
 
     private let bookingId: String
     private let app: AppModel
@@ -27,10 +34,12 @@ final class TrackRideModel {
     }
 
     /// Faster than the booking page: this screen exists to watch a dot move.
+    /// Faster still on board, where the warning at the top follows the car.
     func poll() async {
+        if case .success(let me) = await app.client.send(API.profile()) { passengerName = me.fullName }
         await refresh()
         while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(15))
+            try? await Task.sleep(for: .seconds(booking?.status == .onboard ? 8 : 15))
             if Task.isCancelled { return }
             await refresh()
         }
@@ -38,6 +47,7 @@ final class TrackRideModel {
 
     private func refresh() async {
         if let fresh = await app.client.send(API.booking(bookingId), caching: "booking-\(bookingId)", in: app.personal).value {
+            if booking?.status == .onboard && fresh.status != .onboard { rideEnded = true }
             booking = fresh
         }
         guard let booking else { return }
@@ -57,6 +67,11 @@ final class TrackRideModel {
             vehicle = nil
         }
         etaMinutes = eta(booking)
+        if let map, let vehicle {
+            roadAhead = RoadAhead.next(road: map.road, car: (vehicle.latitude, vehicle.longitude), alerts: map.alerts ?? [])
+        } else {
+            roadAhead = nil
+        }
     }
 
     /// Before boarding the car is coming to her station; after, both are
@@ -102,6 +117,59 @@ struct TrackRideView: View {
     }
 
     var body: some View {
+        Group {
+            if model.booking?.status == .onboard {
+                ride
+            } else {
+                waiting
+            }
+        }
+        .task { await model.poll() }
+        .onChange(of: model.rideEnded) { _, ended in
+            if ended { app.router.back() }
+        }
+        .sheet(isPresented: $helpOpen) {
+            HelpSheet(app: app, ride: model.rideFacts, tripId: model.booking?.tripId, bookingId: model.booking?.id)
+        }
+    }
+
+    /// On board: the map and nothing else but the road's next warning at the
+    /// top and who is in the car at the bottom. Help stays -- a small door at
+    /// the top, because this is the screen she is looking at in the car.
+    private var ride: some View {
+        ZStack {
+            if let map = model.map {
+                JourneyMapView(map: map, vehicle: model.vehicle, height: nil, fullBleed: true)
+                    .ignoresSafeArea()
+            } else {
+                Palette.background.ignoresSafeArea()
+            }
+
+            VStack(spacing: Spacing.sm) {
+                HStack(alignment: .top, spacing: Spacing.sm) {
+                    RoadAheadBanner(next: model.roadAhead)
+                    Button { helpOpen = true } label: {
+                        Image(systemName: "sos")
+                            .font(.headline)
+                            .frame(width: Sizing.touchTarget, height: Sizing.touchTarget)
+                            .foregroundStyle(Palette.onPrimary)
+                            .background(Palette.error, in: Circle())
+                            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                    }
+                    .accessibilityLabel(strings["safety.title"])
+                    .accessibilityIdentifier("ride.help")
+                }
+                Spacer()
+                RideNames(driver: model.driver?.name ?? model.booking?.driverName, passenger: model.passengerName)
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.sm)
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .preference(key: BrandStatusBar.self, value: false)
+    }
+
+    private var waiting: some View {
         VelroScreen(title: strings["track.title"]) {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 if let map = model.map {
@@ -131,10 +199,6 @@ struct TrackRideView: View {
             }
             .padding(.horizontal, Spacing.gutter)
             .padding(.vertical, Spacing.md)
-        }
-        .task { await model.poll() }
-        .sheet(isPresented: $helpOpen) {
-            HelpSheet(app: app, ride: model.rideFacts, tripId: model.booking?.tripId, bookingId: model.booking?.id)
         }
     }
 
@@ -179,6 +243,89 @@ struct TrackRideView: View {
                 }
                 .buttonStyle(PressStyle())
             }
+        }
+    }
+}
+
+/// The road's next warning, at the top of the ride map: the warning itself
+/// once the car is in it, and how far off it is before. Nothing at all when
+/// the road ahead is clear or the car's position is unknown -- an empty
+/// banner would read as a warning about nothing.
+struct RoadAheadBanner: View {
+    let next: RoadAhead.Next?
+    @Environment(\.strings) private var strings
+
+    var body: some View {
+        Group {
+            if let next {
+                HStack(alignment: .top, spacing: Spacing.sm) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(next.inside ? Palette.onToneAttention : Palette.accent)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        Text(strings["notif.road.title"])
+                            .velroFont(.caption, weight: .medium)
+                            .foregroundStyle(Palette.onSurfaceVariant)
+                        Text(strings[next.messageKey])
+                            .velroFont(.label, weight: .medium)
+                            .foregroundStyle(Palette.onSurface)
+                        if !next.inside {
+                            Text(distance(next.metres))
+                                .velroFont(.caption)
+                                .foregroundStyle(Palette.onSurfaceVariant)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(Spacing.md)
+                .background(next.inside ? Palette.toneAttention : Palette.surface,
+                            in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+                .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("ride.road")
+            } else {
+                Color.clear.frame(height: 1)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .animation(.easeOut(duration: 0.2), value: next)
+    }
+
+    private func distance(_ metres: Int) -> String {
+        metres >= 1000
+            ? strings["location.distance.kilometres", ["distance": metres / 1000]]
+            : strings["location.distance.metres", ["distance": metres]]
+    }
+}
+
+/// Who is in the car, and nothing else, at the foot of the ride map.
+struct RideNames: View {
+    let driver: String?
+    let passenger: String?
+    @Environment(\.strings) private var strings
+
+    var body: some View {
+        VStack(spacing: Spacing.sm) {
+            row(strings["trip.label.driver"], driver)
+            Divider()
+            row(strings["driver.label.passengers"], passenger)
+        }
+        .padding(Spacing.lg)
+        .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("ride.names")
+    }
+
+    private func row(_ label: String, _ name: String?) -> some View {
+        HStack {
+            Text(label)
+                .velroFont(.label)
+                .foregroundStyle(Palette.onSurfaceVariant)
+            Spacer()
+            Text((name ?? "").isEmpty ? strings["common.value.no_name"] : name!)
+                .velroFont(.heading, weight: .medium)
+                .foregroundStyle(Palette.onSurface)
         }
     }
 }

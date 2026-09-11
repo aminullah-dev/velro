@@ -19,11 +19,11 @@ final class AskFlowTests: XCTestCase {
         settle()
         snapshot("4-villages")
         // A village with one station skips the station step.
-        if app.buttons["ask.station"].firstMatch.waitForExistence(timeout: 3) {
+        if app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'ask.station'")).firstMatch.waitForExistence(timeout: 3) {
             tapFirst(app, "ask.station")
         }
-        tapFirst(app, "ask.destination", timeout: 15)
-        if app.buttons["ask.destination.child"].firstMatch.waitForExistence(timeout: 2) {
+        tapFirst(app, "ask.destination.", timeout: 15)
+        if app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'ask.destination.child'")).firstMatch.waitForExistence(timeout: 2) {
             tapFirst(app, "ask.destination.child")
         }
 

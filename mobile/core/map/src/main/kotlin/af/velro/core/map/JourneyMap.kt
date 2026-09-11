@@ -5,6 +5,7 @@ import af.velro.data.repository.TripMapData
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -16,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.core.view.doOnLayout
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -68,6 +70,8 @@ fun JourneyMap(
     /** The car, when the viewer is entitled to see it. Passenger side only. */
     vehicle: MapPlace? = null,
     modifier: Modifier = Modifier,
+    /** Edge to edge, for the ride itself, instead of a rounded card. */
+    fullBleed: Boolean = false,
 ) {
     val context = LocalContext.current
     // Must run before the first MapView is constructed, once per process.
@@ -94,19 +98,40 @@ fun JourneyMap(
         }
     }
 
+    // What is already on the map. The update block runs on every
+    // recomposition, and it used to call setStyle every time -- reloading the
+    // style and re-framing the camera whenever anything on the screen changed.
+    // On a card that polls every ten seconds that was a flicker; on the ride
+    // map, which recomposes as the car moves, it would be a map that snaps
+    // back under the finger. The road is drawn once per journey; the car moves.
+    val drawn = remember { Drawn() }
+
     AndroidView(
         factory = { mapView },
-        modifier = modifier
-            .fillMaxWidth()
-            .height(220.dp)
-            .clip(RoundedCornerShape(Radius.card)),
+        modifier = if (fullBleed) {
+            modifier.fillMaxSize()
+        } else {
+            modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .clip(RoundedCornerShape(Radius.card))
+        },
         update = { view ->
-            view.getMapAsync { map -> map.render(context, data, vehicle) }
+            view.getMapAsync { map ->
+                if (drawn.data != data) {
+                    drawn.data = data
+                    map.render(context, view, data, vehicle)
+                } else {
+                    map.style?.takeIf { it.isFullyLoaded }?.drawVehicle(vehicle)
+                }
+            }
         },
     )
 }
 
-private fun MapLibreMap.render(context: Context, data: TripMapData, vehicle: MapPlace?) {
+private class Drawn { var data: TripMapData? = null }
+
+private fun MapLibreMap.render(context: Context, view: MapView, data: TripMapData, vehicle: MapPlace?) {
     // A card, not a navigator: no rotation, no tilt, pinch and pan only.
     uiSettings.isRotateGesturesEnabled = false
     uiSettings.isTiltGesturesEnabled = false
@@ -160,28 +185,36 @@ private fun MapLibreMap.render(context: Context, data: TripMapData, vehicle: Map
             )
         )
 
-        // The car. Its source is replaced on every poll rather than the whole
-        // style, so the dot moves without the map flickering.
-        vehicle?.let { car ->
-            val point = Feature.fromGeometry(Point.fromLngLat(car.longitude, car.latitude))
-            val existing = style.getSourceAs<GeoJsonSource>("velro-vehicle")
-            if (existing != null) {
-                existing.setGeoJson(point)
-            } else {
-                style.addSource(GeoJsonSource("velro-vehicle", point))
-                style.addLayer(
-                    CircleLayer("velro-vehicle-dot", "velro-vehicle").withProperties(
-                        circleRadius(8f),
-                        circleColor("#1c1b16"),
-                        circleStrokeColor("#f5c400"),
-                        circleStrokeWidth(3f),
-                    )
-                )
-            }
-        }
-
+        style.drawVehicle(vehicle)
         enableOwnPosition(context, style)
-        frame(data)
+        // Framed once the view has a size. Fitting bounds into a map that has
+        // not been laid out throws (and is swallowed), leaving the camera on
+        // the equator: the full-screen ride map opened on an empty beige sea
+        // when its style came back from cache before its first layout.
+        view.doOnLayout { frame(data) }
+    }
+}
+
+/**
+ * The car. Its source is replaced on every poll rather than the whole style,
+ * so the dot moves without the map flickering.
+ */
+private fun Style.drawVehicle(vehicle: MapPlace?) {
+    val car = vehicle ?: return
+    val point = Feature.fromGeometry(Point.fromLngLat(car.longitude, car.latitude))
+    val existing = getSourceAs<GeoJsonSource>("velro-vehicle")
+    if (existing != null) {
+        existing.setGeoJson(point)
+    } else {
+        addSource(GeoJsonSource("velro-vehicle", point))
+        addLayer(
+            CircleLayer("velro-vehicle-dot", "velro-vehicle").withProperties(
+                circleRadius(8f),
+                circleColor("#1c1b16"),
+                circleStrokeColor("#f5c400"),
+                circleStrokeWidth(3f),
+            )
+        )
     }
 }
 

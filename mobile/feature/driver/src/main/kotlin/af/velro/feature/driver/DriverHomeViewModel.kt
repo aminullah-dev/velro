@@ -50,6 +50,8 @@ data class DriverHomeUiState(
     val tripMap: af.velro.data.repository.TripMapData? = null,
     /** A road advisory the driver is inside right now, or null. */
     val roadAlertKey: String? = null,
+    /** Where he is, while a trip is his -- from the duty service's own fix. */
+    val position: Pair<Double, Double>? = null,
     /** A newer APK on the server, as a download URL. Null is the usual day. */
     val updateUrl: String? = null,
     val offers: List<TripSummary> = emptyList(),
@@ -99,6 +101,20 @@ data class DriverHomeUiState(
     val lastEarning: MoneyValue? = null,
 ) {
     val canWork: Boolean get() = profile?.canWork == true
+
+    /**
+     * The passenger is on board and the car is moving: the screen becomes the
+     * ride map. The same moment the passenger's phone makes the same change.
+     */
+    val isRiding: Boolean get() = assignment?.trip?.status == TripStatus.IN_TRANSIT
+
+    /** The road's next warning ahead of him, for the top of the ride map. */
+    val roadAhead: af.velro.data.tracking.RoadAhead.Next?
+        get() {
+            val map = tripMap ?: return null
+            val at = position ?: return null
+            return af.velro.data.tracking.RoadAhead.next(map.geometry.orEmpty(), at, map.alerts)
+        }
     val isOnline: Boolean get() = profile?.isOnline == true
 
     /**
@@ -265,6 +281,11 @@ class DriverHomeViewModel @Inject constructor(
         viewModelScope.launch {
             dutySignals.roadAlertKey.collect { key ->
                 _state.update { it.copy(roadAlertKey = key) }
+            }
+        }
+        viewModelScope.launch {
+            dutySignals.position.collect { at ->
+                _state.update { it.copy(position = at) }
             }
         }
     }

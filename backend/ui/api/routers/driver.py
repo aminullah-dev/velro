@@ -419,20 +419,9 @@ def trip_map(
         ))
     ]
 
-    # The road's advisories: bends found by the curvature scan, hand-placed
-    # caution stretches, and the bazaars -- which are simply the stations
-    # whose name says so. The handset announces each as he enters it; the
+    # The road's advisories. The handset announces each as he enters it; the
     # server just knows where they are.
-    alerts = list(mapdata.road_alerts())
-    for _name, lat, lon in session.execute(sql(
-        "SELECT name, latitude, longitude FROM stations "
-        "WHERE latitude IS NOT NULL AND deleted_at IS NULL "
-        "AND status = 'ACTIVE' AND name LIKE '%بازار%'"
-    )):
-        alerts.append({
-            "latitude": float(lat), "longitude": float(lon), "radius_m": 400,
-            "kind": "bazaar", "message_key": "road.alert.bazaar",
-        })
+    alerts = mapdata.alerts_for(session)
 
     return ok({
         "origin": origin,

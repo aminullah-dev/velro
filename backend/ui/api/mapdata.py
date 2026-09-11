@@ -191,6 +191,29 @@ def road_alerts() -> list[dict]:
     return seen
 
 
+def alerts_for(session) -> list[dict]:
+    """The road's advisories as a trip or journey map carries them.
+
+    Bends found by the curvature scan, hand-placed caution stretches, and the
+    bazaars -- which are simply the stations whose name says so. One function
+    for the driver's trip map and the passenger's journey map, so the warning
+    at the top of the passenger's screen is the one the driver was just given.
+    """
+    from sqlalchemy import text as sql
+
+    alerts = list(road_alerts())
+    for _name, lat, lon in session.execute(sql(
+        "SELECT name, latitude, longitude FROM stations "
+        "WHERE latitude IS NOT NULL AND deleted_at IS NULL "
+        "AND status = 'ACTIVE' AND name LIKE '%بازار%'"
+    )):
+        alerts.append({
+            "latitude": float(lat), "longitude": float(lon), "radius_m": 400,
+            "kind": "bazaar", "message_key": "road.alert.bazaar",
+        })
+    return alerts
+
+
 def place(session, table: str, place_id: str | None):
     """Name, coordinates and code of a station or destination row.
 
