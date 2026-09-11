@@ -16,7 +16,7 @@ ios/scripts/appstore.py                    # what would change; sends nothing
 ios/scripts/appstore.py --apply            # text, category, age rating, price (free), countries
 ios/scripts/appstore.py --apply --screenshots
 ios/scripts/appstore.py --apply --build 2  # the build this version submits
-ios/scripts/appstore.py --apply --review   # review notes, demo account, the video
+ios/scripts/appstore.py --apply --review --contact-phone "+1 …"   # review notes, demo account, the video
 ```
 
 It never presses "Submit for Review".
@@ -33,7 +33,8 @@ It never presses "Submit for Review".
    - Identifiers → **User ID**, **Device ID** (the per-install id sessions are labelled with)
    - For every one: purpose **App Functionality** only; **linked to the user**; **not** used for tracking.
    - Not collected on iOS: diagnostics, usage data, purchases, contacts, photos.
-2. **App Review contact phone.** Typed by hand; it is not kept in git.
+2. **App Review contact phone.** Given to `--contact-phone` once, or typed
+   in App Store Connect; it is not kept in git.
 3. **Submit for Review.**
 
 ## Before `--review`

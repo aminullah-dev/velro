@@ -4,7 +4,8 @@
   ios/scripts/appstore.py              show what would change, change nothing
   ios/scripts/appstore.py --apply      text, category, age rating, rights
   ios/scripts/appstore.py --apply --screenshots   ...and replace the screenshots
-  ios/scripts/appstore.py --apply --review        ...and the App Review details
+  ios/scripts/appstore.py --apply --review --contact-phone "+1 555 ..."
+                                                  ...and the App Review details
   ios/scripts/appstore.py --apply --build 2       ...and pick the build to submit
 
 It never submits for review: that button stays a person's. It reads the same
@@ -280,7 +281,7 @@ def attach_build(app_id: str, version_id: str, number: str) -> None:
 
 # -- App Review ----------------------------------------------------------------
 
-def push_review(version_id: str, review: dict, attachment: Path | None) -> None:
+def push_review(version_id: str, review: dict, attachment: Path | None, contact_phone: str | None) -> None:
     attributes = {
         "contactFirstName": review["contact_first_name"],
         "contactLastName": review["contact_last_name"],
@@ -290,7 +291,14 @@ def push_review(version_id: str, review: dict, attachment: Path | None) -> None:
         "demoAccountPassword": review["demo_account_password"],
         "notes": review["notes"],
     }
+    # Given on the command line and never written down: the owner's phone
+    # does not belong in git. App Store Connect refuses a new review detail
+    # without one, and keeps the one it has when this is omitted later.
+    if contact_phone:
+        attributes["contactPhone"] = contact_phone
     existing = call("GET", f"/v1/appStoreVersions/{version_id}/appStoreReviewDetail").get("data")
+    if not existing and not contact_phone:
+        raise SystemExit("✗ the first --review needs --contact-phone \"+<country code> <number>\"")
     if existing:
         detail = call("PATCH", f"/v1/appStoreReviewDetails/{existing['id']}", {"data": {
             "type": "appStoreReviewDetails", "id": existing["id"], "attributes": attributes}})["data"]
@@ -326,6 +334,7 @@ def main() -> None:
     parser.add_argument("--review", action="store_true", help="push App Review details too")
     parser.add_argument("--attachment", type=Path, help="video for the reviewer (default: listing's name, next to it)")
     parser.add_argument("--build", help="the build number to submit with this version")
+    parser.add_argument("--contact-phone", help="App Review's number for you, with + and country code (not stored)")
     args = parser.parse_args()
 
     listing = json.loads(LISTING.read_text())
@@ -366,7 +375,7 @@ def main() -> None:
         print(f"  (assuming {review['demo_account_name']} is on the server's OTP_TEST_NUMBERS "
               "and GEOFENCE_EXEMPT_PHONES -- see the module docstring)")
         attachment = args.attachment or (LISTING.parent / review["attachment"])
-        push_review(state["version"]["id"], review, attachment if attachment.exists() else None)
+        push_review(state["version"]["id"], review, attachment if attachment.exists() else None, args.contact_phone)
     print("✓ done. Submitting for review is still a button in App Store Connect.")
 
 
