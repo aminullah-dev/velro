@@ -148,6 +148,18 @@ class DriverDutyService : Service() {
                 alertsForTrip = null
                 signals.roadAlert(null)
                 signals.clearPosition()
+                // Off duty is the server's word, not the home screen's. The
+                // screen stopped this service when he went offline, but its
+                // ten-second poll, if already in flight, landed a moment later
+                // with the old "online" profile and started it again; with the
+                // phone then in his pocket nothing stopped it, and an offline
+                // driver kept the "on duty" notification and heard "a passenger
+                // wants you". A failed read keeps him on duty: no signal is not
+                // the same as having gone offline.
+                if ((drivers.profile() as? ApiResult.Success)?.value?.isOnline == false) {
+                    stopSelf()
+                    return
+                }
                 notifyDuty(strings["notif.duty.waiting"])
                 knownAsks = watchAsks(knownAsks, strings)
                 knownOffers = watchOffers(knownOffers, strings)
