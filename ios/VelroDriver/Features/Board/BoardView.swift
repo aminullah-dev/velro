@@ -177,7 +177,7 @@ private struct RequestCard: View {
                 } else {
                     PrimaryButton(label: strings["driver.board.offer"], enabled: !busy, action: offer)
                         .padding(.top, Spacing.xs)
-                        .accessibilityIdentifier("board.offer")
+                        .accessibilityIdentifier("board.offer.\(request.id)")
                 }
             }
         }

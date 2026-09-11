@@ -105,7 +105,7 @@ struct EarningsView: View {
                 Text(strings[earnings.owes ? "driver.earnings.owed" : "driver.earnings.available"])
                     .velroFont(.label)
                     .foregroundStyle(Palette.onSurfaceVariant)
-                Text(MoneyFormatter.format(earnings.owes ? earnings.owed : earnings.available, strings: strings))
+                Text(MoneyFormatter.format(earnings.headline, strings: strings))
                     .velroFont(.display, weight: .bold)
                     .foregroundStyle(earnings.owes ? Palette.error : Palette.primary)
                 if earnings.owes {
@@ -115,6 +115,12 @@ struct EarningsView: View {
                     Text(strings["driver.earnings.settle_at_station"])
                         .velroFont(.label, weight: .medium)
                         .foregroundStyle(Palette.onSurface)
+                }
+                // Both buckets, so a debt or a payout on its way to the
+                // office is never money that seems to have gone missing.
+                if earnings.pending.amountMinor != 0 {
+                    row("earnings.label.available", MoneyFormatter.format(minor: earnings.available.amountMinor, currency: earnings.available.currency, strings: strings, showPlus: true))
+                    row("driver.earnings.pending", MoneyFormatter.format(minor: earnings.pending.amountMinor, currency: earnings.pending.currency, strings: strings, showPlus: true))
                 }
                 Divider()
                 row("driver.earnings.lifetime_earned", MoneyFormatter.format(earnings.lifetimeEarned, strings: strings))

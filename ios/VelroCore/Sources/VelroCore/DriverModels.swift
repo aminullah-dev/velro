@@ -250,8 +250,18 @@ public struct Earnings: Decodable, Sendable, Hashable {
     public let lifetimePaid: Money?
     public let completedTrips: Int
 
-    public var owes: Bool { available.amountMinor < 0 }
-    public var owed: Money { Money(amountMinor: abs(available.amountMinor), currency: available.currency) }
+    /// Everything between him and VELRO not yet handed over: both buckets.
+    /// Opening a settlement moves the debt from `available` into `pending`,
+    /// so a rule read from `available` alone says "you owe nothing" at the
+    /// exact moment he acts on the debt -- Android's bug before this rule.
+    public var position: Money { available + pending }
+
+    /// Whether he is holding VELRO's money rather than the other way round.
+    public var owes: Bool { position.amountMinor < 0 }
+
+    /// The figure to headline, always positive; the label beside it says
+    /// which way it runs.
+    public var headline: Money { Money(amountMinor: abs(position.amountMinor), currency: position.currency) }
 }
 
 public struct EarningsBucket: Decodable, Sendable, Hashable, Identifiable {

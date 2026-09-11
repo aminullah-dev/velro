@@ -420,7 +420,7 @@ private struct EarningsCard: View {
                     Text(strings[earnings.owes ? "driver.earnings.owed" : "earnings.label.available"])
                         .velroFont(.label)
                         .foregroundStyle(Palette.onSurfaceVariant)
-                    Text(MoneyFormatter.format(earnings.owes ? earnings.owed : earnings.available, strings: strings))
+                    Text(MoneyFormatter.format(earnings.headline, strings: strings))
                         .velroFont(.display, weight: .bold)
                         .foregroundStyle(earnings.owes ? Palette.error : Palette.primary)
                     if earnings.owes {

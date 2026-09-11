@@ -104,7 +104,31 @@ struct DriverRulesTests {
          "lifetime_paid":{"amount_minor":0,"currency":"AFN"},"completed_trips":10}
         """#)
         #expect(earnings.owes)
-        #expect(earnings.owed == Money(amountMinor: 55800))
+        #expect(earnings.headline == Money(amountMinor: 55800))
+    }
+
+    @Test func aSettlementInFlightDoesNotMakeTheDebtDisappear() throws {
+        // 308 still in his pocket and 250 already on its way to the office:
+        // he owes 558 until the office marks it paid.
+        let earnings = try decode(Earnings.self, #"""
+        {"available":{"amount_minor":-30800,"currency":"AFN"},"pending":{"amount_minor":-25000,"currency":"AFN"},
+         "lifetime_earned":{"amount_minor":682200,"currency":"AFN"},"lifetime_commission":{"amount_minor":75800,"currency":"AFN"},
+         "lifetime_paid":{"amount_minor":100000,"currency":"AFN"},"completed_trips":10}
+        """#)
+        #expect(earnings.owes)
+        #expect(earnings.headline == Money(amountMinor: 55800))
+    }
+
+    @Test func aPayoutInFlightIsStillHis() throws {
+        // A full payout asked for, then one more cash trip: available is the
+        // commission on that trip, below zero, but the wallet as a whole is his.
+        let earnings = try decode(Earnings.self, #"""
+        {"available":{"amount_minor":-5000,"currency":"AFN"},"pending":{"amount_minor":40000,"currency":"AFN"},
+         "lifetime_earned":{"amount_minor":90000,"currency":"AFN"},"lifetime_commission":{"amount_minor":9000,"currency":"AFN"},
+         "completed_trips":3}
+        """#)
+        #expect(!earnings.owes)
+        #expect(earnings.headline == Money(amountMinor: 35000))
     }
 
     @Test func aNotificationPayloadWithANumberStillDecodes() throws {
