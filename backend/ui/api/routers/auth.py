@@ -20,8 +20,10 @@ from application.use_cases.authenticate import (
     VerifyOtp,
     VerifyOtpCommand,
 )
+from application.use_cases.delete_account import DeleteAccount, DeleteAccountCommand
 from application.use_cases.record_name import RecordName, RecordNameCommand
 from domain.enums import ActorRole
+from shared.logging import get_logger
 from ui.api import deps
 from ui.api.errors import ok
 from ui.api.schemas.auth import (
@@ -34,6 +36,7 @@ from ui.api.schemas.auth import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+log = get_logger(__name__)
 
 
 @router.post("/otp/request")
@@ -193,6 +196,43 @@ def update_me(
             locale=row.locale, status=row.status, roles=actor.roles,
         ).model_dump()
     )
+
+
+@router.delete("/me")
+def delete_me(
+    actor: deps.ActorDep,
+    session: deps.SessionDep,
+    users: Annotated[object, Depends(deps.users)],
+    bookings: Annotated[object, Depends(deps.bookings)],
+    drivers: Annotated[object, Depends(deps.drivers)],
+    trips: Annotated[object, Depends(deps.trips)],
+    refresh_tokens: Annotated[object, Depends(deps.refresh_tokens)],
+    eraser: Annotated[object, Depends(deps.account_eraser)],
+    audit: Annotated[object, Depends(deps.audit)],
+) -> dict:
+    """The account deletes itself. See DeleteAccount for what that means."""
+    result = DeleteAccount(
+        users=users, bookings=bookings, drivers=drivers, trips=trips,
+        refresh_tokens=refresh_tokens, eraser=eraser,
+        audit=audit, clock=deps.clock(),
+    ).execute(DeleteAccountCommand(user_id=actor.user_id, actor_role=actor.role))
+
+    # Committed here rather than left to the middleware, because the files
+    # come next and cannot be put back: unlinking a tazkira before the rows
+    # that forget it are safely written would leave, on a failed commit, a
+    # live account whose documents point at nothing. A commit that fails here
+    # raises, and the handset is told the account was not deleted.
+    session.commit()
+    storage = deps.file_storage()
+    for key in result.file_keys:
+        try:
+            storage.delete(key)
+        except Exception as exc:  # the account is gone either way
+            # Logged loudly with the key, not the person: the rows no longer
+            # name the file, so this line is how an operator finds a
+            # photograph that outlived its owner and removes it by hand.
+            log.error("account.delete.file_left_behind", key=key, error=type(exc).__name__)
+    return ok({"deleted": True})
 
 
 __all__ = ["ActorRole", "router"]

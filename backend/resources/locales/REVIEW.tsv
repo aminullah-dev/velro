@@ -16,6 +16,9 @@ error.refresh_token_revoked	You have been signed out. Please sign in again.	از
 error.user_not_found	No account found for that number.	برای این شماره حسابی یافت نشد.	د دې شمېرې لپاره حساب ونه موندل شو.	
 error.user_suspended	This account is suspended. Contact support.	این حساب بند است. با پشتیبانی تماس بگیرید.	دا حساب بند دی. له ملاتړ سره اړیکه ونیسئ.	
 error.permission_denied	You do not have permission to do that.	شما اجازه این کار را ندارید.	تاسو د دې کار اجازه نه لرئ.	
+error.account_has_active_booking	You have a seat booked. Cancel it, or finish the trip, before deleting your account.	شما یک چوکی رزرو شده دارید. پیش از حذف حساب، آن را لغو کنید یا سفر را تمام کنید.	تاسو یوه نیول شوې چوکۍ لرئ. د حساب له ړنګولو مخکې یې لغوه کړئ یا سفر پای ته ورسوئ.	new — please check the Pashto
+error.account_has_active_trip	You are driving a trip. Finish it before deleting your account.	شما یک سفر را رانندگی می‌کنید. پیش از حذف حساب، آن را تمام کنید.	تاسو اوس یو سفر چلوئ. د حساب له ړنګولو مخکې یې پای ته ورسوئ.	new — please check the Pashto
+error.account_staff_undeletable	This account opens the office console. Another administrator must close it.	این حساب کنسول دفتر را باز می‌کند. مدیر دیگری باید آن را ببندد.	دا حساب د دفتر کنسول پرانیزي. بل مدیر باید دا وتړي.	new — please check the Pashto
 error.province_not_found	That province was not found.	این ولایت یافت نشد.	دا ولایت ونه موندل شو.	
 error.district_not_found	That district was not found.	این ولسوالی یافت نشد.	دا ولسوالي ونه موندل شوه.	
 error.village_not_found	That village was not found.	این قریه یافت نشد.	دا کلی ونه موندل شو.	
@@ -252,6 +255,18 @@ passenger.profile.language_hint	The app and your messages use this.	اپ و پی
 passenger.profile.phone	Phone number	شماره تیلفون	د تلیفون شمېره	
 passenger.profile.phone_hint	This is your account. It cannot be changed here.	این حساب شماست. اینجا تغییر داده نمی‌شود.	دا ستاسو حساب دی. دلته نشي بدلېدای.	
 passenger.profile.name_saved	Saved.	ذخیره شد.	خوندي شو.	
+account.privacy	Privacy policy	سیاست حریم خصوصی	د محرمیت تګلاره	new — please check the Pashto
+account.delete.action	Delete account	حذف حساب	حساب ړنګول	new — please check the Pashto
+account.delete.title	Delete your account	حذف حساب شما	ستاسو د حساب ړنګول	new — please check the Pashto
+account.delete.gone_title	What is deleted	چه چیزی پاک می‌شود	څه ړنګیږي	new — please check the Pashto
+account.delete.gone	Your name, your phone number and your sign-in. You are signed out on every phone, and any open request is withdrawn.	نام، شمارهٔ تیلفون و ورود شما. از همهٔ تیلفون‌ها خارج می‌شوید و درخواست باز شما پس گرفته می‌شود.	ستاسو نوم، د تلیفون شمېره او ننوتل. له ټولو تلیفونونو وځئ، او پرانیستې غوښتنه مو بېرته اخیستل کېږي.	new — please check the Pashto
+account.delete.gone_driver	Your documents, your photo and your vehicle's papers are deleted too, and your offers are withdrawn.	مدارک، عکس و اسناد موتر شما هم پاک می‌شود و پیشنهادهای شما پس گرفته می‌شود.	ستاسو اسناد، انځور او د موټر کاغذونه هم ړنګیږي، او وړاندیزونه مو بېرته اخیستل کېږي.	new — please check the Pashto
+account.delete.kept_title	What is kept, without your name	چه چیزی بدون نام شما می‌ماند	څه ستاسو له نوم پرته پاتې کیږي	new — please check the Pashto
+account.delete.kept	Records of past trips and fares, for accounting, and any safety report you filed, because it may concern someone else's safety.	سابقهٔ سفرها و کرایه‌های گذشته برای حساب‌وکتاب، و گزارش‌های امنیتی که ثبت کرده‌اید، چون ممکن است به امنیت کس دیگری مربوط باشد.	د تېرو سفرونو او کرایو ریکارډ د حساب‌ کتاب لپاره، او هغه امنیتي راپورونه چې تاسو ثبت کړي، ځکه چې کېدای شي د بل چا له امنیت سره تړاو ولري.	new — please check the Pashto
+account.delete.again	You can sign up again with the same number at any time, as a new account.	هر وقت بخواهید می‌توانید با همین شماره دوباره ثبت‌نام کنید، به‌عنوان یک حساب نو.	هر وخت چې وغواړئ، په همدې شمېره بیا نوم‌لیکنه کولای شئ، د یوه نوي حساب په توګه.	new — please check the Pashto
+account.delete.confirm_question	Delete your account permanently? This cannot be undone.	حساب‌تان برای همیشه حذف شود؟ این کار برگشت ندارد.	ستاسو حساب د تل لپاره ړنګ شي؟ دا کار بېرته نه راګرځي.	new — please check the Pashto
+account.delete.confirm	Delete my account	حسابم را حذف کن	زما حساب ړنګ کړه	new — please check the Pashto
+account.delete.done	Your account was deleted.	حساب شما حذف شد.	ستاسو حساب ړنګ شو.	new — please check the Pashto
 common.state.offline	You are offline. Showing saved information.	آفلاین هستید. معلومات ذخیره‌شده نشان داده می‌شود.	آفلاین یاست. زېرمه شوي معلومات ښودل کېږي.	
 common.label.currency_afn	AFN	افغانی	افغانۍ	
 admin.title	VELRO Admin	پنل مدیریت ولرو	د ولرو مدیریت پنل	

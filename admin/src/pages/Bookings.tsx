@@ -9,7 +9,8 @@ interface Booking {
   number: string;
   trip_number: string;
   passenger_name: string | null;
-  passenger_phone: string;
+  /** null once the passenger deleted their account. */
+  passenger_phone: string | null;
   status: string;
   seat_count: number;
   fare_total_minor: number;
@@ -65,7 +66,7 @@ export function BookingsPage() {
                 <td><StatusChip status={booking.status} kind="booking" /></td>
                 <td>{booking.passenger_name ?? t("common.value.no_name")}</td>
                 {/* A phone number is a sequence to be dialled, never mirrored. */}
-                <td><Ltr>{booking.passenger_phone}</Ltr></td>
+                <td><Ltr>{booking.passenger_phone ?? "—"}</Ltr></td>
                 <td><Ltr>{booking.trip_number}</Ltr></td>
                 <td className="num">{num(booking.seat_count)}</td>
                 <td className="num">

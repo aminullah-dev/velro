@@ -22,7 +22,9 @@ from infrastructure.db.base import Auditable, Base, enum_check
 class UserRow(Auditable, Base):
     __tablename__ = "users"
 
-    phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    #: NULL only on an account its owner deleted: the number is let go so the
+    #: same SIM can open a fresh account. See DeleteAccount.
+    phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     full_name: Mapped[str | None] = mapped_column(String(160))
     locale: Mapped[str] = mapped_column(String(8), default=Locale.DARI.value, nullable=False)
     photo_key: Mapped[str | None] = mapped_column(String(255))

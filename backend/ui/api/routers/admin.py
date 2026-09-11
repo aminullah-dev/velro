@@ -763,7 +763,8 @@ class DriverAdminOut(Schema):
     id: str
     user_id: str
     full_name: str | None
-    phone: str
+    #: None once the driver deleted his own account.
+    phone: str | None
     approval_status: str
     availability: str
     rating_average: float | None
@@ -1004,7 +1005,8 @@ def suspend_driver(
 
 class UserAdminOut(Schema):
     id: str
-    phone: str
+    #: None on an account its owner deleted (status DEACTIVATED).
+    phone: str | None
     full_name: str | None
     status: str
     locale: str
@@ -1068,7 +1070,9 @@ def _load_user(users_repo, user_id: str) -> DomainUser:
     row = users_repo.get(user_id)
     return DomainUser(
         id=row.id,
-        phone=PhoneNumber(row.phone),
+        # A deleted account has no number, and neither switch below reads
+        # one: they refuse it on its DEACTIVATED status instead.
+        phone=PhoneNumber(row.phone) if row.phone else None,
         full_name=row.full_name,
         locale=Locale(row.locale),
         status=UserStatus(row.status),
@@ -1289,7 +1293,7 @@ class BookingAdminOut(Schema):
     number: str
     trip_number: str
     passenger_name: str | None
-    passenger_phone: str
+    passenger_phone: str | None
     status: str
     seat_count: int
     fare_total_minor: int

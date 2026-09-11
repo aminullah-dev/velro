@@ -8,7 +8,7 @@ interface Driver {
   id: string;
   user_id: string;
   full_name: string | null;
-  phone: string;
+  phone: string | null;
   approval_status: string;
   availability: string;
   rating_average: number | null;

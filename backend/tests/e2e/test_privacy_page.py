@@ -19,3 +19,12 @@ def test_the_download_page_links_to_it(client: TestClient) -> None:
     page = client.get("/app")
     assert page.status_code == 200
     assert 'href="/privacy"' in page.text
+
+
+def test_it_says_how_to_delete_an_account_from_inside_the_app(client: TestClient) -> None:
+    """The stores link here for "how do I delete my account", and the answer
+    must be the button that exists, not a letter to write."""
+    page = client.get("/privacy").text
+    assert 'id="delete"' in page
+    assert "«حذف حساب»" in page
+    assert '"Delete account"' in page

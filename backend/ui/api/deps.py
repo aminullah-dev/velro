@@ -28,6 +28,7 @@ from domain.identity import (
     SUPER_ADMIN,
     SUPPORT_AGENT,
 )
+from infrastructure.db.repositories.erasure import AccountEraser
 from infrastructure.db.repositories.geography import (
     DestinationRepository,
     DistrictRepository,
@@ -281,6 +282,10 @@ def driver_documents(session: SessionDep) -> DriverDocumentRepository:
 
 def vehicle_documents(session: SessionDep) -> VehicleDocumentRepository:
     return VehicleDocumentRepository(session)
+
+
+def account_eraser(session: SessionDep) -> AccountEraser:
+    return AccountEraser(session)
 
 
 @lru_cache(maxsize=1)

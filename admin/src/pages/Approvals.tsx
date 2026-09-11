@@ -6,7 +6,7 @@ import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 
 interface Driver {
-  id: string; full_name: string | null; phone: string;
+  id: string; full_name: string | null; phone: string | null;
   approval_status: string; plate_number: string | null;
 }
 

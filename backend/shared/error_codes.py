@@ -31,6 +31,12 @@ USER_SUSPENDED: Final = "USER_SUSPENDED"
 USER_ALREADY_SUSPENDED: Final = "USER_ALREADY_SUSPENDED"
 USER_NOT_SUSPENDED: Final = "USER_NOT_SUSPENDED"
 PERMISSION_DENIED: Final = "PERMISSION_DENIED"
+# Deleting your own account, refused for a reason you can act on: a seat
+# somebody is holding for you, a car you are driving with people in it, or an
+# account that opens the office and must be closed by another administrator.
+ACCOUNT_HAS_ACTIVE_BOOKING: Final = "ACCOUNT_HAS_ACTIVE_BOOKING"
+ACCOUNT_HAS_ACTIVE_TRIP: Final = "ACCOUNT_HAS_ACTIVE_TRIP"
+ACCOUNT_STAFF_UNDELETABLE: Final = "ACCOUNT_STAFF_UNDELETABLE"
 
 # -- geography -----------------------------------------------------------
 PROVINCE_NOT_FOUND: Final = "PROVINCE_NOT_FOUND"

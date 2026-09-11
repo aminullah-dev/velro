@@ -21,7 +21,7 @@ from fastapi.responses import HTMLResponse
 page_router = APIRouter(tags=["release"])
 
 CONTACT = "aminhashemi979@gmail.com"
-EFFECTIVE = "۱۱ سنبله ۱۴۰۵ — 2 September 2026"
+EFFECTIVE = "۲۰ سنبله ۱۴۰۵ — 11 September 2026"
 
 _PAGE = """<!doctype html>
 <html lang="fa" dir="rtl">
@@ -70,15 +70,25 @@ _PAGE = """<!doctype html>
 <p>معلومات شما فروخته نمی‌شود و به هیچ تبلیغ‌کننده‌ای داده نمی‌شود.</p>
 
 <h2>۴. تا کی نگه داشته می‌شود</h2>
-<p>تا وقتی حساب شما فعال است. کود ورود چند دقیقه بعد از بین می‌رود. نسخهٔ پشتیبان ۱۴ روز روی سرور می‌ماند و کاپی‌های آن برای بازیابی در حادثه نگهداری می‌شود. اگر بخواهید حساب‌تان پاک شود، بنویسید؛ معلومات حساب پاک می‌شود و فقط آنچه برای حساب‌وکتاب کرایه‌ها لازم است، بدون نام، می‌ماند.</p>
+<p>تا وقتی حساب شما فعال است، یا تا وقتی خودتان آن را حذف کنید (بخش ۵). کود ورود چند دقیقه بعد از بین می‌رود. نسخهٔ پشتیبان ۱۴ روز روی سرور می‌ماند و کاپی‌های آن برای بازیابی در حادثه نگهداری می‌شود.</p>
 
-<h2>۵. حق شما</h2>
-<p>می‌توانید بپرسید چه چیزی از شما داریم، آن را اصلاح کنید، یا حذفش را بخواهید — از داخل اپ («کمک بگیرید») یا با ایمیل به <a href="mailto:{contact}">{contact}</a>. اجازهٔ موقعیت را هر وقت خواستید از تنظیمات تیلفون بردارید؛ بدون آن، مسافر نمی‌تواند درخواست بدهد.</p>
+<h2 id="delete">۵. حذف حساب</h2>
+<p>از داخل اپ، هر وقت خواستید: در اپ مسافر «حساب من» ← «حذف حساب»، و در اپ راننده «پروفایل» ← «حذف حساب». با حذف حساب، همان لحظه:</p>
+<ul>
+<li>نام، شمارهٔ تیلفون، ایمیل و ورود شما پاک می‌شود و از همهٔ تیلفون‌ها خارج می‌شوید؛</li>
+<li>عکس تذکره، جواز رانندگی، عکس پروفایل و اسناد موتر (برای راننده) از سرور پاک می‌شود؛</li>
+<li>شناسهٔ دستگاه برای اعلان‌ها، موقعیت فعلی موتر، کودهای ورود، و یادداشت‌هایی که روی درخواست یا رزرو نوشته‌اید پاک می‌شود، و درخواست یا پیشنهاد باز شما پس گرفته می‌شود.</li>
+</ul>
+<p>آنچه بدون نام و شماره می‌ماند: سابقهٔ سفرها، کرایه‌ها، کمیشن و تصفیه‌ها (برای حساب‌وکتاب)، امتیازها بدون متن‌شان، و گزارش‌های امنیتی یا شکایت‌هایی که ثبت کرده‌اید، چون ممکن است به امنیت کس دیگری مربوط باشد. تا وقتی یک چوکی برای شما رزرو است یا خودتان یک سفر را می‌رانید، حذف ممکن نیست — اول آن را لغو یا تمام کنید. نسخه‌های پشتیبانی که پیش از حذف گرفته شده‌اند، کاپی قدیمی را تا وقتی خودشان پاک شوند نگه می‌دارند و فقط برای بازیابی در حادثه به کار می‌روند. هر وقت بخواهید می‌توانید با همان شماره دوباره ثبت‌نام کنید؛ آن یک حساب نو خواهد بود.</p>
+<p>اگر به اپ دسترسی ندارید، به <a href="mailto:{contact}">{contact}</a> بنویسید و شماره‌تان را بگویید؛ پیش از حذف، با تماس یا پیام به همان شماره تأیید می‌کنیم که شماره از خودتان است.</p>
 
-<h2>۶. امنیت</h2>
+<h2>۶. حق شما</h2>
+<p>می‌توانید بپرسید چه چیزی از شما داریم یا آن را اصلاح کنید — از داخل اپ («کمک بگیرید») یا با ایمیل به <a href="mailto:{contact}">{contact}</a> — و حساب‌تان را خودتان حذف کنید (بخش ۵). اجازهٔ موقعیت را هر وقت خواستید از تنظیمات تیلفون بردارید؛ بدون آن، مسافر نمی‌تواند درخواست بدهد.</p>
+
+<h2>۷. امنیت</h2>
 <p>همهٔ ارتباط اپ با سرور رمزگذاری‌شده (HTTPS) است. کود ورود روی سرور به‌شکل هش نگه داشته می‌شود، نه متن ساده. مدارک رانندگان فقط برای کارمندان مجاز قابل دیدن است و در مرورگر یا پراکسی ذخیره نمی‌شود.</p>
 
-<h2>۷. تغییرات</h2>
+<h2>۸. تغییرات</h2>
 <p>اگر این سیاست عوض شود، نسخهٔ جدید همین‌جا با تاریخ جدید می‌نشیند.</p>
 
 <section class="en" lang="en">
@@ -108,15 +118,25 @@ _PAGE = """<!doctype html>
 <p>Your data is not sold and is not given to advertisers.</p>
 
 <h2>4. How long it is kept</h2>
-<p>For as long as your account is active. Sign-in codes expire within minutes. Backups stay on the server for 14 days, and copies are kept for disaster recovery. If you ask for your account to be deleted, account data is removed and only what is needed for fare accounting is kept, without your name.</p>
+<p>For as long as your account is active, or until you delete it yourself (section 5). Sign-in codes expire within minutes. Backups stay on the server for 14 days, and copies are kept for disaster recovery.</p>
 
-<h2>5. Your rights</h2>
-<p>You can ask what we hold about you, correct it, or ask for it to be deleted — from inside the app ("Get help") or by email to <a href="mailto:{contact}">{contact}</a>. You can withdraw location permission in your phone's settings at any time; without it, a passenger cannot ask for a ride.</p>
+<h2 id="delete-en">5. Deleting your account</h2>
+<p>From inside the app, at any time: in the passenger app, "Account" → "Delete account"; in the driver app, "Profile" → "Delete account". The moment you confirm:</p>
+<ul>
+<li>your name, phone number, email and sign-in are removed, and you are signed out on every phone;</li>
+<li>a driver's tazkira, driving licence, profile photo and vehicle papers are deleted from the server;</li>
+<li>your notification device token, your car's current position, your sign-in codes and any notes you wrote on a request or booking are deleted, and any open request or offer of yours is withdrawn.</li>
+</ul>
+<p>What stays, without your name or number: the record of past trips, fares, commission and settlements (for accounting), ratings without their comments, and any safety report or complaint you filed, because it may concern someone else's safety. An account cannot be deleted while a seat is booked for you or while you are driving a trip — cancel or finish it first. Backups taken before the deletion keep the old copy until they are themselves deleted, and are used only for disaster recovery. You can sign up again with the same number at any time; it will be a new account.</p>
+<p>If you cannot open the app, write to <a href="mailto:{contact}">{contact}</a> with your number; before deleting, we confirm the number is yours by calling or messaging it.</p>
 
-<h2>6. Security</h2>
+<h2>6. Your rights</h2>
+<p>You can ask what we hold about you or correct it — from inside the app ("Get help") or by email to <a href="mailto:{contact}">{contact}</a> — and delete your account yourself (section 5). You can withdraw location permission in your phone's settings at any time; without it, a passenger cannot ask for a ride.</p>
+
+<h2>7. Security</h2>
 <p>All traffic between the apps and the server is encrypted (HTTPS). Sign-in codes are stored hashed, never in plain text. Driver documents are visible only to authorised staff and are never cached by browsers or proxies.</p>
 
-<h2>7. Changes</h2>
+<h2>8. Changes</h2>
 <p>If this policy changes, the new version appears here with a new date.</p>
 </section>
 </main>
