@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# Archive the VELRO passenger app and send it to App Store Connect (TestFlight),
-# in one command. The same shape as Namazia's scripts/upload.sh.
+# Archive a VELRO app and send it to App Store Connect (TestFlight), in one
+# command. The same shape as Namazia's scripts/upload.sh.
 #
-#   ios/scripts/upload.sh              archive, export, upload
+#   ios/scripts/upload.sh              archive, export, upload (VELRO Ride)
+#   ios/scripts/upload.sh --app driver ...VELRO Driver instead
 #   ios/scripts/upload.sh --dry-run    archive and export only, no upload
 #   ios/scripts/upload.sh --build 7    use build number 7 instead of the next one
 #
@@ -20,14 +21,25 @@ EXPORT_DIR="$BUILD_DIR/export"
 
 DRY_RUN=false
 FORCED_BUILD=""
+APP=passenger
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --app)     APP="${2:-}"; shift 2 ;;
         --dry-run) DRY_RUN=true; shift ;;
         --build)   FORCED_BUILD="${2:-}"; shift 2 ;;
-        -h|--help) sed -n '3,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '3,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
 done
+
+case "$APP" in
+    passenger) SCHEME=VelroPassenger; NAME="VELRO Ride" ;;
+    driver)    SCHEME=VelroDriver;    NAME="VELRO Driver" ;;
+    *) echo "unknown app: $APP (passenger or driver)" >&2; exit 2 ;;
+esac
+# The driver target's own version lines end in "# driver"; the passenger's
+# are the project-wide ones without it.
+if [[ "$APP" == driver ]]; then PICK='# driver$'; else PICK='^[^#]*$'; fi
 
 [[ -f "$ROOT/scripts/.env" ]] && { set -a; source "$ROOT/scripts/.env"; set +a; }
 DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-27RXPRW77S}"
@@ -48,12 +60,16 @@ ASC_KEY_PATH="${ASC_KEY_PATH/#\~/$HOME}"
 if [[ -n "$FORCED_BUILD" ]]; then
     BUILD_NUMBER="$FORCED_BUILD"
 else
-    CURRENT=$(grep -E '^[[:space:]]*CURRENT_PROJECT_VERSION:' project.yml | head -1 | sed -E 's/.*"([0-9]+)".*/\1/')
+    CURRENT=$(grep -E '^[[:space:]]*CURRENT_PROJECT_VERSION:' project.yml | grep -E "$PICK" | head -1 | sed -E 's/.*"([0-9]+)".*/\1/')
     BUILD_NUMBER=$((CURRENT + 1))
 fi
-sed -i '' -E "s/(CURRENT_PROJECT_VERSION: )\"[0-9]+\"/\1\"$BUILD_NUMBER\"/" project.yml
-MARKETING=$(grep -E '^[[:space:]]*MARKETING_VERSION:' project.yml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
-echo "▸ VELRO $MARKETING (build $BUILD_NUMBER)"
+if [[ "$APP" == driver ]]; then
+    sed -i '' -E "/# driver\$/ s/(CURRENT_PROJECT_VERSION: )\"[0-9]+\"/\1\"$BUILD_NUMBER\"/" project.yml
+else
+    sed -i '' -E "/#/! s/(CURRENT_PROJECT_VERSION: )\"[0-9]+\"/\1\"$BUILD_NUMBER\"/" project.yml
+fi
+MARKETING=$(grep -E '^[[:space:]]*MARKETING_VERSION:' project.yml | grep -E "$PICK" | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+echo "▸ $NAME $MARKETING (build $BUILD_NUMBER)"
 
 AUTH=(-allowProvisioningUpdates
       -authenticationKeyPath "$ASC_KEY_PATH"
@@ -65,7 +81,7 @@ xcodegen generate --quiet
 rm -rf "$BUILD_DIR"; mkdir -p "$BUILD_DIR"
 
 echo "▸ Archiving (a few minutes)"
-xcodebuild archive -project Velro.xcodeproj -scheme VelroPassenger -configuration Release \
+xcodebuild archive -project Velro.xcodeproj -scheme "$SCHEME" -configuration Release \
     -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" \
     "${AUTH[@]}" DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" | tail -5
 

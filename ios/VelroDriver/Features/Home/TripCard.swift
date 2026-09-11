@@ -34,6 +34,7 @@ struct TripCard: View {
                             .foregroundStyle(Palette.onSurface)
                     }
                     JourneyLine(origin: trip.originStationName, destination: trip.destinationName)
+                    if model.app.duty.access == .denied { LocationOffBanner() }
                     if let key = model.app.duty.roadAlertKey {
                         RoadAlertBanner(messageKey: key)
                     }
@@ -219,5 +220,35 @@ struct RoadAlertBanner: View {
             .padding(Spacing.md)
             .background(Palette.toneFailed, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
             .accessibilityIdentifier("trip.road_alert")
+    }
+}
+
+/// Location is off for this app while a trip is his: the passengers cannot
+/// see the car and the road cannot warn him. Said plainly, with the one
+/// action that fixes it -- never a trip that silently goes dark.
+struct LocationOffBanner: View {
+    @Environment(\.strings) private var strings
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Label(strings["location.permission.denied"], systemImage: "location.slash.fill")
+                .velroFont(.label, weight: .medium)
+                .foregroundStyle(Palette.onToneFailed)
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+            } label: {
+                Text(strings["location.action.open_settings"])
+                    .velroFont(.label, weight: .bold)
+                    .foregroundStyle(Palette.onToneFailed)
+                    .underline()
+                    .frame(minHeight: 44)
+            }
+            .accessibilityIdentifier("trip.location_settings")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.md)
+        .background(Palette.toneFailed, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+        .accessibilityElement(children: .contain)
     }
 }

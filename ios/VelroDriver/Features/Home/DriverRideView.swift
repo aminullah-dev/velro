@@ -14,6 +14,10 @@ struct DriverRideView: View {
         ZStack {
             if let map = model.tripMap {
                 JourneyMapView(map: map, vehicle: car, height: nil, fullBleed: true)
+                    // Framed again once, when the first fix arrives: a map
+                    // sized before his position was known can leave his own
+                    // car off the edge of the screen.
+                    .id(car == nil)
                     .ignoresSafeArea()
             } else {
                 Palette.background.ignoresSafeArea()
@@ -33,6 +37,7 @@ struct DriverRideView: View {
                     .accessibilityLabel(strings["safety.title"])
                     .accessibilityIdentifier("ride.help")
                 }
+                if model.app.duty.access == .denied { LocationOffBanner() }
                 Spacer()
                 RideNames(
                     driver: model.profile?.fullName,

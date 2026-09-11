@@ -27,6 +27,16 @@ struct LocalPassenger {
         return token
     }
 
+    /// The name the driver sees on his trip card.
+    func setName(_ name: String, token: String) async throws {
+        var request = URLRequest(url: api.appending(path: "auth/me"))
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["full_name": name])
+        _ = try await URLSession.shared.data(for: request)
+    }
+
     /// Asks for a ride from ایستگاه خیشکی (Siahgird) to Charikar -- the one
     /// pair the development database has a drawn road for -- tomorrow at seven,
     /// standing at the station so the service-area check lets it through.

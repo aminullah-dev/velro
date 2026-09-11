@@ -19,7 +19,7 @@ DERIVED = build
 DEST = platform=iOS Simulator,name=$(SIM)
 APP_PATH = $(DERIVED)/Build/Products/Debug-iphonesimulator/$(SCHEME).app
 
-.PHONY: help project core-test build run ui-test api clean
+.PHONY: help project core-test build run ui-test store-shots api clean
 
 help:
 	@echo "make api        start the local API on :8000 (codes come back in the response)"
@@ -57,6 +57,24 @@ ui-test: project
 	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Debug \
 		-destination '$(DEST)' -derivedDataPath $(DERIVED) \
 		-resultBundlePath $(DERIVED)/ui-test.xcresult -quiet test
+
+# The driver's App Store pictures (needs make api): a real trip in Dari on the
+# 6.9" iPhone, a 9:41 status bar, the car on the Siahgird road just before a
+# caution zone. Lands in AppStore/driver/screenshots as JPEG.
+STORE_SIM ?= iPhone 17 Pro Max
+store-shots: project
+	rm -rf $(DERIVED)/store-shots.xcresult $(DERIVED)/store-shots
+	@xcrun simctl boot "$(STORE_SIM)" 2>/dev/null || true
+	xcrun simctl bootstatus "$(STORE_SIM)" -b >/dev/null
+	xcrun simctl status_bar "$(STORE_SIM)" override --time 9:41 --dataNetwork wifi --wifiBars 3 --cellularBars 4 --batteryState charged --batteryLevel 100
+	@# A fresh install asks; a test device may carry an old "Don't Allow".
+	xcrun simctl privacy "$(STORE_SIM)" grant location af.velro.driver
+	xcrun simctl location "$$(xcrun simctl list devices booted | grep '$(STORE_SIM) (' | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')" set 34.99896,68.83797
+	TEST_RUNNER_VELRO_STORE_SHOTS=1 xcodebuild -project $(PROJECT) -scheme VelroDriver -configuration Debug \
+		-destination 'platform=iOS Simulator,name=$(STORE_SIM)' -derivedDataPath $(DERIVED) \
+		-resultBundlePath $(DERIVED)/store-shots.xcresult -only-testing:VelroDriverUITests/StoreScreenshots -quiet test
+	xcrun xcresulttool export attachments --path $(DERIVED)/store-shots.xcresult --output-path $(DERIVED)/store-shots >/dev/null
+	python3 scripts/store-shots.py $(DERIVED)/store-shots AppStore/driver/screenshots
 
 api:
 	../backend/scripts/dev-api.sh

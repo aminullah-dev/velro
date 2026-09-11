@@ -127,6 +127,7 @@ final class DriverFlowTests: XCTestCase {
         step(app, "I have arrived")
         let field = app.textFields["trip.code"]
         XCTAssertTrue(field.waitForExistence(timeout: 20))
+        if !field.isHittable { app.swipeUp() }
         field.tap()
         field.typeText(code)
         app.buttons["trip.verify"].tap()

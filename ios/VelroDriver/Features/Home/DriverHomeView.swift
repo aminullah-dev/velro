@@ -399,6 +399,7 @@ private struct InboxCard: View {
                             .foregroundStyle(Palette.onSurface)
                     }
                     SecondaryButton(label: strings["inbox.mark_read"], action: markRead)
+                        .accessibilityIdentifier("home.inbox.read")
                 }
             }
         }
@@ -466,6 +467,9 @@ struct NoticeToast: View {
                     .padding(.bottom, Spacing.xl)
                     .padding(.horizontal, Spacing.gutter)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+                    // Says, never blocks: a thumb meant for the field under
+                    // it must reach the field.
+                    .allowsHitTesting(false)
                     .task(id: text) {
                         try? await Task.sleep(for: .seconds(4))
                         self.text = nil

@@ -133,13 +133,14 @@ func realStrings(_ locale: AppLocale) -> Strings {
         let walker = FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil)
         // Every dotted literal in a namespace the locale files use -- not only
         // the ones written inside `strings[...]`, because keys also live in
-        // tuples and `titleKey` switches. Test identifiers are taken out first.
+        // tuples and `titleKey` switches. Test identifiers and SF Symbol names
+        // ("location.slash.fill") are taken out first.
         let namespaces = Set(localeFile(.english).keys.compactMap { $0.split(separator: ".").first.map(String.init) })
         var keys: Set<String> = ["error.network_offline", "error.internal_error"]
         while let url = walker?.nextObject() as? URL {
             guard url.pathExtension == "swift" else { continue }
             let text = try String(contentsOf: url, encoding: .utf8)
-                .replacing(/(?:accessibilityIdentifier\(|identifier: )"[^"]*"/, with: "")
+                .replacing(/(?:accessibilityIdentifier\(|identifier: |systemImage: |systemName: )"[^"]*"/, with: "")
             for match in text.matches(of: /"([a-z0-9_]+(?:\.[a-z0-9_]+)+)"/) {
                 let key = String(match.output.1)
                 if let first = key.split(separator: ".").first, namespaces.contains(String(first)) {

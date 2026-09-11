@@ -62,3 +62,35 @@ The snapshots are named after the step (`7-offer`, `17-ride-map`, …). The
 video is `xcrun simctl io "iPhone 17 Pro Max" recordVideo` running while
 `RideFlowTests` and `AccountFlowTests/testDeletingTheAccount` play, trimmed
 past the home screen with `avconvert --start`.
+
+# VELRO Driver on the App Store
+
+`driver/listing.json` and `driver/screenshots/` are the driver app's; every
+command above takes `--app driver`. The screenshots come from a real trip in
+the simulator: `make store-shots` (needs `make api`).
+
+## What only a person can do, once
+
+1. **Create the record.** App Store Connect → My Apps → + → New App: iOS,
+   name **VELRO Driver**, primary language English (U.S.), bundle ID
+   **af.velro.driver** (register it under Identifiers first if it is not in
+   the list; Xcode's automatic signing registers it on the first archive), SKU
+   `velro-driver`. Then `ios/scripts/appstore.py --app driver --apply
+   --screenshots`, and upload a build: `ios/scripts/upload.sh --app driver`
+   (the first archive also registers the bundle ID through automatic signing).
+2. **App Privacy**, as `VelroDriver/Resources/PrivacyInfo.xcprivacy` and the
+   privacy page say — the passenger's answers plus two:
+   - Contact Info → Name, Phone Number
+   - Location → Precise Location (while he carries a trip)
+   - **User Content → Photos or Videos** (tazkira, licence, car papers, his face)
+   - **Financial Info → Other Financial Info** (earnings, commission, settlements)
+   - User Content → Customer Support, Other User Content (the note on a price)
+   - Identifiers → User ID, Device ID
+   - For every one: App Functionality; linked to the user; no tracking.
+3. **The review account.** +12025550142 is already on production's
+   OTP_TEST_NUMBERS and GEOFENCE_EXEMPT_PHONES for the passenger app. For the
+   driver app the same number must also be a driver: sign in to the driver
+   app with it once (Apply to drive), then in the admin console approve the
+   driver and add an ACTIVE vehicle with its papers. Until then App Review
+   sees "awaiting approval" and cannot go online — a 2.1 rejection.
+4. `--review --contact-phone …`, then **Submit for Review**.

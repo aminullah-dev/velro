@@ -1,6 +1,7 @@
 import AudioToolbox
 import CoreLocation
 import Observation
+import OSLog
 import UIKit
 import UserNotifications
 import VelroCore
@@ -42,6 +43,7 @@ final class TripDuty: NSObject, CLLocationManagerDelegate {
     private var loop: Task<Void, Never>?
 
     static let tick: Duration = .seconds(30)
+    private let log = Logger(subsystem: "af.velro.driver", category: "duty")
     static let cooldown: TimeInterval = 10 * 60
 
     init(client: APIClient) {
@@ -90,6 +92,7 @@ final class TripDuty: NSObject, CLLocationManagerDelegate {
     }
 
     private func start(tripId: String) {
+        log.info("on duty for trip \(tripId, privacy: .public), access \(String(describing: self.access), privacy: .public)")
         self.tripId = tripId
         announced = [:]
         requestPermissionIfNeeded()
@@ -106,6 +109,7 @@ final class TripDuty: NSObject, CLLocationManagerDelegate {
 
     private func beginUpdates() {
         guard access == .granted, tripId != nil else { return }
+        log.info("location updates start")
         // Only while a trip is his, and only with the pill showing: he can see
         // the app is following him, and why.
         manager.allowsBackgroundLocationUpdates = true
@@ -143,6 +147,7 @@ final class TripDuty: NSObject, CLLocationManagerDelegate {
 
     private func received(_ fix: CLLocation) {
         guard tripId != nil else { return }
+        log.debug("fix \(fix.coordinate.latitude, privacy: .public),\(fix.coordinate.longitude, privacy: .public)")
         position = fix
         watchRoad(fix)
         // The first fix of a trip goes straight away: the passenger's map
@@ -159,14 +164,18 @@ final class TripDuty: NSObject, CLLocationManagerDelegate {
         let now = Date.now
         let inside = alerts.filter { Eta.distance(car, ($0.latitude, $0.longitude)) <= Double($0.radiusM) }
         guard !inside.isEmpty else {
-            roadAlertKey = nil
+            // Written only when it changes: an @Observable property redraws
+            // its readers on every write, and a fix a second rewriting nil
+            // redrew the trip card under his thumb -- the code field he was
+            // typing into lost its keyboard.
+            if roadAlertKey != nil { roadAlertKey = nil }
             return
         }
         guard let hit = inside.first(where: { now.timeIntervalSince(announced[key($0)] ?? .distantPast) > Self.cooldown }) else {
             return
         }
         announced[key(hit)] = now
-        roadAlertKey = hit.messageKey
+        if roadAlertKey != hit.messageKey { roadAlertKey = hit.messageKey }
         // Felt as well as heard: a ringer set to vibrate must not make the
         // warning silent.
         AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
@@ -200,7 +209,9 @@ final class TripDuty: NSObject, CLLocationManagerDelegate {
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
         MainActor.assumeIsolated {
-            access = Self.access(for: status)
+            let now = Self.access(for: status)
+            if access != now { access = now }
+            log.info("authorization \(status.rawValue, privacy: .public)")
             beginUpdates()
         }
     }
@@ -210,5 +221,8 @@ final class TripDuty: NSObject, CLLocationManagerDelegate {
         MainActor.assumeIsolated { received(last) }
     }
 
-    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {}
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
+        let text = String(describing: error)
+        MainActor.assumeIsolated { log.error("location failed: \(text, privacy: .public)") }
+    }
 }
