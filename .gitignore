@@ -62,3 +62,8 @@ admin/tsconfig.tsbuildinfo
 keystore.properties*
 *.jks
 *.keystore
+
+# iOS uploads. The App Store Connect key and the file that names it stay on
+# this Mac: a key in the repository uploads builds as the account holder.
+ios/scripts/.env
+*.p8
