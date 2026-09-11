@@ -17,11 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import android.app.Activity
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -56,23 +52,9 @@ fun BrandHeader(
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
-    // The status bar sits on the green, so its icons have to be light while
-    // this header is on screen -- and dark again the moment it is not, because
-    // every other screen keeps a white bar. Owned here rather than at the
-    // activity, so a screen cannot forget to set it or forget to put it back:
-    // the header that causes the problem is the thing that fixes it.
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        val window = (view.context as? Activity)?.window
-        DisposableEffect(window) {
-            val controller = window?.let { WindowCompat.getInsetsController(it, view) }
-            val previous = controller?.isAppearanceLightStatusBars
-            controller?.isAppearanceLightStatusBars = false
-            onDispose {
-                previous?.let { controller.isAppearanceLightStatusBars = it }
-            }
-        }
-    }
+    // Owned here rather than at the activity, so a screen cannot forget to set
+    // it or forget to put it back: the header that causes the problem fixes it.
+    LightStatusBarIconsWhileShown()
 
     Surface(
         modifier = modifier.fillMaxWidth(),

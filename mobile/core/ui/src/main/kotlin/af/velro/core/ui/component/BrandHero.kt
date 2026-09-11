@@ -3,7 +3,6 @@ package af.velro.core.ui.component
 import af.velro.core.ui.theme.Radius
 import af.velro.core.ui.theme.Spacing
 import af.velro.core.ui.theme.VelroColors
-import android.app.Activity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.heightIn
@@ -23,12 +22,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
 
 /**
  * The brand field a signed-out screen opens with.
@@ -68,22 +64,7 @@ fun BrandHero(
     minHeight: Dp = 0.dp,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
-    // The status bar sits on the green while this is on screen, so its icons
-    // must be light -- and restored on the way out, because every other screen
-    // keeps a white bar. Owned here for the same reason BrandHeader owns it:
-    // the thing that causes the problem is the thing that undoes it.
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        val window = (view.context as? Activity)?.window
-        DisposableEffect(window) {
-            val controller = window?.let { WindowCompat.getInsetsController(it, view) }
-            val previous = controller?.isAppearanceLightStatusBars
-            controller?.isAppearanceLightStatusBars = false
-            onDispose {
-                previous?.let { controller.isAppearanceLightStatusBars = it }
-            }
-        }
-    }
+    LightStatusBarIconsWhileShown()
 
     Surface(
         modifier = modifier.fillMaxWidth(),
