@@ -828,7 +828,13 @@ data class RideVehicleDto(
 data class RideDriverDto(
     val driver_id: String,
     val name: String? = null,
-    val phone: String,
+    /**
+     * Null once the driver has deleted his account: the number goes with it,
+     * so the same SIM can open a fresh one. Declared non-null, that one null
+     * would fail the whole card to decode, and take his name and plate down
+     * with it.
+     */
+    val phone: String? = null,
     val rating_average: Double? = null,
     val rating_count: Int = 0,
     val vehicle: RideVehicleDto? = null,

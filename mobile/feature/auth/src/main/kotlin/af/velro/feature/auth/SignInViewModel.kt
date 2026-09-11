@@ -61,6 +61,13 @@ data class SignInUiState(
     val channel: String = CHANNEL_SMS,
     /** What actually carried it -- not always what was asked for. */
     val sentChannel: String = CHANNEL_SMS,
+    /**
+     * This screen follows a deletion, and says so.
+     *
+     * Until somebody asks for a code: by then they are opening a new account,
+     * and a line about the old one only muddles it.
+     */
+    val accountDeleted: Boolean = false,
 ) {
     enum class Step { PHONE, CODE }
 
@@ -100,6 +107,19 @@ class SignInViewModel @Inject constructor(
     private val _effects = Channel<SignInEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
+    init {
+        // Followed rather than read once: on a retried deletion it is the
+        // refused refresh that ends the session and opens this screen, and
+        // the flag can land a moment after it. Cleared only by the person
+        // moving on (requestCode), never by this screen merely existing --
+        // a sign-in screen nobody is looking at must not use it up.
+        viewModelScope.launch {
+            auth.accountDeleted.collect { deleted ->
+                _state.update { it.copy(accountDeleted = deleted) }
+            }
+        }
+    }
+
     fun onEvent(event: SignInEvent) {
         when (event) {
             is SignInEvent.PhoneChanged ->
@@ -136,7 +156,8 @@ class SignInViewModel @Inject constructor(
         // place that spends money.
         if (current.step == SignInUiState.Step.CODE && !current.canResend) return
 
-        _state.update { it.copy(isSubmitting = true, errorCode = null) }
+        auth.acknowledgeAccountDeleted()
+        _state.update { it.copy(isSubmitting = true, errorCode = null, accountDeleted = false) }
         viewModelScope.launch {
             when (
                 val result = auth.requestOtp(

@@ -22,6 +22,7 @@ import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Spacing
+import af.velro.feature.auth.DeleteAccountRoute
 import af.velro.feature.auth.SignInRoute
 import af.velro.feature.booking.BookingFlowRoute
 import af.velro.feature.booking.OffersRoute
@@ -81,6 +82,7 @@ private object Routes {
     const val REPORTS = "reports"
     const val OFFERS = "offers"
     const val ACCOUNT = "account"
+    const val DELETE_ACCOUNT = "account/delete"
 
     fun bookingDetail(id: String) = "booking/$id"
     fun track(id: String) = "track/$id"
@@ -210,6 +212,16 @@ fun PassengerNavHost(
         composable(Routes.ACCOUNT) {
             AccountRoute(
                 onSignOut = onSignOut,
+                onDeleteAccount = { navController.navigate(Routes.DELETE_ACCOUNT) },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        // No success callback, on purpose: a deleted account is an ended
+        // session, and the effect at the top of this host already takes an
+        // ended session to sign-in with the back stack cleared.
+        composable(Routes.DELETE_ACCOUNT) {
+            DeleteAccountRoute(
+                isDriverApp = false,
                 onBack = { navController.popBackStack() },
             )
         }

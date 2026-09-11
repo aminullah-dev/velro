@@ -124,6 +124,26 @@ class ContrastTest {
     }
 
     @Test
+    fun `the way to delete an account is readable in both themes`() {
+        // Two pairs the account screens added. The link to it is error-red
+        // text on the page itself, not on a card; the button that does it is
+        // a label on an error-red fill -- onError on error, which no screen
+        // drew before.
+        assertContrast(
+            "delete link, light", VelroColors.Red700, VelroColors.Neutral50, TEXT,
+        )
+        assertContrast(
+            "delete link, dark", VelroColors.Red200, VelroColors.DarkBackground, TEXT,
+        )
+        assertContrast(
+            "delete button, light", VelroColors.White, VelroColors.Red700, TEXT,
+        )
+        assertContrast(
+            "delete button, dark", VelroColors.Neutral900, VelroColors.Red200, TEXT,
+        )
+    }
+
+    @Test
     fun `a disabled control is quieter than a live one, never invisible`() {
         // Material's disabled treatment is onSurface at 38% over onSurface at
         // 12%: a 2.31:1 label on a container 1.23:1 from the page. In a room

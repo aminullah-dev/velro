@@ -79,7 +79,7 @@ data class TrackRideUiState(
             return RideFacts(
                 bookingNumber = b.number,
                 driverName = if (live == null) b.driverName else live.name,
-                driverPhone = live?.phone ?: b.driverPhone,
+                driverPhone = if (live == null) b.driverPhone else live.phone,
                 plate = if (live == null) b.vehiclePlate else live.vehicle?.plateNumber,
                 origin = journeyMap?.origin?.name ?: b.pickupStationName,
                 destination = journeyMap?.destination?.name ?: b.dropoffDestinationName,

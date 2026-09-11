@@ -242,7 +242,8 @@ data class RideVehicle(
 data class RideDriver(
     val driverId: String,
     val name: String?,
-    val phone: String,
+    /** Null for a driver who has deleted his account; there is then no number to dial. */
+    val phone: String?,
     val ratingAverage: Double?,
     val ratingCount: Int,
     val vehicle: RideVehicle?,

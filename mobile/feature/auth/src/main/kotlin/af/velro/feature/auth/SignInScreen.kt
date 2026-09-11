@@ -31,11 +31,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -143,6 +150,11 @@ fun SignInScreen(
                     LanguagePicker(state.locale) { onEvent(SignInEvent.LocaleChanged(it)) }
 
                     Spacer(Modifier.height(Spacing.xl))
+
+                    if (state.accountDeleted) {
+                        AccountDeletedNotice()
+                        Spacer(Modifier.height(Spacing.lg))
+                    }
 
                     when (state.step) {
                         SignInUiState.Step.PHONE -> PhoneStep(state, onEvent)
@@ -327,6 +339,43 @@ private fun CodeStep(state: SignInUiState, onEvent: (SignInEvent) -> Unit) {
                 } else {
                     strings["auth.action.resend_code_in", "seconds" to state.resendAfterSeconds]
                 },
+            )
+        }
+    }
+}
+
+/**
+ * The answer to "delete my account", on the first screen after it.
+ *
+ * Without it a deletion looks exactly like a session that ran out: the app is
+ * simply on sign-in again, and nothing says whether the account went or the
+ * connection did. A live region too, for somebody who deleted the account by
+ * ear.
+ */
+@Composable
+private fun AccountDeletedNotice() {
+    val strings = LocalVelroStrings.current
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        shape = RoundedCornerShape(Radius.md),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Row(
+            Modifier.padding(Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Filled.CheckCircle,
+                contentDescription = null,
+                modifier = Modifier.size(Sizing.iconMd),
+            )
+            Spacer(Modifier.size(Spacing.sm))
+            Text(
+                strings["account.delete.done"],
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }

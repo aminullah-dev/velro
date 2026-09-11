@@ -230,9 +230,14 @@ private fun DriverCard(driver: RideDriver, photo: ByteArray?, onCall: (String) -
                     )
                 }
             }
-            Button(onClick = { onCall(driver.phone) }) {
-                Icon(Icons.Filled.Call, contentDescription = null)
-                Text(strings["track.call"])
+            // No number, no button: a driver who deleted his account took it
+            // with him, and a dial button that opens an empty dialler is a
+            // control that lies.
+            driver.phone?.let { phone ->
+                Button(onClick = { onCall(phone) }) {
+                    Icon(Icons.Filled.Call, contentDescription = null)
+                    Text(strings["track.call"])
+                }
             }
         }
     }

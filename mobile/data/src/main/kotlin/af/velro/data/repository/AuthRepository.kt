@@ -16,7 +16,11 @@ import af.velro.domain.Session
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -106,11 +110,72 @@ class AuthRepository @Inject constructor(
         runCatching { api.updateProfile(UpdateProfileRequest(locale = locale.tag)) }
     }
 
+    /** Sign out. What leaves the phone is [forgetThisHandset]'s to decide. */
+    suspend fun signOut(allDevices: Boolean = false) {
+        if (allDevices) {
+            runCatching { api.logoutAllDevices() }
+        }
+        forgetThisHandset()
+    }
+
+    private val _accountDeleted = MutableStateFlow(false)
+
     /**
-     * Sign out.
+     * An account was deleted from this phone, and the person has not moved on.
      *
-     * The cache is wiped before the session is cleared, and both run off the
-     * main thread.
+     * The sign-in screen that follows the deletion says so, until somebody
+     * starts signing in again and it calls [acknowledgeAccountDeleted].
+     * Without that one line the only answer to "delete my account" is the app
+     * silently signing out, which reads the same as a session that expired.
+     *
+     * Observed rather than read once, because the screen can arrive before
+     * the flag does: on a retry (see [alreadyDeleted]) it is the refused
+     * refresh that clears the session, and so opens sign-in, while the answer
+     * is still on its way back to [deleteAccount].
+     *
+     * In memory, not on disk. A process that dies in between loses the
+     * sentence and nothing else -- the account is gone either way.
+     */
+    val accountDeleted: StateFlow<Boolean> = _accountDeleted.asStateFlow()
+
+    fun acknowledgeAccountDeleted() {
+        _accountDeleted.value = false
+    }
+
+    /**
+     * Delete the account, and then everything this phone knows about it.
+     *
+     * The phone forgets exactly what signing out forgets -- one function does
+     * both, so the two cannot come to disagree -- but never calls the logout
+     * endpoint: the server has already revoked every session the account had,
+     * on this phone and on any other.
+     *
+     * Not cancellable once asked. The server may carry the deletion out while
+     * its answer is still crossing a valley, and if leaving the screen could
+     * cancel the rest, this phone would go on holding the name and the
+     * journeys of an account that no longer exists -- the one outcome the
+     * whole feature is for. So the call and the forgetting finish together,
+     * whatever the screen does in the meantime.
+     *
+     * A refusal changes nothing here. The account, the session and the cache
+     * are exactly as they were, and the code goes back to the screen to say.
+     */
+    suspend fun deleteAccount(): ApiResult<Unit> = withContext(NonCancellable) {
+        val result = mapper.call { api.deleteAccount() }
+        if (result is ApiResult.Success || alreadyDeleted(result)) {
+            _accountDeleted.value = true
+            forgetThisHandset()
+            ApiResult.Success(Unit)
+        } else {
+            result.map { }
+        }
+    }
+
+    /**
+     * Everything this phone holds about the person: the cache, then the session.
+     *
+     * Shared by signing out and by deleting the account. The cache is wiped
+     * before the session is cleared, and both run off the main thread.
      *
      * Both of those are repairs for the same crash. `clearAllTables` is Room's
      * one blocking call -- every other access here is a suspend DAO, which Room
@@ -126,13 +191,31 @@ class AuthRepository @Inject constructor(
      * the cache goes first: if anything fails now, the worst outcome is an app
      * that still looks signed in, which is a confusion rather than a leak.
      */
-    suspend fun signOut(allDevices: Boolean = false) {
-        if (allDevices) {
-            runCatching { api.logoutAllDevices() }
-        }
+    private suspend fun forgetThisHandset() {
         withContext(Dispatchers.IO) {
             db.clearAllTables()
             tokens.clear()
+        }
+    }
+
+    internal companion object {
+        /**
+         * The answer a retry gets when the first attempt had already worked.
+         *
+         * A deletion whose answer was lost on the way back leaves this phone
+         * holding a session for an account the server has closed. The retry
+         * is then refused the way every request from that account is --
+         * USER_SUSPENDED, carrying the account's status -- and DEACTIVATED is
+         * the status nothing but a deletion sets. That is the outcome that was
+         * asked for. Read as a failure, the phone would be signed out by the
+         * refused refresh with the account's journeys still in its cache, and
+         * told nothing.
+         *
+         * A suspended account is SUSPENDED, and stays a refusal.
+         */
+        fun alreadyDeleted(result: ApiResult<*>): Boolean {
+            val error = (result as? ApiResult.Failure)?.error ?: return false
+            return error.code == "USER_SUSPENDED" && error.context["status"] == "DEACTIVATED"
         }
     }
 }

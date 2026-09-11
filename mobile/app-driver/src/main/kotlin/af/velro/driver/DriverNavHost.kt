@@ -3,6 +3,7 @@ package af.velro.driver
 import af.velro.core.ui.theme.NavMotion
 import af.velro.core.ui.theme.LocalAnimationsEnabled
 import af.velro.feature.driver.ProfileRoute
+import af.velro.feature.auth.DeleteAccountRoute
 import af.velro.feature.auth.SignInRoute
 import af.velro.feature.driver.DocumentsRoute
 import af.velro.feature.safety.ReportsRoute
@@ -39,6 +40,7 @@ private object Routes {
     const val BOARD = "board"
     const val REPORTS = "reports"
     const val PROFILE = "profile"
+    const val DELETE_ACCOUNT = "profile/delete"
 }
 
 /**
@@ -132,10 +134,17 @@ fun DriverNavHost(
             composable(Routes.PROFILE) {
                 ProfileRoute(
                     onSignOut = onSignOut,
+                    onDeleteAccount = { navController.navigate(Routes.DELETE_ACCOUNT) },
                     onBack = back,
                     onOpenDocuments = { navController.navigate(Routes.DOCUMENTS) },
                     onOpenVehicle = { navController.navigate(Routes.VEHICLE) },
                 )
+            }
+            // No success callback: a deleted account is an ended session, and
+            // the effect at the top of this host takes that to sign-in. The
+            // duty service notices the same ending on its own and stops.
+            composable(Routes.DELETE_ACCOUNT) {
+                DeleteAccountRoute(isDriverApp = true, onBack = back)
             }
             composable(Routes.DOCUMENTS) { DocumentsRoute(onBack = back) }
             composable(Routes.VEHICLE) { VehicleRoute(onBack = back) }

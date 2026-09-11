@@ -76,13 +76,32 @@ class DriverDutyService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var loop: Job? = null
+    private var session: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startInForeground()
         if (loop?.isActive != true) loop = scope.launch { run() }
+        if (session?.isActive != true) session = scope.launch { endWithTheSession() }
         return START_STICKY
+    }
+
+    /**
+     * Off duty the moment there is nobody signed in to be on duty for.
+     *
+     * The only hand that stopped this was the home screen's, and only when
+     * the driver went offline -- so signing out, deleting the account, or a
+     * session the server ended all left it running on a phone at the sign-in
+     * screen: a "waiting for requests" notification nobody could clear,
+     * polling every forty-five seconds with no token, and brought back by
+     * START_STICKY whenever Android killed it. The session is what the duty
+     * belongs to, so the service watches the session itself rather than
+     * trusting every road out of it to remember.
+     */
+    private suspend fun endWithTheSession() {
+        tokens.isSignedIn.first { signedIn -> !signedIn }
+        stopSelf()
     }
 
     override fun onDestroy() {

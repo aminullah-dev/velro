@@ -5,6 +5,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.ConfirmDialog
+import af.velro.core.ui.component.DeleteAccountLink
+import af.velro.core.ui.component.PrivacyPolicyLink
+import af.velro.data.api.PublicPages
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.getValue
@@ -65,6 +68,7 @@ import androidx.compose.ui.text.style.TextAlign
 @Composable
 fun ProfileRoute(
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
     onBack: () -> Unit,
     onOpenDocuments: () -> Unit,
     onOpenVehicle: () -> Unit,
@@ -78,6 +82,7 @@ fun ProfileRoute(
             profile = profile,
             photo = state.photo,
             onSignOut = onSignOut,
+            onDeleteAccount = onDeleteAccount,
             onBack = onBack,
             onOpenDocuments = onOpenDocuments,
             onOpenVehicle = onOpenVehicle,
@@ -99,6 +104,7 @@ fun ProfileScreen(
     profile: DriverProfile,
     photo: ByteArray?,
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
     onBack: () -> Unit,
     onOpenDocuments: () -> Unit,
     onOpenVehicle: () -> Unit,
@@ -229,6 +235,10 @@ fun ProfileScreen(
             )
         }
 
+        Spacer(Modifier.height(Spacing.sm))
+
+        PrivacyPolicyLink(url = PublicPages.privacyPolicyUrl)
+
         // Last, and here rather than in the header. It sat one tap from every
         // screen beside the help button -- a bad neighbour for a control that
         // wipes the local cache and needs a connection to undo.
@@ -237,6 +247,10 @@ fun ProfileScreen(
             label = strings["auth.action.sign_out"],
             onClick = { confirming = true },
         )
+
+        // Below sign-out and quieter than it: further along the same road.
+        Spacer(Modifier.height(Spacing.sm))
+        DeleteAccountLink(onClick = onDeleteAccount)
 
         Spacer(Modifier.height(Spacing.xl))
     }

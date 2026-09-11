@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +27,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -35,6 +37,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -98,6 +103,68 @@ fun PrimaryAction(
                 androidx.compose.foundation.layout.Spacer(Modifier.size(Spacing.sm))
             }
             Text(label, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+/**
+ * The one button on a screen that cannot be taken back.
+ *
+ * The same shape as [PrimaryAction], so it reads as an action rather than a
+ * warning label, and in the error colour, so nobody presses it expecting the
+ * green one. For the foot of a screen that has already said what happens --
+ * never a screen's first control.
+ *
+ * Two departures from its sibling, both about who is reading it. It grows
+ * rather than clips: a fixed height holds for "Send code" and does not hold
+ * for every sentence in Pashto at a large font size. And busy is not
+ * unavailable: while the request runs it keeps its colour, spins in the
+ * colour of its own label, and still tells a screen reader what it is and
+ * that it is working -- a spinner on its own announces nothing at all.
+ */
+@Composable
+fun DestructiveAction(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false,
+) {
+    val strings = LocalVelroStrings.current
+    val working = strings["common.state.loading"]
+    val colours = MaterialTheme.colorScheme
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = Sizing.buttonHeight)
+            .semantics {
+                if (loading) {
+                    contentDescription = label
+                    stateDescription = working
+                }
+            },
+        enabled = enabled && !loading,
+        shape = RoundedCornerShape(Radius.lg),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = colours.error,
+            contentColor = colours.onError,
+            disabledContainerColor = if (loading) colours.error else colours.surfaceVariant,
+            disabledContentColor = if (loading) colours.onError else disabledLabel(),
+        ),
+    ) {
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(Sizing.iconSm),
+                strokeWidth = 2.dp,
+                color = LocalContentColor.current,
+            )
+        } else {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

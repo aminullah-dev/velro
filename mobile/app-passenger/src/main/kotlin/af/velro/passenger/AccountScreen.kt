@@ -7,12 +7,15 @@ import af.velro.core.ui.component.ConfirmDialog
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.Numerals
+import af.velro.core.ui.component.DeleteAccountLink
 import af.velro.core.ui.component.InlineError
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PhotoAvatar
 import af.velro.core.ui.component.PrimaryAction
+import af.velro.core.ui.component.PrivacyPolicyLink
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.VelroScreen
+import af.velro.data.api.PublicPages
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Radius
 import af.velro.core.ui.theme.Sizing
@@ -42,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun AccountRoute(
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
     onBack: () -> Unit,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
@@ -63,6 +67,7 @@ fun AccountRoute(
         onSaveName = viewModel::saveName,
         onLocaleChanged = viewModel::changeLocale,
         onSignOut = onSignOut,
+        onDeleteAccount = onDeleteAccount,
         onBack = onBack,
     )
 }
@@ -99,6 +104,7 @@ fun AccountScreen(
     onSaveName: () -> Unit,
     onLocaleChanged: (Locale) -> Unit,
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -270,6 +276,9 @@ fun AccountScreen(
             InlineError(errorCode, context = errorContext)
         }
 
+        Spacer(Modifier.height(Spacing.lg))
+        PrivacyPolicyLink(url = PublicPages.privacyPolicyUrl)
+
         // Last, and on this screen rather than in the header.
         //
         // It used to sit beside the brand as an icon, one tap from every
@@ -282,6 +291,11 @@ fun AccountScreen(
             label = strings["auth.action.sign_out"],
             onClick = { confirming = true },
         )
+
+        // Below sign-out and quieter than it, because it is further along the
+        // same road: sign-out leaves the account, this ends it.
+        Spacer(Modifier.height(Spacing.sm))
+        DeleteAccountLink(onClick = onDeleteAccount)
 
         Spacer(Modifier.height(Spacing.xl))
     }

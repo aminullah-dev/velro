@@ -304,7 +304,7 @@ private data class Capture(val file: java.io.File, val uri: Uri)
 
 /** The content URI for a capture file the app already owns. */
 private fun captureFrom(context: Context, file: java.io.File): Capture =
-    Capture(file, FileProvider.getUriForFile(context, "${'$'}{context.packageName}.captures", file))
+    Capture(file, FileProvider.getUriForFile(context, "${context.packageName}.captures", file))
 
 private fun newCapture(context: Context): Capture {
     val dir = java.io.File(context.cacheDir, "captures").apply { mkdirs() }

@@ -4,6 +4,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Multipart
@@ -48,6 +49,21 @@ interface VelroApi {
     suspend fun updateProfile(
         @Body body: UpdateProfileRequest,
     ): Response<Envelope<ProfileDto>>
+
+    /**
+     * Close the account, from the phone it belongs to.
+     *
+     * No Idempotency-Key, unlike the other mutations here: there is no second
+     * account to delete by accident. A retry after a dropped connection meets
+     * an account that is already gone and is answered as a dead session is --
+     * AuthRepository.deleteAccount reads that answer for what it means.
+     *
+     * Answered `{"deleted": true}`, or refused with a code the person can act
+     * on: a seat still booked, a trip still being driven, or a staff account
+     * another administrator has to close.
+     */
+    @DELETE("auth/me")
+    suspend fun deleteAccount(): Response<Envelope<Map<String, Boolean>>>
 
     // -- geography ------------------------------------------------------
 

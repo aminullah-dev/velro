@@ -118,6 +118,19 @@ class TrackRideUiStateTest {
     }
 
     @Test
+    fun `a live card with no number is not given the booking's`() {
+        // The server sends no number for a driver who deleted his account.
+        // The phone field was the one fact still read with `?:`, which only
+        // ever fell through when the whole card was missing -- until the
+        // number became nullable, when it would have put the cached number
+        // beside the live card's name and plate. Same rule as the others.
+        val numberless = liveDriver.copy(phone = null)
+        val facts = TrackRideUiState(booking = booking, driver = numberless).helpFacts!!
+        assertNull(facts.driverPhone)
+        assertEquals("محمود", facts.driverName)
+    }
+
+    @Test
     fun `the journey's ends come off the drawn map, else the booking`() {
         val bare = booking.copy(pickupStationName = null, dropoffDestinationName = null)
 
