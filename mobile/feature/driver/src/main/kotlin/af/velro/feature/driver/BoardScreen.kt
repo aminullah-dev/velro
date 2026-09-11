@@ -398,7 +398,7 @@ private fun OfferSheet(
         OutlinedTextField(
             value = note,
             onValueChange = { note = it },
-            label = { Text(strings["ride.ask.note"]) },
+            label = { Text(strings["driver.board.offer_note"]) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )

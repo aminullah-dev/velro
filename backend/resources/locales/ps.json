@@ -715,6 +715,7 @@
   "driver.board.offer": "د کرایې وړاندیز",
   "driver.board.offered": "تاسو {amount} وړاندیز کړ",
   "driver.board.withdraw": "بېرته اخیستل",
+  "driver.board.offer_note": "د مسافر لپاره یادښت",
   "driver.offer.title": "د دې سفر لپاره ستاسو کرایه",
   "driver.offer.hint": "هماغه غوښتل شوې اندازه یا خپله بیه وړاندیز کړئ.",
   "driver.offer.match": "د {amount} منل",

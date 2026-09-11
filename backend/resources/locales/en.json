@@ -715,6 +715,7 @@
   "driver.board.offer": "Offer a fare",
   "driver.board.offered": "You offered {amount}",
   "driver.board.withdraw": "Withdraw",
+  "driver.board.offer_note": "A note for the passenger",
   "driver.offer.title": "Your fare for this ride",
   "driver.offer.hint": "Offer what they asked, or your own price.",
   "driver.offer.match": "Agree to {amount}",

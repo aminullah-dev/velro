@@ -619,7 +619,8 @@ driver.board.empty	Nobody is waiting right now.	فعلاً کسی منتظر ن�
 driver.board.asking	Asking {amount}	پیشنهاد مسافر {amount}	د مسافر وړاندیز {amount}	
 driver.board.offer	Offer a fare	پیشنهاد کرایه	د کرایې وړاندیز	
 driver.board.offered	You offered {amount}	شما {amount} پیشنهاد دادید	تاسو {amount} وړاندیز کړ	
-driver.board.withdraw	Withdraw	پس گرفتن	بېرته اخیستل	
+driver.board.withdraw	Withdraw	پس گرفتن	بېرته اخیستل
+driver.board.offer_note	A note for the passenger	یادداشتی برای مسافر	د مسافر لپاره یادښت	new — please check the Pashto
 driver.offer.title	Your fare for this ride	کرایه شما برای این سفر	د دې سفر لپاره ستاسو کرایه	
 driver.offer.hint	Offer what they asked, or your own price.	همان مقدار خواسته‌شده یا قیمت خود را پیشنهاد کنید.	هماغه غوښتل شوې اندازه یا خپله بیه وړاندیز کړئ.	
 driver.offer.match	Agree to {amount}	قبول {amount}	د {amount} منل	

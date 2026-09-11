@@ -715,6 +715,7 @@
   "driver.board.offer": "پیشنهاد کرایه",
   "driver.board.offered": "شما {amount} پیشنهاد دادید",
   "driver.board.withdraw": "پس گرفتن",
+  "driver.board.offer_note": "یادداشتی برای مسافر",
   "driver.offer.title": "کرایه شما برای این سفر",
   "driver.offer.hint": "همان مقدار خواسته‌شده یا قیمت خود را پیشنهاد کنید.",
   "driver.offer.match": "قبول {amount}",
