@@ -4,7 +4,7 @@
 /// `{"retry_after_seconds": 40}` for another. They fill placeholders in a
 /// translated sentence, so they are kept as data rather than decoded into a
 /// type per error.
-public enum JSONValue: Sendable, Equatable, Decodable {
+public enum JSONValue: Sendable, Hashable, Decodable {
     case string(String)
     case int(Int64)
     case double(Double)

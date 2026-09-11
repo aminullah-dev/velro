@@ -12,6 +12,8 @@ public struct Endpoint<Response: Decodable & Sendable>: Sendable {
     /// `IdempotencyKeys`.
     public var idempotencyKey: String?
     public var authenticated = true
+    /// JSON unless said otherwise; a document upload is multipart.
+    public var contentType: String?
 
     public static func get(_ path: String, query: [URLQueryItem] = []) -> Self {
         Endpoint(method: .get, path: path, query: query)
@@ -35,6 +37,53 @@ public struct Endpoint<Response: Decodable & Sendable>: Sendable {
 
     public static func delete(_ path: String) -> Self {
         Endpoint(method: .delete, path: path)
+    }
+
+    /// One file and its text fields, as `multipart/form-data`. The boundary is
+    /// fresh per request, so no photograph's bytes can happen to contain it.
+    public static func multipart(
+        _ path: String,
+        fields: [String: String],
+        file: Upload,
+        fileField: String = "file",
+        boundary: String = "velro-" + UUID().uuidString.lowercased()
+    ) -> Self {
+        var body = Data()
+        func line(_ text: String) { body.append(Data((text + "\r\n").utf8)) }
+        for (name, value) in fields.sorted(by: { $0.key < $1.key }) {
+            line("--\(boundary)")
+            line("Content-Disposition: form-data; name=\"\(name)\"")
+            line("")
+            line(value)
+        }
+        line("--\(boundary)")
+        line("Content-Disposition: form-data; name=\"\(fileField)\"; filename=\"\(file.filename)\"")
+        line("Content-Type: \(file.mimeType)")
+        line("")
+        body.append(file.data)
+        line("")
+        line("--\(boundary)--")
+        var endpoint = Endpoint(method: .post, path: path, body: body)
+        endpoint.contentType = "multipart/form-data; boundary=\(boundary)"
+        return endpoint
+    }
+}
+
+/// A file on its way to the server.
+public struct Upload: Sendable, Equatable {
+    public let data: Data
+    public let filename: String
+    public let mimeType: String
+
+    public init(data: Data, filename: String, mimeType: String) {
+        self.data = data
+        self.filename = filename
+        self.mimeType = mimeType
+    }
+
+    /// A photograph, as the JPEG the server accepts.
+    public static func jpeg(_ data: Data, name: String = "photo.jpg") -> Upload {
+        Upload(data: data, filename: name, mimeType: "image/jpeg")
     }
 }
 
@@ -170,7 +219,7 @@ public final class APIClient: Sendable {
         request.setValue(UUID().uuidString.lowercased(), forHTTPHeaderField: "X-Request-ID")
         if let body = endpoint.body {
             request.httpBody = body
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(endpoint.contentType ?? "application/json", forHTTPHeaderField: "Content-Type")
         }
         if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         if let key = endpoint.idempotencyKey { request.setValue(key, forHTTPHeaderField: "Idempotency-Key") }

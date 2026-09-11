@@ -170,6 +170,20 @@ public enum ISODate {
         return whole.addingTimeInterval(fraction)
     }
 
+    /// A calendar day as the server writes one, `2026-09-10`, read as noon
+    /// in Kabul so no time zone on the phone can move it to another day.
+    public static func parseDay(_ text: String?) -> Date? {
+        guard let text, let match = text.firstMatch(of: /^(\d{4})-(\d{2})-(\d{2})$/) else { return nil }
+        var components = DateComponents()
+        components.year = Int(match.output.1)
+        components.month = Int(match.output.2)
+        components.day = Int(match.output.3)
+        components.hour = 12
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Kabul") ?? .gmt
+        return calendar.date(from: components)
+    }
+
     public static func format(_ date: Date) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]

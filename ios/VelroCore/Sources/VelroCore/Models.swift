@@ -173,6 +173,11 @@ public struct RideRequest: Decodable, Sendable, Hashable, Identifiable {
     /// request that merely closed.
     public let bookingId: String?
     public let offers: [FareOffer]?
+    /// The driver's board only: who is asking, and whether this driver has
+    /// already put a price on it.
+    public let passengerName: String?
+    public let alreadyOffered: Bool?
+    public let createdAt: String?
 
     public var isOpen: Bool { status == .open }
 
