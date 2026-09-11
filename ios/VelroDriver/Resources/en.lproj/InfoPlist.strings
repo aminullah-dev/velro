@@ -1,0 +1,4 @@
+/* Generated from backend/resources/locales ("location.permission.rationale.driver",
+   "camera.permission.rationale.driver"); LocaleCoverageTests fails if they drift apart. */
+"NSLocationWhenInUseUsageDescription" = "VELRO Driver uses your location while you are on a trip, to show your car to the passengers you are driving and to warn you about dangerous stretches of road.";
+"NSCameraUsageDescription" = "VELRO Driver uses the camera to photograph your documents, your vehicle's papers and your face, so VELRO can check who is driving.";

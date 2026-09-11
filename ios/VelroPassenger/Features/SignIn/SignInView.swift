@@ -19,7 +19,7 @@ struct SignInView: View {
                 VStack(spacing: 0) {
                     BrandHero(
                         title: strings["app.name"],
-                        subtitle: strings["app.tagline"],
+                        subtitle: strings[AppFlavor.taglineKey],
                         minHeight: geometry.size.height * 0.36,
                         topInset: geometry.safeAreaInsets.top
                     )

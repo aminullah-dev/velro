@@ -897,6 +897,7 @@ driver.trip.start_unverified_confirm	Start	شروع شود	پیل کړئ
 driver.trip.start_unverified_back	Go back	برگردید	بېرته لاړ شئ	
 error.geofence_location_required	We need your location to confirm you are in a VELRO area. Please allow location access and try again.	برای تأیید اینکه در ساحهٔ پوشش ولرو هستید، به موقعیت شما نیاز داریم. لطفاً اجازهٔ دسترسی به موقعیت را بدهید و دوباره تلاش کنید.	د دې لپاره چې ډاډ ترلاسه کړو تاسو د ولرو د خدمت په سیمه کې یاست، ستاسو موقعیت ته اړتیا لرو. مهرباني وکړئ د موقعیت اجازه ورکړئ او بیا هڅه وکړئ.	
 location.permission.rationale	VELRO asks for your location only to confirm you are inside the service area.	ولرو موقعیت شما را فقط برای تأیید اینکه در ساحهٔ پوشش هستید می‌پرسد.	ولرو ستاسو موقعیت یوازې د دې لپاره غواړي چې ډاډ ترلاسه کړي تاسو د خدمت په سیمه کې یاست.	
+location.permission.rationale.driver	VELRO Driver uses your location while you are on a trip, to show your car to the passengers you are driving and to warn you about dangerous stretches of road.	ولرو راننده موقعیت شما را فقط هنگام سفر به کار می‌برد، تا موتر شما را به مسافرانی که می‌برید نشان دهد و شما را از جاهای خطرناک سرک آگاه کند.	د ولرو چلوونکی ستاسو ځای یوازې د سفر پر مهال کاروي، څو ستاسو موټر هغو مسافرو ته وښيي چې تاسو يې وړئ او تاسو د سړک له خطرناکو ځایونو خبر کړي.	new — please check the Pashto
 location.permission.denied	Location access is off for VELRO. Turn it on in your phone's settings, then try again.	دسترسی ولرو به موقعیت خاموش است. آن را در تنظیمات تیلفون خود روشن کنید و دوباره تلاش کنید.	د ولرو لپاره د موقعیت لاسرسی بند دی. د خپل تلیفون له تنظیماتو څخه یې فعال کړئ، بیا هڅه وکړئ.	
 location.action.open_settings	Open settings	باز کردن تنظیمات	تنظیمات پرانیزئ	
 sync.queued.generic	Saved. It will be sent when the connection returns.	ذخیره شد. با برگشتن انترنت فرستاده می‌شود.	خوندي شو. انټرنېټ چې راستون شو، لېږل کېږي.	
@@ -907,3 +908,6 @@ sync.failed.title	Could not be sent	فرستاده نشد	ونه لېږل شو
 sync.kind.book_seats	Seat booking	رزرو چوکی	د چوکۍ ریزرف	
 sync.kind.cancel_booking	Booking cancellation	لغو رزرو	د ریزرف لغوه	
 sync.kind.rate_trip	Trip rating	امتیاز سفر	د سفر ستوری	
+document.source.camera	Take a photo	عکس بگیرید	انځور واخلئ	new — please check the Pashto
+document.source.library	Choose from your photos	از عکس‌های خود انتخاب کنید	له خپلو انځورونو یې وټاکئ	new — please check the Pashto
+camera.permission.rationale.driver	VELRO Driver uses the camera to photograph your documents, your vehicle's papers and your face, so VELRO can check who is driving.	ولرو راننده از کمره برای عکس گرفتن از اسناد شما، اسناد موتر و چهره شما استفاده می‌کند تا ولرو بداند چه کسی رانندگی می‌کند.	د ولرو چلوونکی کمره ستاسو د اسنادو، د موټر د اسنادو او ستاسو د مخ د انځور اخیستو لپاره کاروي، څو ولرو وپوهیږي چې څوک موټر چلوي.	new — please check the Pashto

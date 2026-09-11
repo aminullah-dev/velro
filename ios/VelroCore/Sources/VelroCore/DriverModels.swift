@@ -124,6 +124,32 @@ public enum TripStatus: String, LenientStatus, CaseIterable {
 
     /// Checking a code only makes sense with the passenger at the car.
     public var acceptsBoardingCodes: Bool { self == .arrivedAtPickup || self == .boarding }
+
+    public var messageKey: String { "trip.status." + rawValue.lowercased() }
+
+    public var tone: StatusTone {
+        switch self {
+        case .scheduled, .requested: .neutral
+        case .driverAssigned, .driverArriving, .inTransit: .active
+        case .arrivedAtPickup, .boarding, .arrived: .attention
+        case .completed: .ended
+        case .cancelled, .expired, .noDriverAvailable: .failed
+        }
+    }
+
+    /// The button that moves a trip *to* this status names what tapping does,
+    /// not the state being left.
+    public var actionKey: String {
+        switch self {
+        case .driverArriving: "driver.action.on_my_way"
+        case .arrivedAtPickup: "driver.action.arrived"
+        case .boarding: "driver.action.start_boarding"
+        case .inTransit: "driver.action.start_trip"
+        case .arrived: "driver.action.arrived_destination"
+        case .completed: "driver.action.complete_trip"
+        default: "common.action.confirm"
+        }
+    }
 }
 
 public struct TripSummary: Decodable, Sendable, Hashable, Identifiable {
@@ -379,4 +405,46 @@ public struct InboxNotification: Decodable, Sendable, Hashable, Identifiable {
 public struct Inbox: Decodable, Sendable, Hashable {
     public let notifications: [InboxNotification]?
     public let unread: Int?
+}
+
+// MARK: - What the papers say
+
+extension DocumentChecklist {
+    public var isComplete: Bool { missing.isEmpty }
+    /// Everything sent, nothing approved yet: the state that needs explaining.
+    public var awaitingReview: Bool { isComplete && !canWork }
+
+    public var headlineKey: String {
+        canWork ? "driver.documents.approved"
+            : awaitingReview ? "driver.documents.awaiting_review"
+            : "driver.documents.incomplete"
+    }
+}
+
+extension VehicleChecklist {
+    public var awaitingReview: Bool { missing.isEmpty && !canCarry }
+}
+
+/// A paper's expiry, said before it stops him working: a month ahead, and
+/// again once it has passed. Android's `expiryNotice`, same thresholds.
+public enum DocumentExpiry {
+    public enum Severity: Sendable { case fine, soon, past }
+
+    public struct Notice: Equatable, Sendable {
+        public let messageKey: String
+        public let severity: Severity
+        public let date: Date
+    }
+
+    public static let warnWithinDays = 30
+
+    public static func notice(expiresOn: String?, today: Date = .now) -> Notice? {
+        guard let expiry = ISODate.parseDay(expiresOn) else { return nil }
+        var kabul = Calendar(identifier: .gregorian)
+        kabul.timeZone = TimeZone(identifier: "Asia/Kabul") ?? .gmt
+        let days = kabul.dateComponents([.day], from: kabul.startOfDay(for: today), to: kabul.startOfDay(for: expiry)).day ?? 0
+        if days < 0 { return Notice(messageKey: "driver.documents.expired", severity: .past, date: expiry) }
+        if days <= warnWithinDays { return Notice(messageKey: "driver.documents.expiring_soon", severity: .soon, date: expiry) }
+        return Notice(messageKey: "driver.documents.valid_until", severity: .fine, date: expiry)
+    }
 }

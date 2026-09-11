@@ -140,6 +140,32 @@ struct DriverRulesTests {
     }
 }
 
+@Suite("A driver's papers")
+struct DriverPapersTests {
+    private let today = ISODate.parseDay("2026-09-11")!
+
+    @Test func aPaperAMonthOutIsWarnedAbout() {
+        #expect(DocumentExpiry.notice(expiresOn: "2026-10-11", today: today)?.severity == .soon)
+        #expect(DocumentExpiry.notice(expiresOn: "2026-10-12", today: today)?.severity == .fine)
+    }
+
+    @Test func aPaperPastItsDateSaysSo() {
+        #expect(DocumentExpiry.notice(expiresOn: "2026-09-10", today: today)?.messageKey == "driver.documents.expired")
+        #expect(DocumentExpiry.notice(expiresOn: "2026-09-11", today: today)?.severity == .soon)
+        #expect(DocumentExpiry.notice(expiresOn: nil, today: today) == nil)
+    }
+
+    @Test func theHeadlineSaysWhatIsLeftToDo() throws {
+        func checklist(missing: [String], canWork: Bool) throws -> DocumentChecklist {
+            let json = #"{"required":["LICENSE","NATIONAL_ID","SELFIE"],"missing":\#(missing.description),"documents":[],"approval_status":"PENDING","can_work":\#(canWork)}"#
+            return try decode(DocumentChecklist.self, json)
+        }
+        #expect(try checklist(missing: ["SELFIE"], canWork: false).headlineKey == "driver.documents.incomplete")
+        #expect(try checklist(missing: [], canWork: false).headlineKey == "driver.documents.awaiting_review")
+        #expect(try checklist(missing: [], canWork: true).headlineKey == "driver.documents.approved")
+    }
+}
+
 @Suite("Driver endpoints")
 struct DriverEndpointTests {
     @Test func aDocumentUploadIsOneFileAndItsTypeAsMultipart() throws {

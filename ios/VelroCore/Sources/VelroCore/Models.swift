@@ -314,6 +314,15 @@ public struct VehicleLocation: Decodable, Sendable, Hashable {
     public let headingDegrees: Int?
     public let recordedAt: String
     public let ageSeconds: Int
+
+    /// A fix taken on this phone -- the driver's own car on his own map.
+    public init(latitude: Double, longitude: Double, headingDegrees: Int? = nil, recordedAt: String = "", ageSeconds: Int = 0) {
+        self.latitude = latitude
+        self.longitude = longitude
+        self.headingDegrees = headingDegrees
+        self.recordedAt = recordedAt
+        self.ageSeconds = ageSeconds
+    }
 }
 
 // MARK: - Safety

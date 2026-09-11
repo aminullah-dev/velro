@@ -89,6 +89,101 @@ targets:
       testTargets:
         - VelroPassengerUITests
 
+  # The driver's app. Its own screens live in VelroDriver/; the brand, the
+  # controls, sign-in, help and account deletion are the passenger app's own
+  # files, compiled into this target as well rather than copied, so a fix to
+  # one of them reaches both apps. Each app has its own AppModel, Router and
+  # AppFlavor, which is all those shared files ask of it.
+  VelroDriver:
+    type: application
+    platform: iOS
+    sources:
+      - path: VelroDriver
+      - path: VelroPassenger/Components
+      - path: VelroPassenger/Theme
+      - path: VelroPassenger/Features/SignIn
+      - path: VelroPassenger/Features/Safety
+      - path: VelroPassenger/Features/Account/DeleteAccountView.swift
+      - path: VelroPassenger/App/AppDelegate.swift
+      - path: ../backend/resources/locales/en.json
+        type: file
+        buildPhase: resources
+      - path: ../backend/resources/locales/fa-AF.json
+        type: file
+        buildPhase: resources
+      - path: ../backend/resources/locales/ps.json
+        type: file
+        buildPhase: resources
+      - path: ../mobile/core/ui/src/main/res/font/vazirmatn_regular.ttf
+        type: file
+        buildPhase: resources
+      - path: ../mobile/core/ui/src/main/res/font/vazirmatn_medium.ttf
+        type: file
+        buildPhase: resources
+      - path: ../mobile/core/ui/src/main/res/font/vazirmatn_bold.ttf
+        type: file
+        buildPhase: resources
+      - path: ../mobile/core/ui/src/main/assets/licences/vazirmatn-OFL.txt
+        type: file
+        buildPhase: resources
+    dependencies:
+      - package: VelroCore
+    info:
+      path: VelroDriver/Info.plist
+      properties:
+        CFBundleDisplayName: VELRO Driver
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ITSAppUsesNonExemptEncryption: false
+        VelroAPIBaseURL: $(VELRO_API_BASE_URL)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        # When In Use only. While he carries a trip the app keeps the fix going
+        # with the screen off (the blue pill in the status bar says so); it
+        # never asks for Always, and never runs in the background off a trip.
+        NSLocationWhenInUseUsageDescription: VELRO Driver uses your location while you are on a trip, to show your car to the passengers you are driving and to warn you about dangerous stretches of road.
+        UIBackgroundModes: [location]
+        NSCameraUsageDescription: VELRO Driver uses the camera to photograph your documents, your vehicle's papers and your face, so VELRO can check who is driving.
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [fa, ps, en]
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).SceneDelegate
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: af.velro.driver
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+      configs:
+        Debug:
+          VELRO_API_BASE_URL: http://localhost:8000/api/v1/
+        Release:
+          VELRO_API_BASE_URL: https://api.velro.linumic.com/api/v1/
+    scheme:
+      testTargets:
+        - VelroDriverUITests
+
+  VelroDriverUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [VelroDriverUITests]
+    dependencies:
+      - target: VelroDriver
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: af.velro.driver.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"
+        TEST_TARGET_NAME: VelroDriver
+
   # Drives the real app in the simulator against `make api`: `make ui-test`.
   VelroPassengerUITests:
     type: bundle.ui-testing

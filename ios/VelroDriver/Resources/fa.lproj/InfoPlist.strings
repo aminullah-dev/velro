@@ -1,0 +1,4 @@
+/* Generated from backend/resources/locales ("location.permission.rationale.driver",
+   "camera.permission.rationale.driver"); LocaleCoverageTests fails if they drift apart. */
+"NSLocationWhenInUseUsageDescription" = "ولرو راننده موقعیت شما را فقط هنگام سفر به کار می‌برد، تا موتر شما را به مسافرانی که می‌برید نشان دهد و شما را از جاهای خطرناک سرک آگاه کند.";
+"NSCameraUsageDescription" = "ولرو راننده از کمره برای عکس گرفتن از اسناد شما، اسناد موتر و چهره شما استفاده می‌کند تا ولرو بداند چه کسی رانندگی می‌کند.";

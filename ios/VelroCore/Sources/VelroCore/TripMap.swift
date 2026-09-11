@@ -98,7 +98,7 @@ public enum Eta {
         return best
     }
 
-    static func distance(_ a: (latitude: Double, longitude: Double), _ b: (latitude: Double, longitude: Double)) -> Double {
+    public static func distance(_ a: (latitude: Double, longitude: Double), _ b: (latitude: Double, longitude: Double)) -> Double {
         let dx = (a.longitude - b.longitude) * 111_320 * cos((a.latitude + b.latitude) / 2 * .pi / 180)
         let dy = (a.latitude - b.latitude) * 110_574
         return (dx * dx + dy * dy).squareRoot()

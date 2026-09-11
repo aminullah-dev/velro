@@ -1,0 +1,4 @@
+/* Generated from backend/resources/locales ("location.permission.rationale.driver",
+   "camera.permission.rationale.driver"); LocaleCoverageTests fails if they drift apart. */
+"NSLocationWhenInUseUsageDescription" = "د ولرو چلوونکی ستاسو ځای یوازې د سفر پر مهال کاروي، څو ستاسو موټر هغو مسافرو ته وښيي چې تاسو يې وړئ او تاسو د سړک له خطرناکو ځایونو خبر کړي.";
+"NSCameraUsageDescription" = "د ولرو چلوونکی کمره ستاسو د اسنادو، د موټر د اسنادو او ستاسو د مخ د انځور اخیستو لپاره کاروي، څو ولرو وپوهیږي چې څوک موټر چلوي.";

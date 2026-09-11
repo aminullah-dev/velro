@@ -5,19 +5,26 @@
 # spend a real SMS.
 
 SIM ?= iPhone 17
+# Which app: `make run APP=driver` for VELRO Driver. The passenger's is the default.
+APP ?= passenger
 PROJECT = Velro.xcodeproj
+ifeq ($(APP),driver)
+SCHEME = VelroDriver
+BUNDLE = af.velro.driver
+else
 SCHEME = VelroPassenger
 BUNDLE = af.velro.passenger
+endif
 DERIVED = build
 DEST = platform=iOS Simulator,name=$(SIM)
-APP = $(DERIVED)/Build/Products/Debug-iphonesimulator/$(SCHEME).app
+APP_PATH = $(DERIVED)/Build/Products/Debug-iphonesimulator/$(SCHEME).app
 
 .PHONY: help project core-test build run ui-test api clean
 
 help:
 	@echo "make api        start the local API on :8000 (codes come back in the response)"
 	@echo "make core-test  test VelroCore on the Mac -- seconds, no simulator"
-	@echo "make build      build the passenger app for the simulator"
+	@echo "make build      build the passenger app for the simulator (APP=driver: the driver's)"
 	@echo "make run        build, install and launch it on $(SIM)"
 	@echo "make ui-test    sign in end to end in the simulator (needs make api)"
 	@echo "make project    regenerate $(PROJECT) from project.yml"
@@ -36,7 +43,7 @@ build: project
 run: build
 	@xcrun simctl boot "$(SIM)" 2>/dev/null || true
 	@open -a Simulator
-	xcrun simctl install "$(SIM)" "$(APP)"
+	xcrun simctl install "$(SIM)" "$(APP_PATH)"
 	xcrun simctl launch "$(SIM)" $(BUNDLE)
 
 # The real app, driven in the simulator. Screenshots of every step land in

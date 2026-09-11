@@ -107,8 +107,29 @@ func realStrings(_ locale: AppLocale) -> Strings {
         }
     }
 
+    /// The driver app's two prompts -- location on a trip, the camera for his
+    /// papers -- are copies too.
+    @Test func theDriversPromptsMatchTheLocaleFiles() throws {
+        for (locale, lproj) in [(AppLocale.english, "en"), (.dari, "fa"), (.pashto, "ps")] {
+            let url = iosRoot.appending(path: "VelroDriver/Resources/\(lproj).lproj/InfoPlist.strings")
+            let text = try String(contentsOf: url, encoding: .utf8)
+            let file = localeFile(locale)
+            for (plistKey, localeKey) in [("NSLocationWhenInUseUsageDescription", "location.permission.rationale.driver"),
+                                          ("NSCameraUsageDescription", "camera.permission.rationale.driver")] {
+                let expected = file[localeKey] ?? "missing"
+                #expect(text.contains("\"\(plistKey)\" = \"\(expected)\";"), "\(lproj) \(plistKey)")
+            }
+        }
+    }
+
     private func usedKeys() throws -> Set<String> {
-        let sources = iosRoot.appending(path: "VelroPassenger")
+        var keys: Set<String> = []
+        for app in ["VelroPassenger", "VelroDriver"] { keys.formUnion(try usedKeys(in: app)) }
+        return keys
+    }
+
+    private func usedKeys(in app: String) throws -> Set<String> {
+        let sources = iosRoot.appending(path: app)
         let walker = FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil)
         // Every dotted literal in a namespace the locale files use -- not only
         // the ones written inside `strings[...]`, because keys also live in
