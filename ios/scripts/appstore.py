@@ -2,6 +2,8 @@
 """Push ios/AppStore/listing.json to App Store Connect.
 
   ios/scripts/appstore.py              show what would change, change nothing
+  ios/scripts/appstore.py --app driver ...the same for VELRO Driver
+                                       (ios/AppStore/driver/listing.json)
   ios/scripts/appstore.py --apply      text, category, age rating, rights
   ios/scripts/appstore.py --apply --screenshots   ...and replace the screenshots
   ios/scripts/appstore.py --apply --review --contact-phone "+1 555 ..."
@@ -34,9 +36,12 @@ import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-LISTING = HERE.parent / "AppStore" / "listing.json"
+APPS = {
+    "passenger": ("VELRO Ride", "af.velro.passenger", HERE.parent / "AppStore" / "listing.json"),
+    "driver": ("VELRO Driver", "af.velro.driver", HERE.parent / "AppStore" / "driver" / "listing.json"),
+}
+NAME, BUNDLE_ID, LISTING = APPS["passenger"]
 ENV = HERE / ".env"
-BUNDLE_ID = "af.velro.passenger"
 API = "https://api.appstoreconnect.apple.com"
 EDITABLE = {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED", "INVALID_BINARY"}
 
@@ -113,7 +118,10 @@ def call(method: str, path: str, body: dict | None = None) -> dict:
 # -- what is there --------------------------------------------------------
 
 def find_state() -> dict:
-    app = call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"][0]
+    found = call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"]
+    if not found:
+        raise SystemExit(f"✗ no App Store Connect record for {BUNDLE_ID} yet: create it (My Apps → +) first")
+    app = found[0]
     versions = call("GET", f"/v1/apps/{app['id']}/appStoreVersions?filter[platform]=IOS")["data"]
     editable = [v for v in versions if v["attributes"]["appStoreState"] in EDITABLE]
     if not editable:
@@ -329,6 +337,7 @@ def push_review(version_id: str, review: dict, attachment: Path | None, contact_
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--app", choices=sorted(APPS), default="passenger", help="which app (default: passenger)")
     parser.add_argument("--apply", action="store_true", help="make the changes (default: show them)")
     parser.add_argument("--screenshots", action="store_true", help="replace the screenshots too")
     parser.add_argument("--review", action="store_true", help="push App Review details too")
@@ -336,12 +345,14 @@ def main() -> None:
     parser.add_argument("--build", help="the build number to submit with this version")
     parser.add_argument("--contact-phone", help="App Review's number for you, with + and country code (not stored)")
     args = parser.parse_args()
+    global NAME, BUNDLE_ID, LISTING
+    NAME, BUNDLE_ID, LISTING = APPS[args.app]
 
     listing = json.loads(LISTING.read_text())
     check_limits(listing)
     state = find_state()
     changes = plan(state, listing)
-    print(f"▸ VELRO Ride {state['version']['attributes']['versionString']} "
+    print(f"▸ {NAME} {state['version']['attributes']['versionString']} "
           f"({state['version']['attributes']['appStoreState']})")
     for label, _, body in changes:
         attributes = body["data"].get("attributes") or body["data"].get("relationships")
