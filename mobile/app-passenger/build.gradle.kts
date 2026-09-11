@@ -11,12 +11,12 @@ plugins {
 
 android {
     namespace = "af.velro.passenger"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "af.velro.passenger"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         // From gradle.properties, so the two apps cannot drift apart.
         versionCode = (project.findProperty("velro.versionCode") as String).toInt()
         versionName = project.findProperty("velro.versionName") as String

@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "af.velro.core.i18n"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24   // Android 7. Below this is a vanishing share of the market

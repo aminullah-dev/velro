@@ -14,7 +14,7 @@ plugins {
  */
 android {
     namespace = "af.velro.baselineprofile"
-    compileSdk = 35
+    compileSdk = 36
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -38,7 +38,7 @@ android {
         // go back to 24 -- a device below 28 simply gets no profile, which is
         // exactly the behaviour before this module existed.
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 36
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

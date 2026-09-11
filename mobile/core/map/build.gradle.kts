@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "af.velro.core.map"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig { minSdk = 24 }
     buildFeatures { compose = true }
     compileOptions {

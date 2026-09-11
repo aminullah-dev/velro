@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "af.velro.feature.driver"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig { minSdk = 24 }
     buildFeatures { compose = true }
     compileOptions {
