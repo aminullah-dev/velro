@@ -312,6 +312,33 @@ def cancel_ride_request(
 driver_router = APIRouter(prefix="/driver", tags=["driver"])
 
 
+def _board_scope(viewer_user_id: str, users) -> tuple[list[str] | None, list[str]]:
+    """Which passengers' requests this driver may see: (only, except).
+
+    A number on OTP_TEST_NUMBERS is nobody's handset -- its code never
+    leaves the server -- so a request from it is a rehearsal: a developer's,
+    or App Review's from a desk in Cupertino. A real driver who sees it may
+    well offer, and a real driver whose offer is accepted drives to a station
+    in Ghorband for nobody. The mirror is as bad: a rehearsing driver's offer
+    on a real request is a car that will never come. So the two never meet --
+    a test driver sees test passengers only, a real driver never sees them.
+    Nothing changes in a deployment that lists no test numbers, the default.
+    """
+    sandbox = set(deps.settings().otp_test_numbers)
+    if not sandbox:
+        return None, []
+    rehearsing = [row.id for phone in sandbox if (row := users.find_by_phone(phone)) is not None]
+    viewer = users.find(viewer_user_id)
+    if viewer is not None and viewer.phone in sandbox:
+        return rehearsing, []
+    return None, rehearsing
+
+
+def _may_see(viewer_user_id: str, passenger_id: str, users) -> bool:
+    only, hidden = _board_scope(viewer_user_id, users)
+    return passenger_id not in hidden and (only is None or passenger_id in only)
+
+
 @driver_router.get("/ride-requests")
 def open_requests(
     actor: Annotated[deps.Actor, Depends(deps.require_driver)],
@@ -330,8 +357,10 @@ def open_requests(
         raise NotFoundError(error_codes.DRIVER_NOT_FOUND, user_id=actor.user_id)
 
     stations = [station_id] if station_id else None
+    scope = _board_scope(actor.user_id, users)
     rows = requests.open_board(
-        station_ids=stations, at=deps.clock().now(), limit=limit
+        station_ids=stations, at=deps.clock().now(), limit=limit,
+        only_passenger_ids=scope[0], exclude_passenger_ids=scope[1],
     )
     mine = {o.ride_request_id for o in offers.open_for_driver(driver.id, limit=50)}
     passengers = {u.id: u for u in users.by_ids({r.passenger_id for r in rows})}
@@ -361,10 +390,17 @@ def offer_fare(
     drivers: Annotated[object, Depends(deps.drivers)],
     vehicles: Annotated[object, Depends(deps.vehicles)],
     trips: Annotated[object, Depends(deps.trips)],
+    users: Annotated[object, Depends(deps.users)],
     audit: Annotated[object, Depends(deps.audit)],
     notifier: Annotated[object, Depends(deps.notifier)],
 ) -> dict:
     """Name your price. Offering exactly what was asked is agreeing to it."""
+    # The board hides a rehearsal from a real driver; an id kept from before
+    # the filter, or guessed, meets the same wall here -- answered as though
+    # the request did not exist, which for him it does not.
+    asked = requests.find(request_id)
+    if asked is not None and not _may_see(actor.user_id, asked.passenger_id, users):
+        raise NotFoundError(error_codes.RIDE_REQUEST_NOT_FOUND, ride_request_id=request_id)
     use_case = OfferFare(
         requests=requests, offers=offers, drivers=drivers, vehicles=vehicles,
         trips=trips,

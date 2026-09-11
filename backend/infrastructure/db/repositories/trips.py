@@ -374,16 +374,30 @@ class RideRequestRepository(SqlRepository[RideRequestRow]):
         )
 
     def open_board(
-        self, *, station_ids=None, at: datetime | None = None, limit: int = 50
+        self,
+        *,
+        station_ids=None,
+        at: datetime | None = None,
+        limit: int = 50,
+        only_passenger_ids=None,
+        exclude_passenger_ids=None,
     ) -> list[RideRequestRow]:
         """What a driver sees: open requests that have not run out of time.
 
         Filtered by station when the driver has a home station, because a
         request from three valleys away is noise they have to read past.
+        ``only_passenger_ids`` and ``exclude_passenger_ids`` keep rehearsals
+        and real journeys apart -- see ``_board_scope`` in the negotiation
+        router. ``only`` given as an empty list means nobody.
         """
         stmt = self._base().where(RideRequestRow.status == RideRequestStatus.OPEN.value)
         if at is not None:
             stmt = stmt.where(RideRequestRow.expires_at > at)
+        if only_passenger_ids is not None:
+            stmt = stmt.where(RideRequestRow.passenger_id.in_([i for i in only_passenger_ids if i]))
+        excluded = [i for i in (exclude_passenger_ids or []) if i]
+        if excluded:
+            stmt = stmt.where(RideRequestRow.passenger_id.not_in(excluded))
         ids = [i for i in (station_ids or []) if i]
         if ids:
             stmt = stmt.where(RideRequestRow.origin_station_id.in_(ids))

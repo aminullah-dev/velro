@@ -19,6 +19,9 @@ DATABASE_URL = os.environ.get(
     "VELRO_TEST_DATABASE_URL", "postgresql+psycopg://localhost/velro_e2e"
 )
 
+#: See test_rehearsals.py: a passenger and a driver who only ever meet each other.
+REHEARSAL_PHONES = ("+12025550142", "+12025550143")
+
 
 @pytest.fixture(scope="session")
 def client():
@@ -35,7 +38,12 @@ def client():
     os.environ["VELRO_GEOFENCE_EXEMPT_PHONES"] = ",".join(
         [f"+93700000{n:03d}" for n in range(1000) if n != 555]
         + ["+93700123456"]
+        + list(REHEARSAL_PHONES)
     )
+    # Rehearsal numbers, as App Review's will be in production: the code
+    # comes back in the response and their journeys never meet a real one.
+    # Fictional by construction (555-01xx), so no handset anywhere owns them.
+    os.environ["VELRO_OTP_TEST_NUMBERS"] = ",".join(REHEARSAL_PHONES)
 
     import infrastructure.db.models  # noqa: F401
     from infrastructure.db.base import Base
