@@ -12,7 +12,7 @@ settings:
     DEVELOPMENT_TEAM: 27RXPRW77S
     SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "2"
 packages:
   VelroCore:
     path: VelroCore

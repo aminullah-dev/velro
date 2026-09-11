@@ -2,7 +2,7 @@ import Foundation
 
 /// One call to the API, typed by what it answers with.
 public struct Endpoint<Response: Decodable & Sendable>: Sendable {
-    public enum Method: String, Sendable { case get = "GET", post = "POST", patch = "PATCH" }
+    public enum Method: String, Sendable { case get = "GET", post = "POST", patch = "PATCH", delete = "DELETE" }
 
     public var method: Method
     public var path: String
@@ -31,6 +31,10 @@ public struct Endpoint<Response: Decodable & Sendable>: Sendable {
 
     public static func patch(_ path: String, body: some Encodable) -> Self {
         Endpoint(method: .patch, path: path, body: APIClient.encode(body))
+    }
+
+    public static func delete(_ path: String) -> Self {
+        Endpoint(method: .delete, path: path)
     }
 }
 

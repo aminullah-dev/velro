@@ -37,6 +37,53 @@ final class AccountFlowTests: XCTestCase {
         XCTAssertTrue(app.textFields["signin.phone"].waitForExistence(timeout: 10))
     }
 
+    /// Leaving for good: what goes and what stays, one question, and the phone
+    /// lands on sign-in saying so. The same number then comes back as somebody
+    /// new -- without the name the old account had.
+    func testDeletingTheAccount() {
+        let phone = freshTestPhone()
+        let app = launchSignedIn(phone: phone)
+        app.buttons["home.account"].tap()
+
+        let name = app.textFields["account.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 10))
+        name.tap()
+        name.typeText("زهره")
+        app.buttons["account.name.save"].tap()
+        Thread.sleep(forTimeInterval: 1)
+
+        let delete = app.buttons["account.delete"]
+        while !delete.isHittable { app.swipeUp() }
+        snapshot("17-account-doors")
+        delete.tap()
+
+        let start = app.buttons["account.delete.start"]
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+        snapshot("18-delete-account")
+        start.tap()
+        let confirm = app.alerts.buttons["حسابم را حذف کن"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        snapshot("19-delete-confirm")
+        confirm.tap()
+
+        XCTAssertTrue(app.textFields["signin.phone"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.staticTexts["signin.account_deleted"].exists || app.otherElements["signin.account_deleted"].exists)
+        snapshot("20-deleted")
+
+        // The same number again: a fresh account, not the old one.
+        let field = app.textFields["signin.phone"]
+        field.tap()
+        field.typeText(phone)
+        app.buttons["signin.send"].tap()
+        XCTAssertTrue(app.textFields["signin.code"].waitForExistence(timeout: 15))
+        app.buttons["signin.submit"].tap()
+        XCTAssertTrue(app.buttons["home.account"].waitForExistence(timeout: 15))
+        app.buttons["home.account"].tap()
+        let again = app.textFields["account.name"]
+        XCTAssertTrue(again.waitForExistence(timeout: 10))
+        XCTAssertFalse((again.value as? String ?? "").contains("زهره"))
+    }
+
     /// From home's help door: a report with a reference she keeps, then the
     /// list where VELRO's answer will arrive, then her journeys.
     func testReportingAndHistory() {

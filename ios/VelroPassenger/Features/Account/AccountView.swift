@@ -10,6 +10,7 @@ import VelroCore
 /// this is a screen for changing a name and a language.
 struct AccountView: View {
     @Environment(\.strings) private var strings
+    @Environment(\.openURL) private var openURL
     @State private var profile: ProfileDTO?
     @State private var draftName = ""
     @State private var isSaving = false
@@ -71,6 +72,7 @@ struct AccountView: View {
                                   enabled: draftName != (profile.fullName ?? ""), loading: isSaving, pill: true) {
                         Task { await saveName() }
                     }
+                    .accessibilityIdentifier("account.name.save")
                     if saved {
                         Text(strings["passenger.profile.name_saved"])
                             .velroFont(.caption)
@@ -117,6 +119,19 @@ struct AccountView: View {
             SecondaryButton(label: strings["auth.action.sign_out"]) { confirmingSignOut = true }
                 .accessibilityIdentifier("account.signout")
                 .padding(.top, Spacing.md)
+
+            // Below the way out, the two doors every store asks for: what
+            // VELRO keeps about her, and how to leave for good. Quiet, but
+            // never hidden -- a person looking for them looks here.
+            VStack(spacing: 0) {
+                TextAction(label: strings["account.privacy"]) { openURL(app.privacyURL) }
+                    .accessibilityIdentifier("account.privacy")
+                TextAction(label: strings["account.delete.action"], destructive: true) {
+                    app.router.open(.deleteAccount)
+                }
+                .accessibilityIdentifier("account.delete")
+            }
+            .frame(maxWidth: .infinity)
         }
     }
 

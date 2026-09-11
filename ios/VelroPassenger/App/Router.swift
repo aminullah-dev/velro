@@ -8,6 +8,7 @@ enum Route: Hashable {
     case track(String)
     case history
     case account
+    case deleteAccount
     case reports
 }
 

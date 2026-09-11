@@ -31,6 +31,9 @@ enum Palette {
     static let accent = dynamic(light: 0xB45309, dark: 0xD97706)
 
     static let error = dynamic(light: 0xB42318, dark: 0xFDA29B)
+    /// Text on a filled error button: 6.8:1 on the light red, 7.9:1 on the
+    /// dark theme's pale one.
+    static let onError = dynamic(light: 0xFFFFFF, dark: 0x4C1512)
 
     // Status pills, one measured pair per tone per theme.
     static let toneNeutral = dynamic(light: 0xF2F4F7, dark: 0x1B222C)

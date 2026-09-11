@@ -60,17 +60,46 @@ struct SecondaryButton: View {
     }
 }
 
-/// A quiet text action: "back", "send again".
+/// The one action that cannot be taken back, in the colour that says so.
+/// Filled, like the primary: this is what the screen exists for, and a
+/// person who came here to leave should not have to hunt for the door.
+struct DestructiveButton: View {
+    let label: String
+    var loading = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                if loading {
+                    ProgressView().tint(Palette.onError)
+                } else {
+                    Text(label).velroFont(.label)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: Sizing.buttonHeight)
+            .foregroundStyle(Palette.onError)
+            .background(Palette.error, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressStyle())
+        .disabled(loading)
+    }
+}
+
+/// A quiet text action: "back", "send again" -- or, in the error colour, the
+/// way out of an account.
 struct TextAction: View {
     let label: String
     var enabled = true
+    var destructive = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Text(label)
                 .velroFont(.label)
-                .foregroundStyle(enabled ? Palette.primary : Palette.disabledLabel)
+                .foregroundStyle(enabled ? (destructive ? Palette.error : Palette.primary) : Palette.disabledLabel)
                 .frame(minHeight: Sizing.touchTarget)
                 .padding(.horizontal, Spacing.sm)
                 .contentShape(Rectangle())

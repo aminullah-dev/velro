@@ -13,6 +13,10 @@ final class AppModel {
     private(set) var locale: AppLocale
     private(set) var strings: Strings
     private(set) var isSignedIn: Bool
+    /// Set the moment the account deletes itself, so the sign-in screen she
+    /// lands on says it happened rather than looking like a crash; cleared by
+    /// the next sign-in.
+    private(set) var accountDeleted = false
 
     let client: APIClient
     let store: any SessionStore
@@ -79,7 +83,21 @@ final class AppModel {
 
     func signedIn(_ session: SessionDTO) {
         store.save(session)
+        accountDeleted = false
         isSignedIn = true
+    }
+
+    /// The server has already revoked every session, so there is nobody to
+    /// tell: the phone forgets the account exactly as a sign-out does.
+    func accountWasDeleted() {
+        endSession()
+        accountDeleted = true
+    }
+
+    /// The privacy page, on whichever server this build talks to: it lives at
+    /// the host's root, beside the download page, not under the API.
+    var privacyURL: URL {
+        URL(string: "/privacy", relativeTo: client.baseURL)?.absoluteURL ?? client.baseURL
     }
 
     /// Sign out. The saved journeys go first: if anything fails after that,

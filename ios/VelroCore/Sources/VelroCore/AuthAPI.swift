@@ -53,4 +53,9 @@ public enum API {
     }
 
     public static func logoutAllDevices() -> Endpoint<[String: JSONValue]> { .post("auth/logout-all") }
+
+    /// The account deletes itself: name, number, sign-in and every session.
+    /// Refused while a seat is booked (`ACCOUNT_HAS_ACTIVE_BOOKING`); the
+    /// server says what is kept and why, on the privacy page.
+    public static func deleteAccount() -> Endpoint<[String: JSONValue]> { .delete("auth/me") }
 }

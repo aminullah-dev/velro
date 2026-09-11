@@ -57,6 +57,7 @@ private struct SignedInView: View {
         case .track(let id): TrackRideView(app: app, bookingId: id)
         case .history: HistoryView(app: app)
         case .account: AccountView(app: app)
+        case .deleteAccount: DeleteAccountView(app: app)
         case .reports: ReportsView(app: app)
         }
     }

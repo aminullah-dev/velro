@@ -5,3 +5,6 @@ VelroPassenger/Info.plist
 build/
 VelroCore/.build/
 VelroCore/.swiftpm/
+
+# The review video: 12 MB, regenerated from the UI tests (AppStore/README.md).
+AppStore/*.mp4

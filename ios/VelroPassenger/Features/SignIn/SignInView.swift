@@ -5,6 +5,7 @@ import VelroCore
 struct SignInView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.strings) private var strings
+    @Environment(\.openURL) private var openURL
     @State private var model: SignInModel
     @State private var helpOpen = false
 
@@ -25,6 +26,15 @@ struct SignInView: View {
 
                     VelroCard {
                         VStack(alignment: .leading, spacing: Spacing.xl) {
+                            // Straight after a deletion, the screen says so: it
+                            // is otherwise indistinguishable from being thrown
+                            // out by a fault.
+                            if app.accountDeleted {
+                                Label(strings["account.delete.done"], systemImage: "checkmark.circle.fill")
+                                    .velroFont(.label)
+                                    .foregroundStyle(Palette.primary)
+                                    .accessibilityIdentifier("signin.account_deleted")
+                            }
                             // Language first: somebody who cannot read the form
                             // cannot fill it in.
                             languagePicker
@@ -47,8 +57,13 @@ struct SignInView: View {
                     // without the report, which needs a token.
                     SecondaryButton(label: strings["safety.title"]) { helpOpen = true }
                         .padding(.horizontal, Spacing.gutter)
-                        .padding(.vertical, Spacing.lg)
+                        .padding(.top, Spacing.lg)
                         .accessibilityIdentifier("signin.help")
+
+                    // What VELRO keeps, readable before handing over a number.
+                    TextAction(label: strings["account.privacy"]) { openURL(app.privacyURL) }
+                        .padding(.bottom, Spacing.lg)
+                        .accessibilityIdentifier("signin.privacy")
                 }
             }
             .scrollDismissesKeyboard(.interactively)
