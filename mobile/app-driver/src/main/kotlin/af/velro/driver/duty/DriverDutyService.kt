@@ -323,6 +323,10 @@ class DriverDutyService : Service() {
             .setContentText(text)
             .setOngoing(true)
             .setSilent(true)
+            // Android 12+ may hold a foreground service's notification back
+            // for ten seconds. He should see that he is on duty the moment he
+            // turns the switch on, not after he has put the phone away.
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(openApp())
             .build()
 
