@@ -1,0 +1,65 @@
+{
+  "_comment": "What the App Store shows for VELRO Ride, pushed by ios/scripts/appstore.py. App Store Connect has no Dari or Pashto listing, so en-US is the only one; the app itself opens in Dari. Every sentence must stay true of the build it ships with.",
+  "version": "1.0.0",
+  "copyright": "2026 Linumic",
+  "primary_category": "TRAVEL",
+  "content_rights": "USES_THIRD_PARTY_CONTENT",
+  "localizations": {
+    "en-US": {
+      "subtitle": "Intercity rides in Afghanistan",
+      "privacy_policy_url": "https://api.velro.linumic.com/privacy",
+      "support_url": "https://linumic.com/what-we-do/velro/",
+      "marketing_url": "https://linumic.com/what-we-do/velro/",
+      "keywords": "taxi,intercity,Kabul,Parwan,Ghorband,Afghanistan,seat,travel,driver,car,booking,trip,fare,Dari",
+      "promotional_text": "Book a seat between Kabul, Parwan and Ghorband: name your price, compare the drivers' offers, and know the fare before you get in the car.",
+      "description": "VELRO books intercity rides between Kabul, Parwan and Ghorband.\n\nYou name the price. Choose the station you are leaving from, where you are going, the day and the hour, and what you want to pay. Drivers answer with their own offers, and you choose one. The fare is agreed before anyone gets in the car.\n\nWHAT YOU CAN DO\n• Ask for a ride from a real station to a real destination, today or on a later day, with a return if you need one.\n• Compare offers side by side: each driver's price, rating and number of trips, and the car and its plate.\n• Keep your booking on your phone: your boarding code, your driver's name and photo, the car, and a button to call.\n• Watch the road: the route on the map and, once your driver is on the way, the car on it. When you board, the whole screen becomes the ride map, with warnings about the road ahead.\n• Get help fast: emergency numbers you can call without internet, your trip details sent by SMS to someone you trust, and a report straight to VELRO.\n• Use the app in Dari, Pashto or English, and switch at any time.\n\nHOW IT WORKS\nYour phone number is your account: you sign in with a one-time code, with no password. You pay the driver in cash; there are no payments in the app. You can delete your account from inside the app at any time (Account → Delete account).\n\nWHERE\nVELRO serves Kabul, Parwan and Ghorband. A ride can only be requested from inside this area.\n\nولرو — سفر بین‌شهری میان کابل، پروان و غوربند. قیمت را خودتان بگویید، پیشنهاد راننده‌ها را مقایسه کنید و پیش از سوار شدن کرایه را بدانید. به دری، پښتو و انگلیسی.",
+      "screenshots": {
+        "APP_IPHONE_67": [
+          "screenshots/iphone69-01-offers.jpg",
+          "screenshots/iphone69-02-price.jpg",
+          "screenshots/iphone69-03-destination.jpg",
+          "screenshots/iphone69-04-booking.jpg",
+          "screenshots/iphone69-05-ride-map.jpg",
+          "screenshots/iphone69-06-trip-done.jpg",
+          "screenshots/iphone69-07-help.jpg"
+        ]
+      }
+    }
+  },
+  "age_rating": {
+    "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+    "contests": "NONE",
+    "gamblingSimulated": "NONE",
+    "gunsOrOtherWeapons": "NONE",
+    "horrorOrFearThemes": "NONE",
+    "matureOrSuggestiveThemes": "NONE",
+    "medicalOrTreatmentInformation": "NONE",
+    "profanityOrCrudeHumor": "NONE",
+    "sexualContentGraphicAndNudity": "NONE",
+    "sexualContentOrNudity": "NONE",
+    "violenceCartoonOrFantasy": "NONE",
+    "violenceRealistic": "NONE",
+    "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+    "advertising": false,
+    "ageAssurance": false,
+    "gambling": false,
+    "healthOrWellnessTopics": false,
+    "lootBox": false,
+    "messagingAndChat": false,
+    "parentalControls": false,
+    "socialMedia": false,
+    "socialMediaAgeRestricted": false,
+    "unrestrictedWebAccess": false,
+    "userGeneratedContent": false
+  },
+  "review": {
+    "_comment": "Pushed only with --review, and only once the review number below is live on the server (OTP_TEST_NUMBERS and GEOFENCE_EXEMPT_PHONES). The contact phone is typed by hand in App Store Connect; it does not live in git.",
+    "contact_first_name": "Aminullah",
+    "contact_last_name": "Hashemi",
+    "contact_email": "aminhashemi979@gmail.com",
+    "demo_account_name": "+12025550142",
+    "demo_account_password": "No password. The sign-in code fills in by itself.",
+    "attachment": "velro-review-demo.mp4",
+    "notes": "VELRO is an intercity ride-booking app for Kabul, Parwan and Ghorband (Afghanistan). A passenger names a price, drivers (who use a separate driver app) answer with offers, and the passenger picks one. The fare is paid to the driver in cash; there are no in-app purchases.\n\nSIGN IN\n1. The app opens in Dari. Tap \"English\" on the sign-in screen to switch to English.\n2. Phone number: +1 202 555 0142 (type the +). Tap \"Send code\".\n3. The code fills in by itself for this review number (no SMS is sent). Tap \"Sign in\".\n\nLOCATION\nRide requests are normally accepted only from inside the service area. The review number is exempt, so a request can be sent from anywhere.\n\nWHAT TO TRY\n1. Home → \"Find a vehicle\": choose a district, village, station and destination, then a price, day and hour, and tap \"Ask for a ride\".\n2. Offers come from real drivers in Afghanistan, and requests from the review number are shown only to our own test drivers, so during review the request will wait for offers. The attached video shows the rest of the flow recorded against our test server: a driver's offer, accepting it, the booking with its boarding code, the full-screen ride map with road warnings once on board, and the end of the trip.\n3. Home → \"Get help\": emergency numbers, sending trip details by SMS, and reporting a problem.\n4. Home → the person icon at the top (\"Your account\") → \"Privacy policy\", and \"Delete account\" → \"Delete account\" → \"Delete my account\". This deletes the account permanently; signing in again with the same number creates a new, empty account.\n\nPrivacy policy: https://api.velro.linumic.com/privacy"
+  }
+}
