@@ -29,6 +29,15 @@ from ui.api.schemas.common import Schema
 router = APIRouter(prefix="/dispatch", tags=["dispatch"])
 
 
+def _rehearsing_user_ids(users) -> frozenset[str]:
+    """The accounts behind OTP_TEST_NUMBERS, who are never sent a real trip."""
+    return frozenset(
+        row.id
+        for phone in deps.settings().otp_test_numbers
+        if (row := users.find_by_phone(phone)) is not None
+    )
+
+
 class OfferTripOut(Schema):
     trip_id: str
     offers_made: int
@@ -72,6 +81,7 @@ def unassigned_trips(
     drivers: Annotated[object, Depends(deps.drivers)],
     vehicles: Annotated[object, Depends(deps.vehicles)],
     settings: Annotated[object, Depends(deps.app_settings)],
+    users: Annotated[object, Depends(deps.users)],
     within_hours: Annotated[int, Query(ge=1, le=72)] = 12,
 ) -> dict:
     """Trips that need a driver, soonest first -- and what can be done about each.
@@ -92,7 +102,10 @@ def unassigned_trips(
 
     # The supply, once: every online approved driver and the car he would
     # drive, then a count per trip of those big enough for it.
-    pool = drivers.available_for(limit=100)
+    # Test accounts are left out, as the offer leaves them out: a count that
+    # included App Review would tell the office somebody could take the run.
+    rehearsing = _rehearsing_user_ids(users)
+    pool = [d for d in drivers.available_for(limit=100) if d.user_id not in rehearsing]
     cars = vehicles.active_by_driver([d.id for d in pool])
     capacities = sorted(car.seat_capacity for car in cars.values())
 
@@ -154,6 +167,7 @@ def offer_trip(
     settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
     notifier: Annotated[object, Depends(deps.notifier)],
+    users: Annotated[object, Depends(deps.users)],
 ) -> dict:
     """Offer a trip to the drivers who could take it.
 
@@ -173,6 +187,7 @@ def offer_trip(
         clock=deps.clock(),
         new_id=deps.new_id,
         notifier=notifier,
+        rehearsing_user_ids=_rehearsing_user_ids(users),
     )
     result = use_case.execute(
         OfferTripCommand(trip_id=trip_id, actor_id=actor.user_id, actor_role=actor.role)

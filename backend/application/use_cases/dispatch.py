@@ -102,8 +102,14 @@ class OfferTripToDrivers:
     def __init__(
         self, *, trips, drivers, vehicles, locations, offers, geography,
         matching: MatchingStrategy, settings, audit, clock: Clock, new_id, notifier=None,
+        rehearsing_user_ids: frozenset[str] = frozenset(),
     ) -> None:
         self._trips = trips
+        # Accounts on OTP_TEST_NUMBERS: App Review at a desk in Cupertino, a
+        # developer at a laptop. The same line the board draws (ADR 0014's
+        # neighbour, _board_scope), drawn here too: a trip offered to one of
+        # them is a departure in Ghorband waiting for a car that is not coming.
+        self._rehearsing = rehearsing_user_ids
         self._drivers = drivers
         self._vehicles = vehicles
         self._locations = locations
@@ -131,7 +137,10 @@ class OfferTripToDrivers:
         limit = self._settings.get_int("dispatch.max_offers_per_trip", 10)
         ttl = self._settings.get_int("dispatch.offer_ttl_seconds", 30)
 
-        pool = self._drivers.available_for(limit=limit * 3)
+        pool = [
+            driver for driver in self._drivers.available_for(limit=limit * 3)
+            if driver.user_id not in self._rehearsing
+        ]
         candidates = self._matching.rank(
             trip=trip,
             drivers=pool,

@@ -137,7 +137,8 @@ RIVAL = DriverStub(id="drv-2", user_id="usr-2")
 
 
 def offer(
-    drivers: list[DriverStub], notifier: Any, *, already: list[str] | None = None
+    drivers: list[DriverStub], notifier: Any, *, already: list[str] | None = None,
+    rehearsing: frozenset[str] = frozenset(),
 ) -> tuple[OfferTripResult, FakeOffers]:
     offers = FakeOffers(already=already or [])
     use_case = OfferTripToDrivers(
@@ -153,6 +154,7 @@ def offer(
         clock=FrozenClock(),
         new_id=lambda: f"offer-{len(offers.created)}",
         notifier=notifier,
+        rehearsing_user_ids=rehearsing,
     )
     result = use_case.execute(
         OfferTripCommand(trip_id=TRIP_ID, actor_id="01a05400-0000-7000-8000-0000000000ee")
@@ -196,6 +198,26 @@ class TestEveryDriverOfferedIsTold:
 
         assert result.offers_made == 0
         assert listening.told == []
+
+
+class TestATestAccountIsNeverSentARealTrip:
+    """App Review's driver goes online in Cupertino; a Ghorband run is not his."""
+
+    def test_the_rehearsing_driver_is_left_out_and_not_told(self) -> None:
+        listening = Listening()
+        result, offers = offer([HAULER, RIVAL], listening, rehearsing=frozenset({"usr-1"}))
+
+        assert result.driver_ids == ["drv-2"]
+        assert [row["driver_id"] for row in offers.created] == ["drv-2"]
+        assert [t["user_id"] for t in listening.told] == ["usr-2"]
+
+    def test_only_test_accounts_online_is_nobody_available(self) -> None:
+        import pytest
+
+        from shared.errors import NotFoundError
+
+        with pytest.raises(NotFoundError):
+            offer([HAULER], Listening(), rehearsing=frozenset({"usr-1"}))
 
 
 class TestTellingHimCanNeverCostTheOffer:
