@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { api, query } from "../api/client";
-import { Empty, Loading, Ltr, PageHeader, Pager, Table, gate } from "../components/ui";
+import { gate } from "../components/gate";
+import { Empty, Loading, Ltr, PageHeader, Pager, Table } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface District {

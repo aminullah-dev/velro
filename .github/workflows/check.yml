@@ -40,8 +40,8 @@ jobs:
       # deploy time and is never in this file.
       VELRO_JWT_SECRET: ci-secret-key-at-least-32-characters-long
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -56,8 +56,8 @@ jobs:
   admin:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
@@ -69,14 +69,14 @@ jobs:
   mobile:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
         with:
           # Kotlin 2.0.x does not run on the newest JDKs; 21 is what every
           # laptop pins in its own ~/.gradle/gradle.properties.
           java-version: "21"
           distribution: temurin
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
       - run: scripts/check.sh mobile
 
   # The two domains are generated from one specification. If they drift, a rule
@@ -85,8 +85,8 @@ jobs:
   lifecycles:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: "3.12" }
       - name: the shared specs are valid JSON
         run: |

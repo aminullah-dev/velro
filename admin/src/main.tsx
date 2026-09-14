@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { ApiError } from "./api/client";
 import { App } from "./App";
-import { StringsProvider } from "./i18n/strings";
+import { StringsProvider } from "./i18n/StringsProvider";
 import "./styles.css";
 
 const client = new QueryClient({

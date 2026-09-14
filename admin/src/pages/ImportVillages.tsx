@@ -1,8 +1,9 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api, session } from "../api/client";
+import { gate } from "../components/gate";
 import {
-  Empty, ErrorBanner, Loading, Ltr, PageHeader, Stat, Table, gate,
+  Empty, ErrorBanner, Loading, Ltr, PageHeader, Stat, Table,
 } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 

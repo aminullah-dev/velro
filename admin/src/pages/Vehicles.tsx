@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Empty, Ltr, PageHeader, Phone, Table, gate } from "../components/ui";
+import { gate } from "../components/gate";
+import { Empty, Ltr, PageHeader, Phone, Table } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Vehicle {

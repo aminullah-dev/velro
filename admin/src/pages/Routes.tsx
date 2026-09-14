@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, query } from "../api/client";
-import { Empty, ErrorBanner, Ltr, PageHeader, Pager, Table, gate } from "../components/ui";
+import { gate } from "../components/gate";
+import { Empty, ErrorBanner, Ltr, PageHeader, Pager, Table } from "../components/ui";
 import { InputDialog } from "../components/InputDialog";
 import { useStrings } from "../i18n/strings";
 

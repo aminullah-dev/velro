@@ -1,46 +1,19 @@
 /**
- * Message keys, from the same JSON the backend and both apps use.
- *
- * No user-visible literal appears anywhere else in this panel. An error code
- * from the server resolves to a sentence here through exactly the mapping the
- * mobile apps apply, so the three surfaces cannot drift apart in wording.
+ * The provider behind `useStrings`, in a file of its own: a module that exports
+ * a component and anything else besides loses React Fast Refresh, and every
+ * page imports the hook from `./strings`.
  */
 import { KABUL, shamsiFromParts } from "./calendar";
+import { Context, LOCALES, type LocaleTag, type StringsContext } from "./strings";
 import {
-  createContext, useCallback, useContext, useEffect, useMemo, useState,
-  type ReactNode,
+  useCallback, useEffect, useMemo, useState, type ReactNode,
 } from "react";
-
-export type LocaleTag = "en" | "fa-AF" | "ps";
-
-export const LOCALES: { tag: LocaleTag; label: string; rtl: boolean }[] = [
-  { tag: "fa-AF", label: "دری", rtl: true },
-  { tag: "ps", label: "پښتو", rtl: true },
-  { tag: "en", label: "English", rtl: false },
-];
 
 const EASTERN = "۰۱۲۳۴۵۶۷۸۹";
 const PLACEHOLDER = /\{(\w+)\}/g;
 const STORAGE_KEY = "velro.locale";
 
 type Dictionary = Record<string, string>;
-
-interface StringsContext {
-  locale: LocaleTag;
-  rtl: boolean;
-  setLocale: (tag: LocaleTag) => void;
-  t: (key: string, params?: Record<string, unknown>) => string;
-  forErrorCode: (code: string, context?: Record<string, unknown>) => string;
-  /** Eastern Arabic-Indic digits for Dari and Pashto prose. */
-  num: (value: number | string) => string;
-  money: (amountMinor: number, currency?: string) => string;
-  dateTime: (iso: string) => string;
-  /** A calendar day with no time: a settlement period, an expiry, a birthday. */
-  date: (iso: string) => string;
-  ready: boolean;
-}
-
-const Context = createContext<StringsContext | null>(null);
 
 /** One shared empty dictionary, so a load in flight does not remount consumers. */
 const EMPTY: Dictionary = {};
@@ -234,10 +207,4 @@ export function StringsProvider({ children }: { children: ReactNode }) {
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;
-}
-
-export function useStrings(): StringsContext {
-  const context = useContext(Context);
-  if (!context) throw new Error("useStrings must be used inside a StringsProvider");
-  return context;
 }

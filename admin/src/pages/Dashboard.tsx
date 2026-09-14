@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { gate } from "../components/gate";
 import {
-  ActionStat, MoneyStat, PageHeader, Section, Stat, gate,
+  ActionStat, MoneyStat, PageHeader, Section, Stat,
 } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 

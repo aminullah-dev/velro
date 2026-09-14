@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Empty, ErrorBanner, Ltr, PageHeader, StatusChip, Table, gate } from "../components/ui";
+import { gate } from "../components/gate";
+import { Empty, ErrorBanner, Ltr, PageHeader, StatusChip, Table } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface UnassignedTrip {

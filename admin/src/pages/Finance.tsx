@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, query } from "../api/client";
-import { MoneyStat, PageHeader, Stat, gate } from "../components/ui";
+import { gate } from "../components/gate";
+import { MoneyStat, PageHeader, Stat } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Finance {
