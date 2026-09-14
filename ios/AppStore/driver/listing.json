@@ -14,7 +14,15 @@
    "promotional_text": "Find passengers between Kabul, Parwan and Ghorband: see the fare they ask, answer with your own, and drive with warnings about the road ahead.",
    "description": "VELRO Driver is the driver's side of VELRO, the intercity ride service between Kabul, Parwan and Ghorband.\n\nPassengers name the price they want to pay for a seat. You see their requests and answer with your own fare. When a passenger picks your offer, the trip is yours.\n\nWHAT YOU CAN DO\n• Go online to see the passengers who are waiting: where they are going, the day and hour, how many seats, and the fare they are asking.\n• Accept the asking fare in one tap, or offer your own, with a note for the passenger.\n• Keep each trip on one card: the booking, a button to call the passenger, and each passenger's boarding code to check before you leave.\n• Drive with the ride map: your route, and warnings about curves and dangerous stretches of the road ahead.\n• See what you earn by day, week and month, your trips, VELRO's commission, and what has been settled.\n• Send your driving licence, tazkira and car papers from your phone, and follow their review.\n• Get help fast: emergency numbers you can call without internet, and a report straight to VELRO.\n• Use the app in Dari, Pashto or English.\n\nHOW IT WORKS\nYour phone number is your account: you sign in with a one-time code, with no password. Passengers pay you in cash; there are no payments in the app. Your documents and your car are reviewed before you can go online. While you carry a trip, the app uses your location, also with the phone in your pocket, to show your car to the passengers you are driving and to warn you about the road ahead; iOS shows this in the status bar, and it stops when the trip ends. You can delete your account from inside the app at any time (Profile → Delete account).\n\nWHERE\nVELRO serves Kabul, Parwan and Ghorband.\n\nولرو راننده — مسافر پیدا کنید، کرایه خود را بگویید و با اطمینان رانندگی کنید. به دری، پښتو و انگلیسی.",
    "screenshots": {
-    "APP_IPHONE_67": []
+    "APP_IPHONE_67": [
+          "screenshots/iphone69-01-home.jpg",
+          "screenshots/iphone69-02-board.jpg",
+          "screenshots/iphone69-03-offer.jpg",
+          "screenshots/iphone69-04-trip.jpg",
+          "screenshots/iphone69-05-ride-map.jpg",
+          "screenshots/iphone69-06-earnings.jpg",
+          "screenshots/iphone69-07-documents.jpg"
+        ]
    }
   }
  },

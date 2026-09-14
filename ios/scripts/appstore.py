@@ -231,9 +231,13 @@ def replace_screenshots(version_loc_id: str, display_type: str, files: list[Path
 def ensure_free(app_id: str) -> None:
     """Free, everywhere Apple sells, once: a fare is paid to the driver in
     cash, and never through the App Store."""
-    # The schedule answers for every app, priced or not; only its prices
-    # say whether one was ever chosen.
-    if call("GET", f"/v1/appPriceSchedules/{app_id}/manualPrices")["data"]:
+    # Only its prices say whether one was ever chosen -- and a record made
+    # minutes ago has no schedule at all, which answers 404.
+    try:
+        chosen = call("GET", f"/v1/appPriceSchedules/{app_id}/manualPrices")["data"]
+    except SystemExit:
+        chosen = []
+    if chosen:
         print("  · price already set")
     else:
         points = call("GET", f"/v1/apps/{app_id}/appPricePoints?filter[territory]=USA&limit=200")["data"]
