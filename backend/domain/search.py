@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass
 
 from domain.driver import normalise_plate
-from domain.text import normalise_digits
+from domain.text import fold_letters, normalise_digits
 
 #: Digits and the punctuation people put between them, nothing else. A term
 #: with a letter in it is a name or a plate, and reading its digits as a phone
@@ -64,10 +64,23 @@ class SearchTerm:
         The operator's % and _ are characters he typed, not wildcards: a search
         for "%" must not return every row.
         """
-        escaped = (
-            self.text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        )
-        return f"%{escaped}%"
+        return _contains_pattern(self.text)
+
+    @property
+    def name_pattern(self) -> str:
+        """like_pattern with Arabic letter forms folded to Persian ones.
+
+        For a name column folded the same way in SQL (translate() over
+        domain.text.LETTER_FOLDING_FROM / _TO): the operator's keyboard is not
+        the one the name was typed on, and علي is علی. Escaped exactly as
+        like_pattern is -- folding touches no %, _ or backslash.
+        """
+        return _contains_pattern(fold_letters(self.text))
+
+
+def _contains_pattern(text: str) -> str:
+    escaped = text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
 
 
 def normalise_business_number(raw: str) -> str:

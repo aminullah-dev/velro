@@ -81,6 +81,37 @@ class TestBlankAndWildcards:
         assert term is not None and term.like_pattern == "%Gul%"
 
 
+class TestANameTypedOnAnotherKeyboard:
+    @pytest.mark.parametrize(("typed", "folded"), [
+        ("كريمة علي", "%کریمه علی%"),      # Arabic keyboard: ك ة ي
+        ("کریمه علی", "%کریمه علی%"),      # Persian keyboard: already folded
+        ("يوسفى", "%یوسفی%"),              # yeh and alef maksura
+    ])
+    def test_the_name_pattern_folds_the_letters(self, typed: str, folded: str) -> None:
+        term = SearchTerm.parse(typed)
+        assert term is not None and term.name_pattern == folded
+
+    def test_the_name_pattern_keeps_the_wildcards_as_letters(self) -> None:
+        term = SearchTerm.parse(r"علي_50%\x")
+        assert term is not None
+        assert term.name_pattern == r"%علی\_50\%\\x%"
+
+    def test_the_text_itself_is_not_folded(self) -> None:
+        """What was typed is kept; only the name comparison folds."""
+        term = SearchTerm.parse("كريم")
+        assert term is not None and term.text == "كريم"
+        assert term.like_pattern == "%كريم%"
+
+    def test_the_sql_table_is_the_python_table(self) -> None:
+        """translate(name, FROM, TO) in the database must fold exactly what
+        fold_letters folds, letter for letter, or the two sides disagree."""
+        from domain.text import LETTER_FOLDING_FROM, LETTER_FOLDING_TO, fold_letters
+
+        assert len(LETTER_FOLDING_FROM) == len(LETTER_FOLDING_TO) > 0
+        assert fold_letters(LETTER_FOLDING_FROM) == LETTER_FOLDING_TO
+        assert {"ي", "ى", "ك", "ة"} <= set(LETTER_FOLDING_FROM)
+
+
 class TestATripNumber:
     @pytest.mark.parametrize("typed", [
         "VLR-2026-000047",

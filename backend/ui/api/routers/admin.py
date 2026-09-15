@@ -41,6 +41,7 @@ from domain.identity import PASSENGER as PASSENGER_ROLE
 from domain.identity import STAFF_ROLES, PhoneNumber
 from domain.identity import User as DomainUser
 from domain.search import SearchTerm, normalise_business_number
+from domain.text import LETTER_FOLDING_FROM, LETTER_FOLDING_TO
 from infrastructure.db.models.geography import (
     DestinationRow,
     DistrictRow,
@@ -878,8 +879,15 @@ def _person_matches(term: SearchTerm):
     on its significant digits, so 0700…, +93700… and ۰۷۰۰… all find the same
     row. Plain ILIKE with no index: a few hundred drivers is nothing to scan,
     and a trigram index is the step if it ever shows in a profile.
+
+    Both sides of the name comparison are folded with one table
+    (domain/text.py): the stored name by translate() in the database, the
+    typed term by SearchTerm.name_pattern. So كريم typed on an Arabic
+    keyboard and کریم typed on a Persian one are the same name, in either
+    direction. Only the comparison is folded; the name shown is as stored.
     """
-    clauses = [UserRow.full_name.ilike(term.like_pattern, escape="\\")]
+    folded_name = func.translate(UserRow.full_name, LETTER_FOLDING_FROM, LETTER_FOLDING_TO)
+    clauses = [folded_name.ilike(term.name_pattern, escape="\\")]
     if term.phone_digits:
         clauses.append(UserRow.phone.contains(term.phone_digits))
     return or_(*clauses)

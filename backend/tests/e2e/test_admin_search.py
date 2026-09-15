@@ -34,6 +34,7 @@ RIDER = "+93700000872"
 NAME = "Rahim Gul"
 PLATE = "SRC ۸۷۰۱"            # stored as typed; its key is SRC8701
 
+USERS = "/api/v1/admin/users"
 DRIVERS = "/api/v1/admin/drivers"
 VEHICLES = "/api/v1/admin/vehicles"
 TRIPS = "/api/v1/admin/trips"
@@ -419,6 +420,90 @@ class TestTheAuditLogByWhoDidIt:
         body = _get(client, AUDIT, admin_session, actor_id=NOBODY)
         assert body["data"] == []
         assert body["meta"]["total"] == 0
+
+
+# -- a name typed on another keyboard ---------------------------------------
+
+#: Stored with Arabic letter forms: ك kaf, ي yeh, ة teh marbuta.
+ARABIC_TYPED = ("+93700000895", "كريمة علي", "FLD ۸۹۵")
+#: Stored with Persian ones: ک and ی.
+PERSIAN_TYPED = ("+93700000896", "زکیه یوسفی", "FLD ۸۹۶")
+
+
+@pytest.fixture(scope="module")
+def keyboards(client: TestClient) -> dict[str, dict]:
+    """Two drivers, each with a car, whose names were typed on different
+    keyboards. Written directly, like the owner above: the names are stored
+    exactly as typed, and it is finding them that is under test."""
+    from domain.driver import normalise_plate
+    from infrastructure.db.models.identity import UserRow
+    from infrastructure.db.models.supply import DriverRow, VehicleRow
+    from shared.ids import new_id
+
+    made: dict[str, dict] = {}
+    for phone, name, plate in (ARABIC_TYPED, PERSIAN_TYPED):
+        headers = auth(sign_in(client, phone))
+        registered = client.post("/api/v1/driver/register", json={}, headers=headers)
+        assert registered.status_code in (200, 201), registered.text
+        with _session() as session:
+            user = session.scalars(select(UserRow).where(UserRow.phone == phone)).one()
+            user.full_name = name
+            driver = session.scalars(
+                select(DriverRow).where(DriverRow.user_id == user.id)
+            ).one()
+            vehicle = VehicleRow(
+                id=new_id(), driver_id=driver.id, vehicle_type_code="SEDAN",
+                plate_number=plate, plate_key=normalise_plate(plate), seat_capacity=4,
+            )
+            session.add(vehicle)
+            made[phone] = {
+                USERS: user.id, DRIVERS: driver.id, VEHICLES: vehicle.id, "name": name,
+            }
+            session.commit()
+    return made
+
+
+class TestANameTypedOnAnotherKeyboard:
+    @pytest.mark.parametrize("path", [USERS, DRIVERS, VEHICLES])
+    @pytest.mark.parametrize(("stored", "typed"), [
+        # A Persian keyboard finds a name typed on an Arabic one...
+        (ARABIC_TYPED, "کریمه علی"),
+        (ARABIC_TYPED, "کریمه"),
+        (ARABIC_TYPED, "علی"),
+        # ...and an Arabic keyboard finds a name typed on a Persian one.
+        (PERSIAN_TYPED, "زكيه يوسفي"),
+        (PERSIAN_TYPED, "يوسفى"),          # alef maksura for the final yeh
+    ])
+    def test_either_keyboard_finds_it(
+        self, client: TestClient, admin_session: dict, keyboards: dict,
+        path: str, stored: tuple, typed: str,
+    ) -> None:
+        wanted = keyboards[stored[0]][path]
+        assert wanted in _ids(_get(client, path, admin_session, search=typed, limit=200))
+
+    def test_the_name_is_shown_as_it_was_typed(
+        self, client: TestClient, admin_session: dict, keyboards: dict
+    ) -> None:
+        """Only the comparison is folded. Rewriting the name would be ours to
+        do to somebody else's name, and it is not."""
+        for phone, name, _ in (ARABIC_TYPED, PERSIAN_TYPED):
+            users = _get(client, USERS, admin_session, search=phone)["data"]
+            assert [u["full_name"] for u in users] == [name]
+            drivers = _get(client, DRIVERS, admin_session, search=phone)["data"]
+            assert [d["full_name"] for d in drivers] == [name]
+
+    def test_folding_is_not_a_wildcard(
+        self, client: TestClient, admin_session: dict, keyboards: dict
+    ) -> None:
+        found = _ids(_get(client, DRIVERS, admin_session, search="کریمه علی", limit=200))
+        assert keyboards[ARABIC_TYPED[0]][DRIVERS] in found
+        assert keyboards[PERSIAN_TYPED[0]][DRIVERS] not in found
+
+    def test_a_percent_sign_is_still_a_character(
+        self, client: TestClient, admin_session: dict, keyboards: dict
+    ) -> None:
+        assert _get(client, USERS, admin_session, search="%")["meta"]["total"] == 0
+        assert _get(client, USERS, admin_session, search="كريمة_علي")["meta"]["total"] == 0
 
 
 # -- the gates are the lists' own ----------------------------------------

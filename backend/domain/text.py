@@ -28,6 +28,13 @@ _LETTER_FOLDING = str.maketrans(
     }
 )
 
+#: The same table as two aligned strings, for SQL translate(). A search that
+#: folds the typed term in Python and the stored name in the database must
+#: fold exactly the same letters on both sides, so both are read off this one
+#: table rather than written out twice.
+LETTER_FOLDING_FROM = "".join(chr(code) for code in _LETTER_FOLDING)
+LETTER_FOLDING_TO = "".join(str(letter) for letter in _LETTER_FOLDING.values())
+
 # Pashto-specific consonants are deliberately NOT folded into their Persian
 # lookalikes: ټ ډ ړ ږ ښ ګ ڼ distinguish real, different words. Nor are the
 # Pashto vowels ې and ۍ. The yeh forms above ARE folded, which is wrong for
@@ -59,6 +66,16 @@ def normalise_digits(value: str) -> str:
     which the code comparison relied on for its whole life.
     """
     return value.translate(_EASTERN_DIGITS)
+
+
+def fold_letters(value: str) -> str:
+    """Arabic letter forms folded to their Persian ones, and nothing else.
+
+    علي and علی, كريم and کریم: one name typed on two keyboards. Everything
+    else -- case, spacing, punctuation, the Pashto letters -- is left alone,
+    because a search box's term is not a village name to be deduplicated.
+    """
+    return value.translate(_LETTER_FOLDING)
 
 
 def normalise(value: str) -> str:
