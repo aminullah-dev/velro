@@ -193,10 +193,13 @@ private struct RefreshButton: ToolbarContent {
             Button {
                 Task { await model.refresh() }
             } label: {
+                // The button wears the app's amber; its glyph in the same
+                // amber vanished into it. Dark ink reads on amber.
                 if model.isRefreshing {
-                    ProgressView()
+                    ProgressView().tint(.black)
                 } else {
                     Image(systemName: "arrow.clockwise")
+                        .foregroundStyle(.black)
                 }
             }
             .disabled(model.isRefreshing)

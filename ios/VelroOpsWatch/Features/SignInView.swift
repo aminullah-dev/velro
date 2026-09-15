@@ -156,7 +156,17 @@ final class WatchSignInFlow {
     private let model: WatchModel
     private var countdown: Task<Void, Never>?
 
-    init(model: WatchModel) { self.model = model }
+    init(model: WatchModel) {
+        self.model = model
+        #if DEBUG
+        // Nothing can type into the watch simulator from a script, so a
+        // development build takes the form from its launch arguments:
+        // -VelroDemoPhone +93700000001 -VelroDemoChannel sms
+        let defaults = UserDefaults.standard
+        if let phone = defaults.string(forKey: "VelroDemoPhone") { self.phone = phone }
+        if defaults.string(forKey: "VelroDemoChannel") == "sms" { channel = API.channelSMS }
+        #endif
+    }
 
     private var latinPhone: String { Numerals.latin(phone).filter { !$0.isWhitespace } }
 
