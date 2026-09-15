@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { onSignedOut, session } from "./api/client";
+import { api, onSignedOut, session } from "./api/client";
+import { isStaff } from "./api/roles";
 import { LOCALES, useStrings, type LocaleTag } from "./i18n/strings";
 import { ApprovalsPage } from "./pages/Approvals";
 import { AuditPage } from "./pages/Audit";
@@ -52,8 +53,9 @@ const NAV = [
 ];
 
 export function App() {
-  const { t, ready, locale, setLocale } = useStrings();
+  const { t, ready, locale, setLocale, forErrorCode } = useStrings();
   const [signedIn, setSignedIn] = useState(session.isSignedIn);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(
     // A revoked or expired session returns to sign-in wherever the operator
@@ -62,11 +64,40 @@ export function App() {
     [],
   );
 
+  useEffect(() => {
+    if (!signedIn) return;
+    // The roles were checked when the code was verified -- but a role can be
+    // taken away afterwards, and the refresh token outlives it: the seed
+    // administrator's session stayed open for weeks after its role was
+    // revoked, showing every page and a 403 on each. Ask again on every open.
+    // A failed request proves nothing about roles, so it signs nobody out.
+    let cancelled = false;
+    api.get<{ roles: string[] }>("/auth/me").then((me) => {
+      if (cancelled || isStaff(me.roles)) return;
+      session.clear();
+      setNotice(forErrorCode("PERMISSION_DENIED"));
+      setSignedIn(false);
+    }, () => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn, forErrorCode]);
+
   // Holding the first paint until the strings are in avoids a flash of raw
   // message keys, which looks broken.
   if (!ready) return null;
 
-  if (!signedIn) return <SignInPage onSignedIn={() => setSignedIn(true)} />;
+  if (!signedIn) {
+    return (
+      <SignInPage
+        initialNotice={notice}
+        onSignedIn={() => {
+          setNotice(null);
+          setSignedIn(true);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="shell">

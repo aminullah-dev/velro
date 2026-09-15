@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ApiError, api, session } from "../api/client";
+import { isStaff } from "../api/roles";
 import { LOCALES, useStrings, type LocaleTag } from "../i18n/strings";
 
 interface SessionOut {
@@ -9,20 +10,19 @@ interface SessionOut {
   roles: string[];
 }
 
-const STAFF_ROLES = new Set([
-  "SUPER_ADMIN", "ADMIN", "OPERATIONS_MANAGER",
-  "DISPATCHER", "FINANCE_MANAGER", "SUPPORT_AGENT",
-]);
-
 /** Staff sign-in. Same phone + OTP flow as the apps; no second credential system. */
-export function SignInPage({ onSignedIn }: { onSignedIn: () => void }) {
+export function SignInPage({ onSignedIn, initialNotice = null }: {
+  onSignedIn: () => void;
+  /** Why the operator is here: a session the panel just ended, say. */
+  initialNotice?: string | null;
+}) {
   const { t, locale, setLocale, forErrorCode } = useStrings();
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(initialNotice);
   // Where the code should go. Email is the console's own pipe: free, and it
   // reaches a laptop in another country when the SIM does not. The server
   // honours it only for a staff account with an address on file, and says
@@ -64,8 +64,7 @@ export function SignInPage({ onSignedIn }: { onSignedIn: () => void }) {
     setError(null);
     try {
       const result = await api.post<SessionOut>("/auth/otp/verify", { phone, code, locale });
-      const isStaff = result.roles.some((role) => STAFF_ROLES.has(role));
-      if (!isStaff) {
+      if (!isStaff(result.roles)) {
         // A passenger's credentials are valid; they simply have no business
         // here. Saying so beats an empty dashboard full of 403s.
         setNotice(forErrorCode("PERMISSION_DENIED"));
