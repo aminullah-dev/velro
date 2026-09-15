@@ -261,8 +261,22 @@ interface VelroApi {
         @Path("bookingId") bookingId: String,
     ): Response<Envelope<VehicleLocationDto?>>
 
+    /**
+     * The release manifest -- and, on the way in, which build is asking.
+     *
+     * A sideloaded APK has no store console counting installs, so these four
+     * parameters are the only way anyone learns whether a fix has reached the
+     * phones. Nullable because an identity the caller cannot vouch for is left
+     * out rather than guessed: Retrofit drops a null query entirely, and the
+     * server treats a missing value as "not counted".
+     */
     @GET("app/version")
-    suspend fun appVersion(): Response<Envelope<ReleaseDto>>
+    suspend fun appVersion(
+        @Query("app") app: String? = null,
+        @Query("platform") platform: String? = null,
+        @Query("version_code") versionCode: Int? = null,
+        @Query("version_name") versionName: String? = null,
+    ): Response<Envelope<ReleaseDto>>
 
     @POST("telemetry/crash")
     suspend fun reportCrash(@Body body: CrashRequest): Response<Envelope<Map<String, Boolean>>>

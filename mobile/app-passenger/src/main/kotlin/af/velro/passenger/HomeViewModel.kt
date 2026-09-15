@@ -100,7 +100,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { refreshOpenRequest() }
         poll()
         viewModelScope.launch {
-            updates.availableUpdate("passenger", appVersion.code)?.let { url ->
+            updates.availableUpdate("passenger", appVersion.code, appVersion.name)?.let { url ->
                 _state.update { it.copy(updateUrl = url) }
             }
         }

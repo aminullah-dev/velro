@@ -274,7 +274,7 @@ class DriverHomeViewModel @Inject constructor(
         refresh()
         poll()
         viewModelScope.launch {
-            updates.availableUpdate("driver", appVersion.code)?.let { url ->
+            updates.availableUpdate("driver", appVersion.code, appVersion.name)?.let { url ->
                 _state.update { it.copy(updateUrl = url) }
             }
         }
