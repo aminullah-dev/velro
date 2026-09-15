@@ -339,14 +339,21 @@ public enum AdminAPI {
     /// `search` is matched by the server: a name, or a phone in any form or
     /// digits. Paged: `sendWithMeta` for the total.
     ///
-    /// A server before this contract ignores role, search and offset and
-    /// sends no total -- every account, one page. A caller can tell by
-    /// `meta.total` being nil, and narrow by `AdminUser.roles` itself.
+    /// `passengerOnly`: accounts that only travel -- PASSENGER, and neither
+    /// DRIVER nor any staff role. Every account starts as a passenger, so
+    /// `role: .passenger` alone also lists every driver and every colleague.
+    ///
+    /// A server before this contract ignores role, passenger_only, search
+    /// and offset and sends no total -- every account, one page. A caller
+    /// can tell by `meta.total` being nil, and narrow by `AdminUser.roles`
+    /// itself (`isPassengerOnly`).
     public static func users(
-        role: AccountRole?, search: String? = nil, status: UserStatus? = nil, limit: Int = 50, offset: Int = 0
+        role: AccountRole?, passengerOnly: Bool = false, search: String? = nil, status: UserStatus? = nil,
+        limit: Int = 50, offset: Int = 0
     ) -> Endpoint<[AdminUser]> {
         var query: [URLQueryItem] = []
         if let role { query.append(URLQueryItem(name: "role", value: role.rawValue)) }
+        if passengerOnly { query.append(URLQueryItem(name: "passenger_only", value: "true")) }
         if let search = clean(search) { query.append(URLQueryItem(name: "search", value: search)) }
         if let status { query.append(URLQueryItem(name: "status", value: status.rawValue)) }
         query.append(URLQueryItem(name: "limit", value: String(min(200, max(1, limit)))))

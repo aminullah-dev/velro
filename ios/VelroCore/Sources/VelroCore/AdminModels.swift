@@ -865,6 +865,10 @@ public struct AdminUser: Decodable, Sendable, Hashable, Identifiable {
     public var isStaff: Bool { StaffAccess.isStaff(roles) }
     public var isPassenger: Bool { roles.contains(AccountRole.passenger.rawValue) }
     public var isDriver: Bool { roles.contains(AccountRole.driver.rawValue) }
+    /// Only travels: a passenger who neither drives nor works here -- the
+    /// server's `passenger_only`. Every account starts as a passenger, so
+    /// `isPassenger` alone is true of every driver too.
+    public var isPassengerOnly: Bool { isPassenger && !isDriver && !isStaff }
 }
 
 /// Which accounts `AdminAPI.users` lists: the server's `role` filter.

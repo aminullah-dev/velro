@@ -2,9 +2,14 @@ import Observation
 import SwiftUI
 import VelroCore
 
-/// The passenger directory: everyone who travels, found by name or phone,
-/// narrowed to the active or the suspended, and scrolling on past the first
-/// page. Beside the list on iPad and Mac, pushed on an iPhone.
+/// The passenger directory: the people who only travel -- not drivers, not
+/// staff, though every account starts as a passenger (the server's
+/// `passenger_only`) -- found by name or phone, narrowed to the active or
+/// the suspended, and scrolling on past the first page. Beside the list on
+/// iPad and Mac, pushed on an iPhone.
+///
+/// A driver's own passenger page is still reachable by id ("passenger:<id>",
+/// from one of his bookings); it just is not listed here.
 ///
 /// Other screens open it with `navigator.open(.passengers, filter:)`:
 /// "passenger:<user id>" (selects him), "search:<text>", "suspended",
@@ -12,8 +17,8 @@ import VelroCore
 ///
 /// A server before admin/users learned role, search and paging answers
 /// every account in one page and no total: the list then keeps the
-/// passengers itself, searches what it holds, and says once, calmly, that
-/// the rest comes with the server's update.
+/// passengers-only itself, searches what it holds, and says once, calmly,
+/// that the rest comes with the server's update.
 struct PassengersView: View {
     @Environment(OpsModel.self) private var ops
     @Environment(\.strings) private var strings
@@ -171,8 +176,10 @@ final class OpPassengersModel {
         guard isLegacyServer else { return pager.items }
         let query = query
         let status = slice.status
+        // The server's passenger_only, here: a driver or a colleague also
+        // holds PASSENGER, and is not one of the passengers.
         return pager.items.filter { user in
-            user.isPassenger && (status == nil || user.status == status) && (query.isEmpty || Self.matches(user, query))
+            user.isPassengerOnly && (status == nil || user.status == status) && (query.isEmpty || Self.matches(user, query))
         }
     }
 
@@ -203,7 +210,9 @@ final class OpPassengersModel {
         let status = slice.status
         let search: String? = query.isEmpty ? nil : query
         await pager.reload { [ops] limit, offset in
-            await ops.sendWithMeta(AdminAPI.users(role: .passenger, search: search, status: status, limit: limit, offset: offset))
+            await ops.sendWithMeta(AdminAPI.users(
+                role: .passenger, passengerOnly: true, search: search, status: status, limit: limit, offset: offset
+            ))
         }
     }
 
@@ -241,7 +250,6 @@ private struct OpPassengerRow: View {
                     .foregroundStyle(Palette.text)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                if user.isDriver { StatusChip(role: AccountRole.driver.rawValue) }
                 StatusChip(user: user.status)
             }
             HStack(spacing: Spacing.s2) {

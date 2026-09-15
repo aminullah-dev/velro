@@ -292,6 +292,7 @@ struct AdminModelTests {
         """#)
         #expect(user.status == .deactivated)
         #expect(user.isStaff)
+        #expect(!user.isPassengerOnly)
         #expect(user.lastSeen == nil)
 
         let finance = try decode(FinanceSummary.self, #"""
@@ -355,6 +356,8 @@ struct AdminModelTests {
         """#)
         #expect(detail.user.status == .suspended)
         #expect(detail.user.isPassenger && detail.user.isDriver && !detail.user.isStaff)
+        // Every driver started as a passenger: he is not one of the passengers.
+        #expect(!detail.user.isPassengerOnly)
         #expect(detail.user.lastSeen != nil)
         #expect(detail.driverId == "d7")
         let summary = try #require(detail.passenger)
@@ -372,6 +375,7 @@ struct AdminModelTests {
          "driver_id":null,"passenger":{"bookings_total":1}}
         """#)
         #expect(bare.driverId == nil)
+        #expect(bare.user.isPassengerOnly)
         #expect(bare.passenger?.bookingsTotal == 1)
         #expect(bare.passenger?.ticketsTotal == 0)
         #expect(bare.passenger?.currency == "AFN")
@@ -580,6 +584,10 @@ struct AdminEndpointTests {
         #expect(page.method == .get)
         #expect(page.path == "admin/users")
         #expect(query(page) == ["role": "PASSENGER", "search": "۰۷۹۳", "status": "ACTIVE", "limit": "50", "offset": "100"])
+        // Only those who only travel: sent when asked for, never as "false".
+        let travellers = AdminAPI.users(role: .passenger, passengerOnly: true, limit: 50)
+        #expect(query(travellers) == ["role": "PASSENGER", "passenger_only": "true", "limit": "50", "offset": "0"])
+        #expect(query(page)["passenger_only"] == nil)
         // Blank asks nothing; the server's bounds are kept on this side too.
         #expect(query(AdminAPI.users(role: nil, search: "  ", limit: 500, offset: -3)) == ["limit": "200", "offset": "0"])
         #expect(query(AdminAPI.users(role: .staff))["role"] == "STAFF")
