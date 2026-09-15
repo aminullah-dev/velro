@@ -1,4 +1,5 @@
 import SwiftUI
+import VelroCore
 
 /// What a place shows until its feature is built: its name, and a sentence
 /// saying so. Each placeholder view in Features/ is one line of this.

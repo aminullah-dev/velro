@@ -1137,5 +1137,19 @@
   "ops.week.new_passengers": "نوي مسافر",
   "ops.week.new_drivers": "نوي چلوونکي",
   "admin.stat.passengers_suspended": "ځنډول شوي مسافر",
-  "admin.passengers.only_note": "دلته یوازې هغه کسان شمېرل کېږي چې سفر کوي؛ هغه حسابونه چې موټر هم چلوي یا د ولرو کارکوونکي دي، پکې نه شمېرل کېږي."
+  "admin.passengers.only_note": "دلته یوازې هغه کسان شمېرل کېږي چې سفر کوي؛ هغه حسابونه چې موټر هم چلوي یا د ولرو کارکوونکي دي، پکې نه شمېرل کېږي.",
+  "ops.watch.signed_out": "یو ځل د خپل کارکوونکي شمېرې سره ننوځئ. له هغې وروسته دا ساعت ښيي چې همدا اوس کوم شی چا ته اړتیا لري.",
+  "ops.watch.updated": "تازه شوی {time}",
+  "ops.watch.stale": "تازه نه شو. وروستۍ شمېرې: {age}.",
+  "ops.watch.no_dashboard": "ستاسو رول ډشبورډ ته لاسرسی نه لري، نو دا ساعت د ښودلو لپاره څه نه لري.",
+  "ops.watch.need_attention": "پاملرنې ته اړتیا: {count}",
+  "ops.watch.all_clear": "هر څه سم دي",
+  "ops.watch.widget_description": "هغه څه چې همدا اوس چا ته اړتیا لري.",
+  "ops.watch.short.unassigned": "بې چلوونکي سفرونه",
+  "ops.watch.short.unanswered_requests": "بې ځوابه غوښتنې",
+  "ops.watch.short.stale_gps": "بې موقعیته",
+  "ops.watch.short.pending_drivers": "د تصویب په تمه چلوونکي",
+  "ops.watch.short.pending_vehicles": "د فعالولو په تمه موټرونه",
+  "ops.watch.short.open_tickets": "د ملاتړ غوښتنې",
+  "ops.watch.short.expiring_documents": "پای ته رسېدونکي اسناد"
 }

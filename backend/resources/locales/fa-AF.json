@@ -1137,5 +1137,19 @@
   "ops.week.new_passengers": "مسافران جدید",
   "ops.week.new_drivers": "رانندگان جدید",
   "admin.stat.passengers_suspended": "مسافران معلق",
-  "admin.passengers.only_note": "اینجا فقط کسانی شمرده می‌شوند که سفر می‌کنند؛ حساب‌هایی که رانندگی هم می‌کنند یا کارمند ولرو هستند، شامل نیستند."
+  "admin.passengers.only_note": "اینجا فقط کسانی شمرده می‌شوند که سفر می‌کنند؛ حساب‌هایی که رانندگی هم می‌کنند یا کارمند ولرو هستند، شامل نیستند.",
+  "ops.watch.signed_out": "یک بار با شمارهٔ کارمندی خود وارد شوید. پس از آن، این ساعت نشان می‌دهد همین حالا چه چیزی به کسی نیاز دارد.",
+  "ops.watch.updated": "به‌روز شده {time}",
+  "ops.watch.stale": "تازه نشد. آخرین ارقام: {age}.",
+  "ops.watch.no_dashboard": "نقش شما به داشبورد دسترسی ندارد، بنابراین این ساعت چیزی برای نمایش ندارد.",
+  "ops.watch.need_attention": "نیاز به توجه: {count}",
+  "ops.watch.all_clear": "همه‌چیز روبه‌راه است",
+  "ops.watch.widget_description": "آنچه همین حالا به کسی نیاز دارد.",
+  "ops.watch.short.unassigned": "سفر بدون راننده",
+  "ops.watch.short.unanswered_requests": "درخواست بی‌پاسخ",
+  "ops.watch.short.stale_gps": "بدون موقعیت",
+  "ops.watch.short.pending_drivers": "راننده منتظر تأیید",
+  "ops.watch.short.pending_vehicles": "موتر منتظر فعال‌سازی",
+  "ops.watch.short.open_tickets": "درخواست پشتیبانی",
+  "ops.watch.short.expiring_documents": "اسناد رو به انقضا"
 }

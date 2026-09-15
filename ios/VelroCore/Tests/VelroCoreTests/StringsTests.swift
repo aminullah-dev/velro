@@ -124,7 +124,9 @@ func realStrings(_ locale: AppLocale) -> Strings {
 
     private func usedKeys() throws -> Set<String> {
         var keys: Set<String> = []
-        for app in ["VelroPassenger", "VelroDriver", "VelroOps"] { keys.formUnion(try usedKeys(in: app)) }
+        for app in ["VelroPassenger", "VelroDriver", "VelroOps", "VelroOpsWatch", "VelroOpsWatchWidgets"] {
+            keys.formUnion(try usedKeys(in: app))
+        }
         return keys
     }
 

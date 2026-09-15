@@ -10,6 +10,7 @@ Android mark:
     python3 scripts/make-appicon.py            # the passenger's
     python3 scripts/make-appicon.py --driver   # the driver's
     python3 scripts/make-appicon.py --ops      # the operations console's
+    python3 scripts/make-appicon.py --watch    # ...and its Apple Watch app's
 
 The driver's is app-driver's launcher: the same mark on #101828, the road in
 the brand's lightest green and the dashes in its darkest, because white on the
@@ -20,6 +21,9 @@ inside a ring -- the office watching the road -- so nobody opens the console
 thinking it is the passenger's app. It runs on the Mac as well, so it also
 gets the macOS sizes: the tile inset on Apple's 1024 grid with rounded
 corners, since macOS draws an icon as it is rather than masking it.
+
+The watch app's is the console's own tile, full bleed and opaque: watchOS
+cuts it to a circle, and the ring sits inside that circle.
 """
 import json
 import os
@@ -38,8 +42,11 @@ AMBER = (0xB4, 0x53, 0x09)
 CREAM = (0xFE, 0xF3, 0xC7)
 
 DRIVER = "--driver" in sys.argv
-OPS = "--ops" in sys.argv
-if OPS:
+WATCH = "--watch" in sys.argv
+OPS = "--ops" in sys.argv or WATCH
+if WATCH:
+    GROUND, ROAD_FILL, DASH_FILL, TARGET = AMBER, WHITE, CREAM, "VelroOpsWatch"
+elif OPS:
     GROUND, ROAD_FILL, DASH_FILL, TARGET = AMBER, WHITE, CREAM, "VelroOps"
 elif DRIVER:
     GROUND, ROAD_FILL, DASH_FILL, TARGET = NIGHT, MINT, GREEN, "VelroDriver"
@@ -100,9 +107,10 @@ out = os.path.join(here, "..", TARGET, "Resources", "Assets.xcassets", "AppIcon.
 os.makedirs(out, exist_ok=True)
 
 draw_tile(SIZE).save(os.path.join(out, "AppIcon-1024.png"))
-images = [{"filename": "AppIcon-1024.png", "idiom": "universal", "platform": "ios", "size": "1024x1024"}]
+images = [{"filename": "AppIcon-1024.png", "idiom": "universal",
+           "platform": "watchos" if WATCH else "ios", "size": "1024x1024"}]
 
-if OPS:
+if OPS and not WATCH:
     master = mac_master()
     for points, scale in MAC_SIZES:
         pixels = points * scale

@@ -1,4 +1,5 @@
 import SwiftUI
+import VelroCore
 
 /// A section's title, an optional line under it, and whatever belongs at its
 /// end -- a filter, a count, a refresh button.

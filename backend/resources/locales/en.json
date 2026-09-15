@@ -1137,5 +1137,19 @@
   "ops.week.new_passengers": "New passengers",
   "ops.week.new_drivers": "New drivers",
   "admin.stat.passengers_suspended": "Suspended passengers",
-  "admin.passengers.only_note": "Only people who travel are counted here; accounts that also drive or work for VELRO are left out."
+  "admin.passengers.only_note": "Only people who travel are counted here; accounts that also drive or work for VELRO are left out.",
+  "ops.watch.signed_out": "Sign in once with your staff number. After that, this watch shows what needs somebody right now.",
+  "ops.watch.updated": "Updated {time}",
+  "ops.watch.stale": "Could not refresh. Last figures: {age}.",
+  "ops.watch.no_dashboard": "Your role does not include the dashboard, so this watch has nothing to show.",
+  "ops.watch.need_attention": "Needs attention: {count}",
+  "ops.watch.all_clear": "All clear",
+  "ops.watch.widget_description": "What needs somebody right now.",
+  "ops.watch.short.unassigned": "Without a driver",
+  "ops.watch.short.unanswered_requests": "No offer yet",
+  "ops.watch.short.stale_gps": "No GPS fix",
+  "ops.watch.short.pending_drivers": "Drivers to approve",
+  "ops.watch.short.pending_vehicles": "Vehicles to approve",
+  "ops.watch.short.open_tickets": "Support requests",
+  "ops.watch.short.expiring_documents": "Papers expiring"
 }

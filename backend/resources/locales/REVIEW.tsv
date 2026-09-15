@@ -1138,3 +1138,17 @@ ops.week.new_passengers	New passengers	مسافران جدید	نوي مسافر
 ops.week.new_drivers	New drivers	رانندگان جدید	نوي چلوونکي	new — please check the Pashto
 admin.stat.passengers_suspended	Suspended passengers	مسافران معلق	ځنډول شوي مسافر	new — please check the Pashto
 admin.passengers.only_note	Only people who travel are counted here; accounts that also drive or work for VELRO are left out.	اینجا فقط کسانی شمرده می‌شوند که سفر می‌کنند؛ حساب‌هایی که رانندگی هم می‌کنند یا کارمند ولرو هستند، شامل نیستند.	دلته یوازې هغه کسان شمېرل کېږي چې سفر کوي؛ هغه حسابونه چې موټر هم چلوي یا د ولرو کارکوونکي دي، پکې نه شمېرل کېږي.	new — please check the Pashto
+ops.watch.signed_out	Sign in once with your staff number. After that, this watch shows what needs somebody right now.	یک بار با شمارهٔ کارمندی خود وارد شوید. پس از آن، این ساعت نشان می‌دهد همین حالا چه چیزی به کسی نیاز دارد.	یو ځل د خپل کارکوونکي شمېرې سره ننوځئ. له هغې وروسته دا ساعت ښيي چې همدا اوس کوم شی چا ته اړتیا لري.	new — please check the Pashto
+ops.watch.updated	Updated {time}	به‌روز شده {time}	تازه شوی {time}	new — please check the Pashto
+ops.watch.stale	Could not refresh. Last figures: {age}.	تازه نشد. آخرین ارقام: {age}.	تازه نه شو. وروستۍ شمېرې: {age}.	new — please check the Pashto
+ops.watch.no_dashboard	Your role does not include the dashboard, so this watch has nothing to show.	نقش شما به داشبورد دسترسی ندارد، بنابراین این ساعت چیزی برای نمایش ندارد.	ستاسو رول ډشبورډ ته لاسرسی نه لري، نو دا ساعت د ښودلو لپاره څه نه لري.	new — please check the Pashto
+ops.watch.need_attention	Needs attention: {count}	نیاز به توجه: {count}	پاملرنې ته اړتیا: {count}	new — please check the Pashto
+ops.watch.all_clear	All clear	همه‌چیز روبه‌راه است	هر څه سم دي	new — please check the Pashto
+ops.watch.widget_description	What needs somebody right now.	آنچه همین حالا به کسی نیاز دارد.	هغه څه چې همدا اوس چا ته اړتیا لري.	new — please check the Pashto
+ops.watch.short.unassigned	Without a driver	سفر بدون راننده	بې چلوونکي سفرونه	new — please check the Pashto
+ops.watch.short.unanswered_requests	No offer yet	درخواست بی‌پاسخ	بې ځوابه غوښتنې	new — please check the Pashto
+ops.watch.short.stale_gps	No GPS fix	بدون موقعیت	بې موقعیته	new — please check the Pashto
+ops.watch.short.pending_drivers	Drivers to approve	راننده منتظر تأیید	د تصویب په تمه چلوونکي	new — please check the Pashto
+ops.watch.short.pending_vehicles	Vehicles to approve	موتر منتظر فعال‌سازی	د فعالولو په تمه موټرونه	new — please check the Pashto
+ops.watch.short.open_tickets	Support requests	درخواست پشتیبانی	د ملاتړ غوښتنې	new — please check the Pashto
+ops.watch.short.expiring_documents	Papers expiring	اسناد رو به انقضا	پای ته رسېدونکي اسناد	new — please check the Pashto

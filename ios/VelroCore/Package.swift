@@ -8,7 +8,8 @@ import PackageDescription
 
 let package = Package(
     name: "VelroCore",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    // watchOS for VELRO Ops on the wrist: the same client, session and text.
+    platforms: [.iOS(.v17), .macOS(.v14), .watchOS(.v10)],
     products: [
         .library(name: "VelroCore", targets: ["VelroCore"]),
     ],
