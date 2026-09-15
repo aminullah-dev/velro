@@ -31,6 +31,7 @@ from infrastructure.db.models.money import (  # noqa: F401
     WalletTransactionRow,
 )
 from infrastructure.db.models.ops import (  # noqa: F401
+    AppVersionCheckRow,
     AuditLogRow,
     CancellationRow,
     DeviceTokenRow,

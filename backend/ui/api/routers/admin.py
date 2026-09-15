@@ -92,6 +92,29 @@ def dashboard(
     return ok(opscentre.snapshot(session, settings, deps.clock().now()))
 
 
+@router.get("/live-map")
+def live_map(
+    actor: Annotated[deps.Actor, Depends(deps.require_operations)],
+    session: deps.SessionDep,
+    settings: Annotated[object, Depends(deps.app_settings)],
+) -> dict:
+    """Every working driver on one map, with his car and his trip.
+
+    Operations roles only, not every staff role. A name, a phone number and
+    a live position together are the most personal thing this system holds
+    about a man while he works; the people who dispatch need it, and a
+    finance manager reconciling commissions does not.
+
+    See opscentre.live_map for who is on it and how "stale" is decided.
+    """
+    return ok(
+        opscentre.live_map(
+            session, settings, deps.clock().now(),
+            rehearsing_phones=frozenset(deps.settings().otp_test_numbers),
+        )
+    )
+
+
 # -- locations -----------------------------------------------------------
 
 class DistrictAdminOut(Schema):

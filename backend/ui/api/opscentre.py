@@ -26,7 +26,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import Date, case, cast, exists, func, or_, select
 from sqlalchemy.orm import Session
 
 from domain.enums import (
@@ -45,9 +45,9 @@ from domain.enums import (
 from domain.identity import PASSENGER
 from domain.lifecycles import BOOKABLE_TRIP_STATUSES
 from infrastructure.db.models.geography import StationRow, VillageRow
-from infrastructure.db.models.identity import RoleRow, UserRoleRow
+from infrastructure.db.models.identity import RoleRow, UserRoleRow, UserRow
 from infrastructure.db.models.money import CommissionRow, SettlementRow, WalletRow
-from infrastructure.db.models.ops import CancellationRow, SupportTicketRow
+from infrastructure.db.models.ops import AppVersionCheckRow, CancellationRow, SupportTicketRow
 from infrastructure.db.models.routing import RouteRow
 from infrastructure.db.models.supply import (
     DriverDocumentRow,
@@ -63,6 +63,9 @@ from infrastructure.db.models.trips import (
     TripRow,
     TripSeatRow,
 )
+from infrastructure.db.repositories.supply import VehicleRepository
+from infrastructure.db.repositories.trips import TripRepository
+from ui.api import release_manifest
 
 # A "day" is a business day in the product's timezone, not date() in UTC.
 KABUL = ZoneInfo("Asia/Kabul")
@@ -75,6 +78,11 @@ NOT_TRAVELLING = (
     TripStatus.CANCELLED.value, TripStatus.EXPIRED.value, TripStatus.NO_DRIVER_AVAILABLE.value,
 )
 BOOKABLE = tuple(s.value for s in BOOKABLE_TRIP_STATUSES)
+#: A driver somebody could be looking for on a map.
+WORKING = (DriverAvailability.ONLINE.value, DriverAvailability.ON_TRIP.value)
+#: A trip with a driver on it that has not finished, in the order it moves
+#: through them -- later in this tuple is further along the road.
+UNDERWAY = (*ON_THE_WAY, *AT_THE_STATION, *MOVING)
 
 #: A trip still waiting for a driver this long after it should have left is
 #: still somebody's journey, not yet a record. Past this the board stops
@@ -91,12 +99,35 @@ CAPACITY_HORIZON = timedelta(hours=24)
 EXPIRING_WITHIN = timedelta(days=30)
 #: A trip with this share of its seats or fewer left is "nearly full".
 NEARLY_FULL_FRACTION = 0.2
+#: The history strip under "how did today go": this many business days,
+#: today last. A week is what an operator compares today against -- "is this
+#: Thursday normal" -- and seven bars still fit on a laptop without scrolling.
+HISTORY_DAYS = 7
+#: How far back the app-version counts are summed. The same week, so an old
+#: build that stopped launching a fortnight ago has dropped off the list.
+APP_VERSION_WINDOW_DAYS = 7
+#: How many builds the dashboard lists, most launched first. The counter is
+#: fed by an unauthenticated endpoint; a script inventing version codes must
+#: not be able to push the real builds off the panel or grow its answer.
+APP_VERSIONS_SHOWN = 40
 
 
 def business_day(now: datetime) -> tuple[datetime, datetime]:
     local = now.astimezone(KABUL)
     start = local.replace(hour=0, minute=0, second=0, microsecond=0)
     return start, start + timedelta(days=1)
+
+
+def kabul_date(column):
+    """The business day a timestamptz column falls on, decided by the database.
+
+    timezone('Asia/Kabul', ts) is the wall-clock time in Kabul, whatever the
+    session's own TimeZone happens to be, and its date is the day an operator
+    in Charikar would say it happened on. date(ts) would be the day in UTC --
+    wrong for every event between midnight and half past four in the morning.
+    The zone is KABUL's own key, so business_day() and this cannot drift apart.
+    """
+    return cast(func.timezone(KABUL.key, column), Date)
 
 
 # -- the shared clauses -----------------------------------------------------
@@ -130,9 +161,7 @@ def stale_gps_clause(now: datetime, stale_after: timedelta):
     """A working driver the office cannot place. Needs DriverLocationRow
     outer-joined on driver_id."""
     return [
-        DriverRow.availability.in_(
-            (DriverAvailability.ONLINE.value, DriverAvailability.ON_TRIP.value)
-        ),
+        DriverRow.availability.in_(WORKING),
         or_(
             DriverLocationRow.recorded_at.is_(None),
             DriverLocationRow.recorded_at < now - stale_after,
@@ -421,4 +450,245 @@ def snapshot(session: Session, settings: Any, now: datetime) -> dict[str, Any]:
         "finance": finance,
         "network": network,
         "people": {"passengers": passengers, "drivers": drivers["total"]},
+        "history": _history(session, today, end),
+        "apps": _apps(session, today),
     }
+
+
+# -- the week behind today --------------------------------------------------
+
+def _history(session: Session, today: date, end: datetime) -> dict[str, Any]:
+    """The last HISTORY_DAYS business days, oldest first, today last.
+
+    Every figure has exactly the definition its counterpart in the today and
+    finance sections has -- same column, same status, same deleted_at rule --
+    so the last bar and the cards above it are one number, not two numbers
+    that usually agree. What changes is only the grouping: one GROUP BY over
+    the Kabul date per figure, five queries for the whole week rather than
+    one per figure per day. A day nothing happened on is not missing, it is
+    zero, and it is filled in here rather than left for the chart to guess.
+    """
+    since = end - timedelta(days=HISTORY_DAYS)
+    first = today - timedelta(days=HISTORY_DAYS - 1)
+    blank = {
+        "trips": 0, "bookings": 0, "completed_trips": 0, "cancellations": 0,
+        "revenue_minor": 0, "commission_minor": 0,
+    }
+    days: dict[date, dict[str, int]] = {
+        first + timedelta(days=i): dict(blank) for i in range(HISTORY_DAYS)
+    }
+
+    def per_day(field: str, column, *where) -> None:
+        day = kabul_date(column)
+        stmt = (
+            select(day, func.count())
+            .where(column >= since, column < end, *where)
+            .group_by(day)
+        )
+        for when, n in session.execute(stmt).all():
+            if when in days:
+                days[when][field] = int(n)
+
+    per_day("trips", TripRow.scheduled_departure_at, TripRow.deleted_at.is_(None))
+    per_day("bookings", BookingRow.created_at, BookingRow.deleted_at.is_(None))
+    per_day(
+        "completed_trips",
+        TripRow.completed_at,
+        TripRow.status == TripStatus.COMPLETED.value,
+        TripRow.deleted_at.is_(None),
+    )
+    per_day("cancellations", CancellationRow.created_at, CancellationRow.deleted_at.is_(None))
+
+    settled = kabul_date(CommissionRow.created_at)
+    for when, gross, platform in session.execute(
+        select(
+            settled,
+            func.coalesce(func.sum(CommissionRow.gross_minor), 0),
+            func.coalesce(func.sum(CommissionRow.platform_minor), 0),
+        )
+        .where(
+            CommissionRow.created_at >= since,
+            CommissionRow.created_at < end,
+            CommissionRow.deleted_at.is_(None),
+        )
+        .group_by(settled)
+    ).all():
+        if when in days:
+            days[when]["revenue_minor"] = int(gross)
+            days[when]["commission_minor"] = int(platform)
+
+    return {
+        "currency": "AFN",
+        "days": [{"date": when.isoformat(), **days[when]} for when in sorted(days)],
+    }
+
+
+# -- the builds in people's hands -------------------------------------------
+
+def _apps(session: Session, today: date) -> dict[str, Any]:
+    """What is published beside what is actually launching.
+
+    The newest build comes from release.json, the counts from the anonymous
+    table the version check fills (routers/app_release.py). Together they
+    answer the question neither answers alone: how many launches last week
+    were of a build older than the one on offer.
+    """
+    first = today - timedelta(days=APP_VERSION_WINDOW_DAYS - 1)
+    checks = AppVersionCheckRow
+    rows = session.execute(
+        select(
+            checks.app,
+            checks.platform,
+            checks.version_code,
+            # One name per code in practice; max() only makes the choice
+            # deterministic if a hand-made request ever smuggled in another.
+            func.max(checks.version_name),
+            func.sum(checks.checks),
+        )
+        .where(checks.day >= first, checks.day <= today, checks.deleted_at.is_(None))
+        .group_by(checks.app, checks.platform, checks.version_code)
+        .order_by(func.sum(checks.checks).desc(), checks.version_code.desc())
+        .limit(APP_VERSIONS_SHOWN)
+    ).all()
+    # Chosen by launches, shown by app and newest build first.
+    rows = sorted(rows, key=lambda row: (row[0], -int(row[2]), row[1]))
+    return {
+        "window_days": APP_VERSION_WINDOW_DAYS,
+        "latest": release_manifest.latest_versions(),
+        "versions": [
+            {
+                "app": app,
+                "platform": platform,
+                "version_code": int(code),
+                "version_name": name,
+                "checks": int(n or 0),
+            }
+            for app, platform, code, name, n in rows
+        ],
+    }
+
+
+# -- the live map -----------------------------------------------------------
+
+def live_map(
+    session: Session, settings: Any, now: datetime, *, rehearsing_phones: frozenset[str]
+) -> dict[str, Any]:
+    """Every working driver: where he is, in which car, on which trip.
+
+    Approved drivers who are online or on a trip -- the people the office
+    could send somewhere, or needs to find. A pending driver who pressed
+    "online" is not on the road yet, and an offline one is at home.
+
+    Four queries whatever the fleet: the drivers with their users and their
+    one location row, their active cars, their unfinished trips, and those
+    trips' place names. A query per marker is how a map on a slow connection
+    becomes a blank rectangle.
+
+    A position is marked stale by the same rule the "without a fix" card
+    counts by (stale_gps_clause), so a grey pin on the map and that number
+    never disagree. Rehearsing drivers -- App Review, developers, the
+    accounts behind OTP_TEST_NUMBERS -- are shown, and said to be, because a
+    car at a desk in Cupertino is otherwise a mystery on a map of Ghorband.
+    """
+    stale_after_seconds = settings.get_int("dispatch.stale_gps_seconds", 300)
+    stale_before = now - timedelta(seconds=stale_after_seconds)
+    on_trip_first = case(
+        (DriverRow.availability == DriverAvailability.ON_TRIP.value, 0), else_=1
+    )
+    rows = session.execute(
+        select(
+            DriverRow.id,
+            DriverRow.availability,
+            UserRow.full_name,
+            UserRow.phone,
+            DriverLocationRow.latitude,
+            DriverLocationRow.longitude,
+            DriverLocationRow.heading_degrees,
+            DriverLocationRow.recorded_at,
+        )
+        .join(UserRow, UserRow.id == DriverRow.user_id)
+        .outerjoin(DriverLocationRow, DriverLocationRow.driver_id == DriverRow.id)
+        .where(
+            DriverRow.deleted_at.is_(None),
+            DriverRow.approval_status == DriverApprovalStatus.APPROVED.value,
+            DriverRow.availability.in_(WORKING),
+        )
+        .order_by(on_trip_first, UserRow.full_name.asc().nulls_last(), DriverRow.id)
+    ).all()
+    driver_ids = [row.id for row in rows]
+
+    # The same car dispatch would put him in: the earliest active one.
+    cars = VehicleRepository(session).active_by_driver(driver_ids)
+    trips = _underway_trips(session, driver_ids)
+    names = TripRepository(session).place_names([t.id for t in trips.values()])
+
+    drivers = []
+    for row in rows:
+        car = cars.get(row.id)
+        trip = trips.get(row.id)
+        origin, destination = names.get(trip.id, (None, None)) if trip else (None, None)
+        drivers.append({
+            "driver_id": row.id,
+            "name": row.full_name,
+            "phone": row.phone,
+            "availability": row.availability,
+            "vehicle": (
+                {"plate": car.plate_number, "brand": car.brand, "model": car.model}
+                if car else None
+            ),
+            "location": (
+                {
+                    "latitude": float(row.latitude),
+                    "longitude": float(row.longitude),
+                    "heading_degrees": row.heading_degrees,
+                    "recorded_at": row.recorded_at,
+                    "stale": row.recorded_at < stale_before,
+                }
+                if row.recorded_at is not None else None
+            ),
+            "trip": (
+                {
+                    "id": trip.id,
+                    "number": trip.number,
+                    "status": trip.status,
+                    "origin_name": origin,
+                    "destination_name": destination,
+                }
+                if trip else None
+            ),
+            "rehearsing": row.phone is not None and row.phone in rehearsing_phones,
+        })
+    return {
+        "generated_at": now,
+        "stale_after_seconds": stale_after_seconds,
+        "drivers": drivers,
+    }
+
+
+def _underway_trips(session: Session, driver_ids: list[str]) -> dict[str, Any]:
+    """Each driver's trip in progress, one per driver.
+
+    A driver can hold more than one unfinished trip -- this afternoon's run
+    assigned while this morning's is still on the road -- and the map has
+    room for one. The one furthest along wins, then the earliest departure:
+    the car in transit is the trip he is driving, not the one he was given
+    for later.
+    """
+    if not driver_ids:
+        return {}
+    rows = session.execute(
+        select(
+            TripRow.id, TripRow.driver_id, TripRow.number, TripRow.status,
+            TripRow.scheduled_departure_at,
+        ).where(
+            TripRow.driver_id.in_(driver_ids),
+            TripRow.status.in_(UNDERWAY),
+            TripRow.deleted_at.is_(None),
+        )
+    ).all()
+    chosen: dict[str, Any] = {}
+    for trip in sorted(
+        rows, key=lambda t: (-UNDERWAY.index(t.status), t.scheduled_departure_at, t.id)
+    ):
+        chosen.setdefault(trip.driver_id, trip)
+    return chosen

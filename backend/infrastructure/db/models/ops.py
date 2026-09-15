@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     JSON,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -292,3 +293,42 @@ class CrashReportRow(Base):
     stack: Mapped[str] = mapped_column(Text, nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AppVersionCheckRow(Auditable, Base):
+    """How many times each app version asked "is there a newer one?" on a day.
+
+    One counter per (Kabul day, app, platform, version_code), incremented in
+    place. Nothing else is kept, on purpose: no user id, no device id, no IP
+    address, and not the time of day either -- the row's created_at and
+    updated_at are pinned to the start of its day and never moved, because
+    "last updated 14:07:32" on a build only one driver has is that driver's
+    last launch. (Caddy's access log records this request with its address,
+    as it records every request; it rolls over, and it is not this table.)
+    The question it answers is "which builds
+    are still out there", which needs launches counted and nobody followed --
+    and the endpoint that writes it is unauthenticated, so a column that could
+    tie a row to a person would be a tracker anyone's handset feeds.
+
+    version_name rides along for the panel to print and is not part of the
+    key: a version_code names exactly one build, so a second name for the same
+    code is a hand-made request, and the first name seen is kept.
+    """
+
+    __tablename__ = "app_version_checks"
+
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    app: Mapped[str] = mapped_column(String(16), nullable=False)
+    platform: Mapped[str] = mapped_column(String(12), nullable=False)
+    version_code: Mapped[int] = mapped_column(Integer, nullable=False)
+    version_name: Mapped[str] = mapped_column(String(32), nullable=False)
+    checks: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+
+    __table_args__ = (
+        # The upsert's conflict target, and -- day first -- the index the
+        # dashboard's seven-day read walks.
+        UniqueConstraint(
+            "day", "app", "platform", "version_code",
+            name="uq_app_version_checks_day_app_platform_version_code",
+        ),
+    )
