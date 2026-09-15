@@ -243,7 +243,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: af.velro.ops
         # Its own numbers, marked like the driver's.
         MARKETING_VERSION: "1.0.0" # ops
-        CURRENT_PROJECT_VERSION: "3" # ops
+        CURRENT_PROJECT_VERSION: "4" # ops
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
@@ -305,21 +305,22 @@ targets:
     entitlements:
       path: VelroOpsWatch/Resources/VelroOpsWatch.entitlements
       properties:
-        com.apple.security.application-groups: [$(VELRO_SHARED_GROUP)]
+        keychain-access-groups: [$(VELRO_SHARED_GROUP)]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: af.velro.ops.watchkitapp
         MARKETING_VERSION: "1.0.0" # ops
-        CURRENT_PROJECT_VERSION: "3" # ops
+        CURRENT_PROJECT_VERSION: "4" # ops
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "4"
         CODE_SIGN_STYLE: Automatic
         # Inside VelroOps.app, not an archive product of its own.
         SKIP_INSTALL: YES
         # Shared with the complications: the summary, the language and the
-        # access token they may borrow. An App Group is also a keychain
-        # access group on watchOS.
-        VELRO_SHARED_GROUP: group.af.velro.ops
+        # access token they may borrow, in a keychain access group under the
+        # team's prefix -- unlike an App Group it needs nothing registered
+        # with Apple, so automatic signing can always provision it.
+        VELRO_SHARED_GROUP: $(DEVELOPMENT_TEAM).af.velro.ops.shared
       configs:
         Debug:
           VELRO_API_BASE_URL: http://localhost:8000/api/v1/
@@ -368,17 +369,17 @@ targets:
     entitlements:
       path: VelroOpsWatchWidgets/VelroOpsWatchWidgets.entitlements
       properties:
-        com.apple.security.application-groups: [$(VELRO_SHARED_GROUP)]
+        keychain-access-groups: [$(VELRO_SHARED_GROUP)]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: af.velro.ops.watchkitapp.widgets
         MARKETING_VERSION: "1.0.0" # ops
-        CURRENT_PROJECT_VERSION: "3" # ops
+        CURRENT_PROJECT_VERSION: "4" # ops
         TARGETED_DEVICE_FAMILY: "4"
         CODE_SIGN_STYLE: Automatic
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
-        VELRO_SHARED_GROUP: group.af.velro.ops
+        VELRO_SHARED_GROUP: $(DEVELOPMENT_TEAM).af.velro.ops.shared
       configs:
         Debug:
           VELRO_API_BASE_URL: http://localhost:8000/api/v1/

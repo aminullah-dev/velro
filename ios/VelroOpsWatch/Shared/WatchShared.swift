@@ -7,12 +7,13 @@ import VelroCore
 // targets (project.yml), so the two cannot disagree about a shape.
 
 enum WatchShared {
-    /// The App Group both targets hold. On watchOS an App Group is also a
-    /// keychain access group, so the summary, the language and the borrowed
-    /// access token live in the keychain rather than in a plain file.
+    /// The keychain access group both targets hold, under the team's prefix:
+    /// the summary, the language and the borrowed access token live in the
+    /// keychain rather than in a plain file. Not an App Group, which would
+    /// have to be registered with Apple before anything could be signed.
     /// Read from Info.plist, so the entitlement and the code name one group.
     static let accessGroup: String =
-        Bundle.main.object(forInfoDictionaryKey: "VelroSharedGroup") as? String ?? "group.af.velro.ops"
+        Bundle.main.object(forInfoDictionaryKey: "VelroSharedGroup") as? String ?? "27RXPRW77S.af.velro.ops.shared"
 
     /// The complication's kind, for `WidgetCenter`.
     static let widgetKind = "af.velro.ops.watch.attention"
