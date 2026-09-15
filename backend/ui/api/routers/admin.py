@@ -1141,6 +1141,11 @@ def users_list(
     #: A name or a phone number, however it was typed: 0700…, +93700…, or in
     #: Persian digits. The drivers list's search, see domain/search.py.
     search: Annotated[str | None, Query(max_length=80)] = None,
+    #: Real passengers only: PASSENGER, and neither DRIVER nor any staff
+    #: role. Every account starts as a passenger, so role=PASSENGER is
+    #: everybody; this is what the Passengers screens mean, and the set the
+    #: dashboard's passenger card counts. Combines with every other filter.
+    passenger_only: bool = False,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
@@ -1161,6 +1166,8 @@ def users_list(
         stmt = stmt.where(UserRow.status == status)
     if role:
         stmt = stmt.where(opscentre.holds_role_clause(_ROLE_FILTERS[role]))
+    if passenger_only:
+        stmt = stmt.where(opscentre.passenger_only_clause())
     if (term := SearchTerm.parse(search)) is not None:
         stmt = stmt.where(_person_matches(term))
 

@@ -26,7 +26,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import Date, case, cast, exists, func, or_, select
+from sqlalchemy import Date, and_, case, cast, exists, func, or_, select
 from sqlalchemy.orm import Session
 
 from domain.enums import (
@@ -44,7 +44,8 @@ from domain.enums import (
     UserStatus,
     VehicleStatus,
 )
-from domain.identity import PASSENGER
+from domain.identity import DRIVER as DRIVER_ROLE
+from domain.identity import PASSENGER, STAFF_ROLES
 from domain.lifecycles import BOOKABLE_TRIP_STATUSES
 from infrastructure.db.models.geography import StationRow, VillageRow
 from infrastructure.db.models.identity import RoleRow, UserRoleRow, UserRow
@@ -200,6 +201,26 @@ def holds_role_clause(codes: frozenset[str] | set[str]) -> Any:
             RoleRow.deleted_at.is_(None),
             RoleRow.code.in_(sorted(codes)),
         )
+    )
+
+
+#: Roles that make an account something more than a passenger.
+_BEYOND_PASSENGER = frozenset({DRIVER_ROLE, *STAFF_ROLES})
+
+
+def passenger_only_clause() -> Any:
+    """An account that is a passenger and nothing else. Correlates on UserRow.id.
+
+    Every sign-up is granted PASSENGER, and a driver or a member of staff
+    only ever gains roles on top of it -- so "holds PASSENGER" is everybody.
+    This is what the Passengers screens mean: PASSENGER, and neither DRIVER
+    nor any staff role. Decided by roles alone, as they are now: registering
+    as a driver grants DRIVER at once, so an applicant still waiting for
+    approval is already not a passenger here.
+    """
+    return and_(
+        holds_role_clause({PASSENGER}),
+        ~holds_role_clause(_BEYOND_PASSENGER),
     )
 
 
@@ -492,16 +513,18 @@ def snapshot(session: Session, settings: Any, now: datetime) -> dict[str, Any]:
 def _passengers(session: Session, now: datetime, start: datetime) -> dict[str, int]:
     """Who the passengers are, beyond one number.
 
-    A passenger is an account that still exists and holds the PASSENGER
-    role. Every figure below is a subset of that total, so no card can read
-    larger than the one it sits beside. (people.passengers above is the
+    A passenger is an account that still exists and is a passenger only --
+    PASSENGER with no driver or staff role on top (passenger_only_clause),
+    the same set GET /admin/users?passenger_only=true lists. Every figure
+    below is a subset of that total, so no card can read larger than the
+    one it sits beside. (people.passengers above is the
     older, looser count -- role grants, deleted accounts included -- and is
     left exactly as it was for the screens already reading it.)
 
     The windows are business days in Kabul ending today, like everything
     else here: "the last 7 days" is today and the six before it.
     """
-    person = (UserRow.deleted_at.is_(None), holds_role_clause({PASSENGER}))
+    person = (UserRow.deleted_at.is_(None), passenger_only_clause())
 
     def people(*where: Any) -> int:
         stmt = select(func.count()).select_from(UserRow).where(*person, *where)
@@ -591,12 +614,14 @@ def _history(session: Session, today: date, end: datetime) -> dict[str, Any]:
     )
     per_day("cancellations", CancellationRow.created_at, CancellationRow.deleted_at.is_(None))
     # Sign-ups, by the passenger card's definition and the drivers card's:
-    # an existing account holding PASSENGER, and a driver record.
+    # a passenger-only account, and a driver record. Roles are read as they
+    # are now, so a passenger approved to drive later leaves his sign-up day's
+    # bar -- the price of the bars adding up to the card's new_7d.
     per_day(
         "new_passengers",
         UserRow.created_at,
         UserRow.deleted_at.is_(None),
-        holds_role_clause({PASSENGER}),
+        passenger_only_clause(),
     )
     per_day("new_drivers", DriverRow.created_at, DriverRow.deleted_at.is_(None))
 

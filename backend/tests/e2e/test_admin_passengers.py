@@ -548,7 +548,7 @@ class TestThePassengerCard:
 
         before = _get(client, DASHBOARD, admin_session)["data"]
 
-        newcomer = auth(sign_in(client, NEWCOMER))
+        sign_in(client, NEWCOMER)
         user_id = _user_id(NEWCOMER)
         now = _now()
         with _session() as session:
@@ -563,8 +563,8 @@ class TestThePassengerCard:
             )
             session.commit()
         try:
-            registered = client.post("/api/v1/driver/register", json={}, headers=newcomer)
-            assert registered.status_code in (200, 201), registered.text
+            # He only signs up: registering to drive would grant DRIVER and
+            # make him more than a passenger (see TestPassengersOnly).
             thrown = client.post(
                 f"{USERS}/{user_id}/suspend", json={"reason": "a test"}, headers=admin_session
             )
@@ -577,7 +577,152 @@ class TestThePassengerCard:
         assert moved == dict.fromkeys(CARD_FIELDS, 1)
         today_before, today_after = before["history"]["days"][-1], after["history"]["days"][-1]
         assert today_after["new_passengers"] - today_before["new_passengers"] == 1
+        assert today_after["new_drivers"] == today_before["new_drivers"]
+
+
+# -- passengers and nothing else -----------------------------------------------
+
+#: Signed up as a passenger, then registered to drive: DRIVER at once.
+DRIVING = "+93700000897"
+#: Signed up as a passenger, then given a desk in finance.
+KEEPING_BOOKS = "+93700000898"
+
+
+@pytest.fixture(scope="module")
+def more_than_passengers(client: TestClient, admin_session: dict, journey: dict) -> dict:
+    """Two accounts that hold PASSENGER and something more, each doing all
+    that would move a passenger figure -- signing up today, finishing two
+    trips, waiting for a third, being suspended -- between two readings of
+    the dashboard. The Passengers screens must count none of it."""
+    from domain.enums import BookingStatus, RideRequestStatus
+    from infrastructure.db.models.identity import UserRow
+    from infrastructure.db.repositories.identity import UserRepository
+
+    before = _get(client, DASHBOARD, admin_session)["data"]
+
+    driving = auth(sign_in(client, DRIVING))
+    registered = client.post("/api/v1/driver/register", json={}, headers=driving)
+    assert registered.status_code in (200, 201), registered.text
+    sign_in(client, KEEPING_BOOKS)
+    ids = {DRIVING: _user_id(DRIVING), KEEPING_BOOKS: _user_id(KEEPING_BOOKS)}
+
+    now = _now()
+    waiting: list[str] = []
+    with _session() as session:
+        UserRepository(session).grant_role(ids[KEEPING_BOOKS], "FINANCE_MANAGER")
+        # Suspended as a passenger before he was given his desk. Written
+        # directly: the switch refuses a staff account (reason staff_account
+        # -- staff lose roles instead), but the row can still be SUSPENDED,
+        # and the card must not count it.
+        session.get(UserRow, ids[KEEPING_BOOKS]).status = "SUSPENDED"
+        for user_id in ids.values():
+            for _ in range(2):
+                _book(
+                    session, journey, user_id, BookingStatus.COMPLETED.value,
+                    seats=1, fare=12_000, made=now, done=now,
+                )
+            waiting.append(
+                _ask(
+                    session, journey, user_id, RideRequestStatus.OPEN.value,
+                    expires_at=now + timedelta(hours=2),
+                )
+            )
+        session.commit()
+    try:
+        thrown = client.post(
+            f"{USERS}/{ids[DRIVING]}/suspend", json={"reason": "a test"}, headers=admin_session
+        )
+        assert thrown.status_code == 200, thrown.text
+        after = _get(client, DASHBOARD, admin_session)["data"]
+    finally:
+        for request_id in waiting:
+            _close_request(request_id)
+    return {"ids": set(ids.values()), "driving": ids[DRIVING], "before": before, "after": after}
+
+
+class TestPassengersOnly:
+    def test_role_passenger_still_means_whoever_holds_it(
+        self, client: TestClient, admin_session: dict, more_than_passengers: dict,
+        shopper: dict,
+    ) -> None:
+        body = _get(client, USERS, admin_session, role="PASSENGER", limit=200)
+        assert more_than_passengers["ids"] <= _ids(body)
+        assert shopper["user_id"] in _ids(body)
+
+    def test_passenger_only_leaves_out_drivers_and_staff(
+        self, client: TestClient, admin_session: dict, more_than_passengers: dict,
+        shopper: dict,
+    ) -> None:
+        from domain.identity import STAFF_ROLES
+
+        body = _get(
+            client, USERS, admin_session, role="PASSENGER", passenger_only="true", limit=200
+        )
+        assert shopper["user_id"] in _ids(body)
+        assert not _ids(body) & more_than_passengers["ids"]
+        assert body["meta"]["total"] == len(body["data"])
+        for user in body["data"]:
+            assert "PASSENGER" in user["roles"]
+            assert not set(user["roles"]) & (STAFF_ROLES | {"DRIVER"})
+
+    def test_it_needs_no_role_filter_to_mean_the_same(
+        self, client: TestClient, admin_session: dict, more_than_passengers: dict
+    ) -> None:
+        alone = _get(client, USERS, admin_session, passenger_only="true", limit=200)
+        with_role = _get(
+            client, USERS, admin_session, role="PASSENGER", passenger_only="true", limit=200
+        )
+        assert alone == with_role
+
+    def test_it_combines_with_search_status_and_paging(
+        self, client: TestClient, admin_session: dict, more_than_passengers: dict,
+        shopper: dict, quiet: str,
+    ) -> None:
+        only = {"passenger_only": "true"}
+        assert _get(client, USERS, admin_session, **only, search=DRIVING)["meta"]["total"] == 0
+        found = _get(client, USERS, admin_session, **only, search=SHOPPER)
+        assert [u["id"] for u in found["data"]] == [shopper["user_id"]]
+
+        off = _get(client, USERS, admin_session, **only, status="SUSPENDED", limit=200)
+        assert all(u["status"] == "SUSPENDED" for u in off["data"])
+        assert not _ids(off) & more_than_passengers["ids"]
+
+        everyone = _get(client, USERS, admin_session, **only, limit=200)
+        total = everyone["meta"]["total"]
+        assert total >= 2, "the shopper and the quiet one at least"
+        second = _get(client, USERS, admin_session, **only, limit=1, offset=1)
+        assert second["meta"] == {"count": 1, "total": total, "limit": 1, "offset": 1}
+        assert second["data"][0]["id"] == everyone["data"][1]["id"]
+
+    def test_no_dashboard_figure_counts_them(self, more_than_passengers: dict) -> None:
+        before, after = more_than_passengers["before"], more_than_passengers["after"]
+        moved = {k: after["passengers"][k] - before["passengers"][k] for k in CARD_FIELDS}
+        assert moved == dict.fromkeys(CARD_FIELDS, 0)
+        today_before, today_after = before["history"]["days"][-1], after["history"]["days"][-1]
+        assert today_after["new_passengers"] == today_before["new_passengers"]
+        # new_drivers keeps its meaning: a driver record made that day.
         assert today_after["new_drivers"] - today_before["new_drivers"] == 1
+        # The older, looser count still counts every PASSENGER grant.
+        assert after["people"]["passengers"] - before["people"]["passengers"] == 2
+
+    def test_the_card_and_the_list_are_one_set(
+        self, client: TestClient, admin_session: dict, more_than_passengers: dict
+    ) -> None:
+        card = _get(client, DASHBOARD, admin_session)["data"]["passengers"]
+        listed = _get(client, USERS, admin_session, passenger_only="true", limit=1)
+        assert card["total"] == listed["meta"]["total"]
+        off = _get(client, USERS, admin_session, passenger_only="true", status="SUSPENDED")
+        assert card["suspended"] == off["meta"]["total"]
+
+    def test_his_passenger_page_still_opens(
+        self, client: TestClient, admin_session: dict, more_than_passengers: dict
+    ) -> None:
+        """A driver's booking still links to his account page."""
+        user_id = more_than_passengers["driving"]
+        body = _get(client, f"{USERS}/{user_id}", admin_session)["data"]
+        assert {"DRIVER", "PASSENGER"} <= set(body["user"]["roles"])
+        assert body["driver_id"] is not None
+        assert body["passenger"]["bookings_completed"] == 2
 
 
 # -- the gates are the lists' own ----------------------------------------------
