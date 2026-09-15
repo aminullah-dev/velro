@@ -145,19 +145,50 @@ def _literal_keys(root: Path, patterns: tuple[str, ...]) -> dict[str, set[Path]]
     return found
 
 
+#: A literal key as the first argument of the admin panel's t().
+#:
+#: The lookbehind matters: without it the pattern also matches the tail of any
+#: identifier ending in t -- part("year"), format("x") -- and reports their
+#: arguments as missing message keys.
+#:
+#: The key may be followed by arguments. It used to have to be followed by ")"
+#: directly, so every t("key", { values }) -- the parameterised strings, which
+#: are the ones most likely to be added in a hurry -- went unread, and
+#: t("admin.approvals.still_missing", { list }) shipped with no message behind
+#: it. The whitespace spans a line break because a long call is wrapped as
+#: t(\n "key",\n {...}). A key that continues -- t("admin.x." + code) -- is not
+#: a whole key and stays out, as does a template literal, which starts with a
+#: backtick.
+_ADMIN_T_CALL = r'(?<![A-Za-z0-9_$.])t\(\s*"([a-z][a-zA-Z0-9._]*)"\s*[,)]'
+
+
 def test_every_key_the_admin_panel_asks_for_exists() -> None:
     """A missing key does not crash -- it renders as ``ADMIN.COL.AMOUNT`` on
     screen, which is how this was found. The test is cheaper than the review."""
     english = load("en")
-    # The lookbehind matters: without it the pattern also matches the tail of
-    # any identifier ending in t -- part("year"), format("x") -- and reports
-    # their arguments as missing message keys.
-    used = _literal_keys(
-        _REPO / "admin" / "src",
-        (r'(?<![A-Za-z0-9_$.])t\("([a-z][a-zA-Z0-9._]*)"\)',),
-    )
+    used = _literal_keys(_REPO / "admin" / "src", (_ADMIN_T_CALL,))
     missing = {k: v for k, v in used.items() if k not in english}
     assert not missing, "admin keys with no message: " + ", ".join(sorted(missing))
+
+
+def test_the_admin_scanner_reads_a_key_that_has_arguments(tmp_path: Path) -> None:
+    """The scanner itself, on the shapes the panel actually writes."""
+    (tmp_path / "Page.tsx").write_text(
+        'a = t("plain.key");\n'
+        'b = t("with.values", { list });\n'
+        "c = t(\n"
+        '  "wrapped.call",\n'
+        "  { n },\n"
+        ");\n"
+        "d = t(`family.${code}`);\n"
+        'e = t("prefix." + code);\n'
+        'f = format("not.a.key");\n'
+        'g = obj.t("not.ours");\n',
+        encoding="utf-8",
+    )
+    assert set(_literal_keys(tmp_path, (_ADMIN_T_CALL,))) == {
+        "plain.key", "with.values", "wrapped.call",
+    }
 
 
 def test_every_key_the_apps_ask_for_exists() -> None:

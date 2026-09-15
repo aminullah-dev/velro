@@ -37,6 +37,7 @@ from domain.geography import PLACED_SOURCE_NOTE, SEED_SOURCE_NOTE
 from domain.identity import DRIVER as DRIVER_ROLE
 from domain.identity import PhoneNumber
 from domain.identity import User as DomainUser
+from domain.search import SearchTerm, normalise_business_number
 from infrastructure.db.models.geography import (
     DestinationRow,
     DistrictRow,
@@ -810,7 +811,11 @@ def drivers(
     #: Only working drivers whose last fix is stale or missing -- the
     #: dashboard's "without a fix" card.
     stale_gps: bool = False,
+    #: A name or a phone number, however it was typed: 0700…, +93700…, or
+    #: in Persian digits. See domain/search.py.
+    search: Annotated[str | None, Query(max_length=80)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
     from infrastructure.db.models.supply import DriverLocationRow
 
@@ -819,22 +824,28 @@ def drivers(
     # than one, and an outer join then returns that driver once per vehicle: the
     # operator sees the same person twice in the approvals queue and cannot tell
     # the copies apart, and `limit` counts the duplicates, so a real driver falls
-    # off the end of the list to make room for a repeat.
+    # off the end of the list to make room for a repeat. (driver_locations is
+    # one row per driver, so that join cannot duplicate and `total` is honest.)
     stmt = (
         select(DriverRow, UserRow, DriverLocationRow.recorded_at)
         .join(UserRow, UserRow.id == DriverRow.user_id)
         .outerjoin(DriverLocationRow, DriverLocationRow.driver_id == DriverRow.id)
         .where(DriverRow.deleted_at.is_(None))
-        .order_by(DriverRow.created_at.desc())
-        .limit(limit)
+        # The id breaks ties: the seed creates its drivers in one instant, and
+        # without it a page boundary between two of them can show one twice
+        # and the other never.
+        .order_by(DriverRow.created_at.desc(), DriverRow.id)
     )
     if approval_status:
         stmt = stmt.where(DriverRow.approval_status == approval_status)
     if stale_gps:
         stale_after = timedelta(seconds=settings.get_int("dispatch.stale_gps_seconds", 300))
         stmt = stmt.where(*opscentre.stale_gps_clause(now, stale_after))
+    if (term := SearchTerm.parse(search)) is not None:
+        stmt = stmt.where(_person_matches(term))
 
-    rows = session.execute(stmt).all()
+    total = session.scalar(select(func.count()).select_from(stmt.subquery()))
+    rows = session.execute(stmt.limit(limit).offset(offset)).all()
     vehicles = _one_vehicle_each(session, [d.id for d, _, _ in rows])
 
     return ok(
@@ -852,8 +863,23 @@ def drivers(
                 ),
             ).model_dump()
             for d, u, seen in rows
-        ]
+        ],
+        meta={"total": int(total or 0), "limit": limit, "offset": offset},
     )
+
+
+def _person_matches(term: SearchTerm):
+    """A driver's name or phone, the way the operator typed it.
+
+    The name is a case-insensitive contains-match; the phone a contains-match
+    on its significant digits, so 0700…, +93700… and ۰۷۰۰… all find the same
+    row. Plain ILIKE with no index: a few hundred drivers is nothing to scan,
+    and a trigram index is the step if it ever shows in a profile.
+    """
+    clauses = [UserRow.full_name.ilike(term.like_pattern, escape="\\")]
+    if term.phone_digits:
+        clauses.append(UserRow.phone.contains(term.phone_digits))
+    return or_(*clauses)
 
 
 def _one_vehicle_each(
@@ -1201,16 +1227,32 @@ class VehicleAdminOut(Schema):
 def vehicles(
     actor: Annotated[deps.Actor, Depends(deps.require_staff)],
     session: deps.SessionDep,
+    #: A plate, or its owner's name or phone, however it was typed: "SRC ۸۷۰۱",
+    #: "src-8701" and "8701" all find the same car. See domain/search.py.
+    search: Annotated[str | None, Query(max_length=80)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
     stmt = (
         select(VehicleRow, UserRow.full_name, UserRow.phone)
         .join(DriverRow, DriverRow.id == VehicleRow.driver_id)
         .join(UserRow, UserRow.id == DriverRow.user_id)
         .where(VehicleRow.deleted_at.is_(None))
-        .order_by(VehicleRow.plate_number)
-        .limit(limit)
+        # The id breaks ties between two plates typed the same way, so pages
+        # never overlap.
+        .order_by(VehicleRow.plate_number, VehicleRow.id)
     )
+    if (term := SearchTerm.parse(search)) is not None:
+        # The plate is matched on plate_key, the form uniqueness is already
+        # decided on (see normalise_plate): upper case, alphanumeric, Latin
+        # digits -- so the spelling the driver typed never matters.
+        clauses = [_person_matches(term)]
+        if term.plate_key:
+            clauses.append(VehicleRow.plate_key.contains(term.plate_key))
+        stmt = stmt.where(or_(*clauses))
+
+    total = session.scalar(select(func.count()).select_from(stmt.subquery()))
+    rows = session.execute(stmt.limit(limit).offset(offset)).all()
     return ok(
         [
             VehicleAdminOut(
@@ -1220,8 +1262,9 @@ def vehicles(
                 seat_capacity=v.seat_capacity, brand=v.brand, model=v.model,
                 colour=v.colour, status=v.status,
             ).model_dump()
-            for v, driver_name, driver_phone in session.execute(stmt).all()
-        ]
+            for v, driver_name, driver_phone in rows
+        ],
+        meta={"total": int(total or 0), "limit": limit, "offset": offset},
     )
 
 
@@ -1255,10 +1298,20 @@ def trips_list(
     unassigned: bool = False,
     overdue: bool = False,
     departing_within_hours: Annotated[int | None, Query(ge=1, le=72)] = None,
+    #: One trip by the number on a receipt, VLR-2026-000047. Exact, apart from
+    #: case, surrounding spaces and Persian digits; an unknown number is an
+    #: empty page, not a 404, like every other filter here.
+    number: Annotated[str | None, Query(max_length=24)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
-    """The live board (section 53), newest departures first."""
+    """The live board (section 53), newest departures first.
+
+    A trip is looked up by its number here rather than at a path of its own:
+    the row an operator wants is exactly the row this board shows -- seats,
+    driver, plate -- under the same gate, so a second endpoint would only be
+    a second definition of it to keep in step.
+    """
     now = deps.clock().now()
     stmt = (
         select(
@@ -1275,6 +1328,9 @@ def trips_list(
     )
     if status:
         stmt = stmt.where(TripRow.status == status)
+    if number and (wanted := normalise_business_number(number)):
+        # uq_trips_number is the index this reads.
+        stmt = stmt.where(TripRow.number == wanted)
     if active_only:
         stmt = stmt.where(TripRow.status.in_(_ACTIVE_TRIP_STATUSES))
     if unassigned:
@@ -1314,6 +1370,9 @@ def trips_list(
 class BookingAdminOut(Schema):
     id: str
     number: str
+    #: The trip this seat is on, so a row can open its trip without a lookup
+    #: by number.
+    trip_id: str
     trip_number: str
     passenger_name: str | None
     passenger_phone: str | None
@@ -1353,7 +1412,7 @@ def bookings_list(
     return ok(
         [
             BookingAdminOut(
-                id=b.id, number=b.number, trip_number=trip_number,
+                id=b.id, number=b.number, trip_id=b.trip_id, trip_number=trip_number,
                 passenger_name=name, passenger_phone=phone, status=b.status,
                 seat_count=b.seat_count, fare_total_minor=b.fare_total_minor,
                 fare_currency=b.fare_total_currency, payment_method=b.payment_method,
@@ -1580,6 +1639,8 @@ def audit_log(
     session: deps.SessionDep,
     action: str | None = None,
     entity_type: str | None = None,
+    #: What one person did -- the user id in each entry's actor_id.
+    actor_id: Annotated[str | None, Query(max_length=36)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
@@ -1587,12 +1648,17 @@ def audit_log(
     stmt = (
         select(AuditLogRow, UserRow.full_name)
         .outerjoin(UserRow, UserRow.id == AuditLogRow.actor_id)
-        .order_by(AuditLogRow.occurred_at.desc())
+        # The id breaks ties between entries written in one transaction,
+        # which share an instant, so a page boundary never repeats one.
+        .order_by(AuditLogRow.occurred_at.desc(), AuditLogRow.id)
     )
     if action:
         stmt = stmt.where(AuditLogRow.action == action)
     if entity_type:
         stmt = stmt.where(AuditLogRow.entity_type == entity_type)
+    if actor_id:
+        # ix_audit_logs_actor_id is the index this reads.
+        stmt = stmt.where(AuditLogRow.actor_id == actor_id)
 
     total = session.scalar(select(func.count()).select_from(stmt.subquery()))
     rows = session.execute(stmt.limit(limit).offset(offset)).all()

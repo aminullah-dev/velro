@@ -62,7 +62,14 @@ class TestTheShapeOfTheScreen:
     ) -> None:
         """The old card counted every user row -- drivers, staff, the seed
         admin -- under the word "passengers"."""
-        everyone = client.get("/api/v1/admin/users", headers=admin_session).json()["meta"]["count"]
+        # meta.count is the length of the page, not a total, and the page
+        # defaults to fifty: once the suite had signed in fifty-one people
+        # this compared the passengers against a truncated list. The largest
+        # page, and a check that it really held everybody.
+        everyone = client.get(
+            "/api/v1/admin/users?limit=200", headers=admin_session
+        ).json()["meta"]["count"]
+        assert everyone < 200, "every user must fit on the page for this comparison"
         assert dashboard["people"]["passengers"] < everyone
         assert dashboard["people"]["drivers"] == dashboard["drivers"]["total"]
 
