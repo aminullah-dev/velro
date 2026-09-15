@@ -43,7 +43,29 @@ struct DashWeekCharts: View {
                     OpsFormat.money(minor: Int64((value * 100).rounded()), currency: history.currency, strings: strings)
                 }
             )
+            // Who joined, each day: the two sides of the market side by side,
+            // because a week of new passengers and no new drivers is the
+            // shortage the office should see coming. Only from a server
+            // that counts them.
+            if hasSignUps {
+                DashBarChart(
+                    title: strings["ops.week.signups_title"],
+                    days: history.days,
+                    series: [
+                        DashSeries(labelKey: "ops.week.new_passengers", slot: 0,
+                                   values: history.days.map { Double($0.newPassengers ?? 0) }),
+                        DashSeries(labelKey: "ops.week.new_drivers", slot: 1,
+                                   values: history.days.map { Double($0.newDrivers ?? 0) }),
+                    ],
+                    tick: { [strings] value in OpsFormat.count(Int(value.rounded()), strings) },
+                    exact: { [strings] value in OpsFormat.count(Int(value.rounded()), strings) }
+                )
+            }
         }
+    }
+
+    private var hasSignUps: Bool {
+        history.days.contains { $0.newPassengers != nil || $0.newDrivers != nil }
     }
 }
 

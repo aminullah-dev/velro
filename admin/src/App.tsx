@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { api, onSignedOut, session } from "./api/client";
-import { isStaff } from "./api/roles";
+import { onSignedOut, session } from "./api/client";
+import { fetchMe, hasAnyRole, isStaff, ME_KEY, OPERATIONS_ROLES, useRoles } from "./api/roles";
 import { LOCALES, useStrings, type LocaleTag } from "./i18n/strings";
 import { ApprovalsPage } from "./pages/Approvals";
 import { AuditPage } from "./pages/Audit";
@@ -10,6 +11,8 @@ import { BookingsPage } from "./pages/Bookings";
 import { DashboardPage } from "./pages/Dashboard";
 import { DispatchPage } from "./pages/Dispatch";
 import { DriversPage } from "./pages/Drivers";
+import { PassengerPage } from "./pages/Passenger";
+import { PassengersPage } from "./pages/Passengers";
 import { FinancePage } from "./pages/Finance";
 import { ImportVillagesPage } from "./pages/ImportVillages";
 import { LocationsPage } from "./pages/Locations";
@@ -22,9 +25,17 @@ import { TripsPage } from "./pages/Trips";
 import { VehicleApprovalsPage } from "./pages/VehicleApprovals";
 import { VehiclesPage } from "./pages/Vehicles";
 
+interface NavEntry {
+  to: string;
+  labelKey: string;
+  element: ReactElement;
+  /** Only these roles see the entry. None given: every staff role does. */
+  roles?: ReadonlySet<string>;
+}
+
 // Section 76, in the order an operator actually works: what is happening now,
 // then what it is made of, then the money, then the settings.
-const NAV = [
+const NAV: NavEntry[] = [
   { to: "/", labelKey: "admin.nav.dashboard", element: <DashboardPage /> },
   { to: "/dispatch", labelKey: "admin.nav.operations", element: <DispatchPage /> },
   { to: "/trips", labelKey: "admin.nav.trips", element: <TripsPage /> },
@@ -35,6 +46,15 @@ const NAV = [
   },
   { to: "/bookings", labelKey: "admin.nav.bookings", element: <BookingsPage /> },
   { to: "/drivers", labelKey: "admin.nav.drivers", element: <DriversPage /> },
+  {
+    to: "/passengers",
+    labelKey: "admin.nav.passengers",
+    element: <PassengersPage />,
+    // Names, phone numbers and the off switch: the server serves this list
+    // to operations roles only, and the sidebar does not offer the others a
+    // page that can only answer "not allowed".
+    roles: OPERATIONS_ROLES,
+  },
   { to: "/approvals", labelKey: "admin.nav.approvals", element: <ApprovalsPage /> },
   { to: "/vehicles", labelKey: "admin.nav.vehicles", element: <VehiclesPage /> },
   {
@@ -54,14 +74,25 @@ const NAV = [
 
 export function App() {
   const { t, ready, locale, setLocale, forErrorCode } = useStrings();
+  const client = useQueryClient();
   const [signedIn, setSignedIn] = useState(session.isSignedIn);
   const [notice, setNotice] = useState<string | null>(null);
+  // Null until known. An entry limited to some roles is shown meanwhile: the
+  // server decides either way, and a sidebar that grows an entry a moment
+  // after opening is better than one that hides a page on a slow line.
+  const roles = useRoles(signedIn);
 
   useEffect(
     // A revoked or expired session returns to sign-in wherever the operator
-    // happened to be, rather than leaving a page of failed requests.
-    () => onSignedOut(() => setSignedIn(false)),
-    [],
+    // happened to be, rather than leaving a page of failed requests. Whose
+    // roles they were goes with it, so the next person to sign in on this
+    // browser is not shown the last one's sidebar.
+    () =>
+      onSignedOut(() => {
+        client.removeQueries({ queryKey: ME_KEY });
+        setSignedIn(false);
+      }),
+    [client],
   );
 
   useEffect(() => {
@@ -71,17 +102,22 @@ export function App() {
     // administrator's session stayed open for weeks after its role was
     // revoked, showing every page and a 403 on each. Ask again on every open.
     // A failed request proves nothing about roles, so it signs nobody out.
+    //
+    // Fetched into the shared cache rather than beside it, and never served
+    // from it (staleTime 0): the sidebar and the pages read this same answer,
+    // so what they show is decided by the roles just checked.
     let cancelled = false;
-    api.get<{ roles: string[] }>("/auth/me").then((me) => {
+    client.fetchQuery({ queryKey: ME_KEY, queryFn: fetchMe, staleTime: 0 }).then((me) => {
       if (cancelled || isStaff(me.roles)) return;
       session.clear();
+      client.removeQueries({ queryKey: ME_KEY });
       setNotice(forErrorCode("PERMISSION_DENIED"));
       setSignedIn(false);
     }, () => undefined);
     return () => {
       cancelled = true;
     };
-  }, [signedIn, forErrorCode]);
+  }, [signedIn, forErrorCode, client]);
 
   // Holding the first paint until the strings are in avoids a flash of raw
   // message keys, which looks broken.
@@ -99,11 +135,15 @@ export function App() {
     );
   }
 
+  const visible = NAV.filter(
+    (entry) => !entry.roles || roles === null || hasAnyRole(roles, entry.roles),
+  );
+
   return (
     <div className="shell">
       <nav className="sidebar">
         <div className="brand">{t("app.name")}</div>
-        {NAV.map((entry) => (
+        {visible.map((entry) => (
           <NavLink
             key={entry.to}
             to={entry.to}
@@ -132,6 +172,7 @@ export function App() {
           style={{ margin: "var(--s-2)" }}
           onClick={() => {
             session.clear();
+            client.removeQueries({ queryKey: ME_KEY });
             setSignedIn(false);
           }}
         >
@@ -141,9 +182,15 @@ export function App() {
 
       <main className="main">
         <Routes>
+          {/* Every route stays, whatever the sidebar shows: a page the roles
+              cannot use answers with the server's refusal, which is clearer
+              than being bounced to the dashboard with no reason given. */}
           {NAV.map((entry) => (
             <Route key={entry.to} path={entry.to} element={entry.element} />
           ))}
+          {/* One passenger. Not in the sidebar -- it is reached from a row --
+              but under /passengers, so that entry stays lit while it is open. */}
+          <Route path="/passengers/:userId" element={<PassengerPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -312,6 +312,115 @@ struct AdminModelTests {
         #expect(entry.occurred != nil)
     }
 
+    @Test func theDashboardReadsThePassengersBlockAndTheWeeksSignUps() throws {
+        var object = try #require(try JSONSerialization.jsonObject(with: Data(dashboardJSON.utf8)) as? [String: Any])
+        object["passengers"] = ["total": 63, "new_today": 2, "new_7d": 9, "active_7d": 14, "active_30d": 31,
+                                "repeat_30d": 6, "suspended": 1, "with_open_request": 3]
+        object["history"] = ["currency": "AFN", "days": [
+            ["date": "2026-09-14", "trips": 0, "bookings": 0, "completed_trips": 0, "cancellations": 0,
+             "revenue_minor": 0, "commission_minor": 0, "new_passengers": 4, "new_drivers": 1],
+        ]]
+        let snapshot = try APIClient.decoder().decode(DashboardSnapshot.self, from: JSONSerialization.data(withJSONObject: object))
+        let passengers = try #require(snapshot.passengers)
+        #expect(passengers == DashboardSnapshot.Passengers(
+            total: 63, newToday: 2, new7d: 9, active7d: 14, active30d: 31, repeat30d: 6, suspended: 1, withOpenRequest: 3
+        ))
+        #expect(snapshot.history?.days.first?.newPassengers == 4)
+        #expect(snapshot.history?.days.first?.newDrivers == 1)
+    }
+
+    @Test func todaysServerWithoutThePassengerFieldsStillOpensEverything() throws {
+        let snapshot = try decode(DashboardSnapshot.self, dashboardJSON)
+        #expect(snapshot.passengers == nil)
+        #expect(snapshot.history?.days.allSatisfy { $0.newPassengers == nil && $0.newDrivers == nil } == true)
+
+        // A block with a field missing or mistyped costs that figure, not the dashboard.
+        var object = try #require(try JSONSerialization.jsonObject(with: Data(dashboardJSON.utf8)) as? [String: Any])
+        object["passengers"] = ["total": 63, "new_today": "two"]
+        let partial = try APIClient.decoder().decode(DashboardSnapshot.self, from: JSONSerialization.data(withJSONObject: object))
+        #expect(partial.passengers?.total == 63)
+        #expect(partial.passengers?.newToday == 0)
+        #expect(partial.passengers?.withOpenRequest == 0)
+    }
+
+    @Test func aPassengersPageReadsHisHistory() throws {
+        let detail = try decode(UserDetail.self, #"""
+        {"user":{"id":"u7","phone":"+93793817977","full_name":"مریم","status":"SUSPENDED","locale":"ps",
+                 "roles":["PASSENGER","DRIVER"],"rating_average":4.5,"rating_count":2,
+                 "created_at":"2026-08-01T10:00:00+00:00","last_seen_at":"2026-09-14T22:00:00+04:30"},
+         "driver_id":"d7",
+         "passenger":{"bookings_total":12,"bookings_completed":9,"bookings_cancelled":2,"no_shows":1,"seats_booked":15,
+                      "spent_minor":540000,"currency":"AFN","first_booking_at":"2026-08-02T08:00:00+00:00",
+                      "last_booking_at":null,"ride_requests_total":4,"open_ride_requests":1,"tickets_total":3,"tickets_open":1}}
+        """#)
+        #expect(detail.user.status == .suspended)
+        #expect(detail.user.isPassenger && detail.user.isDriver && !detail.user.isStaff)
+        #expect(detail.user.lastSeen != nil)
+        #expect(detail.driverId == "d7")
+        let summary = try #require(detail.passenger)
+        #expect(summary.bookingsTotal == 12)
+        #expect(summary.noShows == 1)
+        #expect(summary.spent == Money(amountMinor: 540000))
+        #expect(summary.firstBooking != nil)
+        #expect(summary.lastBooking == nil)
+        #expect(summary.openRideRequests == 1)
+        #expect(summary.ticketsOpen == 1)
+
+        let bare = try decode(UserDetail.self, #"""
+        {"user":{"id":"u8","phone":null,"full_name":null,"status":"ACTIVE","locale":"fa-AF","roles":["PASSENGER"],
+                 "rating_average":null,"rating_count":0,"created_at":null,"last_seen_at":null},
+         "driver_id":null,"passenger":{"bookings_total":1}}
+        """#)
+        #expect(bare.driverId == nil)
+        #expect(bare.passenger?.bookingsTotal == 1)
+        #expect(bare.passenger?.ticketsTotal == 0)
+        #expect(bare.passenger?.currency == "AFN")
+        #expect(try decode(UserDetail.self, #"{"user":{"id":"u9","phone":null,"full_name":null,"status":"ACTIVE","locale":"en","roles":[],"rating_average":null,"rating_count":0,"created_at":null,"last_seen_at":null}}"#).passenger == nil)
+    }
+
+    @Test func rowsNameThePassengerOrReporterWhenTheServerSaysWho() throws {
+        let booking = try decode(AdminBooking.self, #"""
+        {"id":"b2","number":"BKG-2026-000037","trip_number":"VLR-2026-000046","trip_id":"t1","passenger_id":"u7",
+         "passenger_name":"مریم","passenger_phone":"+93793817977","status":"COMPLETED","seat_count":2,
+         "fare_total_minor":62200,"fare_currency":"AFN","payment_method":"CASH","payment_status":"COLLECTED",
+         "created_at":"2026-09-14T09:56:03-04:00"}
+        """#)
+        #expect(booking.passengerId == "u7")
+
+        var ticketObject = try #require(
+            (try JSONSerialization.jsonObject(with: Data(supportJSON.utf8)) as? [String: Any])?["tickets"] as? [[String: Any]]
+        ).first!
+        #expect(try APIClient.decoder().decode(AdminTicket.self, from: JSONSerialization.data(withJSONObject: ticketObject)).reporterId == nil)
+        ticketObject["reporter_id"] = "u7"
+        ticketObject["reporter_name"] = "مریم"
+        ticketObject["reporter_phone"] = NSNull()
+        let ticket = try APIClient.decoder().decode(AdminTicket.self, from: JSONSerialization.data(withJSONObject: ticketObject))
+        #expect(ticket.reporterId == "u7")
+        #expect(ticket.reporterName == "مریم")
+        #expect(ticket.reporterPhone == nil)
+
+        let request = try decode(AdminRideRequest.self, #"""
+        {"id":"r2","status":"OPEN","origin_station_id":"s1","origin_station_name":null,"destination_id":"x1",
+         "destination_name":null,"passenger_count":1,"offered_fare":{"amount_minor":30000,"currency":"AFN"},
+         "return_fare":null,"agreed_fare":null,"note":null,"requested_for":"2026-09-15T02:30:00+00:00","return_for":null,
+         "expires_at":"2026-09-15T04:00:00+00:00","created_at":"2026-09-15T01:00:00+00:00","trip_id":null,"booking_id":null,
+         "offers":[],"passenger_id":"u7","passenger_name":null,"passenger_phone":null,"offer_count":0}
+        """#)
+        #expect(request.passengerId == "u7")
+        #expect(request.isUnanswered)
+    }
+
+    @Test func anOldServersMissingPathIsNotAnUnknownPassenger() {
+        #expect(APIClient.error(from: Data(#"{"detail":"Not Found"}"#.utf8), status: 404).isEndpointMissing)
+        // What the server really answers for a path it does not have (ui/api/errors.py).
+        let missing = #"{"success":false,"error":{"code":"VALIDATION_FAILED","context":{"detail":"Not Found"},"request_id":"r2"}}"#
+        #expect(APIClient.error(from: Data(missing.utf8), status: 404).isEndpointMissing)
+        let unknown = APIClient.error(from: Data(#"{"success":false,"error":{"code":"USER_NOT_FOUND","context":{},"request_id":"r1"}}"#.utf8), status: 404)
+        #expect(unknown.code == "USER_NOT_FOUND")
+        #expect(!unknown.isEndpointMissing)
+        #expect(!APIError.offline.isEndpointMissing)
+    }
+
     @Test func anExpiryDayIsTheKabulDay() throws {
         // 23:00 UTC on the 10th is already the 11th in Kabul (+04:30).
         let late = try #require(ISODate.parse("2026-09-10T23:00:00Z"))
@@ -464,6 +573,32 @@ struct AdminEndpointTests {
         #expect(AdminAPI.suspendUser("u1", reason: "troll").path == "admin/users/u1/suspend")
         #expect(AdminAPI.reinstateUser("u1").path == "admin/users/u1/reinstate")
         #expect(try body(AdminAPI.reinstateUser("u1")).isEmpty)
+    }
+
+    @Test func thePassengerDirectoryAsksByRoleSearchAndPage() throws {
+        let page = AdminAPI.users(role: .passenger, search: " ۰۷۹۳ ", status: .active, limit: 50, offset: 100)
+        #expect(page.method == .get)
+        #expect(page.path == "admin/users")
+        #expect(query(page) == ["role": "PASSENGER", "search": "۰۷۹۳", "status": "ACTIVE", "limit": "50", "offset": "100"])
+        // Blank asks nothing; the server's bounds are kept on this side too.
+        #expect(query(AdminAPI.users(role: nil, search: "  ", limit: 500, offset: -3)) == ["limit": "200", "offset": "0"])
+        #expect(query(AdminAPI.users(role: .staff))["role"] == "STAFF")
+
+        let one = AdminAPI.user("u7")
+        #expect(one.method == .get)
+        #expect(one.path == "admin/users/u7")
+        #expect(AdminAPI.suspendUser("u7", reason: " no-shows ").path == "admin/users/u7/suspend")
+        #expect(try body(AdminAPI.suspendUser("u7", reason: " no-shows "))["reason"] as? String == "no-shows")
+        #expect(try body(AdminAPI.reinstateUser("u7", reason: "spoke to him"))["reason"] as? String == "spoke to him")
+    }
+
+    @Test func onePassengersBookingsTicketsAndRequestsAreAskedForByHisId() {
+        #expect(query(AdminAPI.bookings(passengerId: "u7", limit: 20)) == ["passenger_id": "u7", "limit": "20", "offset": "0"])
+        #expect(query(AdminAPI.supportTickets(.all, reporterId: "u7", limit: 50)) == ["status": "ALL", "reporter_id": "u7", "limit": "50"])
+        #expect(query(AdminAPI.rideRequests(passengerId: "u7")) == ["passenger_id": "u7", "limit": "50"])
+        // Unchanged without the new filters.
+        #expect(query(AdminAPI.rideRequests(limit: 100)) == ["limit": "100"])
+        #expect(query(AdminAPI.bookings()) == ["limit": "50", "offset": "0"])
     }
 }
 

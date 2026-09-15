@@ -1059,3 +1059,80 @@ ops.requests.no_offers	No driver has offered yet	هنوز هیچ راننده‌
 ops.approvals.name_placeholder	The driver's full name	نام کامل راننده	د چلوونکي بشپړ نوم	new — please check the Pashto
 admin.approvals.still_missing	Still missing: {list}	هنوز کم است: {list}	لا کم دي: {list}	new — please check the Pashto
 ops.audit.only_this_actor	Only this person's actions	فقط کارهای همین شخص	یوازې د همدې کس کړنې	new — please check the Pashto
+admin.nav.passengers	Passengers	مسافران	مسافر	new — please check the Pashto
+admin.passengers.all	All passengers	همه مسافران	ټول مسافر	new — please check the Pashto
+admin.passengers.search	Name or phone number	نام یا شماره تیلفون	نوم یا د تلیفون شمېره	new — please check the Pashto
+admin.passengers.none	No passenger matches this search or filter.	هیچ مسافری با این جستجو یا فلتر مطابقت ندارد.	هېڅ مسافر له دې لټون یا فلټر سره سمون نه خوري.	new — please check the Pashto
+admin.passengers.not_supported	This server does not provide the passenger list yet.	این سرور هنوز فهرست مسافران را ارائه نمی‌کند.	دا سرور تر اوسه د مسافرو لېست نه وړاندې کوي.	new — please check the Pashto
+admin.passengers.not_found	This account was not found, or it has been deleted.	این حساب پیدا نشد، یا حذف شده است.	دا حساب ونه موندل شو، یا ړنګ شوی دی.	new — please check the Pashto
+admin.user_status.active	Active	فعال	فعال	new — please check the Pashto
+admin.user_status.suspended	Suspended	معلق	ځنډول شوی	new — please check the Pashto
+admin.user_status.deactivated	Account closed	حساب بسته شده	حساب تړل شوی	new — please check the Pashto
+admin.col.member_since	Member since	تاریخ عضویت	د غړیتوب نېټه	new — please check the Pashto
+admin.col.last_active	Last active	آخرین فعالیت	وروستی فعالیت	new — please check the Pashto
+admin.passengers.first_booking	First booking	اولین رزرو	لومړی ریزرف	new — please check the Pashto
+admin.passengers.last_booking	Latest booking	آخرین رزرو	وروستی ریزرف	new — please check the Pashto
+admin.passengers.also_driver	Also a driver	راننده هم است	چلوونکی هم دی	new — please check the Pashto
+admin.passengers.open_driver	Open the driver record	باز کردن پرونده راننده	د چلوونکي دوسیه پرانیزئ	new — please check the Pashto
+admin.passengers.activity	Bookings and requests	رزروها و درخواست‌ها	ریزرفونه او غوښتنې	new — please check the Pashto
+admin.passengers.seats_booked	Seats booked	چوکی‌های رزروشده	نیول شوې چوکۍ	new — please check the Pashto
+admin.passengers.spent	Fares paid	کرایه پرداخت‌شده	ورکړل شوې کرایه	new — please check the Pashto
+admin.passengers.open_requests	Open ride requests	درخواست‌های سفر باز	د سفر پرانیستې غوښتنې	new — please check the Pashto
+admin.passengers.requests_total	{count} requests in all	در مجموع {count} درخواست	ټولټال {count} غوښتنې	new — please check the Pashto
+admin.passengers.recent_bookings	Latest bookings	آخرین رزروها	وروستي ریزرفونه	new — please check the Pashto
+admin.passengers.no_tickets	This passenger has not contacted support.	این مسافر تا حال با پشتیبانی تماس نگرفته است.	دې مسافر تر اوسه له ملاتړ سره اړیکه نه ده نیولې.	new — please check the Pashto
+admin.passengers.suspend_reason	Why is this passenger being suspended? Staff read this in the audit log.	چرا این مسافر تعلیق می‌شود؟ کارمندان این را در سابقه فعالیت می‌خوانند.	دا مسافر ولې ځنډول کېږي؟ کارکوونکي دا د فعالیت په ثبت کې لولي.	new — please check the Pashto
+admin.passengers.suspend_hint	The account is shut at once: signing in is refused on every phone, and no new booking or ride request is accepted. Seats already booked are left as they are.	حساب فوراً بسته می‌شود: ورود از هیچ تیلفونی پذیرفته نمی‌شود و هیچ رزرو یا درخواست سفر تازه قبول نمی‌شود. چوکی‌هایی که از قبل رزرو شده‌اند به حال خود می‌مانند.	حساب سمدستي بندېږي: له هېڅ تلیفون څخه ننوتل نه منل کېږي، او هېڅ نوی ریزرف یا د سفر غوښتنه نه منل کېږي. هغه چوکۍ چې مخکې نیول شوې دي، همداسې پاتې کېږي.	new — please check the Pashto
+admin.passengers.reinstate_reason	Why is this passenger being reinstated? Staff read this in the audit log.	چرا این مسافر دوباره فعال می‌شود؟ کارمندان این را در سابقه فعالیت می‌خوانند.	دا مسافر ولې بیا فعالېږي؟ کارکوونکي دا د فعالیت په ثبت کې لولي.	new — please check the Pashto
+admin.passengers.reinstate_hint	The passenger can sign in, book seats and ask for rides again.	مسافر دوباره می‌تواند وارد شود، چوکی رزرو کند و درخواست سفر بدهد.	مسافر بیا ننوتلی شي، چوکۍ نیولی شي او د سفر غوښتنه کولی شي.	new — please check the Pashto
+admin.passengers.suspend_on_trip	This passenger also drives and has passengers aboard right now. Suspend the account once that trip is over.	این مسافر راننده هم است و همین حالا مسافر در موتر دارد. حساب را بعد از پایان آن سفر تعلیق کنید.	دا مسافر چلوونکی هم دی او همدا اوس یې په موټر کې سپاره دي. کله چې هغه سفر پای ته ورسېږي، حساب وځنډوئ.	new — please check the Pashto
+admin.action.reinstate	Reinstate	فعال‌سازی دوباره	بیا فعالول	new — please check the Pashto
+admin.filter.one_person	Only this person	فقط همین شخص	یوازې همدا کس	new — please check the Pashto
+admin.filter.show_everyone	Show everyone	نمایش همه	ټول وښیئ	new — please check the Pashto
+admin.stat.passengers_new_today	Signed up today	ثبت‌نام‌های امروز	نننۍ نوم‌لیکنې	new — please check the Pashto
+admin.stat.passengers_new_week	Signed up in the last 7 days	ثبت‌نام در ۷ روز گذشته	په تېرو ۷ ورځو کې نوم‌لیکنې	new — please check the Pashto
+admin.stat.passengers_active_week	Active in the last 7 days	فعال در ۷ روز گذشته	په تېرو ۷ ورځو کې فعال	new — please check the Pashto
+admin.stat.passengers_active_month	Active in the last 30 days	فعال در ۳۰ روز گذشته	په تېرو ۳۰ ورځو کې فعال	new — please check the Pashto
+admin.stat.passengers_repeat	Travelled twice or more in the last 30 days	دو سفر یا بیشتر در ۳۰ روز گذشته	په تېرو ۳۰ ورځو کې دوه یا زیات سفرونه	new — please check the Pashto
+admin.stat.passengers_with_request	With a ride request open	دارای درخواست سفر باز	د سفر پرانیستې غوښتنه لري	new — please check the Pashto
+admin.week.signups_title	Sign-ups per day	ثبت‌نام‌ها در هر روز	په هره ورځ نوم‌لیکنې	new — please check the Pashto
+admin.week.new_passengers	New passengers	مسافران تازه	نوي مسافر	new — please check the Pashto
+admin.week.new_drivers	New drivers	رانندگان تازه	نوي چلوونکي	new — please check the Pashto
+ops.passengers.search	Name or phone	نام یا شماره تلفن	نوم یا د تلیفون شمېره	new — please check the Pashto
+ops.passengers.choose	Choose a passenger to see their bookings, requests and support history.	یک مسافر را انتخاب کنید تا رزروها، درخواست‌ها و سابقه پشتیبانی او را ببینید.	یو مسافر وټاکئ څو د هغه ریزرفونه، غوښتنې او د ملاتړ مخینه ووینئ.	new — please check the Pashto
+ops.passengers.none	No passengers match this search or filter.	هیچ مسافری با این جستجو یا فیلتر مطابقت ندارد.	هیڅ مسافر له دې لټون یا فلټر سره سمون نه لري.	new — please check the Pashto
+ops.passengers.empty	No passengers registered yet.	هنوز مسافری ثبت نشده است.	تر اوسه هېڅ مسافر ثبت شوی نه دی.	new — please check the Pashto
+ops.passengers.needs_server_update	Part of this needs a newer server. It will appear after the next server update.	بخشی از این به نسخه جدیدتر سرور نیاز دارد و بعد از به‌روزرسانی بعدی سرور نشان داده می‌شود.	د دې یوه برخه د سرور نوې نسخې ته اړتیا لري او د سرور له راتلونکي تازه کېدو وروسته به ښکاره شي.	new — please check the Pashto
+ops.passengers.status.active	Active	فعال	فعال	new — please check the Pashto
+ops.passengers.status.suspended	Suspended	معلق	ځنډول شوی	new — please check the Pashto
+ops.passengers.status.deactivated	Account closed	حساب بسته شده	حساب تړل شوی	new — please check the Pashto
+ops.passengers.last_active	Last active	آخرین فعالیت	وروستی فعالیت	new — please check the Pashto
+ops.passengers.copy_phone	Copy the number	کاپی کردن شماره	شمېره کاپي کړئ	new — please check the Pashto
+ops.passengers.spent	Fares paid	کرایه‌های پرداخت‌شده	ورکړل شوې کرایې	new — please check the Pashto
+ops.passengers.requests_total	Rides asked for	درخواست‌های سفر	د سفر غوښتنې	new — please check the Pashto
+ops.passengers.open_requests	Waiting for offers now	اکنون منتظر پیشنهاد	اوس د وړاندیز په تمه	new — please check the Pashto
+ops.passengers.tickets_total	Support requests in all	مجموع درخواست‌های پشتیبانی	د ملاتړ ټولې غوښتنې	new — please check the Pashto
+ops.passengers.first_booking	First booking	اولین رزرو	لومړی ریزرف	new — please check the Pashto
+ops.passengers.last_booking	Latest booking	آخرین رزرو	وروستی ریزرف	new — please check the Pashto
+ops.passengers.recent_bookings	Recent bookings	رزروهای اخیر	وروستي ریزرفونه	new — please check the Pashto
+ops.passengers.no_bookings	No bookings yet.	هنوز رزروی ندارد.	تر اوسه ریزرف نه لري.	new — please check the Pashto
+ops.passengers.no_tickets	No support requests.	درخواست پشتیبانی ندارد.	د ملاتړ غوښتنه نه لري.	new — please check the Pashto
+ops.passengers.also_driver	Also registered as a driver	به‌عنوان راننده هم ثبت شده است	د چلوونکي په توګه هم ثبت شوی دی	new — please check the Pashto
+ops.passengers.open_driver	Open the driver profile	باز کردن مشخصات راننده	د چلوونکي پېژندنه پرانیزئ	new — please check the Pashto
+ops.passengers.open	Open the passenger's page	باز کردن صفحه مسافر	د مسافر پاڼه پرانیزئ	new — please check the Pashto
+ops.passengers.suspend_confirm	Suspend this passenger?	این مسافر تعلیق شود؟	دا مسافر وځنډول شي؟	new — please check the Pashto
+ops.passengers.suspend_hint	The account can no longer sign in or book. Bookings already made play out as usual. An account driving passengers right now cannot be suspended.	این حساب دیگر نمی‌تواند وارد شود یا رزرو کند. رزروهای قبلی مانند معمول ادامه می‌یابند. حسابی که همین حالا مسافر می‌برد تعلیق شده نمی‌تواند.	دا حساب نور نه ننوتلی شي او نه ریزرف کولی شي. مخکیني ریزرفونه د معمول په څېر پر مخ ځي. هغه حساب چې همدا اوس مسافر وړي نه شي ځنډول کېدای.	new — please check the Pashto
+ops.passengers.suspend_reason	Why is this account being suspended? Staff read this in the audit log.	چرا این حساب تعلیق می‌شود؟ کارمندان این را در سابقه فعالیت می‌خوانند.	ولې دا حساب ځنډول کېږي؟ کارکوونکي دا د فعالیت په ثبت کې لولي.	new — please check the Pashto
+ops.passengers.reinstate	Reinstate	فعال‌سازی دوباره	بیا فعالول	new — please check the Pashto
+ops.passengers.reinstate_confirm	Reinstate this passenger?	این مسافر دوباره فعال شود؟	دا مسافر بیا فعال شي؟	new — please check the Pashto
+ops.passengers.reinstate_hint	The account can sign in and book again.	این حساب دوباره می‌تواند وارد شود و رزرو کند.	دا حساب بیا ننوتلی شي او ریزرف کولی شي.	new — please check the Pashto
+ops.passengers.reinstate_reason	Why is this account being reinstated? Staff read this in the audit log.	چرا این حساب دوباره فعال می‌شود؟ کارمندان این را در سابقه فعالیت می‌خوانند.	ولې دا حساب بیا فعالېږي؟ کارکوونکي دا د فعالیت په ثبت کې لولي.	new — please check the Pashto
+ops.passengers.stat.total	Registered	ثبت‌شده	ثبت شوي	new — please check the Pashto
+ops.passengers.stat.new_today	New today	جدید امروز	نن نوي	new — please check the Pashto
+ops.passengers.stat.new_7d	New in the last 7 days	جدید در ۷ روز گذشته	په تېرو ۷ ورځو کې نوي	new — please check the Pashto
+ops.passengers.stat.active_7d	Active in the last 7 days	فعال در ۷ روز گذشته	په تېرو ۷ ورځو کې فعال	new — please check the Pashto
+ops.passengers.stat.active_30d	Active in the last 30 days	فعال در ۳۰ روز گذشته	په تېرو ۳۰ ورځو کې فعال	new — please check the Pashto
+ops.passengers.stat.repeat_30d	Repeat passengers, last 30 days	مسافران تکراری در ۳۰ روز گذشته	په تېرو ۳۰ ورځو کې تکراري مسافر	new — please check the Pashto
+ops.week.signups_title	New sign-ups per day	ثبت‌نام‌های جدید در هر روز	په هره ورځ نوې نوم‌لیکنې	new — please check the Pashto
+ops.week.new_passengers	New passengers	مسافران جدید	نوي مسافر	new — please check the Pashto
+ops.week.new_drivers	New drivers	رانندگان جدید	نوي چلوونکي	new — please check the Pashto

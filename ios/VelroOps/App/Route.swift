@@ -16,6 +16,7 @@ enum Route: String, CaseIterable, Identifiable, Hashable, Sendable {
     case trips
     case liveRequests
     case bookings
+    case passengers
     case drivers
     case driverApprovals
     case vehicles
@@ -36,6 +37,7 @@ enum Route: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .trips: "admin.nav.trips"
         case .liveRequests: "admin.nav.negotiations"
         case .bookings: "admin.nav.bookings"
+        case .passengers: "admin.stat.passengers"
         case .drivers: "admin.nav.drivers"
         case .driverApprovals: "admin.nav.approvals"
         case .vehicles: "admin.nav.vehicles"
@@ -57,6 +59,8 @@ enum Route: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .trips: "car.2"
         case .liveRequests: "hand.raised"
         case .bookings: "person.2"
+        // Not bookings' person.2: two rows of the sidebar would wear one icon.
+        case .passengers: "person.3"
         case .drivers: "steeringwheel"
         case .driverApprovals: "checkmark.seal"
         case .vehicles: "car.side"
@@ -76,7 +80,8 @@ enum Route: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     var access: Access {
         switch self {
-        case .commandCentre, .dispatch, .liveRequests, .driverApprovals, .vehicleApprovals: .operations
+        // Passengers: the server's admin/users is require_operations.
+        case .commandCentre, .dispatch, .liveRequests, .driverApprovals, .vehicleApprovals, .passengers: .operations
         case .dashboard, .trips, .bookings, .drivers, .vehicles, .settings: .staff
         case .payouts, .finance: .finance
         case .support: .support
@@ -108,7 +113,7 @@ enum Route: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .commandCentre: .commandCentre
         case .dispatch, .liveRequests, .driverApprovals, .vehicleApprovals, .payouts, .support: .queues
         case .dashboard, .trips, .bookings: .operations
-        case .drivers, .vehicles: .directory
+        case .passengers, .drivers, .vehicles: .directory
         case .finance, .audit, .settings: .more
         }
     }

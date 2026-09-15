@@ -17,6 +17,7 @@ extension Route {
         case .trips: TripsView()
         case .liveRequests: LiveRequestsView()
         case .bookings: BookingsView()
+        case .passengers: PassengersView()
         case .drivers: DriversView()
         case .driverApprovals: DriverApprovalsView()
         case .vehicles: VehiclesView()

@@ -184,8 +184,66 @@ public struct DashboardSnapshot: Decodable, Sendable, Hashable {
     /// still opens, with this section missing rather than the page broken.
     public let history: WeekHistory?
     public let apps: AppsReport?
+    /// Who travels: sign-ups, activity, suspensions. Nil from a server
+    /// before this block, and the dashboard's section is left out.
+    public let passengers: Passengers?
 
     public var generated: Date? { ISODate.parse(generatedAt) }
+
+    /// The passengers block. Each figure reads as zero when the server sends
+    /// none, so one field renamed tomorrow cannot take the dashboard down.
+    public struct Passengers: Decodable, Sendable, Hashable {
+        public let total: Int
+        public let newToday: Int
+        public let new7d: Int
+        /// Booked or asked for a ride in the last 7 days, by the server's count.
+        public let active7d: Int
+        public let active30d: Int
+        /// Came back for another trip in the last 30 days.
+        public let repeat30d: Int
+        public let suspended: Int
+        /// List: `AdminAPI.rideRequests()`.
+        public let withOpenRequest: Int
+
+        public init(
+            total: Int = 0, newToday: Int = 0, new7d: Int = 0, active7d: Int = 0, active30d: Int = 0,
+            repeat30d: Int = 0, suspended: Int = 0, withOpenRequest: Int = 0
+        ) {
+            self.total = total
+            self.newToday = newToday
+            self.new7d = new7d
+            self.active7d = active7d
+            self.active30d = active30d
+            self.repeat30d = repeat30d
+            self.suspended = suspended
+            self.withOpenRequest = withOpenRequest
+        }
+
+        /// Keys read without regard to case: the decoder's snake-case
+        /// conversion capitalises a word that starts with a digit, so
+        /// "new_7d" arrives as "new7D", and a spelling nobody wrote here
+        /// must not decide whether a card has a number.
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: AnyKey.self)
+            let keys = Dictionary(c.allKeys.map { ($0.stringValue.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+            func count(_ name: String) -> Int {
+                guard let key = keys[name.lowercased()] else { return 0 }
+                return ((try? c.decodeIfPresent(Int.self, forKey: key)) ?? nil) ?? 0
+            }
+            self.init(
+                total: count("total"), newToday: count("newToday"), new7d: count("new7d"),
+                active7d: count("active7d"), active30d: count("active30d"), repeat30d: count("repeat30d"),
+                suspended: count("suspended"), withOpenRequest: count("withOpenRequest")
+            )
+        }
+
+        private struct AnyKey: CodingKey {
+            let stringValue: String
+            var intValue: Int? { nil }
+            init(stringValue: String) { self.stringValue = stringValue }
+            init?(intValue: Int) { nil }
+        }
+    }
 
     public struct Live: Decodable, Sendable, Hashable {
         /// DRIVER_ASSIGNED, DRIVER_ARRIVING. List: `TripFilter(activeOnly: true)`.
@@ -306,6 +364,9 @@ public struct HistoryDay: Decodable, Sendable, Hashable, Identifiable {
     public let cancellations: Int
     public let revenueMinor: Int64
     public let commissionMinor: Int64
+    /// Accounts created that day. Nil from a server before these fields.
+    public let newPassengers: Int?
+    public let newDrivers: Int?
 
     public var id: String { date }
     /// Noon in Kabul on that day, so no time zone can move it.
@@ -536,6 +597,9 @@ public struct AdminBooking: Decodable, Sendable, Hashable, Identifiable {
     public let tripNumber: String
     /// The trip it belongs to. Optional: a server before this field sends none.
     public let tripId: String?
+    /// The passenger's user id, for his own page. Optional: a server before
+    /// this field sends none.
+    public let passengerId: String?
     public let passengerName: String?
     public let passengerPhone: String?
     public let status: BookingStatus
@@ -614,6 +678,8 @@ public struct AdminRideRequest: Decodable, Sendable, Hashable, Identifiable {
     public let tripId: String?
     public let bookingId: String?
     public let offers: [Offer]
+    /// The passenger's user id. Optional: a server before this field sends none.
+    public let passengerId: String?
     public let passengerName: String?
     public let passengerPhone: String?
     /// Has anyone answered this person at all.
@@ -738,6 +804,11 @@ public struct AdminTicket: Decodable, Sendable, Hashable, Identifiable {
     public let createdAt: String
     public let resolvedAt: String?
     public let messages: [AdminTicketMessage]
+    /// Who raised it -- a passenger or a driver. Optional: a server before
+    /// these fields sends none, and a deleted account has no name or phone.
+    public let reporterId: String?
+    public let reporterName: String?
+    public let reporterPhone: String?
 
     public var created: Date? { ISODate.parse(createdAt) }
     public var categoryKey: String { "ticket.category." + categoryCode.lowercased() }
@@ -792,6 +863,79 @@ public struct AdminUser: Decodable, Sendable, Hashable, Identifiable {
     public var created: Date? { ISODate.parse(createdAt) }
     public var lastSeen: Date? { ISODate.parse(lastSeenAt) }
     public var isStaff: Bool { StaffAccess.isStaff(roles) }
+    public var isPassenger: Bool { roles.contains(AccountRole.passenger.rawValue) }
+    public var isDriver: Bool { roles.contains(AccountRole.driver.rawValue) }
+}
+
+/// Which accounts `AdminAPI.users` lists: the server's `role` filter.
+/// STAFF is any of the six staff roles.
+public enum AccountRole: String, Sendable, CaseIterable {
+    case passenger = "PASSENGER", driver = "DRIVER", staff = "STAFF"
+}
+
+/// `GET admin/users/{id}`: the account, the driver record if he also drives,
+/// and what he has done as a passenger. A server before this endpoint
+/// answers 404 without an error code.
+public struct UserDetail: Decodable, Sendable, Hashable {
+    public let user: AdminUser
+    /// Set when the same account is also registered to drive.
+    public let driverId: String?
+    public let passenger: PassengerSummary?
+}
+
+/// A passenger's history in figures. Every count reads as zero when the
+/// server omits it, so one missing field costs one card, not the page.
+public struct PassengerSummary: Decodable, Sendable, Hashable {
+    public let bookingsTotal: Int
+    public let bookingsCompleted: Int
+    public let bookingsCancelled: Int
+    public let noShows: Int
+    public let seatsBooked: Int
+    public let spentMinor: Int64
+    public let currency: String
+    public let firstBookingAt: String?
+    public let lastBookingAt: String?
+    public let rideRequestsTotal: Int
+    public let openRideRequests: Int
+    public let ticketsTotal: Int
+    public let ticketsOpen: Int
+
+    public var spent: Money { Money(amountMinor: spentMinor, currency: currency) }
+    public var firstBooking: Date? { ISODate.parse(firstBookingAt) }
+    public var lastBooking: Date? { ISODate.parse(lastBookingAt) }
+
+    private enum CodingKeys: String, CodingKey {
+        case bookingsTotal, bookingsCompleted, bookingsCancelled, noShows, seatsBooked, spentMinor, currency
+        case firstBookingAt, lastBookingAt, rideRequestsTotal, openRideRequests, ticketsTotal, ticketsOpen
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        func count(_ key: CodingKeys) -> Int { ((try? c.decodeIfPresent(Int.self, forKey: key)) ?? nil) ?? 0 }
+        func text(_ key: CodingKeys) -> String? { (try? c.decodeIfPresent(String.self, forKey: key)) ?? nil }
+        bookingsTotal = count(.bookingsTotal)
+        bookingsCompleted = count(.bookingsCompleted)
+        bookingsCancelled = count(.bookingsCancelled)
+        noShows = count(.noShows)
+        seatsBooked = count(.seatsBooked)
+        spentMinor = ((try? c.decodeIfPresent(Int64.self, forKey: .spentMinor)) ?? nil) ?? 0
+        currency = text(.currency) ?? "AFN"
+        firstBookingAt = text(.firstBookingAt)
+        lastBookingAt = text(.lastBookingAt)
+        rideRequestsTotal = count(.rideRequestsTotal)
+        openRideRequests = count(.openRideRequests)
+        ticketsTotal = count(.ticketsTotal)
+        ticketsOpen = count(.ticketsOpen)
+    }
+}
+
+extension APIError {
+    /// A 404 with no error code of ours: the path itself is unknown, so the
+    /// server predates the endpoint. An unknown record answers 404 with its
+    /// own code (USER_NOT_FOUND), which this is not.
+    /// The server's own missing-path answer is a 404 coded VALIDATION_FAILED
+    /// ("detail": "Not Found"), so anything but USER_NOT_FOUND counts.
+    public var isEndpointMissing: Bool { httpStatus == 404 && code != "USER_NOT_FOUND" }
 }
 
 /// `POST admin/users/{id}/suspend` and `/reinstate`.

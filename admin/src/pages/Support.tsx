@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { useSearchParams } from "react-router-dom";
+import { api, query } from "../api/client";
 import { gate } from "../components/gate";
-import { Empty, ErrorBanner, Ltr, PageHeader, Table } from "../components/ui";
+import {
+  Empty, ErrorBanner, Ltr, OnlyOnePerson, PageHeader, PassengerLink, Table,
+} from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface TicketMessage {
@@ -27,6 +30,13 @@ interface Ticket {
   created_at: string;
   resolved_at: string | null;
   messages: TicketMessage[];
+  /**
+   * Who raised it. Optional: an older server sends none of the three, and the
+   * column is then left out rather than shown empty on every row.
+   */
+  reporter_id?: string | null;
+  reporter_name?: string | null;
+  reporter_phone?: string | null;
 }
 
 interface Queue {
@@ -59,16 +69,23 @@ const FILTERS = [
  */
 export function SupportPage() {
   const { t, num, dateTime } = useStrings();
-  const [status, setStatus] = useState<string>("OPEN");
-  const [open, setOpen] = useState<string | null>(null);
+  const [search, setSearch] = useSearchParams();
+  // From a passenger's page: one person's requests, or one request opened.
+  // Both start on All -- the request being asked about may well have been
+  // answered or closed, and the working queue would hide it.
+  const reporterId = search.get("reporter_id");
+  const [status, setStatus] = useState<string>(() =>
+    search.get("reporter_id") || search.get("ticket") ? "ALL" : "OPEN",
+  );
+  const [open, setOpen] = useState<string | null>(() => search.get("ticket"));
 
   const listQuery = useQuery({
-    queryKey: ["support", status],
+    queryKey: ["support", status, reporterId],
     queryFn: () =>
       api.get<Queue>(
         // ALL is sent, not omitted. Omitting it makes the server fall back
         // to the working queue, which is exactly the bug this filter had.
-        `/admin/support/tickets?status=${status}`,
+        `/admin/support/tickets${query({ status, reporter_id: reporterId })}`,
       ),
     // Short, because this is the queue somebody watches when they are on shift.
     refetchInterval: 30_000,
@@ -79,6 +96,15 @@ export function SupportPage() {
   if (blocked) return blocked;
 
   const queue = data ?? { tickets: [], open: 0, urgent_open: 0 };
+  // Filtered here too. A server that does not know the filter answers with
+  // everybody's requests, and under "only this person" that would put a
+  // stranger's report in front of an operator talking to someone else.
+  const tickets = reporterId
+    ? queue.tickets.filter((ticket) => ticket.reporter_id === reporterId)
+    : queue.tickets;
+  const showReporter = queue.tickets.some(
+    (ticket) => ticket.reporter_id !== undefined || ticket.reporter_name !== undefined,
+  );
 
   return (
     <>
@@ -116,7 +142,9 @@ export function SupportPage() {
         ))}
       </div>
 
-      {queue.tickets.length === 0 ? (
+      {reporterId && <OnlyOnePerson onClear={() => setSearch({})} />}
+
+      {tickets.length === 0 ? (
         <Empty messageKey="admin.support.none" />
       ) : (
         <Table
@@ -124,13 +152,14 @@ export function SupportPage() {
             <tr>
               <th>{t("admin.col.reference")}</th>
               <th>{t("admin.col.category")}</th>
+              {showReporter && <th>{t("admin.support.raised_by")}</th>}
               <th>{t("admin.col.status")}</th>
               <th>{t("admin.col.created")}</th>
               <th>{t("admin.col.actions")}</th>
             </tr>
           }
         >
-          {queue.tickets.map((ticket) => (
+          {tickets.map((ticket) => (
             <tr key={ticket.id}>
               <td>
                 {/* A reference is read down a phone line, so never mirrored
@@ -150,6 +179,16 @@ export function SupportPage() {
                   </span>
                 </div>
               </td>
+              {showReporter && (
+                <td>
+                  <PassengerLink userId={ticket.reporter_id} name={ticket.reporter_name ?? null} />
+                  {ticket.reporter_phone && (
+                    <div style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                      <Ltr>{ticket.reporter_phone}</Ltr>
+                    </div>
+                  )}
+                </td>
+              )}
               <td>
                 <span
                   className={`chip ${
@@ -206,6 +245,13 @@ function TicketThread({
   const client = useQueryClient();
   const [body, setBody] = useState("");
   const [internal, setInternal] = useState(false);
+  const frame = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // The thread opens under the table. Opened from a passenger's page it is
+    // the only thing the operator came for, and it may be a screen away.
+    frame.current?.scrollIntoView({ block: "nearest" });
+  }, []);
 
   const invalidate = () => {
     client.invalidateQueries({ queryKey: ["support"] });
@@ -239,12 +285,18 @@ function TicketThread({
   if (!ticket) return null;
 
   return (
-    <div className="card" style={{ marginBlockStart: "var(--s-4)" }}>
+    <div ref={frame} className="card" style={{ marginBlockStart: "var(--s-4)" }}>
       <div className="row" style={{ marginBlockEnd: "var(--s-3)" }}>
         <strong><Ltr>{ticket.reference}</Ltr></strong>
         <span>{t(`ticket.category.${ticket.category_code.toLowerCase()}`)}</span>
         {ticket.is_urgent && (
           <span className="chip failed">{t("admin.support.urgent")}</span>
+        )}
+        {(ticket.reporter_id !== undefined || ticket.reporter_name !== undefined) && (
+          <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
+            {t("admin.support.raised_by")}:{" "}
+            <PassengerLink userId={ticket.reporter_id} name={ticket.reporter_name ?? null} />
+          </span>
         )}
         <button className="small" onClick={onClose}>
           {t("common.action.close")}

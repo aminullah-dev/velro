@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense } from "react";
 import { api, ApiError } from "../api/client";
+import { hasAnyRole, OPERATIONS_ROLES, useRoles } from "../api/roles";
 import type { AppsReport, LiveMapSnapshot, WeekHistory } from "../api/operations";
 import { AppVersions } from "../components/AppVersions";
 import { gate } from "../components/gate";
@@ -51,6 +52,13 @@ interface Snapshot {
   // simply goes without those two sections.
   history?: WeekHistory;
   apps?: AppsReport;
+  // Optional for the same reason: without it the dashboard keeps the single
+  // passenger count it always had, under the drivers.
+  passengers?: {
+    total: number; new_today: number; new_7d: number;
+    active_7d: number; active_30d: number; repeat_30d: number;
+    suspended: number; with_open_request: number;
+  };
 }
 
 /** A server older than this panel, which has no live map to give. */
@@ -88,6 +96,10 @@ function isSettled(error: unknown): boolean {
  */
 export function DashboardPage() {
   const { t, num, dateTime, forErrorCode } = useStrings();
+  // The dashboard is every staff role's; the passenger list and the live
+  // requests are operations'. A card is only a link where the page it opens
+  // would answer -- and, until the roles are known, it is not one yet.
+  const canOperate = hasAnyRole(useRoles(), OPERATIONS_ROLES);
   const snapshotQuery = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => api.get<Snapshot>("/admin/dashboard"),
@@ -221,9 +233,38 @@ export function DashboardPage() {
           <ActionStat labelKey="admin.stat.stale_gps" value={data.drivers.without_fix} to="/drivers?stale_gps=1" attention />
           <ActionStat labelKey="admin.stat.drivers_pending" value={data.drivers.pending} to="/approvals" attention />
           <Stat labelKey="admin.stat.drivers_suspended" value={num(data.drivers.suspended)} />
-          <Stat labelKey="admin.stat.passengers" value={num(data.people.passengers)} />
+          {/* The one passenger count an older server gives. A newer one has
+              a section of its own below, and a second, differently-counted
+              "passengers" here would only invite the question of which is right. */}
+          {!data.passengers && (
+            <Stat labelKey="admin.stat.passengers" value={num(data.people.passengers)} />
+          )}
         </div>
       </Section>
+
+      {data.passengers && (
+        <Section titleKey="admin.nav.passengers">
+          {/* Growth first, then whether people come back, then what needs
+              somebody: a suspended account is a decision to revisit, and a
+              passenger with a request open is waiting right now. */}
+          <div className="grid stats">
+            {canOperate
+              ? <ActionStat labelKey="admin.passengers.all" value={data.passengers.total} to="/passengers" />
+              : <Stat labelKey="admin.passengers.all" value={num(data.passengers.total)} />}
+            <Stat labelKey="admin.stat.passengers_new_today" value={num(data.passengers.new_today)} />
+            <Stat labelKey="admin.stat.passengers_new_week" value={num(data.passengers.new_7d)} />
+            <Stat labelKey="admin.stat.passengers_active_week" value={num(data.passengers.active_7d)} />
+            <Stat labelKey="admin.stat.passengers_active_month" value={num(data.passengers.active_30d)} />
+            <Stat labelKey="admin.stat.passengers_repeat" value={num(data.passengers.repeat_30d)} />
+            {canOperate
+              ? <ActionStat labelKey="admin.stat.passengers_with_request" value={data.passengers.with_open_request} to="/negotiations" />
+              : <Stat labelKey="admin.stat.passengers_with_request" value={num(data.passengers.with_open_request)} />}
+            {canOperate
+              ? <ActionStat labelKey="admin.stat.drivers_suspended" value={data.passengers.suspended} to="/passengers?status=SUSPENDED" attention />
+              : <Stat labelKey="admin.stat.drivers_suspended" value={num(data.passengers.suspended)} attention={data.passengers.suspended > 0} />}
+          </div>
+        </Section>
+      )}
 
       <Section titleKey="admin.ops.money">
         <div className="grid stats">

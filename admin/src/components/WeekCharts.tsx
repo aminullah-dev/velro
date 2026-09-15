@@ -31,9 +31,30 @@ export function WeekCharts({ history }: { history: WeekHistory }) {
   // Fares are drawn in afghanis, not minor units: the axis should read 12,000,
   // not 1,200,000. `money` takes them back to minor units for the exact figure.
   const whole = (value: number) => num(Math.round(value).toLocaleString("en-US"));
+  // Sign-ups came with a later server. An older one sends neither field, and
+  // the chart is left out rather than drawn as a week of zeros -- an empty
+  // week of sign-ups is a finding, and a false one here.
+  const signups = history.days.every(
+    (day) => typeof day.new_passengers === "number" && typeof day.new_drivers === "number",
+  );
 
   return (
     <div className="grid two">
+      {signups && (
+        // Two series on one axis, because both are counts of people joining
+        // on the same day; the legend names them, so colour is never alone.
+        <BarChart
+          id="week-signups"
+          title={t("admin.week.signups_title")}
+          days={days}
+          series={[
+            { labelKey: "admin.week.new_passengers", slot: 0, values: history.days.map((day) => day.new_passengers ?? 0) },
+            { labelKey: "admin.week.new_drivers", slot: 1, values: history.days.map((day) => day.new_drivers ?? 0) },
+          ]}
+          tick={num}
+          exact={num}
+        />
+      )}
       <BarChart
         id="week-trips"
         title={t("admin.week.trips_title")}

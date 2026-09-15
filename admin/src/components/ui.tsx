@@ -8,6 +8,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../api/client";
+import { hasAnyRole, OPERATIONS_ROLES, useRoles } from "../api/roles";
 import { useStrings } from "../i18n/strings";
 
 export function PageHeader({ title, subtitle, actions }: {
@@ -218,13 +219,15 @@ export function Stat({ labelKey, value, note, attention }: {
  * count of zero is muted rather than hidden, because an operator scanning
  * for what is wrong needs to see what is right as well.
  */
-export function ActionStat({ labelKey, value, to, attention, hintKey }: {
+export function ActionStat({ labelKey, value, to, attention, hintKey, note }: {
   labelKey: string;
   value: number;
   to: string;
   /** Colour and a border, never colour alone: the number itself changes weight. */
   attention?: boolean;
   hintKey?: string;
+  /** A hint that carries a value of its own ("3 open"), already resolved. */
+  note?: string;
 }) {
   const { t, num } = useStrings();
   const hot = Boolean(attention) && value > 0;
@@ -239,6 +242,7 @@ export function ActionStat({ labelKey, value, to, attention, hintKey }: {
         {num(value)}
       </div>
       {hintKey && <div className="stat-note">{t(hintKey)}</div>}
+      {note && <div className="stat-note">{note}</div>}
       <div className="stat-go" aria-hidden="true">{t("admin.ops.open")}</div>
     </Link>
   );
@@ -292,5 +296,61 @@ export function Phone({ number }: { number: string | null | undefined }) {
     <a className="ltr tabular" href={`tel:${number.replace(/[^\d+]/g, "")}`}>
       {number}
     </a>
+  );
+}
+
+const ACCOUNT_TONES: Record<string, Tone> = {
+  ACTIVE: "active", SUSPENDED: "failed", DEACTIVATED: "ended",
+};
+
+/**
+ * An account's own status -- whether the person can sign in at all. Not a
+ * driver's approval, which is a different switch with different words.
+ */
+export function AccountStatusChip({ status }: { status: string }) {
+  const { t } = useStrings();
+  const key = `admin.user_status.${status.toLowerCase()}`;
+  const label = t(key);
+  return (
+    <span className={`chip ${ACCOUNT_TONES[status] ?? "neutral"}`}>
+      {label === key ? status : label}
+    </span>
+  );
+}
+
+/**
+ * A passenger's name, as the way to their page.
+ *
+ * Plain text when there is no id to go to -- an older server, or a deleted
+ * account -- and for a role the passenger page would refuse: a support agent
+ * reading the queue is better served by the name than by a link that can
+ * only answer "not allowed".
+ */
+export function PassengerLink({ userId, name }: {
+  userId?: string | null;
+  name: string | null;
+}) {
+  const { t } = useStrings();
+  const roles = useRoles();
+  const label = name ?? t("common.value.no_name");
+  if (!userId || (roles !== null && !hasAnyRole(roles, OPERATIONS_ROLES))) return <>{label}</>;
+  return <Link to={`/passengers/${encodeURIComponent(userId)}`}>{label}</Link>;
+}
+
+/**
+ * The list is narrowed to one person, arrived at from their page.
+ *
+ * Said on the screen, with the way out beside it: a list that silently shows
+ * one row looks like a list that lost the others.
+ */
+export function OnlyOnePerson({ onClear }: { onClear: () => void }) {
+  const { t } = useStrings();
+  return (
+    <div className="filters filter-notice">
+      <span className="chip active">{t("admin.filter.one_person")}</span>
+      <button type="button" className="small" onClick={onClear}>
+        {t("admin.filter.show_everyone")}
+      </button>
+    </div>
   );
 }

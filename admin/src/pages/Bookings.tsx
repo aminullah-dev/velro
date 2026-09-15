@@ -1,14 +1,20 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { api, query } from "../api/client";
 import { gate } from "../components/gate";
-import { Empty, Ltr, PageHeader, Pager, StatusChip, Table } from "../components/ui";
+import { Empty, Ltr, PageHeader, Pager, PassengerLink, StatusChip, Table } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Booking {
   id: string;
   number: string;
   trip_number: string;
+  /**
+   * Optional: a server older than the Passengers page does not send it, and
+   * the name is then plain text rather than a link to nowhere.
+   */
+  passenger_id?: string | null;
   passenger_name: string | null;
   /** null once the passenger deleted their account. */
   passenger_phone: string | null;
@@ -65,10 +71,18 @@ export function BookingsPage() {
               <tr key={booking.id}>
                 <td><Ltr>{booking.number}</Ltr></td>
                 <td><StatusChip status={booking.status} kind="booking" /></td>
-                <td>{booking.passenger_name ?? t("common.value.no_name")}</td>
+                <td>
+                  <PassengerLink userId={booking.passenger_id} name={booking.passenger_name} />
+                </td>
                 {/* A phone number is a sequence to be dialled, never mirrored. */}
                 <td><Ltr>{booking.passenger_phone ?? "—"}</Ltr></td>
-                <td><Ltr>{booking.trip_number}</Ltr></td>
+                <td>
+                  {/* The trips board looks a trip up by the number on the
+                      receipt, so the booking opens exactly its own trip. */}
+                  <Link to={`/trips${query({ number: booking.trip_number })}`}>
+                    <Ltr>{booking.trip_number}</Ltr>
+                  </Link>
+                </td>
                 <td className="num">{num(booking.seat_count)}</td>
                 <td className="num">
                   {money(booking.fare_total_minor, booking.fare_currency)}

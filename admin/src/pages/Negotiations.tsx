@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { useSearchParams } from "react-router-dom";
+import { api, query } from "../api/client";
 import { gate } from "../components/gate";
-import { Empty, Ltr, PageHeader, Table } from "../components/ui";
+import { Empty, Ltr, OnlyOnePerson, PageHeader, PassengerLink, Table } from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Money {
@@ -24,6 +25,8 @@ interface RideRequest {
   destination_name: string | null;
   passenger_count: number;
   offered_fare: Money;
+  /** Optional: an older server does not send it, and the name stays plain. */
+  passenger_id?: string;
   passenger_name: string | null;
   passenger_phone: string | null;
   offer_count: number;
@@ -42,10 +45,14 @@ interface RideRequest {
  */
 export function NegotiationsPage() {
   const { t, money, num, dateTime } = useStrings();
+  const [search, setSearch] = useSearchParams();
+  // From a passenger's page: only what that person is waiting for.
+  const passengerId = search.get("passenger_id");
 
   const listQuery = useQuery({
-    queryKey: ["negotiations"],
-    queryFn: () => api.get<RideRequest[]>("/admin/ride-requests"),
+    queryKey: ["negotiations", passengerId],
+    queryFn: () =>
+      api.get<RideRequest[]>(`/admin/ride-requests${query({ passenger_id: passengerId })}`),
     // These change by the minute; an operator on the phone needs what is true
     // now, not what was true when they opened the page.
     refetchInterval: 15_000,
@@ -55,7 +62,10 @@ export function NegotiationsPage() {
   const blocked = gate(listQuery);
   if (blocked) return blocked;
 
-  const rows = data ?? [];
+  // Filtered here as well as on the server. A server that does not know the
+  // filter answers with everyone, and "only this person" over a list of
+  // strangers is the wrong person's journey read out on the phone.
+  const rows = (data ?? []).filter((row) => !passengerId || row.passenger_id === passengerId);
 
   return (
     <>
@@ -68,6 +78,8 @@ export function NegotiationsPage() {
           </button>
         }
       />
+
+      {passengerId && <OnlyOnePerson onClear={() => setSearch({})} />}
 
       {rows.length === 0 ? (
         <Empty messageKey="admin.negotiations.none" />
@@ -86,7 +98,9 @@ export function NegotiationsPage() {
           {rows.map((row) => (
             <tr key={row.id}>
               <td>
-                <div>{row.passenger_name ?? t("common.value.no_name")}</div>
+                <div>
+                  <PassengerLink userId={row.passenger_id} name={row.passenger_name} />
+                </div>
                 {row.passenger_phone && (
                   <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
                     <Ltr>{row.passenger_phone}</Ltr>

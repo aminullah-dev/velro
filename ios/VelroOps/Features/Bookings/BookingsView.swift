@@ -77,11 +77,14 @@ struct BookingsView: View {
             } else {
                 List(selection: isSplit ? $selectedID : .constant(nil)) {
                     ForEach(pager.items) { booking in
-                        if isSplit {
-                            OpBookingRowView(booking: booking).tag(booking.id)
-                        } else {
-                            NavigationLink(value: booking) { OpBookingRowView(booking: booking) }
+                        Group {
+                            if isSplit {
+                                OpBookingRowView(booking: booking).tag(booking.id)
+                            } else {
+                                NavigationLink(value: booking) { OpBookingRowView(booking: booking) }
+                            }
                         }
+                        .opPassengerMenu(booking.passengerId)
                     }
                     OpPagerFooter(pager: pager)
                 }
@@ -179,7 +182,9 @@ struct OpBookingDetailView: View {
                 .padding(.vertical, Spacing.s2)
             }
             Section {
-                OpField("admin.col.passenger", text: OpText.name(booking.passengerName, strings))
+                OpField("admin.col.passenger") {
+                    OpPassengerLink(userId: booking.passengerId, name: booking.passengerName)
+                }
                 OpField("admin.col.phone") { PhoneLink(booking.passengerPhone) }
                 OpField("admin.nav.trips") { LTRText(booking.tripNumber) }
                 OpField("admin.col.seats", text: OpsFormat.count(booking.seatCount, strings))

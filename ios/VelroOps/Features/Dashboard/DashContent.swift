@@ -26,6 +26,11 @@ struct DashContent: View {
                     DashWeekCharts(history: history)
                 }
                 drivers
+                // Only from a server that sends the block: today's shows the
+                // one Passengers card among the drivers', as before.
+                if let passengers = snapshot.passengers {
+                    passengersSection(passengers)
+                }
                 money
                 if let apps = snapshot.apps {
                     SectionHeader("admin.ops.app_versions")
@@ -136,8 +141,37 @@ struct DashContent: View {
             StatCard("admin.stat.stale_gps", count: d.withoutFix, attention: true, action: act(.drivers, "stale_gps"))
             StatCard("admin.stat.drivers_pending", count: d.pending, attention: true, action: act(.driverApprovals, "pending"))
             StatCard("admin.stat.drivers_suspended", count: d.suspended)
-            StatCard("admin.stat.passengers", count: snapshot.people.passengers, systemImage: "person.2")
+            if snapshot.passengers == nil {
+                StatCard("admin.stat.passengers", count: snapshot.people.passengers, systemImage: "person.2",
+                         action: act(.passengers))
+            }
         }
+    }
+
+    /// Everyone who travels: how many, how many are new, how many came back,
+    /// and the few who need somebody -- suspended, or waiting for an offer.
+    private func passengersSection(_ p: DashboardSnapshot.Passengers) -> some View {
+        section("admin.stat.passengers") {
+            StatCard("ops.passengers.stat.total", count: p.total, systemImage: Route.passengers.symbol,
+                     action: act(.passengers))
+            StatCard("ops.passengers.stat.new_today", count: p.newToday)
+            StatCard("ops.passengers.stat.new_7d", count: p.new7d)
+            StatCard("ops.passengers.stat.active_7d", count: p.active7d)
+                .note(share(p.active7d, of: p.total))
+            StatCard("ops.passengers.stat.active_30d", count: p.active30d)
+                .note(share(p.active30d, of: p.total))
+            StatCard("ops.passengers.stat.repeat_30d", count: p.repeat30d)
+                .note(share(p.repeat30d, of: p.active30d))
+            StatCard("admin.stat.drivers_suspended", count: p.suspended, attention: true,
+                     action: act(.passengers, "suspended"))
+            StatCard("admin.stat.open_requests", count: p.withOpenRequest, systemImage: Route.liveRequests.symbol,
+                     action: act(.liveRequests))
+        }
+    }
+
+    /// "۱۴/۶۳": a part of its whole, when there is a whole to be part of.
+    private func share(_ part: Int, of whole: Int) -> String? {
+        whole > 0 ? OpsFormat.fraction(part, of: whole, strings) : nil
     }
 
     private var money: some View {

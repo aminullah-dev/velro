@@ -10,13 +10,16 @@ import VelroCore
 /// rings to say nobody will take them -- so an unanswered request is tinted
 /// and says so in words. Refreshes every fifteen seconds, as the panel does.
 ///
-/// Other screens open it with `navigator.open(.liveRequests, filter:
-/// "unanswered")`: only the requests nobody has answered.
+/// Other screens open it with `navigator.open(.liveRequests, filter:)`:
+/// "unanswered" (only the requests nobody has answered), "request:<id>"
+/// (selects it).
 struct LiveRequestsView: View {
     @Environment(OpsModel.self) private var ops
     @Environment(\.strings) private var strings
     @State private var model = OpLiveRequestsModel()
     @State private var selectedID: String?
+    /// A request another screen asked for, pushed on an iPhone.
+    @State private var pushedID: String?
 
     init() {}
 
@@ -37,6 +40,9 @@ struct LiveRequestsView: View {
                     .navigationDestination(for: AdminRideRequest.self) { request in
                         OpRideRequestDetail(request: model.request(request.id) ?? request)
                     }
+                    .navigationDestination(item: $pushedID) { id in
+                        pushedDetail(id)
+                    }
             }
         }
         .background(Palette.background)
@@ -47,9 +53,26 @@ struct LiveRequestsView: View {
             }
         }
         .task { [model, ops] in
-            if ops.navigator.takeFilter(for: .liveRequests) == "unanswered" { model.onlyUnanswered = true }
+            guard let chosen = model.apply(deepLink: ops.navigator.takeFilter(for: .liveRequests)) else { return }
+            selectedID = chosen
+            // On an iPhone it is opened once the board stands behind it.
+            await model.load(ops)
+            pushedID = chosen
         }
         .poll(every: .seconds(15)) { [model, ops] in await model.load(ops) }
+    }
+
+    /// A request opened from elsewhere: it may still be on its way, or have
+    /// left the board since (matched, cancelled, expired).
+    @ViewBuilder
+    private func pushedDetail(_ id: String) -> some View {
+        if let request = model.request(id) {
+            OpRideRequestDetail(request: request)
+        } else if model.state.isLoading {
+            LoadingView()
+        } else {
+            EmptyStateView(messageKey: "admin.negotiations.none", systemImage: "hand.raised")
+        }
     }
 
     @ViewBuilder
@@ -81,6 +104,7 @@ struct LiveRequestsView: View {
                                     NavigationLink(value: request) { OpRideRequestRow(request: request) }
                                 }
                             }
+                            .opPassengerMenu(request.passengerId)
                             .opAttentionRow(request.isUnanswered)
                         }
                     }
@@ -124,6 +148,18 @@ final class OpLiveRequestsModel {
     func request(_ id: String?) -> AdminRideRequest? {
         guard let id else { return nil }
         return state.value?.first { $0.id == id }
+    }
+
+    /// The filter another screen left; a request to open comes back.
+    func apply(deepLink: String?) -> String? {
+        guard let deepLink else { return nil }
+        let parts = deepLink.split(separator: ":", maxSplits: 1).map(String.init)
+        switch parts.first {
+        case "unanswered": onlyUnanswered = true
+        case "request": return parts.count > 1 && !parts[1].isEmpty ? parts[1] : nil
+        default: break
+        }
+        return nil
     }
 
     func load(_ ops: OpsModel) async {
@@ -235,6 +271,9 @@ private struct OpRideRequestDetail: View {
                 .padding(.vertical, Spacing.s2)
             }
             Section {
+                OpField("admin.col.passenger") {
+                    OpPassengerLink(userId: request.passengerId, name: request.passengerName)
+                }
                 OpField("admin.col.phone") { PhoneLink(request.passengerPhone) }
                 OpField("admin.negotiations.asking") { MoneyText(request.offeredFare) }
                 if let back = request.returnFare {

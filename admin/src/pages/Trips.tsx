@@ -52,17 +52,23 @@ export function TripsPage() {
   const { t, num, dateTime } = useStrings();
   const [search, setSearch] = useSearchParams();
   const { slice, hours } = sliceFrom(search);
+  // One trip by the number on its receipt -- the link from a booking. It
+  // stands in for the slices rather than narrowing one: the trip is wanted
+  // whatever state it is in, and no chip is lit while it is shown.
+  const number = search.get("number");
   const [offset, setOffset] = useState(0);
 
-  const params = {
-    ...SLICES.find((s) => s.key === slice)!.params,
-    // A card may ask for a window the chip row does not offer (24 h for
-    // "nearly full"); honour what the URL says over the chip's default.
-    ...(slice === "soon" && hours ? { departing_within_hours: hours } : {}),
-  };
+  const params = number
+    ? { number }
+    : {
+      ...SLICES.find((s) => s.key === slice)!.params,
+      // A card may ask for a window the chip row does not offer (24 h for
+      // "nearly full"); honour what the URL says over the chip's default.
+      ...(slice === "soon" && hours ? { departing_within_hours: hours } : {}),
+    };
 
   const listQuery = useQuery({
-    queryKey: ["trips", slice, hours, offset],
+    queryKey: ["trips", slice, hours, number, offset],
     queryFn: () => api.list<Trip[]>(`/admin/trips${query({ ...params, limit: LIMIT, offset })}`),
     // The live slices move; the archive does not.
     refetchInterval: slice === "all" ? false : 20_000,
@@ -79,23 +85,27 @@ export function TripsPage() {
     <>
       <PageHeader title={t("admin.nav.trips")} />
 
-      <div className="filters" role="group" aria-label={t("admin.col.status")}>
-        {SLICES.map((entry) => (
-          <button
-            key={entry.key}
-            type="button"
-            className={`small${entry.key === slice ? " on" : ""}`}
-            aria-pressed={entry.key === slice}
-            onClick={() => {
-              const next = new URLSearchParams();
-              for (const [k, v] of Object.entries(entry.params)) next.set(k, String(v));
-              setSearch(next);
-              setOffset(0);
-            }}
-          >
-            {t(entry.labelKey)}
-          </button>
-        ))}
+      <div className="filters filter-notice" role="group" aria-label={t("admin.col.status")}>
+        {SLICES.map((entry) => {
+          const on = !number && entry.key === slice;
+          return (
+            <button
+              key={entry.key}
+              type="button"
+              className={`small${on ? " on" : ""}`}
+              aria-pressed={on}
+              onClick={() => {
+                const next = new URLSearchParams();
+                for (const [k, v] of Object.entries(entry.params)) next.set(k, String(v));
+                setSearch(next);
+                setOffset(0);
+              }}
+            >
+              {t(entry.labelKey)}
+            </button>
+          );
+        })}
+        {number && <span className="chip active">{t("admin.map.trip", { number })}</span>}
       </div>
 
       {trips.length === 0 ? (

@@ -50,6 +50,9 @@ export interface HistoryDay {
   cancellations: number;
   revenue_minor: number;
   commission_minor: number;
+  /** People who joined that day. Absent from a server older than the sign-ups chart. */
+  new_passengers?: number;
+  new_drivers?: number;
 }
 
 export interface WeekHistory {

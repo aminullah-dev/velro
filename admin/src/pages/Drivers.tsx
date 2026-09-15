@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { api, query } from "../api/client";
 import { gate } from "../components/gate";
-import { Empty, ErrorBanner, Ltr, PageHeader, Phone, StatusChip, Table } from "../components/ui";
+import {
+  Empty, ErrorBanner, Ltr, OnlyOnePerson, PageHeader, Phone, StatusChip, Table,
+} from "../components/ui";
 import { useStrings } from "../i18n/strings";
 
 interface Driver {
@@ -27,10 +29,15 @@ export function DriversPage() {
   // In the URL, so the dashboard's "without a fix" card opens exactly the
   // drivers it counted.
   const staleOnly = Boolean(search.get("stale_gps"));
+  // From a passenger's page: the same person's driver record. The phone
+  // narrows the list on the server; the id makes it exactly one row.
+  const onlyDriver = search.get("driver");
+  const term = search.get("search") ?? "";
 
   const listQuery = useQuery({
-    queryKey: ["drivers", staleOnly],
-    queryFn: () => api.get<Driver[]>(`/admin/drivers${query({ stale_gps: staleOnly })}`),
+    queryKey: ["drivers", staleOnly, term],
+    queryFn: () =>
+      api.get<Driver[]>(`/admin/drivers${query({ stale_gps: staleOnly, search: term })}`),
     refetchInterval: staleOnly ? 20_000 : false,
   });
 
@@ -59,7 +66,7 @@ export function DriversPage() {
   const blocked = gate(listQuery);
   if (blocked) return blocked;
 
-  const drivers = data ?? [];
+  const drivers = (data ?? []).filter((driver) => !onlyDriver || driver.id === onlyDriver);
 
   return (
     <>
@@ -79,6 +86,8 @@ export function DriversPage() {
           </label>
         }
       />
+
+      {(onlyDriver || term) && <OnlyOnePerson onClear={() => setSearch({})} />}
 
       {/* A refused approval or suspension is shown here rather than swallowed:
           the reason is usually actionable -- a missing licence, a driver

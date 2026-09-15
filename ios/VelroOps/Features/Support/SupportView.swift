@@ -16,6 +16,8 @@ struct SupportView: View {
     @Environment(\.strings) private var strings
     @State private var model = OpSupportModel()
     @State private var selectedID: String?
+    /// A request another screen asked for ("ticket:<id>"), pushed on an iPhone.
+    @State private var pushedID: String?
 
     init() {}
 
@@ -36,6 +38,11 @@ struct SupportView: View {
                 list(isSplit: false)
                     .navigationDestination(for: AdminTicket.self) { ticket in
                         OpTicketDetailView(ticketId: ticket.id, initial: ticket) { [model, ops] in await model.load(ops) }
+                    }
+                    // It loads itself by id: a closed request is not in the
+                    // working queue, and is still the one that was asked for.
+                    .navigationDestination(item: $pushedID) { id in
+                        OpTicketDetailView(ticketId: id, initial: model.ticket(id)) { [model, ops] in await model.load(ops) }
                     }
             }
         }
@@ -59,8 +66,11 @@ struct SupportView: View {
             }
         }
         .task { [model, ops] in
-            if let chosen = model.apply(deepLink: ops.navigator.takeFilter(for: .support)) { selectedID = chosen }
+            let chosen = model.apply(deepLink: ops.navigator.takeFilter(for: .support))
+            if let chosen { selectedID = chosen }
             await model.load(ops)
+            // On an iPhone it is opened once the queue stands behind it.
+            if let chosen { pushedID = chosen }
         }
         // Short, because this is the queue somebody watches on shift.
         .poll(every: .seconds(30)) { [model, ops] in
@@ -388,6 +398,17 @@ struct OpTicketDetailView: View {
                     DateText(ticket.createdAt)
                     DotSeparator().accessibilityHidden(true)
                     DateText(ticket.createdAt, style: .relative).foregroundStyle(Palette.textMuted)
+                }
+                // Who raised it, from a server that says: his page is a tap away.
+                if ticket.reporterId != nil {
+                    HStack(spacing: Spacing.s2) {
+                        Text(strings["admin.support.reporter"]).foregroundStyle(Palette.textMuted)
+                        OpPassengerLink(userId: ticket.reporterId, name: ticket.reporterName)
+                        if let phone = ticket.reporterPhone {
+                            DotSeparator().accessibilityHidden(true)
+                            PhoneLink(phone)
+                        }
+                    }
                 }
                 if let trip = ticket.tripId {
                     HStack(spacing: Spacing.s2) {

@@ -216,12 +216,17 @@ public enum AdminAPI {
     }
 
     /// require_staff. Newest first. Paged: `sendWithMeta` for the total.
+    /// `passengerId` (a user id) narrows it to one passenger's; a server
+    /// before that filter ignores it and answers everyone's, so a caller
+    /// keeps only rows whose `passengerId` matches.
     public static func bookings(
-        status: BookingStatus? = nil, tripId: String? = nil, limit: Int = 50, offset: Int = 0
+        status: BookingStatus? = nil, tripId: String? = nil, passengerId: String? = nil,
+        limit: Int = 50, offset: Int = 0
     ) -> Endpoint<[AdminBooking]> {
         var query: [URLQueryItem] = []
         if let status { query.append(URLQueryItem(name: "status", value: status.rawValue)) }
         if let tripId { query.append(URLQueryItem(name: "trip_id", value: tripId)) }
+        if let passengerId { query.append(URLQueryItem(name: "passenger_id", value: passengerId)) }
         query.append(URLQueryItem(name: "limit", value: String(limit)))
         query.append(URLQueryItem(name: "offset", value: String(offset)))
         return .get("admin/bookings", query: query)
@@ -243,9 +248,14 @@ public enum AdminAPI {
     }
 
     /// require_operations. Passengers waiting for offers, and what they have
-    /// been offered. Read-only by design.
-    public static func rideRequests(limit: Int = 50) -> Endpoint<[AdminRideRequest]> {
-        .get("admin/ride-requests", query: [URLQueryItem(name: "limit", value: String(limit))])
+    /// been offered. Read-only by design. `passengerId` narrows it to one
+    /// passenger's; an older server ignores it (keep rows whose
+    /// `passengerId` matches).
+    public static func rideRequests(passengerId: String? = nil, limit: Int = 50) -> Endpoint<[AdminRideRequest]> {
+        var query: [URLQueryItem] = []
+        if let passengerId { query.append(URLQueryItem(name: "passenger_id", value: passengerId)) }
+        query.append(URLQueryItem(name: "limit", value: String(limit)))
+        return .get("admin/ride-requests", query: query)
     }
 
     // MARK: Money
@@ -277,13 +287,16 @@ public enum AdminAPI {
 
     // MARK: Support
 
-    /// require_support. Urgent first, then oldest.
+    /// require_support. Urgent first, then oldest. `reporterId` (a user id)
+    /// narrows it to what one person raised; an older server ignores it
+    /// (keep tickets whose `reporterId` matches).
     public static func supportTickets(
-        _ filter: SupportQueueFilter = .working, category: String? = nil, limit: Int = 50
+        _ filter: SupportQueueFilter = .working, category: String? = nil, reporterId: String? = nil, limit: Int = 50
     ) -> Endpoint<SupportQueue> {
         var query: [URLQueryItem] = []
         if let status = filter.value { query.append(URLQueryItem(name: "status", value: status)) }
         if let category { query.append(URLQueryItem(name: "category", value: category)) }
+        if let reporterId { query.append(URLQueryItem(name: "reporter_id", value: reporterId)) }
         query.append(URLQueryItem(name: "limit", value: String(limit)))
         return .get("admin/support/tickets", query: query)
     }
@@ -320,6 +333,32 @@ public enum AdminAPI {
         if let status { query.append(URLQueryItem(name: "status", value: status.rawValue)) }
         query.append(URLQueryItem(name: "limit", value: String(limit)))
         return .get("admin/users", query: query)
+    }
+
+    /// require_operations. The directory of accounts by `role`, newest first.
+    /// `search` is matched by the server: a name, or a phone in any form or
+    /// digits. Paged: `sendWithMeta` for the total.
+    ///
+    /// A server before this contract ignores role, search and offset and
+    /// sends no total -- every account, one page. A caller can tell by
+    /// `meta.total` being nil, and narrow by `AdminUser.roles` itself.
+    public static func users(
+        role: AccountRole?, search: String? = nil, status: UserStatus? = nil, limit: Int = 50, offset: Int = 0
+    ) -> Endpoint<[AdminUser]> {
+        var query: [URLQueryItem] = []
+        if let role { query.append(URLQueryItem(name: "role", value: role.rawValue)) }
+        if let search = clean(search) { query.append(URLQueryItem(name: "search", value: search)) }
+        if let status { query.append(URLQueryItem(name: "status", value: status.rawValue)) }
+        query.append(URLQueryItem(name: "limit", value: String(min(200, max(1, limit)))))
+        query.append(URLQueryItem(name: "offset", value: String(max(0, offset))))
+        return .get("admin/users", query: query)
+    }
+
+    /// require_operations. One account, its driver record if any, and its
+    /// passenger history. 404 USER_NOT_FOUND for an unknown id; a server
+    /// before this endpoint answers 404 with no code at all.
+    public static func user(_ userId: String) -> Endpoint<UserDetail> {
+        .get("admin/users/\(userId)")
     }
 
     /// require_operations. The account-level off switch: sign-in and every

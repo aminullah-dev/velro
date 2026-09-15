@@ -587,3 +587,24 @@ html[dir="rtl"] .live-map .maplibregl-cooperative-gesture-screen { direction: rt
 .share-meter > span { display: block; height: 100%; background: var(--viz-1); }
 tbody tr.is-latest td { background: var(--green-50); }
 @media (prefers-color-scheme: dark) { tbody tr.is-latest td { background: #10261d; } }
+
+/* -- people ------------------------------------------------------------ */
+
+/* The way back from one passenger to the list: a link, not a button, so it
+   opens in a new tab like every other link. */
+.back-link { display: inline-block; margin-bottom: var(--s-3); font-size: 13px; color: var(--accent); }
+
+/* A person's particulars: the label beside its value, in reading order in
+   either direction because the grid follows the document's. */
+.facts {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: var(--s-2) var(--s-6); margin: 0; align-items: center;
+}
+.facts dt { color: var(--text-muted); font-size: 13px; }
+.facts dd { margin: 0; }
+
+/* A chip beside a button, centred on it rather than stretched to its height. */
+.filter-notice { align-items: center; }
+
+/* Wide enough for a name or a whole phone number without scrolling inside it. */
+.search-field { min-width: min(320px, 100%); }
