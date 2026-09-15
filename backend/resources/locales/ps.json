@@ -1089,8 +1089,8 @@
   "admin.action.reinstate": "بیا فعالول",
   "admin.filter.one_person": "یوازې همدا کس",
   "admin.filter.show_everyone": "ټول وښیئ",
-  "admin.stat.passengers_new_today": "نننۍ نوم‌لیکنې",
-  "admin.stat.passengers_new_week": "په تېرو ۷ ورځو کې نوم‌لیکنې",
+  "admin.stat.passengers_new_today": "نن نوي مسافر",
+  "admin.stat.passengers_new_week": "په تېرو ۷ ورځو کې نوي مسافر",
   "admin.stat.passengers_active_week": "په تېرو ۷ ورځو کې فعال",
   "admin.stat.passengers_active_month": "په تېرو ۳۰ ورځو کې فعال",
   "admin.stat.passengers_repeat": "په تېرو ۳۰ ورځو کې دوه یا زیات سفرونه",
@@ -1135,5 +1135,7 @@
   "ops.passengers.stat.repeat_30d": "په تېرو ۳۰ ورځو کې تکراري مسافر",
   "ops.week.signups_title": "په هره ورځ نوې نوم‌لیکنې",
   "ops.week.new_passengers": "نوي مسافر",
-  "ops.week.new_drivers": "نوي چلوونکي"
+  "ops.week.new_drivers": "نوي چلوونکي",
+  "admin.stat.passengers_suspended": "ځنډول شوي مسافر",
+  "admin.passengers.only_note": "دلته یوازې هغه کسان شمېرل کېږي چې سفر کوي؛ هغه حسابونه چې موټر هم چلوي یا د ولرو کارکوونکي دي، پکې نه شمېرل کېږي."
 }

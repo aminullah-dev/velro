@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError, query } from "../api/client";
 import { agoKey, kabulDay, type UserRow } from "../api/people";
+import { isStaff } from "../api/roles";
 import { gate } from "../components/gate";
 import { AccountStatusChip, Empty, PageHeader, Pager, Phone, Table } from "../components/ui";
 import { useStrings } from "../i18n/strings";
@@ -19,12 +20,30 @@ const FILTERS = [
 ] as const;
 
 /**
- * Everyone who travels with VELRO.
+ * Somebody who only travels: no driver record, no staff role.
+ *
+ * Every account starts as a passenger and drivers and staff gain roles on
+ * top, so "holds PASSENGER" is everyone. The server narrows with
+ * passenger_only; this is the same rule, applied again to what comes back,
+ * because a server that does not know the parameter answers without it and a
+ * driver listed under "Passengers" is the exact confusion this page exists to
+ * end.
+ */
+function onlyTravels(user: UserRow): boolean {
+  const roles = user.roles ?? [];
+  return !roles.includes("DRIVER") && !isStaff(roles);
+}
+
+/**
+ * Everyone who travels with VELRO -- and only them.
  *
  * The call that brings an operator here is almost always a person on the line
  * -- "I booked and nobody came", "my account is blocked" -- so the search takes
  * a name or a phone number in whatever digits it was read out in, and does it
  * on the server: the list is every passenger, not a page of them.
+ *
+ * Drivers are not here; they have their own page, and a driver's own trips as
+ * a passenger are still one link away from any booking of his.
  *
  * The search and the status filter live in the URL, like the other lists, so
  * the dashboard's "suspended" card opens exactly the rows it counted.
@@ -77,7 +96,14 @@ export function PassengersPage() {
     queryKey: ["passengers", status, term, offset],
     queryFn: () =>
       api.list<UserRow[]>(
-        `/admin/users${query({ role: "PASSENGER", status, search: term, limit: LIMIT, offset })}`,
+        `/admin/users${query({
+          role: "PASSENGER",
+          passenger_only: true,
+          status,
+          search: term,
+          limit: LIMIT,
+          offset,
+        })}`,
       ),
     // The rows stay up while the next search is in flight; otherwise every
     // pause in typing blanks the table to a loading line.
@@ -96,7 +122,7 @@ export function PassengersPage() {
     || (listQuery.data !== undefined && listQuery.data.meta?.total === undefined);
   const blocked = missing ? <Empty messageKey="admin.passengers.not_supported" /> : gate(listQuery);
 
-  const rows = listQuery.data?.data ?? [];
+  const rows = (listQuery.data?.data ?? []).filter(onlyTravels);
   const total = Number(listQuery.data?.meta?.total ?? rows.length);
   // "How long ago" is measured from when the list was fetched, not from the
   // clock at render: the same answer every time the same rows are drawn.
@@ -114,6 +140,9 @@ export function PassengersPage() {
     <>
       <PageHeader
         title={t("admin.nav.passengers")}
+        // Said on the page, because the first thing an operator who knows a
+        // driver travels too will do is search for him here.
+        subtitle={t("admin.passengers.only_note")}
         actions={
           <input
             type="search"
@@ -169,16 +198,9 @@ export function PassengersPage() {
               {rows.map((user) => (
                 <tr key={user.id}>
                   <td>
-                    <div className="row" style={{ gap: "var(--s-2)" }}>
-                      <Link to={`/passengers/${encodeURIComponent(user.id)}`}>
-                        {user.full_name ?? t("common.value.no_name")}
-                      </Link>
-                      {/* Most drivers here are sometimes passengers; saying so
-                          stops an operator treating two records as two people. */}
-                      {(user.roles ?? []).includes("DRIVER") && (
-                        <span className="chip">{t("role.driver")}</span>
-                      )}
-                    </div>
+                    <Link to={`/passengers/${encodeURIComponent(user.id)}`}>
+                      {user.full_name ?? t("common.value.no_name")}
+                    </Link>
                   </td>
                   <td><Phone number={user.phone} /></td>
                   <td className="num">

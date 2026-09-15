@@ -1089,8 +1089,8 @@
   "admin.action.reinstate": "فعال‌سازی دوباره",
   "admin.filter.one_person": "فقط همین شخص",
   "admin.filter.show_everyone": "نمایش همه",
-  "admin.stat.passengers_new_today": "ثبت‌نام‌های امروز",
-  "admin.stat.passengers_new_week": "ثبت‌نام در ۷ روز گذشته",
+  "admin.stat.passengers_new_today": "مسافران تازه امروز",
+  "admin.stat.passengers_new_week": "مسافران تازه در ۷ روز گذشته",
   "admin.stat.passengers_active_week": "فعال در ۷ روز گذشته",
   "admin.stat.passengers_active_month": "فعال در ۳۰ روز گذشته",
   "admin.stat.passengers_repeat": "دو سفر یا بیشتر در ۳۰ روز گذشته",
@@ -1135,5 +1135,7 @@
   "ops.passengers.stat.repeat_30d": "مسافران تکراری در ۳۰ روز گذشته",
   "ops.week.signups_title": "ثبت‌نام‌های جدید در هر روز",
   "ops.week.new_passengers": "مسافران جدید",
-  "ops.week.new_drivers": "رانندگان جدید"
+  "ops.week.new_drivers": "رانندگان جدید",
+  "admin.stat.passengers_suspended": "مسافران معلق",
+  "admin.passengers.only_note": "اینجا فقط کسانی شمرده می‌شوند که سفر می‌کنند؛ حساب‌هایی که رانندگی هم می‌کنند یا کارمند ولرو هستند، شامل نیستند."
 }

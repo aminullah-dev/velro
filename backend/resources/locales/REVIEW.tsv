@@ -1089,8 +1089,8 @@ admin.passengers.suspend_on_trip	This passenger also drives and has passengers a
 admin.action.reinstate	Reinstate	فعال‌سازی دوباره	بیا فعالول	new — please check the Pashto
 admin.filter.one_person	Only this person	فقط همین شخص	یوازې همدا کس	new — please check the Pashto
 admin.filter.show_everyone	Show everyone	نمایش همه	ټول وښیئ	new — please check the Pashto
-admin.stat.passengers_new_today	Signed up today	ثبت‌نام‌های امروز	نننۍ نوم‌لیکنې	new — please check the Pashto
-admin.stat.passengers_new_week	Signed up in the last 7 days	ثبت‌نام در ۷ روز گذشته	په تېرو ۷ ورځو کې نوم‌لیکنې	new — please check the Pashto
+admin.stat.passengers_new_today	New passengers today	مسافران تازه امروز	نن نوي مسافر	new — please check the Pashto
+admin.stat.passengers_new_week	New passengers in the last 7 days	مسافران تازه در ۷ روز گذشته	په تېرو ۷ ورځو کې نوي مسافر	new — please check the Pashto
 admin.stat.passengers_active_week	Active in the last 7 days	فعال در ۷ روز گذشته	په تېرو ۷ ورځو کې فعال	new — please check the Pashto
 admin.stat.passengers_active_month	Active in the last 30 days	فعال در ۳۰ روز گذشته	په تېرو ۳۰ ورځو کې فعال	new — please check the Pashto
 admin.stat.passengers_repeat	Travelled twice or more in the last 30 days	دو سفر یا بیشتر در ۳۰ روز گذشته	په تېرو ۳۰ ورځو کې دوه یا زیات سفرونه	new — please check the Pashto
@@ -1136,3 +1136,5 @@ ops.passengers.stat.repeat_30d	Repeat passengers, last 30 days	مسافران ت
 ops.week.signups_title	New sign-ups per day	ثبت‌نام‌های جدید در هر روز	په هره ورځ نوې نوم‌لیکنې	new — please check the Pashto
 ops.week.new_passengers	New passengers	مسافران جدید	نوي مسافر	new — please check the Pashto
 ops.week.new_drivers	New drivers	رانندگان جدید	نوي چلوونکي	new — please check the Pashto
+admin.stat.passengers_suspended	Suspended passengers	مسافران معلق	ځنډول شوي مسافر	new — please check the Pashto
+admin.passengers.only_note	Only people who travel are counted here; accounts that also drive or work for VELRO are left out.	اینجا فقط کسانی شمرده می‌شوند که سفر می‌کنند؛ حساب‌هایی که رانندگی هم می‌کنند یا کارمند ولرو هستند، شامل نیستند.	دلته یوازې هغه کسان شمېرل کېږي چې سفر کوي؛ هغه حسابونه چې موټر هم چلوي یا د ولرو کارکوونکي دي، پکې نه شمېرل کېږي.	new — please check the Pashto

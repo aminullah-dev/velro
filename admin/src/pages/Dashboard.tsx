@@ -244,6 +244,10 @@ export function DashboardPage() {
 
       {data.passengers && (
         <Section titleKey="admin.nav.passengers">
+          {/* Who is counted, said once for every card below. Every account
+              starts as a passenger, so without it "new today" reads as every
+              sign-up -- drivers and staff included -- which it is not. */}
+          <p className="section-note muted">{t("admin.passengers.only_note")}</p>
           {/* Growth first, then whether people come back, then what needs
               somebody: a suspended account is a decision to revisit, and a
               passenger with a request open is waiting right now. */}
@@ -260,8 +264,8 @@ export function DashboardPage() {
               ? <ActionStat labelKey="admin.stat.passengers_with_request" value={data.passengers.with_open_request} to="/negotiations" />
               : <Stat labelKey="admin.stat.passengers_with_request" value={num(data.passengers.with_open_request)} />}
             {canOperate
-              ? <ActionStat labelKey="admin.stat.drivers_suspended" value={data.passengers.suspended} to="/passengers?status=SUSPENDED" attention />
-              : <Stat labelKey="admin.stat.drivers_suspended" value={num(data.passengers.suspended)} attention={data.passengers.suspended > 0} />}
+              ? <ActionStat labelKey="admin.stat.passengers_suspended" value={data.passengers.suspended} to="/passengers?status=SUSPENDED" attention />
+              : <Stat labelKey="admin.stat.passengers_suspended" value={num(data.passengers.suspended)} attention={data.passengers.suspended > 0} />}
           </div>
         </Section>
       )}

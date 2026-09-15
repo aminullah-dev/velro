@@ -1089,8 +1089,8 @@
   "admin.action.reinstate": "Reinstate",
   "admin.filter.one_person": "Only this person",
   "admin.filter.show_everyone": "Show everyone",
-  "admin.stat.passengers_new_today": "Signed up today",
-  "admin.stat.passengers_new_week": "Signed up in the last 7 days",
+  "admin.stat.passengers_new_today": "New passengers today",
+  "admin.stat.passengers_new_week": "New passengers in the last 7 days",
   "admin.stat.passengers_active_week": "Active in the last 7 days",
   "admin.stat.passengers_active_month": "Active in the last 30 days",
   "admin.stat.passengers_repeat": "Travelled twice or more in the last 30 days",
@@ -1135,5 +1135,7 @@
   "ops.passengers.stat.repeat_30d": "Repeat passengers, last 30 days",
   "ops.week.signups_title": "New sign-ups per day",
   "ops.week.new_passengers": "New passengers",
-  "ops.week.new_drivers": "New drivers"
+  "ops.week.new_drivers": "New drivers",
+  "admin.stat.passengers_suspended": "Suspended passengers",
+  "admin.passengers.only_note": "Only people who travel are counted here; accounts that also drive or work for VELRO are left out."
 }
