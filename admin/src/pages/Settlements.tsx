@@ -190,9 +190,11 @@ export function SettlementsPage() {
               </td>
               <td>
                 {/* Which way the money moves is the first thing to read on a
-                    payments queue; never left to the amount's sign. */}
+                    payments queue; never left to the amount's sign. Read from
+                    VELRO's side: settlement.direction.* is the driver app's
+                    "paid to you", which on this screen reads backwards. */}
                 <span className="chip">
-                  {t(`settlement.direction.${s.direction.toLowerCase()}`)}
+                  {t(`ops.payouts.direction.${s.direction.toLowerCase()}`)}
                 </span>
               </td>
               <td className="num">

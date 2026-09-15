@@ -193,6 +193,9 @@ interface VehicleChecklist {
 function VehiclePapers({ vehicleId }: { vehicleId: string }) {
   const { t, date, dateTime } = useStrings();
   const client = useQueryClient();
+  // Ids rather than rows, so a background refresh cannot swap what the open
+  // dialog is about.
+  const [verifying, setVerifying] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
 
   const papersQuery = useQuery({
@@ -201,10 +204,13 @@ function VehiclePapers({ vehicleId }: { vehicleId: string }) {
   });
 
   const review = useMutation({
-    mutationFn: (input: { id: string; verified: boolean; reason?: string }) =>
+    mutationFn: (input: { id: string; verified: boolean; reason?: string; expires?: string }) =>
       api.post(`/admin/vehicle-documents/${input.id}/review`, {
         verified: input.verified,
         rejection_reason: input.reason ?? null,
+        // Blank sends null, which the server reads as "keep what the driver
+        // declared" -- it never clears an expiry.
+        expires_on: input.expires || null,
       }),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ["vehicle-documents", vehicleId] });
@@ -226,6 +232,26 @@ function VehiclePapers({ vehicleId }: { vehicleId: string }) {
       </div>
 
       {review.error && <ErrorBanner error={review.error} />}
+
+      {/* A permit is verified with the date it runs out, the same as a
+          driver's papers. Prefilled with what the driver declared on upload,
+          so the reviewer confirms it against the photograph or corrects it. */}
+      <InputDialog
+        open={verifying !== null}
+        titleKey="admin.approvals.expiry_prompt"
+        labelKey="admin.col.expires"
+        confirmKey="admin.approvals.verify"
+        hintKey="admin.approvals.expiry_hint"
+        field="date"
+        required={false}
+        destructive={false}
+        initialValue={papers.documents.find((d) => d.id === verifying)?.expires_on ?? ""}
+        onCancel={() => setVerifying(null)}
+        onConfirm={(expires) => {
+          if (verifying) review.mutate({ id: verifying, verified: true, expires });
+          setVerifying(null);
+        }}
+      />
 
       <InputDialog
         open={rejecting !== null}
@@ -286,7 +312,7 @@ function VehiclePapers({ vehicleId }: { vehicleId: string }) {
                     <button
                       className="small primary"
                       disabled={review.isPending}
-                      onClick={() => review.mutate({ id: document.id, verified: true })}
+                      onClick={() => setVerifying(document.id)}
                     >
                       {t("admin.approvals.verify")}
                     </button>
