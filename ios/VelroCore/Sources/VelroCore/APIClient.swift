@@ -130,9 +130,9 @@ public final class APIClient: Sendable {
         switch await exchange(endpoint, isRetry: false) {
         case .failure(let error):
             return .failure(error)
-        case .success(let data):
+        case .success(let reply):
             do {
-                return .success(try Self.decoder().decode(Envelope<T>.self, from: data).data)
+                return .success(try Self.decoder().decode(Envelope<T>.self, from: reply.data).data)
             } catch {
                 // The server answered and it could not be read: a contract
                 // mismatch, not a network problem, and reported as such.
@@ -141,11 +141,43 @@ public final class APIClient: Sendable {
         }
     }
 
-    func raw<T>(_ endpoint: Endpoint<T>) async -> Result<Data, APIError> {
-        await exchange(endpoint, isRetry: false)
+    /// The call, with the envelope's `meta` kept: a list's total and page
+    /// live there, and the dispatch board's counts.
+    public func sendWithMeta<T>(_ endpoint: Endpoint<T>) async -> Result<Paged<T>, APIError> {
+        switch await exchange(endpoint, isRetry: false) {
+        case .failure(let error):
+            return .failure(error)
+        case .success(let reply):
+            guard let envelope = try? Self.decoder().decode(MetaEnvelope<T>.self, from: reply.data) else {
+                return .failure(.unknown(reason: "response_unreadable"))
+            }
+            guard let value = envelope.data else { return .failure(.unknown(status: 200, reason: "empty_payload")) }
+            return .success(Paged(value: value, meta: envelope.meta ?? ResponseMeta()))
+        }
     }
 
-    private func exchange<T>(_ endpoint: Endpoint<T>, isRetry: Bool) async -> Result<Data, APIError> {
+    /// The raw bytes of an answer, authenticated and renewed exactly as any
+    /// other call is -- one expiry, one refresh, however many downloads race.
+    public func data<T>(for endpoint: Endpoint<T>) async -> Result<Data, APIError> {
+        await exchange(endpoint, isRetry: false).map(\.data)
+    }
+
+    /// A file the server serves as bytes, with the type it said it was.
+    public func download(_ endpoint: Endpoint<DownloadedFile>) async -> Result<DownloadedFile, APIError> {
+        await exchange(endpoint, isRetry: false).map { DownloadedFile(data: $0.data, contentType: $0.contentType) }
+    }
+
+    func raw<T>(_ endpoint: Endpoint<T>) async -> Result<Data, APIError> {
+        await exchange(endpoint, isRetry: false).map(\.data)
+    }
+
+    /// A successful answer: its bytes, and what the server said they were.
+    private struct Reply: Sendable {
+        let data: Data
+        let contentType: String?
+    }
+
+    private func exchange<T>(_ endpoint: Endpoint<T>, isRetry: Bool) async -> Result<Reply, APIError> {
         let token = endpoint.authenticated ? store.accessToken : nil
         let data: Data
         let response: URLResponse
@@ -159,7 +191,7 @@ public final class APIClient: Sendable {
             return .failure(.offline)
         }
         guard let http = response as? HTTPURLResponse else { return .failure(.unknown()) }
-        if (200..<300).contains(http.statusCode) { return .success(data) }
+        if (200..<300).contains(http.statusCode) { return .success(Reply(data: data, contentType: http.mimeType)) }
 
         if http.statusCode == 401, token != nil, !isRetry {
             switch await coordinator.renew(used: token, client: self) {

@@ -172,6 +172,92 @@ targets:
       testTargets:
         - VelroDriverUITests
 
+  # The operations console: the web admin panel (admin/src) as a native app,
+  # on iPhone, iPad and Mac from this one target. Staff only -- the shell is in
+  # VelroOps/App, the design system in VelroOps/Design, and each screen in its
+  # own folder under VelroOps/Features. Its own keychain entry and its own
+  # numbers; Debug talks to this Mac's API like the other two.
+  VelroOps:
+    type: application
+    supportedDestinations: [iOS, macOS]
+    platform: auto
+    deploymentTarget:
+      iOS: "17.0"
+      macOS: "14.0"
+    sources:
+      - path: VelroOps
+        # Staging files of new locale keys, merged into the locale JSON by
+        # hand; bundling them would ship them, and two collide in the build.
+        excludes: ["**/NEW_KEYS*.json"]
+      - path: ../backend/resources/locales/en.json
+        type: file
+        buildPhase: resources
+      - path: ../backend/resources/locales/fa-AF.json
+        type: file
+        buildPhase: resources
+      - path: ../backend/resources/locales/ps.json
+        type: file
+        buildPhase: resources
+      - path: ../mobile/core/ui/src/main/res/font/vazirmatn_regular.ttf
+        type: file
+        buildPhase: resources
+      - path: ../mobile/core/ui/src/main/res/font/vazirmatn_medium.ttf
+        type: file
+        buildPhase: resources
+      - path: ../mobile/core/ui/src/main/res/font/vazirmatn_bold.ttf
+        type: file
+        buildPhase: resources
+      - path: ../mobile/core/ui/src/main/assets/licences/vazirmatn-OFL.txt
+        type: file
+        buildPhase: resources
+    dependencies:
+      - package: VelroCore
+    info:
+      path: VelroOps/Info.plist
+      properties:
+        CFBundleDisplayName: VELRO Ops
+        CFBundleName: VELRO Ops
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.business
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad:
+          [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown,
+           UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        ITSAppUsesNonExemptEncryption: false
+        VelroAPIBaseURL: $(VELRO_API_BASE_URL)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [fa, ps, en]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: af.velro.ops
+        # Its own numbers, marked like the driver's.
+        MARKETING_VERSION: "1.0.0" # ops
+        CURRENT_PROJECT_VERSION: "1" # ops
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+        CODE_SIGN_STYLE: Automatic
+        # The Mac build runs in the App Sandbox, allowed out to the API and
+        # nothing else. The session lives in the login keychain, which a
+        # sandboxed app may use for its own items without a sharing group.
+        CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: VelroOps/Resources/VelroOps-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
+      configs:
+        Debug:
+          VELRO_API_BASE_URL: http://localhost:8000/api/v1/
+        Release:
+          VELRO_API_BASE_URL: https://api.velro.linumic.com/api/v1/
+    scheme: {}
+
   VelroDriverUITests:
     type: bundle.ui-testing
     platform: iOS

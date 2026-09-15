@@ -961,3 +961,99 @@ sync.kind.rate_trip	Trip rating	امتیاز سفر	د سفر ستوری
 document.source.camera	Take a photo	عکس بگیرید	انځور واخلئ	new — please check the Pashto
 document.source.library	Choose from your photos	از عکس‌های خود انتخاب کنید	له خپلو انځورونو یې وټاکئ	new — please check the Pashto
 camera.permission.rationale.driver	VELRO Driver uses the camera to photograph your documents, your vehicle's papers and your face, so VELRO can check who is driving.	ولرو راننده از کمره برای عکس گرفتن از اسناد شما، اسناد موتر و چهره شما استفاده می‌کند تا ولرو بداند چه کسی رانندگی می‌کند.	د ولرو چلوونکی کمره ستاسو د اسنادو، د موټر د اسنادو او ستاسو د مخ د انځور اخیستو لپاره کاروي، څو ولرو وپوهیږي چې څوک موټر چلوي.	new — please check the Pashto
+ops.title	VELRO Ops	عملیات ولرو	د ولرو عملیات	new — please check the Pashto
+ops.nav.command_centre	Command centre	مرکز کنترول	د کنټرول مرکز	new — please check the Pashto
+ops.tab.queues	Queues	کارهای در انتظار	پاتې کارونه	new — please check the Pashto
+ops.tab.operations	Operations	عملیات	عملیات	new — please check the Pashto
+ops.tab.directory	Directory	فهرست‌ها	لړلیکونه	new — please check the Pashto
+ops.tab.more	More	بیشتر	نور	new — please check the Pashto
+ops.placeholder.body	This screen is being built.	این صفحه در حال ساخت است.	دا پاڼه لا جوړېږي.	new — please check the Pashto
+ops.settings.roles	Roles	نقش‌ها	رولونه	new — please check the Pashto
+ops.settings.version	Version {version} ({build})	نسخه {version} ({build})	نسخه {version} ({build})	new — please check the Pashto
+ops.offline.banner	No connection to the server. Showing the last information received.	اتصال با سرور برقرار نیست. آخرین معلومات دریافت‌شده نشان داده می‌شود.	له سرور سره اړیکه نشته. وروستي ترلاسه شوي معلومات ښودل کېږي.	new — please check the Pashto
+ops.error.reference	Reference {id}	شماره پیگیری {id}	د تعقیب شمېره {id}	new — please check the Pashto
+ops.map.filter.waiting	Waiting	منتظر	په تمه	new — please check the Pashto
+ops.map.search_prompt	Name, plate or phone	نام، نمبر پلیت یا تیلفون	نوم، د پلېټ شمېره یا تلیفون	new — please check the Pashto
+ops.map.view_map	Map	نقشه	نقشه	new — please check the Pashto
+ops.map.view_list	List	فهرست	لړلیک	new — please check the Pashto
+ops.map.trip_details	Trip details	جزئیات سفر	د سفر جزئیات	new — please check the Pashto
+ops.map.driver_details	Driver details	جزئیات راننده	د چلوونکي جزئیات	new — please check the Pashto
+ops.map.show_on_map	Show on the map	نمایش روی نقشه	په نقشه کې ښودل	new — please check the Pashto
+ops.map.fit_cars	Fit the map to the cars	نمایش همهٔ موترها روی نقشه	ټول موټرونه په نقشه کې ښودل	new — please check the Pashto
+ops.map.frame_region	Show the whole service area	نمایش تمام ساحهٔ خدمات	د خدمت ټوله سیمه ښودل	new — please check the Pashto
+ops.map.no_match	No driver matches this search or filter.	هیچ راننده‌ای با این جستجو یا فلتر مطابقت ندارد.	هېڅ چلوونکی له دې لټون یا فلټر سره سمون نه خوري.	new — please check the Pashto
+ops.map.off_map	{count} not on the map	{count} نفر روی نقشه نیستند	{count} تنه په نقشه کې نه دي	new — please check the Pashto
+ops.queue.waiting	{count} waiting	{count} در انتظار	{count} په تمه	new — please check the Pashto
+ops.approvals.progress	{verified} of {required} verified	{verified} از {required} تأیید شده	{verified} له {required} څخه تایید شوي	new — please check the Pashto
+ops.approvals.select_vehicle	Choose a vehicle to review.	یک موتر را برای بررسی انتخاب کنید.	د کتنې لپاره یو موټر وټاکئ.	new — please check the Pashto
+ops.approvals.has_expiry	This document has an expiry date	این سند تاریخ انقضا دارد	دا سند د پای نېټه لري	new — please check the Pashto
+ops.approvals.expiry_hint	Read the date off the document itself. After that day the document no longer counts.	تاریخ را از روی خود سند بخوانید. بعد از آن روز، این سند دیگر اعتبار ندارد.	نېټه پخپله له سنده ولولئ. له هغې ورځې وروسته دا سند نور اعتبار نه لري.	new — please check the Pashto
+ops.approvals.expiry_needed	Choose the date printed on the document.	تاریخی را که روی سند چاپ شده انتخاب کنید.	هغه نېټه وټاکئ چې په سند چاپ شوې ده.	new — please check the Pashto
+ops.approvals.approve_confirm	{name} will be able to go online and receive trips.	{name} می‌تواند آنلاین شود و سفر دریافت کند.	{name} به وکولای شي آنلاین شي او سفرونه ترلاسه کړي.	new — please check the Pashto
+ops.approvals.suspend_hint	He will not receive any work until someone approves him again. Say why; it is recorded.	تا وقتی کسی دوباره او را تأیید نکند، هیچ کاری دریافت نمی‌کند. دلیل را بنویسید؛ ثبت می‌شود.	تر هغه چې څوک یې بیا تایید نه کړي، هېڅ کار نه ترلاسه کوي. دلیل ولیکئ؛ ثبتېږي.	new — please check the Pashto
+ops.reject.presets	Common reasons	دلیل‌های رایج	عام دلیلونه	new — please check the Pashto
+ops.reject.blurry	The photo is blurry. Take it again in good light.	عکس واضح نیست. در روشنی خوب دوباره عکس بگیرید.	انځور روښانه نه دی. په ښه رڼا کې بیا انځور واخلئ.	new — please check the Pashto
+ops.reject.cut_off	Part of the document is cut off. Photograph the whole page.	بخشی از سند در عکس نیامده است. از تمام صفحه عکس بگیرید.	د سند یوه برخه په انځور کې نه ښکاري. د ټولې پاڼې انځور واخلئ.	new — please check the Pashto
+ops.reject.expired	This document has expired. Send a current one.	این سند منقضی شده است. یک سند معتبر بفرستید.	د دې سند موده پای ته رسېدلې ده. یو اعتبار لرونکی سند راواستوئ.	new — please check the Pashto
+ops.reject.wrong_document	This is not the document we asked for.	این سندی نیست که خواسته بودیم.	دا هغه سند نه دی چې موږ غوښتی و.	new — please check the Pashto
+ops.reject.face_mismatch	The face in the photo does not match the tazkira.	چهره در عکس با تذکره مطابقت ندارد.	په انځور کې څېره له تذکرې سره سمون نه لري.	new — please check the Pashto
+ops.vehicles.colour	Colour	رنگ	رنګ	new — please check the Pashto
+ops.vehicles.reject_reason	Why is this vehicle being refused? The reason is recorded.	چرا این موتر رد می‌شود؟ دلیل ثبت می‌شود.	دا موټر ولې ردېږي؟ دلیل ثبتېږي.	new — please check the Pashto
+ops.vehicles.driver_not_approved	His own papers are not approved yet. The car can be activated, but he cannot work until they are.	اسناد خود راننده هنوز تأیید نشده است. موتر را می‌توان فعال کرد، اما تا تأیید آن‌ها نمی‌تواند کار کند.	د چلوونکي خپل اسناد لا تایید شوي نه دي. موټر فعالېدای شي، خو تر هغو چې تایید شي، کار نه شي کولای.	new — please check the Pashto
+ops.vehicles.open_driver	Review his papers	بررسی اسناد راننده	د چلوونکي اسناد وګورئ	new — please check the Pashto
+ops.vehicles.activate_confirm	{plate} will be able to carry passengers.	{plate} می‌تواند مسافر ببرد.	{plate} به وکولای شي سپرلي یوسي.	new — please check the Pashto
+ops.payouts.direction.payout	VELRO pays the driver	ولرو به راننده می‌پردازد	ولرو چلوونکي ته پیسې ورکوي	new — please check the Pashto
+ops.payouts.direction.collection	The driver pays VELRO	راننده به ولرو می‌پردازد	چلوونکی ولرو ته پیسې ورکوي	new — please check the Pashto
+ops.payouts.to_pay	To pay drivers	برای پرداخت به رانندگان	چلوونکو ته د ورکړې لپاره	new — please check the Pashto
+ops.payouts.to_collect	To collect from drivers	برای دریافت از رانندگان	له چلوونکو د راټولولو لپاره	new — please check the Pashto
+ops.payouts.start_hint	The driver sees that it is being handled.	راننده می‌بیند که به آن رسیدگی می‌شود.	چلوونکی ویني چې دا کار روان دی.	new — please check the Pashto
+ops.payouts.confirm_paid	Mark it paid only once the money has reached the driver. This cannot be undone.	فقط وقتی پرداخت‌شده ثبت کنید که پول به راننده رسیده باشد. این کار برگشت‌پذیر نیست.	یوازې هغه وخت یې ورکړل شوې په نښه کړئ چې پیسې چلوونکي ته رسېدلې وي. دا کار بېرته نه ګرځي.	new — please check the Pashto
+ops.payouts.confirm_collected	Mark it paid only once the cash is in VELRO's hands. This cannot be undone.	فقط وقتی پرداخت‌شده ثبت کنید که پول نقد به دست ولرو رسیده باشد. این کار برگشت‌پذیر نیست.	یوازې هغه وخت یې ورکړل شوې په نښه کړئ چې نغدې پیسې ولرو ته رسېدلې وي. دا کار بېرته نه ګرځي.	new — please check the Pashto
+ops.payouts.reject_payout_hint	The money goes back to his balance and he can ask again.	پول به موجودی او برمی‌گردد و می‌تواند دوباره درخواست کند.	پیسې بېرته د هغه بیلانس ته ورګرځي او بیا غوښتنه کولای شي.	new — please check the Pashto
+ops.payouts.reject_collection_hint	What he owes goes back to how it was. Say why; the driver reads it.	بدهی او به حالت قبل برمی‌گردد. دلیل را بنویسید؛ راننده آن را می‌خواند.	د هغه پور بېرته پخوانی حالت ته ګرځي. دلیل ولیکئ؛ چلوونکی یې لولي.	new — please check the Pashto
+ops.payouts.collect_all	All of it ({amount})	همه‌اش ({amount})	ټول ({amount})	new — please check the Pashto
+ops.payouts.collect_part	Part of it	بخشی از آن	یوه برخه	new — please check the Pashto
+ops.payouts.collect_hint	Record it once the cash is in your hands. It waits in the queue until someone marks it paid.	وقتی پول نقد به دستتان رسید ثبت کنید. تا کسی آن را پرداخت‌شده ثبت نکند، در صف می‌ماند.	کله چې نغدې پیسې درته ورسېږي، ثبت یې کړئ. تر هغه په کتار کې پاتې کېږي چې څوک یې ورکړل شوې په نښه کړي.	new — please check the Pashto
+ops.payouts.collect_too_much	That is more than he owes.	این بیشتر از بدهی اوست.	دا له هغه پور څخه ډېر دی.	new — please check the Pashto
+ops.payouts.open_already	{reference} is already in the queue	{reference} از قبل در صف است	{reference} له مخکې په کتار کې دی	new — please check the Pashto
+ops.finance.split_title	How the fares were split	کرایه‌ها چگونه تقسیم شد	کرایې څنګه ووېشل شوې	new — please check the Pashto
+ops.finance.method_title	How passengers paid	مسافران چگونه پرداختند	سپرليو څنګه پیسې ورکړې	new — please check the Pashto
+ops.finance.compare_title	Average per day, by period	میانگین روزانه، بر اساس دوره	د ورځې اوسط، د مودې له مخې	new — please check the Pashto
+ops.finance.take_rate	Commission rate	نرخ کمیسیون	د کمیشن کچه	new — please check the Pashto
+ops.finance.average_fare	Average fare	میانگین کرایه	منځنۍ کرایه	new — please check the Pashto
+ops.finance.empty	No completed fares in this period.	در این دوره هیچ کرایهٔ تکمیل‌شده‌ای نیست.	په دې موده کې هېڅ بشپړه شوې کرایه نشته.	new — please check the Pashto
+ops.viewer.zoom_in	Zoom in	بزرگ‌نمایی	لوی کول	new — please check the Pashto
+ops.viewer.zoom_out	Zoom out	کوچک‌نمایی	کوچني کول	new — please check the Pashto
+ops.viewer.reset	Fit to screen	اندازهٔ صفحه	د پردې په اندازه	new — please check the Pashto
+ops.viewer.rotate	Rotate	چرخاندن	څرخول	new — please check the Pashto
+ops.dispatch.window	Next {hours} h	{hours} ساعت آینده	راتلونکي {hours} ساعته	new — please check the Pashto
+ops.dispatch.offer_confirm	Trip {number} will be offered to every driver online with room ({count}). Each is notified, and the first to accept takes it.	سفر {number} به همهٔ راننده‌های آنلاین که جای کافی دارند ({count}) پیشنهاد می‌شود. به هر کدام خبر داده می‌شود و اولین کسی که قبول کند آن را می‌گیرد.	د {number} سفر وړاندیز به ټولو هغو آنلاین چلوونکو ته وشي چې ځای لري ({count}). هر یو ته خبر ورکول کېږي، او لومړنی چلوونکی چې یې ومني هغه یې اخلي.	new — please check the Pashto
+ops.trips.departing_within	Departing within {hours} h	حرکت تا {hours} ساعت	تر {hours} ساعتونو حرکت	new — please check the Pashto
+ops.trips.choose	Choose a trip to see its details and who is booked on it.	یک سفر را انتخاب کنید تا جزئیات آن و کسانی را که رزرو کرده‌اند ببینید.	یو سفر وټاکئ څو د هغه جزییات او هغه کسان ووینئ چې ریزرف یې کړی.	new — please check the Pashto
+ops.requests.choose	Choose a request to see what drivers have offered.	یک درخواست را انتخاب کنید تا پیشنهادهای رانندگان را ببینید.	یوه غوښتنه وټاکئ څو د چلوونکو وړاندیزونه ووینئ.	new — please check the Pashto
+ops.bookings.choose	Choose a booking to see its details.	یک رزرو را برای دیدن جزئیات آن انتخاب کنید.	د جزییاتو د لیدو لپاره یو ریزرف وټاکئ.	new — please check the Pashto
+ops.drivers.choose	Choose a driver to see his profile, car and documents.	یک راننده را انتخاب کنید تا مشخصات، موتر و اسناد او را ببینید.	یو چلوونکی وټاکئ څو د هغه پېژندنه، موټر او اسناد ووینئ.	new — please check the Pashto
+ops.drivers.none	No drivers match this filter.	هیچ راننده‌ای با این فیلتر مطابقت ندارد.	هیڅ چلوونکی له دې فلټر سره سمون نه لري.	new — please check the Pashto
+ops.drivers.search	Name, phone or plate	نام، شماره تلفن یا نمبر پلیت	نوم، د تلیفون شمېره یا د پلېټ شمېره	new — please check the Pashto
+ops.drivers.suspend_hint	He stops receiving trips at once. A driver with passengers aboard cannot be suspended.	او فوراً دیگر سفر دریافت نمی‌کند. راننده‌ای که مسافر در موتر دارد تعلیق شده نمی‌تواند.	هغه سمدستي نور سفرونه نه ترلاسه کوي. هغه چلوونکی چې په موټر کې یې سپاره وي نه شي ځنډول کېدای.	new — please check the Pashto
+ops.drivers.suspend_reason	Why is he being suspended? Staff read this in the audit log.	چرا تعلیق می‌شود؟ کارمندان این را در سابقه فعالیت می‌خوانند.	ولې ځنډول کېږي؟ کارکوونکي دا د فعالیت په ثبت کې لولي.	new — please check the Pashto
+ops.drivers.reinstate_hint	He can go online and receive trips again. Refused while a required document is not verified.	او دوباره می‌تواند آنلاین شود و سفر بگیرد. تا وقتی یک سند لازمی تأیید نشده باشد، رد می‌شود.	هغه بیا آنلاین کېدای شي او سفرونه ترلاسه کولی شي. تر هغه چې یو اړین سند تصدیق شوی نه وي، دا نه منل کېږي.	new — please check the Pashto
+ops.vehicles.choose	Choose a vehicle to see its details and papers.	یک موتر را انتخاب کنید تا جزئیات و اسناد آن را ببینید.	یو موټر وټاکئ څو د هغه جزییات او اسناد ووینئ.	new — please check the Pashto
+ops.vehicles.none	No vehicles match this filter.	هیچ موتری با این فیلتر مطابقت ندارد.	هیڅ موټر له دې فلټر سره سمون نه لري.	new — please check the Pashto
+ops.vehicles.search	Plate, make or driver	نمبر پلیت، کمپنی یا راننده	د پلېټ شمېره، کمپنۍ یا چلوونکی	new — please check the Pashto
+ops.support.choose	Choose a request to read it and answer.	یک درخواست را انتخاب کنید تا آن را بخوانید و جواب بدهید.	یوه غوښتنه وټاکئ څو یې ولولئ او ځواب یې ورکړئ.	new — please check the Pashto
+ops.support.working	Open and in progress	باز و در حال بررسی	پرانیستې او په کتنه کې	new — please check the Pashto
+ops.support.send_reply_confirm	Send this reply? The person who reported it will read it.	این جواب فرستاده شود؟ کسی که راپور داده آن را می‌خواند.	دا ځواب ولېږل شي؟ هغه څوک چې راپور یې ورکړی دا به ولولي.	new — please check the Pashto
+ops.support.send_note_confirm	Save this as an internal note? Only staff will see it; the person who reported it never will.	این به عنوان یادداشت داخلی ذخیره شود؟ فقط کارمندان آن را می‌بینند؛ کسی که راپور داده هرگز نمی‌بیند.	دا د دننه یادښت په توګه خوندي شي؟ یوازې کارکوونکي به یې ویني؛ هغه څوک چې راپور یې ورکړی هیڅکله یې نه ویني.	new — please check the Pashto
+ops.support.status_confirm	Move {reference} to “{status}”?	{reference} به «{status}» منتقل شود؟	{reference} «{status}» ته واړول شي؟	new — please check the Pashto
+ops.audit.choose	Choose an entry to see exactly what changed.	یک مورد را انتخاب کنید تا ببینید دقیقاً چه تغییر کرده است.	یو ثبت وټاکئ څو ووینئ چې دقیقاً څه بدل شوي دي.	new — please check the Pashto
+ops.audit.before	Before	قبل	مخکې	new — please check the Pashto
+ops.audit.after	After	بعد	وروسته	new — please check the Pashto
+ops.audit.actor_id	Account id	شناسه حساب	د حساب پېژند	new — please check the Pashto
+ops.audit.entity_id	Record id	شناسه مورد	د توکي پېژند	new — please check the Pashto
+ops.audit.origin	Source	منبع	سرچینه	new — please check the Pashto
+ops.audit.filter_to	Show only {value}	فقط {value} نشان داده شود	یوازې {value} وښیه	new — please check the Pashto
+ops.drivers.no_rating	No ratings yet	هنوز امتیاز ندارد	تر اوسه ستوری نه لري	new — please check the Pashto
+ops.dispatch.none_at_risk	No departure is at risk right now.	فعلاً هیچ حرکتی در خطر نیست.	اوس مهال هیڅ حرکت په خطر کې نه دی.	new — please check the Pashto
+ops.requests.no_offers	No driver has offered yet	هنوز هیچ راننده‌ای پیشنهاد نداده است	تر اوسه هیڅ چلوونکي وړاندیز نه دی ورکړی	new — please check the Pashto
+ops.approvals.name_placeholder	The driver's full name	نام کامل راننده	د چلوونکي بشپړ نوم	new — please check the Pashto

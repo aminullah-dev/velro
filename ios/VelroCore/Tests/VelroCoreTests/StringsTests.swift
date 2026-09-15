@@ -124,7 +124,7 @@ func realStrings(_ locale: AppLocale) -> Strings {
 
     private func usedKeys() throws -> Set<String> {
         var keys: Set<String> = []
-        for app in ["VelroPassenger", "VelroDriver"] { keys.formUnion(try usedKeys(in: app)) }
+        for app in ["VelroPassenger", "VelroDriver", "VelroOps"] { keys.formUnion(try usedKeys(in: app)) }
         return keys
     }
 
@@ -136,6 +136,12 @@ func realStrings(_ locale: AppLocale) -> Strings {
         // tuples and `titleKey` switches. Test identifiers and SF Symbol names
         // ("location.slash.fill") are taken out first.
         let namespaces = Set(localeFile(.english).keys.compactMap { $0.split(separator: ".").first.map(String.init) })
+        // Dotted literals in a locale namespace that are not keys: SF Symbols
+        // chosen in a ternary or a switch, and the server's audit action codes.
+        let notKeys: Set<String> = [
+            "location.fill", "location.slash", "location.slash.fill",
+            "auth.signed_in", "driver.approved", "driver.suspended",
+        ]
         var keys: Set<String> = ["error.network_offline", "error.internal_error"]
         while let url = walker?.nextObject() as? URL {
             guard url.pathExtension == "swift" else { continue }
@@ -143,7 +149,7 @@ func realStrings(_ locale: AppLocale) -> Strings {
                 .replacing(/(?:accessibilityIdentifier\(|identifier: |systemImage: |systemName: )"[^"]*"/, with: "")
             for match in text.matches(of: /"([a-z0-9_]+(?:\.[a-z0-9_]+)+)"/) {
                 let key = String(match.output.1)
-                if let first = key.split(separator: ".").first, namespaces.contains(String(first)) {
+                if let first = key.split(separator: ".").first, namespaces.contains(String(first)), !notKeys.contains(key) {
                     keys.insert(key)
                 }
             }
