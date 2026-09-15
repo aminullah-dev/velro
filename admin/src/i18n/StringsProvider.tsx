@@ -194,6 +194,23 @@ export function StringsProvider({ children }: { children: ReactNode }) {
     [dateTime, formatDate],
   );
 
+  const dayMonth = useCallback(
+    (iso: string) => {
+      // Same reading of a date-only string as `date` above, and the same
+      // calendar as `formatDate`: a bar labelled "۲۳ سنبله" must be the day the
+      // driver's app calls ۲۳ سنبله. Only the year is dropped.
+      const parts = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+      if (!parts) return { day: iso, month: "" };
+      const [, year = "0", month = "1", day = "1"] = parts;
+      if (locale === "en") {
+        return { day: day.replace(/^0/, ""), month: t(`common.month.${Number(month)}`) };
+      }
+      const shamsi = shamsiFromParts(Number(year), Number(month), Number(day));
+      return { day: num(shamsi.day), month: t(`common.shamsi_month.${shamsi.month}`) };
+    },
+    [locale, num, t],
+  );
+
   const setLocale = useCallback((tag: LocaleTag) => {
     localStorage.setItem(STORAGE_KEY, tag);
     setLocaleState(tag);
@@ -201,9 +218,9 @@ export function StringsProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<StringsContext>(
     () => ({
-      locale, rtl, setLocale, t, forErrorCode, num, money, dateTime, date, ready,
+      locale, rtl, setLocale, t, forErrorCode, num, money, dateTime, date, dayMonth, ready,
     }),
-    [locale, rtl, setLocale, t, forErrorCode, num, money, dateTime, date, ready],
+    [locale, rtl, setLocale, t, forErrorCode, num, money, dateTime, date, dayMonth, ready],
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

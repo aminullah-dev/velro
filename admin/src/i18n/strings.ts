@@ -31,6 +31,11 @@ export interface StringsContext {
   dateTime: (iso: string) => string;
   /** A calendar day with no time: a settlement period, an expiry, a birthday. */
   date: (iso: string) => string;
+  /**
+   * A calendar day as its two short parts, in the reader's calendar -- for a
+   * chart's day axis, where they stack and the year would only be noise.
+   */
+  dayMonth: (iso: string) => { day: string; month: string };
   ready: boolean;
 }
 

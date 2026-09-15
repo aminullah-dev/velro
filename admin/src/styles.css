@@ -425,3 +425,165 @@ button.small { min-height: 32px; padding: var(--s-1) var(--s-3); font-size: 13px
   border: 1px solid var(--border);
   border-radius: var(--r-md);
 }
+
+/* -- operations centre: charts, live map, app versions ----------------- */
+
+:root {
+  /* Categorical slots 1 and 2 of the data-viz palette, run through its
+     validator as a pair against this panel's own surfaces (#ffffff, #13181f):
+     inside the lightness band, clear of each other under protanopia and
+     deuteranopia, above 3:1 on the card. Order matters -- slot 1 is always
+     the first series. */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  /* One step off the surface: there to be read against, not looked at. */
+  --viz-grid: var(--n-200);
+  --viz-axis: var(--n-300);
+  --viz-track: var(--n-100);
+
+  /* The dots sit on the vector map, which is light in both schemes, so they
+     have no dark values. Blue and green are validated against the map's own
+     ground (#f4efe6); grey for an old fix is a status, not a category, and
+     the legend names it. */
+  --map-ground: #f4efe6;
+  --map-trip: #2a78d6;
+  --map-online: #127954;
+  --map-stale: #667085;
+  --map-ink: #101828;
+  --map-halo: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --viz-1: #3987e5;
+    --viz-2: #d95926;
+    --viz-grid: #232a34;
+    --viz-axis: #36404d;
+    --viz-track: #232a34;
+  }
+}
+
+.section-note { font-size: 13px; margin: calc(var(--s-1) * -1) 0 var(--s-3); }
+.card-title { margin: 0; font-size: 15px; font-weight: 600; }
+
+/* The live map. */
+.live-map { display: flex; flex-direction: column; gap: var(--s-3); }
+.live-map-frame {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  /* The map's own ground, so the frame does not flash the dark surface
+     before the first tiles arrive. */
+  background: var(--map-ground);
+}
+.live-map-canvas { height: 420px; }
+.live-map-frame .state { background: var(--surface); }
+
+.map-legend {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--s-2) var(--s-5); font-size: 13px;
+}
+.map-legend-item { display: inline-flex; align-items: center; gap: var(--s-2); }
+.map-meta { font-size: 12px; }
+.map-note { margin: 0; font-size: 14px; }
+.map-dot {
+  display: inline-block; flex: none; width: 12px; height: 12px; border-radius: 50%;
+  box-sizing: border-box;
+}
+.map-dot.trip   { background: var(--map-trip); }
+.map-dot.online { background: var(--map-online); }
+.map-dot.stale  { background: var(--map-stale); }
+.map-dot.test   { background: transparent; border: 3px solid var(--text-muted); }
+
+.map-subhead { margin: 0 0 var(--s-2); font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.map-nofix {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: var(--s-2); font-size: 14px;
+}
+.map-nofix li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); }
+.map-nofix-name { font-weight: 500; }
+
+/* MapLibre's popup, in the panel's colours. The map container is always
+   left to right, so the close button is always on the physical right. */
+.live-map .maplibregl-popup-content {
+  background: var(--surface); color: var(--text);
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+  padding-inline-end: var(--s-8);
+  font: inherit; font-size: 13px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+}
+.live-map .maplibregl-popup-close-button { color: var(--text-muted); font-size: 18px; padding: 0 var(--s-2); }
+.live-map .maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.live-map .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.live-map .maplibregl-popup-anchor-top-right .maplibregl-popup-tip { border-bottom-color: var(--surface); }
+.live-map .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.live-map .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.live-map .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip { border-top-color: var(--surface); }
+.live-map .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--surface); }
+.live-map .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--surface); }
+/* "Hold Ctrl and scroll" in Dari is a right-to-left sentence with a Latin
+   word in it; inside the left-to-right map it would come out in pieces. */
+html[dir="rtl"] .live-map .maplibregl-cooperative-gesture-screen { direction: rtl; }
+
+.car-popup { display: flex; flex-direction: column; gap: 2px; min-width: 180px; }
+.car-popup-title { font-weight: 600; font-size: 14px; }
+.car-popup-warn { color: var(--amber-600); font-weight: 500; }
+
+/* Charts. */
+.viz { margin: 0; display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.viz-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3); }
+.viz-legend { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-4); font-size: 12px; color: var(--text-muted); }
+.viz-legend-item { display: inline-flex; align-items: center; gap: var(--s-2); }
+/* Legend swatches mirror the mark -- a small bar -- and tooltip keys are a
+   short line: at tooltip density a filled box is ink doing a label's job. */
+.viz-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.viz-key { display: inline-block; width: 12px; height: 2px; border-radius: 1px; }
+.viz-swatch.s0, .viz-key.s0 { background: var(--viz-1); }
+.viz-swatch.s1, .viz-key.s1 { background: var(--viz-2); }
+
+/* Tall enough for the axis labels under the plot, so the card never grows a
+   scrollbar of its own. */
+.viz-frame { position: relative; min-height: 216px; }
+.viz-frame svg { display: block; overflow: visible; }
+.viz-grid { stroke: var(--viz-grid); stroke-width: 1; }
+.viz-axis { stroke: var(--viz-axis); stroke-width: 1; }
+.viz-tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.viz-day { fill: var(--text-muted); font-size: 11px; }
+.viz-day.latest { fill: var(--text); font-weight: 600; }
+.viz-label { fill: var(--text); font-size: 11px; font-weight: 600; }
+.viz-empty { fill: var(--text-muted); font-size: 13px; }
+.viz-bar { transition: opacity 120ms; }
+.viz-bar.s0 { fill: var(--viz-1); }
+.viz-bar.s1 { fill: var(--viz-2); }
+.viz-bar.on { opacity: 0.75; }
+.viz-hit { fill: transparent; outline: none; }
+.viz-hit:focus-visible { stroke: var(--accent); stroke-width: 2; }
+
+.viz-tip {
+  position: absolute; z-index: 2; pointer-events: none;
+  transform: translate(-50%, calc(-100% - 8px));
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: var(--s-2) var(--s-3);
+  font-size: 12px; white-space: nowrap;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.14);
+}
+/* The value leads: the reader already knows the series, and wants the number. */
+.viz-tip-value { font-size: 14px; font-weight: 650; }
+.viz-tip-series { display: flex; align-items: center; gap: var(--s-2); color: var(--text-muted); }
+.viz-tip-date { color: var(--text-muted); }
+
+/* App versions. Side by side only where each table fits whole; below that
+   they stack, rather than each growing a scrollbar that hides its status. */
+.grid.apps { grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr)); }
+.app-block { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
+.app-latest { font-size: 13px; }
+.share { display: inline-flex; align-items: center; gap: var(--s-2); }
+.share-meter {
+  display: inline-block; width: 64px; height: 6px; overflow: hidden;
+  border-radius: var(--r-pill); background: var(--viz-track);
+}
+.share-meter > span { display: block; height: 100%; background: var(--viz-1); }
+tbody tr.is-latest td { background: var(--green-50); }
+@media (prefers-color-scheme: dark) { tbody tr.is-latest td { background: #10261d; } }

@@ -1,10 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { lazy, Suspense } from "react";
+import { api, ApiError } from "../api/client";
+import type { AppsReport, LiveMapSnapshot, WeekHistory } from "../api/operations";
+import { AppVersions } from "../components/AppVersions";
 import { gate } from "../components/gate";
 import {
-  ActionStat, MoneyStat, PageHeader, Section, Stat,
+  ActionStat, ErrorBanner, Loading, MoneyStat, PageHeader, Section, Stat,
 } from "../components/ui";
+import { WeekCharts } from "../components/WeekCharts";
 import { useStrings } from "../i18n/strings";
+
+// MapLibre is most of this panel's weight -- more than everything else put
+// together. Fetched with the map section rather than with the panel, so a
+// slow connection gets the sign-in screen and the counters first, and every
+// other page never downloads it at all.
+const LiveMap = lazy(() =>
+  import("../components/LiveMap").then((module) => ({ default: module.LiveMap })),
+);
 
 interface Snapshot {
   generated_at: string;
@@ -35,6 +47,29 @@ interface Snapshot {
     stations_without_routes: number; routes_without_upcoming_trips: number;
   };
   people: { passengers: number; drivers: number };
+  // Optional: a server older than this panel sends neither, and the page
+  // simply goes without those two sections.
+  history?: WeekHistory;
+  apps?: AppsReport;
+}
+
+/** A server older than this panel, which has no live map to give. */
+function isMissing(error: unknown): boolean {
+  return error instanceof ApiError && error.httpStatus === 404;
+}
+
+/**
+ * A staff role the map is not for. The dashboard is open to every staff role
+ * but the map is operations-only (names, phones and live positions), so a
+ * finance manager or support agent gets 403 here -- an answer, not a fault:
+ * asking again every half minute will not change it.
+ */
+function isForbidden(error: unknown): boolean {
+  return error instanceof ApiError && error.httpStatus === 403;
+}
+
+function isSettled(error: unknown): boolean {
+  return isMissing(error) || isForbidden(error);
 }
 
 /**
@@ -46,17 +81,30 @@ interface Snapshot {
  * was counted from -- the server counts and the list filters with the same
  * clauses, so the card is never a different number from the page it opens.
  *
- * No charts. A count that has to be acted on in the next twenty minutes is
- * better read as a count; a trend is a question for the finance page.
+ * Counts stay counts: a thing to act on in the next twenty minutes is better
+ * read as a number. The map beside them answers "where", and the week under
+ * today answers "is this normal", which no single day's count can -- both
+ * are context for the numbers, never a replacement for them.
  */
 export function DashboardPage() {
-  const { t, num, dateTime } = useStrings();
+  const { t, num, dateTime, forErrorCode } = useStrings();
   const snapshotQuery = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => api.get<Snapshot>("/admin/dashboard"),
     // Left open on a screen all day. Half a minute is often enough to notice
     // a departure with nobody driving it before the passenger does.
     refetchInterval: 30_000,
+  });
+  // Its own query, so a map that fails leaves the counters standing, and the
+  // same half minute, so the dots and the "on a trip" card never disagree for
+  // long.
+  const liveQuery = useQuery({
+    queryKey: ["dashboard", "live-map"],
+    queryFn: () => api.get<LiveMapSnapshot>("/admin/live-map"),
+    refetchInterval: (query) => (isSettled(query.state.error) ? false : 30_000),
+    // Asking an older server three more times will not grow it a live map,
+    // and asking again will not grant a role.
+    retry: (failures, error) => !isSettled(error) && failures < 3,
   });
   const { data } = snapshotQuery;
 
@@ -89,6 +137,28 @@ export function DashboardPage() {
           <ActionStat labelKey="admin.stat.moving" value={data.live.moving} to="/trips?active_only=1" />
           <ActionStat labelKey="admin.stat.departing_soon" value={data.live.departing_soon} to="/trips?departing_within_hours=2" />
         </div>
+      </Section>
+
+      <Section titleKey="admin.ops.live_map">
+        {isMissing(liveQuery.error) ? (
+          <p className="muted">{t("admin.map.not_supported")}</p>
+        ) : isForbidden(liveQuery.error) ? (
+          <p className="muted">{forErrorCode("PERMISSION_DENIED")}</p>
+        ) : liveQuery.data ? (
+          <>
+            {/* Positions from the last good answer are still worth seeing,
+                provided the screen says the answer is old: the banner does,
+                and so does the time under the map. */}
+            {(liveQuery.error || liveQuery.fetchStatus === "paused") && (
+              <ErrorBanner error={liveQuery.error ?? liveQuery.failureReason} />
+            )}
+            <Suspense fallback={<Loading />}>
+              <LiveMap snapshot={liveQuery.data} />
+            </Suspense>
+          </>
+        ) : (
+          gate(liveQuery)
+        )}
       </Section>
 
       <Section titleKey="admin.ops.attention">
@@ -137,6 +207,12 @@ export function DashboardPage() {
         </div>
       </Section>
 
+      {data.history && data.history.days.length > 0 && (
+        <Section titleKey="admin.ops.week">
+          <WeekCharts history={data.history} />
+        </Section>
+      )}
+
       <Section titleKey="admin.nav.drivers">
         <div className="grid stats">
           <ActionStat labelKey="admin.stat.drivers_online" value={data.drivers.online} to="/drivers" />
@@ -159,6 +235,12 @@ export function DashboardPage() {
           <ActionStat labelKey="admin.stat.settlements_open" value={data.finance.settlements_open} to="/settlements" attention />
         </div>
       </Section>
+
+      {data.apps && (
+        <Section titleKey="admin.ops.app_versions">
+          <AppVersions apps={data.apps} />
+        </Section>
+      )}
 
       <Section titleKey="admin.ops.network">
         <div className="grid stats">

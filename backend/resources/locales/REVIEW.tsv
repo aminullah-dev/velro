@@ -837,6 +837,56 @@ admin.ops.money	Money today	پول امروز	د نن پیسې
 admin.ops.network	The network	شبکه	شبکه	
 admin.ops.updated	Updated {time} · refreshes every half minute	به‌روز شده {time} · هر نیم دقیقه تازه می‌شود	تازه شوی {time} · هر نیمه دقیقه تازه کېږي	
 admin.ops.open	Open	باز کردن	پرانیستل	
+admin.ops.live_map	Live map	نقشهٔ زنده	ژوندۍ نقشه	new — please check the Pashto
+admin.ops.week	The last seven days	هفت روز گذشته	تېرې اوه ورځې	new — please check the Pashto
+admin.ops.app_versions	App versions	نسخه‌های اپ	د اپ نسخې	new — please check the Pashto
+admin.map.on_trip	On a trip	در سفر	په سفر کې	new — please check the Pashto
+admin.map.online	Online, waiting for a trip	آنلاین، منتظر سفر	آنلاین، د سفر په تمه	new — please check the Pashto
+admin.map.stale	Location out of date	موقعیت به‌روز نیست	موقعیت تازه نه دی	new — please check the Pashto
+admin.map.test	Test	آزمایشی	ازمېښتي	new — please check the Pashto
+admin.map.test_legend	Test driver	رانندهٔ آزمایشی	ازمېښتي چلوونکی	new — please check the Pashto
+admin.map.as_of	Positions as of {time}	موقعیت‌ها تا {time}	موقعیتونه تر {time} پورې	new — please check the Pashto
+admin.map.none_online	No driver is online right now.	فعلاً هیچ راننده‌ای آنلاین نیست.	اوس مهال هېڅ چلوونکی آنلاین نه دی.	new — please check the Pashto
+admin.map.no_fix_title	Online, but no location has arrived yet	آنلاین، اما هنوز موقعیتی نرسیده است	آنلاین، خو تر اوسه یې موقعیت نه دی رارسېدلی	new — please check the Pashto
+admin.map.outside_title	Online, last seen far outside the service area	آنلاین، آخرین موقعیت بیرون از ساحهٔ خدمات	آنلاین، وروستی موقعیت یې د خدمت له سیمې ډېر لرې دی	new — please check the Pashto
+admin.map.unavailable	The map could not be loaded. The counts and the list below are still current.	نقشه باز نشد. شمارش‌ها و فهرست پایین هنوز به‌روز است.	نقشه پرانیستل نه شوه. لاندې شمېرې او لړلیک لا هم تازه دي.	new — please check the Pashto
+admin.map.not_supported	This server does not provide the live map yet.	این سرور هنوز نقشهٔ زنده را ارائه نمی‌کند.	دا سرور تر اوسه ژوندۍ نقشه نه وړاندې کوي.	new — please check the Pashto
+admin.map.unnamed	Driver with no name on record	راننده بدون نام ثبت‌شده	چلوونکی چې نوم یې نه دی ثبت شوی	new — please check the Pashto
+admin.map.trip	Trip {number}	سفر {number}	سفر {number}	new — please check the Pashto
+admin.map.route	{origin} → {destination}	{origin} ← {destination}	{origin} ← {destination}	new — please check the Pashto
+admin.map.last_fix	Last location {time}	آخرین موقعیت {time}	وروستی موقعیت {time}	new — please check the Pashto
+admin.map.stale_warning	Out of date: the phone has not sent a location for a while.	به‌روز نیست: تیلفون مدتی است موقعیت نفرستاده است.	تازه نه دی: تلیفون له څه مودې راهیسې موقعیت نه دی لېږلی.	new — please check the Pashto
+admin.map.zoom_in	Zoom in	بزرگ‌نمایی	لوی کول	new — please check the Pashto
+admin.map.zoom_out	Zoom out	کوچک‌نمایی	کوچني کول	new — please check the Pashto
+admin.map.attribution	Map sources	منابع نقشه	د نقشې سرچینې	new — please check the Pashto
+admin.map.gesture_windows	Hold Ctrl and scroll to zoom the map	برای بزرگ‌نمایی نقشه، Ctrl را نگه دارید و اسکرول کنید	د نقشې د لویولو لپاره Ctrl ونیسئ او سکرول وکړئ	new — please check the Pashto
+admin.map.gesture_mac	Hold ⌘ and scroll to zoom the map	برای بزرگ‌نمایی نقشه، ⌘ را نگه دارید و اسکرول کنید	د نقشې د لویولو لپاره ⌘ ونیسئ او سکرول وکړئ	new — please check the Pashto
+admin.map.gesture_touch	Use two fingers to move the map	برای حرکت دادن نقشه از دو انگشت استفاده کنید	د نقشې د خوځولو لپاره دوه ګوتې وکاروئ	new — please check the Pashto
+admin.week.trips_title	Bookings and completed trips per day	رزروها و سفرهای تکمیل‌شده در هر روز	په هره ورځ ریزرفونه او بشپړ شوي سفرونه	new — please check the Pashto
+admin.week.fares_title	Fares per day, in {currency}	کرایه‌ها در هر روز، به {currency}	په هره ورځ کرایې، په {currency}	new — please check the Pashto
+admin.week.bookings	Bookings	رزروها	ریزرفونه	new — please check the Pashto
+admin.week.completed	Completed trips	سفرهای تکمیل‌شده	بشپړ شوي سفرونه	new — please check the Pashto
+admin.week.fares	Fares	کرایه‌ها	کرایې	new — please check the Pashto
+admin.week.day	Day	روز	ورځ	new — please check the Pashto
+admin.week.show_table	Show as a table	نمایش به شکل جدول	د جدول په بڼه یې وښایاست	new — please check the Pashto
+admin.week.show_chart	Show as a chart	نمایش به شکل نمودار	د چارټ په بڼه یې وښایاست	new — please check the Pashto
+admin.week.empty	Nothing in the last seven days.	در هفت روز گذشته چیزی ثبت نشده است.	په تېرو اوو ورځو کې هېڅ شی نه دی ثبت شوی.	new — please check the Pashto
+admin.week.bar_label	{series}: {value}, {date}	{series}: {value}، {date}	{series}: {value}، {date}	new — please check the Pashto
+admin.apps.note	Anonymous counts of app launches over the last {days} days, sent by Android apps that report their version (from the next release on). They count launches, not people.	شمار بی‌نام باز شدن اپ در {days} روز گذشته، از اپ‌های اندروید که نسخهٔ خود را گزارش می‌دهند (از نسخهٔ بعدی به بعد). این شمار دفعات باز شدن است، نه تعداد افراد.	په تېرو {days} ورځو کې د اپ د پرانیستلو بې نومه شمېر، له هغو اندرویډ اپونو څخه چې د خپلې نسخې راپور ورکوي (له راتلونکې نسخې څخه پیل). دا د پرانیستلو شمېر دی، نه د خلکو.	new — please check the Pashto
+admin.apps.passenger	Passenger app	اپ مسافر	د مسافر اپ	new — please check the Pashto
+admin.apps.driver	Driver app	اپ راننده	د چلوونکي اپ	new — please check the Pashto
+admin.apps.latest	Latest published:	آخرین نسخهٔ منتشرشده:	وروستۍ خپره شوې نسخه:	new — please check the Pashto
+admin.apps.latest_none	No published version on record.	هیچ نسخهٔ منتشرشده‌ای ثبت نشده است.	هېڅ خپره شوې نسخه نه ده ثبت شوې.	new — please check the Pashto
+admin.apps.version	Version	نسخه	نسخه	new — please check the Pashto
+admin.apps.platform	Platform	پلتفورم	پلېټفارم	new — please check the Pashto
+admin.apps.launches	Launches	دفعات باز شدن	د پرانیستلو شمېر	new — please check the Pashto
+admin.apps.share	Share of launches	سهم	برخه	new — please check the Pashto
+admin.apps.share_value	{value}%	{value}٪	{value}٪	new — please check the Pashto
+admin.apps.state_latest	Latest	آخرین	وروستۍ	new — please check the Pashto
+admin.apps.state_outdated	Outdated	قدیمی	زړه	new — please check the Pashto
+admin.apps.none	No reports yet.	هنوز گزارشی نرسیده است.	تر اوسه هېڅ راپور نه دی رارسېدلی.	new — please check the Pashto
+admin.apps.platform_android	Android	اندروید	اندرویډ	new — please check the Pashto
+admin.apps.platform_ios	iOS	آی‌اواس	آی او اس	new — please check the Pashto
 admin.stat.on_the_way	On the way to pick up	در راه به ایستگاه	د ایستګاه په لور	
 admin.stat.at_the_station	At the station	در ایستگاه	په ایستګاه کې	
 admin.stat.moving	In transit	در حال سفر	په سفر کې	
