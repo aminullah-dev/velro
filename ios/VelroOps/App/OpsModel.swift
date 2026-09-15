@@ -57,6 +57,14 @@ final class OpsModel {
         navigator.reset(for: StaffAccess(roles: roles))
         // Asked live, so a role changed mid-session counts from then on.
         navigator.canOpen = { [weak self] route in self?.can(route) ?? false }
+        #if DEBUG
+        // Screenshots of each screen without tapping: a development build
+        // opens the screen its launch arguments name (-VelroOpsRoute dashboard).
+        if let raw = UserDefaults.standard.string(forKey: "VelroOpsRoute"),
+           let route = Route(rawValue: raw), can(route) {
+            navigator.open(route)
+        }
+        #endif
         NotificationCenter.default.addObserver(forName: .velroOpsSessionEnded, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.endSession(reason: nil) }
         }
