@@ -28,14 +28,17 @@ from application.use_cases.generate_routes import (
 )
 from application.use_cases.record_name import RecordName, RecordNameCommand
 from domain.enums import (
+    BookingStatus,
     Locale,
+    TicketStatus,
     TripStatus,
     UserStatus,
     VehicleStatus,
 )
 from domain.geography import PLACED_SOURCE_NOTE, SEED_SOURCE_NOTE
 from domain.identity import DRIVER as DRIVER_ROLE
-from domain.identity import PhoneNumber
+from domain.identity import PASSENGER as PASSENGER_ROLE
+from domain.identity import STAFF_ROLES, PhoneNumber
 from domain.identity import User as DomainUser
 from domain.search import SearchTerm, normalise_business_number
 from infrastructure.db.models.geography import (
@@ -44,12 +47,12 @@ from infrastructure.db.models.geography import (
     StationRow,
     VillageRow,
 )
-from infrastructure.db.models.identity import UserRow
+from infrastructure.db.models.identity import RoleRow, UserRoleRow, UserRow
 from infrastructure.db.models.money import CommissionRow, PaymentRow
-from infrastructure.db.models.ops import AuditLogRow, SettingRow
+from infrastructure.db.models.ops import AuditLogRow, SettingRow, SupportTicketRow
 from infrastructure.db.models.routing import FareRuleRow, RouteRow
 from infrastructure.db.models.supply import DriverRow, VehicleRow
-from infrastructure.db.models.trips import BookingRow, TripRow
+from infrastructure.db.models.trips import BookingRow, RideRequestRow, TripRow
 from shared import error_codes
 from shared.errors import ConflictError, NotFoundError, ValidationError
 from ui.api import deps, opscentre
@@ -1085,19 +1088,62 @@ def _user_admin_out(row, roles: list[str]) -> dict:
     ).model_dump()
 
 
+#: What the role filter's three words mean. STAFF is every staff role the
+#: gates know (domain.identity.STAFF_ROLES, what require_staff admits), so a
+#: finance manager is staff here exactly as he is everywhere else.
+_ROLE_FILTERS: dict[str, frozenset[str]] = {
+    PASSENGER_ROLE: frozenset({PASSENGER_ROLE}),
+    DRIVER_ROLE: frozenset({DRIVER_ROLE}),
+    "STAFF": STAFF_ROLES,
+}
+
+
+def _roles_by_user(session: Session, user_ids: list[str]) -> dict[str, list[str]]:
+    """Every listed account's roles in one query rather than one per row.
+
+    Sorted, so the same account reads the same on the list and on its own
+    page. The grant and the role must both be live -- roles_of's rule.
+    """
+    found: dict[str, list[str]] = {user_id: [] for user_id in user_ids}
+    if not user_ids:
+        return found
+    for user_id, code in session.execute(
+        select(UserRoleRow.user_id, RoleRow.code)
+        .join(RoleRow, RoleRow.id == UserRoleRow.role_id)
+        .where(
+            UserRoleRow.user_id.in_(user_ids),
+            UserRoleRow.deleted_at.is_(None),
+            RoleRow.deleted_at.is_(None),
+        )
+        .order_by(RoleRow.code)
+    ).all():
+        found[user_id].append(code)
+    return found
+
+
 @router.get("/users")
 def users_list(
     actor: Annotated[deps.Actor, Depends(deps.require_operations)],
     session: deps.SessionDep,
     phone: Annotated[str | None, Query(max_length=20)] = None,
     status: Annotated[str | None, Query(pattern=r"^(ACTIVE|SUSPENDED|DEACTIVATED)$")] = None,
+    #: Accounts holding this role -- among others, possibly: a driver is a
+    #: passenger too. STAFF is any staff role.
+    role: Annotated[str | None, Query(pattern=r"^(PASSENGER|DRIVER|STAFF)$")] = None,
+    #: A name or a phone number, however it was typed: 0700…, +93700…, or in
+    #: Persian digits. The drivers list's search, see domain/search.py.
+    search: Annotated[str | None, Query(max_length=80)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
     """Find an account, usually by the phone number in a driver's complaint.
 
     A contains-match on digits, because the complaint arrives as 0793..., the
     row holds +93793..., and the operator should not have to know which form
     the database speaks.
+
+    meta.count is the length of this page, as it always was; meta.total is
+    every matching account, which is what a pager needs.
     """
     stmt = select(UserRow).where(UserRow.deleted_at.is_(None))
     if phone:
@@ -1105,13 +1151,129 @@ def users_list(
         stmt = stmt.where(UserRow.phone.contains(digits.lstrip("0") or digits))
     if status:
         stmt = stmt.where(UserRow.status == status)
+    if role:
+        stmt = stmt.where(opscentre.holds_role_clause(_ROLE_FILTERS[role]))
+    if (term := SearchTerm.parse(search)) is not None:
+        stmt = stmt.where(_person_matches(term))
+
+    total = session.scalar(select(func.count()).select_from(stmt.subquery()))
+    # The id breaks ties: sign-ups in one instant must not straddle a page
+    # boundary and show one account twice and another never.
     rows = session.scalars(
-        stmt.order_by(UserRow.created_at.desc()).limit(limit)
+        stmt.order_by(UserRow.created_at.desc(), UserRow.id).limit(limit).offset(offset)
     ).all()
-    users_repo = deps.users(session)
+    roles = _roles_by_user(session, [row.id for row in rows])
     return ok(
-        [_user_admin_out(row, users_repo.roles_of(row.id)) for row in rows],
-        meta={"count": len(rows)},
+        [_user_admin_out(row, roles[row.id]) for row in rows],
+        meta={
+            "count": len(rows),
+            "total": int(total or 0),
+            "limit": limit,
+            "offset": offset,
+        },
+    )
+
+
+class PassengerHistoryOut(Schema):
+    bookings_total: int
+    bookings_completed: int
+    bookings_cancelled: int
+    no_shows: int
+    #: Seats on every booking that was not cancelled -- a no-show held his.
+    seats_booked: int
+    #: Fares of completed bookings, as quoted when booked (never recomputed).
+    spent_minor: int
+    currency: str
+    first_booking_at: datetime | None
+    last_booking_at: datetime | None
+    ride_requests_total: int
+    #: Open and not yet run out -- the dashboard's definition.
+    open_ride_requests: int
+    tickets_total: int
+    #: OPEN or IN_PROGRESS -- the support queue's definition.
+    tickets_open: int
+
+
+_OPEN_TICKET_STATUSES = (TicketStatus.OPEN.value, TicketStatus.IN_PROGRESS.value)
+
+
+@router.get("/users/{user_id}")
+def user_detail(
+    user_id: str,
+    actor: Annotated[deps.Actor, Depends(deps.require_operations)],
+    session: deps.SessionDep,
+) -> dict:
+    """One account, and what its owner has done with VELRO as a passenger.
+
+    Three aggregate queries, one per table, whatever the history's length.
+    An unknown or deleted account is the suspend switch's own not-found.
+    """
+    row = deps.users(session).get(user_id)
+    now = deps.clock().now()
+
+    b = BookingRow
+    booked = session.execute(
+        select(
+            func.count(),
+            func.count().filter(b.status == BookingStatus.COMPLETED.value),
+            func.count().filter(b.status == BookingStatus.CANCELLED.value),
+            func.count().filter(b.status == BookingStatus.NO_SHOW.value),
+            func.coalesce(
+                func.sum(b.seat_count).filter(b.status != BookingStatus.CANCELLED.value), 0
+            ),
+            func.coalesce(
+                func.sum(b.fare_total_minor).filter(
+                    b.status == BookingStatus.COMPLETED.value
+                ),
+                0,
+            ),
+            func.min(b.created_at),
+            func.max(b.created_at),
+        ).where(b.passenger_id == user_id, b.deleted_at.is_(None))
+    ).one()
+    asked = session.execute(
+        select(
+            func.count(),
+            func.count().filter(*opscentre.open_request_clause(now)),
+        ).where(
+            RideRequestRow.passenger_id == user_id, RideRequestRow.deleted_at.is_(None)
+        )
+    ).one()
+    reported = session.execute(
+        select(
+            func.count(),
+            func.count().filter(SupportTicketRow.status.in_(_OPEN_TICKET_STATUSES)),
+        ).where(
+            SupportTicketRow.user_id == user_id, SupportTicketRow.deleted_at.is_(None)
+        )
+    ).one()
+    driver_id = session.scalar(
+        select(DriverRow.id)
+        .where(DriverRow.user_id == user_id, DriverRow.deleted_at.is_(None))
+        .order_by(DriverRow.created_at)
+        .limit(1)
+    )
+
+    return ok(
+        {
+            "user": _user_admin_out(row, _roles_by_user(session, [row.id])[row.id]),
+            "driver_id": driver_id,
+            "passenger": PassengerHistoryOut(
+                bookings_total=int(booked[0]),
+                bookings_completed=int(booked[1]),
+                bookings_cancelled=int(booked[2]),
+                no_shows=int(booked[3]),
+                seats_booked=int(booked[4]),
+                spent_minor=int(booked[5]),
+                currency="AFN",
+                first_booking_at=booked[6],
+                last_booking_at=booked[7],
+                ride_requests_total=int(asked[0]),
+                open_ride_requests=int(asked[1]),
+                tickets_total=int(reported[0]),
+                tickets_open=int(reported[1]),
+            ).model_dump(),
+        }
     )
 
 
@@ -1374,6 +1536,8 @@ class BookingAdminOut(Schema):
     #: by number.
     trip_id: str
     trip_number: str
+    #: So a row can open its passenger's page without a lookup by phone.
+    passenger_id: str
     passenger_name: str | None
     passenger_phone: str | None
     status: str
@@ -1391,6 +1555,8 @@ def bookings_list(
     session: deps.SessionDep,
     status: str | None = None,
     trip_id: str | None = None,
+    #: One passenger's bookings -- the history on his account page.
+    passenger_id: Annotated[str | None, Query(max_length=36)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
@@ -1406,6 +1572,9 @@ def bookings_list(
         stmt = stmt.where(BookingRow.status == status)
     if trip_id:
         stmt = stmt.where(BookingRow.trip_id == trip_id)
+    if passenger_id:
+        # ix_bookings_passenger_id_created_at is the index this reads.
+        stmt = stmt.where(BookingRow.passenger_id == passenger_id)
 
     total = session.scalar(select(func.count()).select_from(stmt.subquery()))
     rows = session.execute(stmt.limit(limit).offset(offset)).all()
@@ -1413,7 +1582,8 @@ def bookings_list(
         [
             BookingAdminOut(
                 id=b.id, number=b.number, trip_id=b.trip_id, trip_number=trip_number,
-                passenger_name=name, passenger_phone=phone, status=b.status,
+                passenger_id=b.passenger_id, passenger_name=name, passenger_phone=phone,
+                status=b.status,
                 seat_count=b.seat_count, fare_total_minor=b.fare_total_minor,
                 fare_currency=b.fare_total_currency, payment_method=b.payment_method,
                 payment_status=payment_status, created_at=b.created_at,

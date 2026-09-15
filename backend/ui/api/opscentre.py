@@ -30,6 +30,7 @@ from sqlalchemy import Date, case, cast, exists, func, or_, select
 from sqlalchemy.orm import Session
 
 from domain.enums import (
+    BookingStatus,
     DocumentStatus,
     DriverApprovalStatus,
     DriverAvailability,
@@ -40,6 +41,7 @@ from domain.enums import (
     SettlementStatus,
     TicketStatus,
     TripStatus,
+    UserStatus,
     VehicleStatus,
 )
 from domain.identity import PASSENGER
@@ -110,6 +112,10 @@ APP_VERSION_WINDOW_DAYS = 7
 #: fed by an unauthenticated endpoint; a script inventing version codes must
 #: not be able to push the real builds off the panel or grow its answer.
 APP_VERSIONS_SHOWN = 40
+#: The passenger card's two windows, in business days ending today. The
+#: week is the history strip's week, so its bars add up to new_7d.
+PASSENGER_WEEK_DAYS = 7
+PASSENGER_MONTH_DAYS = 30
 
 
 def business_day(now: datetime) -> tuple[datetime, datetime]:
@@ -169,6 +175,34 @@ def stale_gps_clause(now: datetime, stale_after: timedelta):
     ]
 
 
+def open_request_clause(now: datetime) -> tuple[Any, ...]:
+    """A ride request a driver can still answer: open, and not yet run out."""
+    return (
+        RideRequestRow.status == RideRequestStatus.OPEN.value,
+        RideRequestRow.expires_at > now,
+    )
+
+
+def holds_role_clause(codes: frozenset[str] | set[str]) -> Any:
+    """A user who holds any of these roles now. Correlates on UserRow.id.
+
+    A grant is a row that can be revoked, and so is a role; both are read,
+    the same rule UserRepository.roles_of applies. A user can hold several
+    roles -- every sign-up is a passenger, and a driver stays one -- so this
+    asks "has this role", never "is only this".
+    """
+    return exists(
+        select(UserRoleRow.id)
+        .join(RoleRow, RoleRow.id == UserRoleRow.role_id)
+        .where(
+            UserRoleRow.user_id == UserRow.id,
+            UserRoleRow.deleted_at.is_(None),
+            RoleRow.deleted_at.is_(None),
+            RoleRow.code.in_(sorted(codes)),
+        )
+    )
+
+
 # -- the snapshot -----------------------------------------------------------
 
 def snapshot(session: Session, settings: Any, now: datetime) -> dict[str, Any]:
@@ -211,10 +245,7 @@ def snapshot(session: Session, settings: Any, now: datetime) -> dict[str, Any]:
     }
 
     # -- attention -----------------------------------------------------------
-    open_request = (
-        RideRequestRow.status == RideRequestStatus.OPEN.value,
-        RideRequestRow.expires_at > now,
-    )
+    open_request = open_request_clause(now)
     has_offer = exists(
         select(FareOfferRow.id).where(
             FareOfferRow.ride_request_id == RideRequestRow.id,
@@ -450,8 +481,68 @@ def snapshot(session: Session, settings: Any, now: datetime) -> dict[str, Any]:
         "finance": finance,
         "network": network,
         "people": {"passengers": passengers, "drivers": drivers["total"]},
+        "passengers": _passengers(session, now, start),
         "history": _history(session, today, end),
         "apps": _apps(session, today),
+    }
+
+
+# -- the people VELRO exists for ---------------------------------------------
+
+def _passengers(session: Session, now: datetime, start: datetime) -> dict[str, int]:
+    """Who the passengers are, beyond one number.
+
+    A passenger is an account that still exists and holds the PASSENGER
+    role. Every figure below is a subset of that total, so no card can read
+    larger than the one it sits beside. (people.passengers above is the
+    older, looser count -- role grants, deleted accounts included -- and is
+    left exactly as it was for the screens already reading it.)
+
+    The windows are business days in Kabul ending today, like everything
+    else here: "the last 7 days" is today and the six before it.
+    """
+    person = (UserRow.deleted_at.is_(None), holds_role_clause({PASSENGER}))
+
+    def people(*where: Any) -> int:
+        stmt = select(func.count()).select_from(UserRow).where(*person, *where)
+        return int(session.scalar(stmt) or 0)
+
+    week = start - timedelta(days=PASSENGER_WEEK_DAYS - 1)
+    month = start - timedelta(days=PASSENGER_MONTH_DAYS - 1)
+
+    def active_since(since: datetime) -> Any:
+        booked = select(BookingRow.passenger_id).where(
+            BookingRow.created_at >= since, BookingRow.deleted_at.is_(None)
+        )
+        asked = select(RideRequestRow.passenger_id).where(
+            RideRequestRow.created_at >= since, RideRequestRow.deleted_at.is_(None)
+        )
+        return or_(UserRow.id.in_(booked), UserRow.id.in_(asked))
+
+    # A booking completes after it is made; the trip is what happened in the
+    # window, so it is dated by completion where there is one.
+    repeat = (
+        select(BookingRow.passenger_id)
+        .where(
+            BookingRow.status == BookingStatus.COMPLETED.value,
+            BookingRow.deleted_at.is_(None),
+            func.coalesce(BookingRow.completed_at, BookingRow.created_at) >= month,
+        )
+        .group_by(BookingRow.passenger_id)
+        .having(func.count() >= 2)
+    )
+    waiting = select(RideRequestRow.passenger_id).where(
+        *open_request_clause(now), RideRequestRow.deleted_at.is_(None)
+    )
+    return {
+        "total": people(),
+        "new_today": people(UserRow.created_at >= start),
+        "new_7d": people(UserRow.created_at >= week),
+        "active_7d": people(active_since(week)),
+        "active_30d": people(active_since(month)),
+        "repeat_30d": people(UserRow.id.in_(repeat)),
+        "suspended": people(UserRow.status == UserStatus.SUSPENDED.value),
+        "with_open_request": people(UserRow.id.in_(waiting)),
     }
 
 
@@ -473,6 +564,7 @@ def _history(session: Session, today: date, end: datetime) -> dict[str, Any]:
     blank = {
         "trips": 0, "bookings": 0, "completed_trips": 0, "cancellations": 0,
         "revenue_minor": 0, "commission_minor": 0,
+        "new_passengers": 0, "new_drivers": 0,
     }
     days: dict[date, dict[str, int]] = {
         first + timedelta(days=i): dict(blank) for i in range(HISTORY_DAYS)
@@ -498,6 +590,15 @@ def _history(session: Session, today: date, end: datetime) -> dict[str, Any]:
         TripRow.deleted_at.is_(None),
     )
     per_day("cancellations", CancellationRow.created_at, CancellationRow.deleted_at.is_(None))
+    # Sign-ups, by the passenger card's definition and the drivers card's:
+    # an existing account holding PASSENGER, and a driver record.
+    per_day(
+        "new_passengers",
+        UserRow.created_at,
+        UserRow.deleted_at.is_(None),
+        holds_role_clause({PASSENGER}),
+    )
+    per_day("new_drivers", DriverRow.created_at, DriverRow.deleted_at.is_(None))
 
     settled = kabul_date(CommissionRow.created_at)
     for when, gross, platform in session.execute(

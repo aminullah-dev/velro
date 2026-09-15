@@ -224,7 +224,7 @@ class TestTheBoard:
 
 DAY_FIELDS = {
     "date", "trips", "bookings", "completed_trips", "cancellations",
-    "revenue_minor", "commission_minor",
+    "revenue_minor", "commission_minor", "new_passengers", "new_drivers",
 }
 
 

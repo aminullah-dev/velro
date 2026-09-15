@@ -312,12 +312,16 @@ def queue(
     actor: Annotated[deps.Actor, Depends(deps.require_support)],
     tickets: Annotated[object, Depends(deps.support_tickets)],
     messages: Annotated[object, Depends(deps.ticket_messages)],
+    users: Annotated[object, Depends(deps.users)],
     # "ALL" means every status. Omitting it gives the working queue, which is
     # the right default and the wrong answer to "show me everything".
     status: Annotated[
         str | None, Query(pattern=r"^(ALL|OPEN|IN_PROGRESS|RESOLVED|CLOSED)$")
     ] = None,
     category: str | None = None,
+    #: One person's requests -- the tickets on his account page. Combines
+    #: with status, so pass ALL for his whole history.
+    reporter_id: Annotated[str | None, Query(max_length=36)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> dict:
     """Urgent first, then oldest.
@@ -325,14 +329,27 @@ def queue(
     The ordering is the triage. Nobody is watching overnight, so a safety
     report raised at 02:00 must not be pushed down the page by a fare dispute
     raised at 09:00 -- there is no human awake to notice it happening.
+
+    Each ticket names who raised it, so the operator can open that account.
+    Staff only: a reporter reading his own tickets already knows who he is.
+    Name and phone are null once the reporter deleted his account.
     """
-    rows = tickets.queue(status=status, category=category, limit=limit)
+    rows = tickets.queue(
+        status=status, category=category, reporter_id=reporter_id, limit=limit
+    )
+    # One query for every reporter on the page, not one per ticket.
+    reporters = {u.id: u for u in users.by_ids({row.user_id for row in rows})}
+    out = []
+    for row in rows:
+        body = _ticket_out(row, messages.for_ticket(row.id), to_staff=True).model_dump()
+        reporter = reporters.get(row.user_id)
+        body["reporter_id"] = row.user_id
+        body["reporter_name"] = reporter.full_name if reporter else None
+        body["reporter_phone"] = reporter.phone if reporter else None
+        out.append(body)
     return ok(
         {
-            "tickets": [
-                _ticket_out(row, messages.for_ticket(row.id), to_staff=True).model_dump()
-                for row in rows
-            ],
+            "tickets": out,
             "open": tickets.open_count(),
             "urgent_open": tickets.open_count(urgent_only=True),
         }

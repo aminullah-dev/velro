@@ -483,6 +483,8 @@ def live_negotiations(
     vehicles: Annotated[object, Depends(deps.vehicles)],
     geo: Annotated[object, Depends(deps.geography)],
     bookings: Annotated[object, Depends(deps.bookings)],
+    #: One passenger's open requests -- the ones on his account page.
+    passenger_id: Annotated[str | None, Query(max_length=36)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> dict:
     """Who is waiting, and what they have been offered.
@@ -492,7 +494,11 @@ def live_negotiations(
     on purpose -- the fare is between the passenger and the driver, and an
     operator who could change it would be a third party to a private agreement.
     """
-    rows = requests.open_board(at=deps.clock().now(), limit=limit)
+    rows = requests.open_board(
+        at=deps.clock().now(),
+        limit=limit,
+        only_passenger_ids=[passenger_id] if passenger_id else None,
+    )
     enricher = _OfferEnricher(drivers=drivers, users=users, vehicles=vehicles)
     passengers = {u.id: u for u in users.by_ids({r.passenger_id for r in rows})}
     out = []
@@ -500,6 +506,8 @@ def live_negotiations(
         made = enricher.decorate(offers.for_request(row.id))
         body = _request_out(row, made, geo=geo, bookings=bookings).model_dump()
         user = passengers.get(row.passenger_id)
+        # Staff only, like the name and phone: the row can open his account.
+        body["passenger_id"] = row.passenger_id
         body["passenger_name"] = user.full_name if user else None
         body["passenger_phone"] = user.phone if user else None
         # The number an operator is really being asked about: has anyone

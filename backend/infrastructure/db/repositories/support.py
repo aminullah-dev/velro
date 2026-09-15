@@ -36,7 +36,12 @@ class SupportTicketRepository(SqlRepository[SupportTicketRow]):
         return list(self.session.scalars(stmt).all())
 
     def queue(
-        self, *, status: str | None = None, category: str | None = None, limit: int = 50
+        self,
+        *,
+        status: str | None = None,
+        category: str | None = None,
+        reporter_id: str | None = None,
+        limit: int = 50,
     ) -> list[SupportTicketRow]:
         """The operator's queue: urgent first, then oldest.
 
@@ -67,6 +72,8 @@ class SupportTicketRepository(SqlRepository[SupportTicketRow]):
             )
         if category:
             stmt = stmt.where(SupportTicketRow.category_code == category)
+        if reporter_id:
+            stmt = stmt.where(SupportTicketRow.user_id == reporter_id)
 
         return list(self.session.scalars(stmt.limit(min(limit, 200))).all())
 
