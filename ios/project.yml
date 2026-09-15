@@ -239,7 +239,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: af.velro.ops
         # Its own numbers, marked like the driver's.
         MARKETING_VERSION: "1.0.0" # ops
-        CURRENT_PROJECT_VERSION: "1" # ops
+        CURRENT_PROJECT_VERSION: "2" # ops
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
