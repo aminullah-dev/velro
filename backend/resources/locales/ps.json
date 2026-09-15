@@ -1057,5 +1057,6 @@
   "ops.dispatch.none_at_risk": "اوس مهال هیڅ حرکت په خطر کې نه دی.",
   "ops.requests.no_offers": "تر اوسه هیڅ چلوونکي وړاندیز نه دی ورکړی",
   "ops.approvals.name_placeholder": "د چلوونکي بشپړ نوم",
-  "admin.approvals.still_missing": "لا کم دي: {list}"
+  "admin.approvals.still_missing": "لا کم دي: {list}",
+  "ops.audit.only_this_actor": "یوازې د همدې کس کړنې"
 }

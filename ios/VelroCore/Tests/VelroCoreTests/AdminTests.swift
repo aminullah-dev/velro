@@ -385,8 +385,14 @@ struct AdminEndpointTests {
         #expect(query(overdue) == ["overdue": "true", "limit": "25", "offset": "50"])
         let soon = AdminAPI.trips(TripFilter(status: .scheduled, activeOnly: true, departingWithinHours: 2))
         #expect(query(soon) == ["status": "SCHEDULED", "active_only": "true", "departing_within_hours": "2", "limit": "50", "offset": "0"])
-        #expect(query(AdminAPI.drivers(staleGPS: true)) == ["stale_gps": "true", "limit": "100"])
-        #expect(query(AdminAPI.drivers(approvalStatus: .pending)) == ["approval_status": "PENDING", "limit": "100"])
+        #expect(query(AdminAPI.drivers(staleGPS: true)) == ["stale_gps": "true", "limit": "100", "offset": "0"])
+        #expect(query(AdminAPI.drivers(approvalStatus: .pending)) == ["approval_status": "PENDING", "limit": "100", "offset": "0"])
+        // Searched by the server past the first page; blank asks nothing.
+        #expect(query(AdminAPI.drivers(search: " 0700 ")) == ["search": "0700", "limit": "100", "offset": "0"])
+        #expect(query(AdminAPI.drivers(search: "  ")) == ["limit": "100", "offset": "0"])
+        #expect(query(AdminAPI.vehicles(search: "KBL 4521", limit: 50)) == ["search": "KBL 4521", "limit": "50", "offset": "0"])
+        #expect(query(AdminAPI.audit(actorId: "u1")) == ["actor_id": "u1", "limit": "50", "offset": "0"])
+        #expect(query(AdminAPI.trips(TripFilter(number: "VLR-2026-000047")))["number"] == "VLR-2026-000047")
         #expect(query(AdminAPI.bookings(status: .noShow, tripId: "t1")) == ["status": "NO_SHOW", "trip_id": "t1", "limit": "50", "offset": "0"])
         #expect(query(AdminAPI.audit(entityType: "driver")) == ["entity_type": "driver", "limit": "50", "offset": "0"])
     }

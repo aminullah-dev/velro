@@ -183,8 +183,13 @@ final class OpTripsModel {
 
     static let windows = [2, 3, 6, 12, 24, 72]
 
-    var slice: Slice = .all
-    var status: TripStatus?
+    // Any chip the operator picks leaves the one-trip lookup behind.
+    var slice: Slice = .all { didSet { onlyNumber = nil } }
+    var status: TripStatus? { didSet { onlyNumber = nil } }
+    /// One trip by its number, when "trip:<number>" named one older than
+    /// the pages of the newest: the list is that trip alone until a chip is
+    /// chosen.
+    private(set) var onlyNumber: String?
     let pager = OpPager<AdminTrip>(pageSize: 50)
     /// "trip:<number>" from another screen, until it is found or given up on.
     private(set) var pendingNumber: String?
@@ -220,7 +225,7 @@ final class OpTripsModel {
 
     func sliceOptions(_ strings: Strings) -> [OpChipBar<Slice>.Option] {
         var options: [OpChipBar<Slice>.Option] = [
-            .init(value: .all, label: strings["admin.filter.all"]),
+            .init(value: .all, label: onlyNumber.map { "\u{2066}\($0)\u{2069}" } ?? strings["admin.filter.all"]),
             .init(value: .active, label: strings["admin.filter.active_only"]),
             .init(value: .unassigned, label: strings["admin.filter.needs_driver"]),
             .init(value: .overdue, label: strings["admin.filter.overdue"]),
@@ -235,16 +240,21 @@ final class OpTripsModel {
     }
 
     /// The first page -- and the trip another screen asked for: among the
-    /// active ones first, then among the newest of all. Nil when it is on
-    /// neither; the list is still there to search by eye.
+    /// active ones first, then among the newest of all, then by its number
+    /// from the server. Nil only when there is no such trip.
     func reloadFindingPending(_ ops: OpsModel) async -> AdminTrip? {
         await reload(ops)
         guard let number = pendingNumber else { return nil }
         pendingNumber = nil
         if let found = pager.items.first(where: { $0.number == number }) { return found }
-        guard slice != .all || status != nil else { return nil }
-        slice = .all
-        status = nil
+        if slice != .all || status != nil {
+            slice = .all
+            status = nil
+            await reload(ops)
+            if let found = pager.items.first(where: { $0.number == number }) { return found }
+        }
+        // Older than a page of the newest: the server finds that one trip.
+        onlyNumber = number
         await reload(ops)
         return pager.items.first { $0.number == number }
     }
@@ -261,6 +271,7 @@ final class OpTripsModel {
 
     private var filter: TripFilter {
         var filter = TripFilter(status: status)
+        filter.number = onlyNumber
         switch slice {
         case .all: break
         case .active: filter.activeOnly = true

@@ -534,6 +534,8 @@ public struct AdminBooking: Decodable, Sendable, Hashable, Identifiable {
     public let id: String
     public let number: String
     public let tripNumber: String
+    /// The trip it belongs to. Optional: a server before this field sends none.
+    public let tripId: String?
     public let passengerName: String?
     public let passengerPhone: String?
     public let status: BookingStatus

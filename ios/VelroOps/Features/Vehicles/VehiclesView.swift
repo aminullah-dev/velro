@@ -51,6 +51,12 @@ struct VehiclesView: View {
         .poll(every: .seconds(60)) { [model, ops] in
             if case .loaded = model.state { await model.load(ops) }
         }
+        // A moment after the typing stops, the server is asked too.
+        .task(id: model.search) { [model, ops] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            await model.searchServer(ops)
+        }
     }
 
     @ViewBuilder
@@ -103,6 +109,8 @@ final class OpVehiclesModel {
     static let statuses: [VehicleStatus] = [.active, .pending, .suspended, .retired]
 
     private(set) var state: LoadState<[AdminVehicle]> = .loading
+    /// The server's own matches for the search, from past the first 200.
+    private(set) var found: [AdminVehicle] = []
     var status: VehicleStatus?
     var search = ""
 
@@ -110,7 +118,7 @@ final class OpVehiclesModel {
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
         let plate = OpDriversModel.plateKey(query)
         let digits = Numerals.latin(query).filter(\.isNumber)
-        return (state.value ?? []).filter { vehicle in
+        let local = (state.value ?? []).filter { vehicle in
             if let status, vehicle.status != status { return false }
             guard !query.isEmpty else { return true }
             if !plate.isEmpty, OpDriversModel.plateKey(vehicle.plateNumber).contains(plate) { return true }
@@ -121,11 +129,24 @@ final class OpVehiclesModel {
                phone.filter(\.isNumber).contains(digits.drop(while: { $0 == "0" })) { return true }
             return false
         }
+        guard !query.isEmpty else { return local }
+        let seen = Set(local.map(\.id))
+        return local + found.filter { !seen.contains($0.id) && (status == nil || $0.status == status) }
     }
 
     func vehicle(_ id: String?) -> AdminVehicle? {
         guard let id else { return nil }
-        return state.value?.first { $0.id == id }
+        return state.value?.first { $0.id == id } ?? found.first { $0.id == id }
+    }
+
+    /// Asks the server for the search -- a plate in any digits, the owner's
+    /// name or phone -- so a car past the first 200 is found too.
+    func searchServer(_ ops: OpsModel) async {
+        let asked = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !asked.isEmpty else { found = []; return }
+        let result = await ops.send(AdminAPI.vehicles(search: asked, limit: 100))
+        guard asked == search.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+        if case .success(let vehicles) = result { found = vehicles }
     }
 
     func apply(deepLink: String?) -> String? {

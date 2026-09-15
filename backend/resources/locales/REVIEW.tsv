@@ -1058,3 +1058,4 @@ ops.dispatch.none_at_risk	No departure is at risk right now.	فعلاً هیچ �
 ops.requests.no_offers	No driver has offered yet	هنوز هیچ راننده‌ای پیشنهاد نداده است	تر اوسه هیڅ چلوونکي وړاندیز نه دی ورکړی	new — please check the Pashto
 ops.approvals.name_placeholder	The driver's full name	نام کامل راننده	د چلوونکي بشپړ نوم	new — please check the Pashto
 admin.approvals.still_missing	Still missing: {list}	هنوز کم است: {list}	لا کم دي: {list}	new — please check the Pashto
+ops.audit.only_this_actor	Only this person's actions	فقط کارهای همین شخص	یوازې د همدې کس کړنې	new — please check the Pashto

@@ -1057,5 +1057,6 @@
   "ops.dispatch.none_at_risk": "No departure is at risk right now.",
   "ops.requests.no_offers": "No driver has offered yet",
   "ops.approvals.name_placeholder": "The driver's full name",
-  "admin.approvals.still_missing": "Still missing: {list}"
+  "admin.approvals.still_missing": "Still missing: {list}",
+  "ops.audit.only_this_actor": "Only this person's actions"
 }

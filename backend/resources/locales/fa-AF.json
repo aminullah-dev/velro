@@ -1057,5 +1057,6 @@
   "ops.dispatch.none_at_risk": "فعلاً هیچ حرکتی در خطر نیست.",
   "ops.requests.no_offers": "هنوز هیچ راننده‌ای پیشنهاد نداده است",
   "ops.approvals.name_placeholder": "نام کامل راننده",
-  "admin.approvals.still_missing": "هنوز کم است: {list}"
+  "admin.approvals.still_missing": "هنوز کم است: {list}",
+  "ops.audit.only_this_actor": "فقط کارهای همین شخص"
 }

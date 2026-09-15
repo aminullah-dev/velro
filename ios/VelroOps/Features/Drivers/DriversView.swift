@@ -64,6 +64,12 @@ struct DriversView: View {
         .poll(every: .seconds(20)) { [model, ops] in
             await model.tick(ops)
         }
+        // A moment after the typing stops, the server is asked too.
+        .task(id: model.search) { [model, ops] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            await model.searchServer(ops)
+        }
     }
 
     private var approvalBinding: Binding<DriverApprovalStatus?> {
@@ -120,7 +126,11 @@ struct DriversView: View {
                             }
                             .opAttentionRow(model.presence == .stale)
                         }
-                        Text(strings["admin.showing", ["from": 1, "to": shown.count, "total": shown.count]])
+                        Text(strings["admin.showing", [
+                            "from": 1, "to": shown.count,
+                            // Unfiltered, the server's own count: the list is its first page.
+                            "total": model.isFiltered ? shown.count : max(model.total ?? shown.count, shown.count),
+                        ]])
                             .opsFont(.caption)
                             .foregroundStyle(Palette.textMuted)
                             .frame(maxWidth: .infinity)
@@ -169,6 +179,10 @@ final class OpDriversModel {
     }
 
     private(set) var state: LoadState<[AdminDriver]> = .loading
+    /// How many drivers the server has in all: the list holds the first 200.
+    private(set) var total: Int?
+    /// The server's own matches for the search, from past those 200.
+    private(set) var found: [AdminDriver] = []
     var approval: DriverApprovalStatus?
     /// `.stale` is the server's own filter (`stale_gps`); the rest narrow
     /// what is loaded.
@@ -186,7 +200,7 @@ final class OpDriversModel {
         let query = query
         let digits = Numerals.latin(query).filter(\.isNumber)
         let plateQuery = OpDriversModel.plateKey(query)
-        return drivers.filter { driver in
+        let local = drivers.filter { driver in
             if let approval, driver.approvalStatus != approval { return false }
             if !presence.matches(driver) { return false }
             guard !query.isEmpty else { return true }
@@ -199,11 +213,29 @@ final class OpDriversModel {
             }
             return false
         }
+        guard !query.isEmpty else { return local }
+        // The server matched these past the loaded page; the device's own
+        // matching (Persian letter forms, plates) keeps its share first.
+        let seen = Set(local.map(\.id))
+        let more = found.filter { driver in
+            !seen.contains(driver.id) && (approval == nil || driver.approvalStatus == approval) && presence.matches(driver)
+        }
+        return local + more
     }
 
     func driver(_ id: String?) -> AdminDriver? {
         guard let id else { return nil }
-        return state.value?.first { $0.id == id }
+        return state.value?.first { $0.id == id } ?? found.first { $0.id == id }
+    }
+
+    /// Asks the server for the search, so a driver past the first 200 is
+    /// found too. The newest question wins.
+    func searchServer(_ ops: OpsModel) async {
+        let asked = query
+        guard !asked.isEmpty else { found = []; return }
+        let result = await ops.send(AdminAPI.drivers(staleGPS: presence == .stale, search: asked, limit: 100))
+        guard asked == query else { return }
+        if case .success(let drivers) = result { found = drivers }
     }
 
     /// The filter another screen left; a driver to select comes back.
@@ -227,10 +259,11 @@ final class OpDriversModel {
 
     func load(_ ops: OpsModel) async {
         let mine = generation
-        let result = await ops.send(AdminAPI.drivers(staleGPS: presence == .stale, limit: 200))
+        let result = await ops.sendWithMeta(AdminAPI.drivers(staleGPS: presence == .stale, limit: 200))
         guard mine == generation else { return }
         if case .failure(let error) = result, error == .cancelled { return }
-        state = LoadState(result, keeping: state)
+        if case .success(let page) = result { total = page.meta.total }
+        state = LoadState(result.map(\.items), keeping: state)
     }
 
     /// The server's list changes with "without a fix": start again.

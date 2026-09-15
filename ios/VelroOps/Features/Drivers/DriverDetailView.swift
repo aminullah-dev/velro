@@ -169,7 +169,9 @@ struct OpDriverDetailView: View {
     }
 
     private func load() async {
-        async let cars = ops.send(AdminAPI.vehicles(limit: 200))
+        // His cars by his phone, which the server matches against the
+        // owner: the first 200 cars by plate could leave his out.
+        async let cars = ops.send(AdminAPI.vehicles(search: driver.phone, limit: driver.phone == nil ? 200 : 50))
         if ops.isOperations {
             let checklist = await ops.send(AdminAPI.driverDocuments(driverId: driver.id))
             if case .failure(let error) = checklist, error == .cancelled { return }

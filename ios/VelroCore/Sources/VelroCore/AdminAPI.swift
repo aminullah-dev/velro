@@ -42,11 +42,16 @@ public struct TripFilter: Sendable, Hashable {
     /// 1...200.
     public var limit: Int
     public var offset: Int
+    /// One trip by its public number, "VLR-2026-000047": exact, though the
+    /// server forgives case, spaces and Eastern digits.
+    public var number: String?
 
     public init(
         status: TripStatus? = nil, activeOnly: Bool = false, unassigned: Bool = false,
-        overdue: Bool = false, departingWithinHours: Int? = nil, limit: Int = 50, offset: Int = 0
+        overdue: Bool = false, departingWithinHours: Int? = nil, limit: Int = 50, offset: Int = 0,
+        number: String? = nil
     ) {
+        self.number = number
         self.status = status
         self.activeOnly = activeOnly
         self.unassigned = unassigned
@@ -59,6 +64,7 @@ public struct TripFilter: Sendable, Hashable {
     var queryItems: [URLQueryItem] {
         var items: [URLQueryItem] = []
         if let status { items.append(URLQueryItem(name: "status", value: status.rawValue)) }
+        if let number { items.append(URLQueryItem(name: "number", value: number)) }
         if activeOnly { items.append(URLQueryItem(name: "active_only", value: "true")) }
         if unassigned { items.append(URLQueryItem(name: "unassigned", value: "true")) }
         if overdue { items.append(URLQueryItem(name: "overdue", value: "true")) }
@@ -107,13 +113,18 @@ public enum AdminAPI {
 
     /// require_staff. `staleGPS`: only working drivers whose last fix is old
     /// or missing -- the dashboard's "without a fix" card.
+    /// `search` is matched by the server: a name in any case, a phone in any
+    /// form or digits. Paged: `sendWithMeta` for the total.
     public static func drivers(
-        approvalStatus: DriverApprovalStatus? = nil, staleGPS: Bool = false, limit: Int = 100
+        approvalStatus: DriverApprovalStatus? = nil, staleGPS: Bool = false, search: String? = nil,
+        limit: Int = 100, offset: Int = 0
     ) -> Endpoint<[AdminDriver]> {
         var query: [URLQueryItem] = []
         if let approvalStatus { query.append(URLQueryItem(name: "approval_status", value: approvalStatus.rawValue)) }
         if staleGPS { query.append(URLQueryItem(name: "stale_gps", value: "true")) }
+        if let search = clean(search) { query.append(URLQueryItem(name: "search", value: search)) }
         query.append(URLQueryItem(name: "limit", value: String(limit)))
+        query.append(URLQueryItem(name: "offset", value: String(offset)))
         return .get("admin/drivers", query: query)
     }
 
@@ -155,8 +166,14 @@ public enum AdminAPI {
     // MARK: Vehicles
 
     /// require_staff. Every vehicle, by plate.
-    public static func vehicles(limit: Int = 100) -> Endpoint<[AdminVehicle]> {
-        .get("admin/vehicles", query: [URLQueryItem(name: "limit", value: String(limit))])
+    /// `search` matches the plate in any digits, and the owner's name or
+    /// phone. Paged: `sendWithMeta` for the total.
+    public static func vehicles(search: String? = nil, limit: Int = 100, offset: Int = 0) -> Endpoint<[AdminVehicle]> {
+        var query: [URLQueryItem] = []
+        if let search = clean(search) { query.append(URLQueryItem(name: "search", value: search)) }
+        query.append(URLQueryItem(name: "limit", value: String(limit)))
+        query.append(URLQueryItem(name: "offset", value: String(offset)))
+        return .get("admin/vehicles", query: query)
     }
 
     /// require_operations. Cars waiting to be activated, oldest first.
@@ -321,10 +338,13 @@ public enum AdminAPI {
     // MARK: The record
 
     /// require_admin. Newest first. Paged: `sendWithMeta` for the total.
-    public static func audit(action: String? = nil, entityType: String? = nil, limit: Int = 50, offset: Int = 0) -> Endpoint<[AuditEntry]> {
+    public static func audit(
+        action: String? = nil, entityType: String? = nil, actorId: String? = nil, limit: Int = 50, offset: Int = 0
+    ) -> Endpoint<[AuditEntry]> {
         var query: [URLQueryItem] = []
         if let action { query.append(URLQueryItem(name: "action", value: action)) }
         if let entityType { query.append(URLQueryItem(name: "entity_type", value: entityType)) }
+        if let actorId { query.append(URLQueryItem(name: "actor_id", value: actorId)) }
         query.append(URLQueryItem(name: "limit", value: String(limit)))
         query.append(URLQueryItem(name: "offset", value: String(offset)))
         return .get("admin/audit", query: query)

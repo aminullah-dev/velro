@@ -8,7 +8,7 @@ import VelroCore
 /// keeps a row readable a year later; each shows them as before → after.
 ///
 /// Other screens open it with `navigator.open(.audit, filter:)`:
-/// "action:<action>" or "entity:<type>".
+/// "action:<action>", "entity:<type>" or "actor:<user id>".
 struct AuditView: View {
     @Environment(OpsModel.self) private var ops
     @Environment(\.strings) private var strings
@@ -86,6 +86,9 @@ struct AuditView: View {
                         if let entity = model.entityType {
                             filterPill("admin.col.entity", value: entity) { filterBinding(\.entityType).wrappedValue = nil }
                         }
+                        if let actor = model.actorId {
+                            filterPill("ops.audit.actor_id", value: actor) { filterBinding(\.actorId).wrappedValue = nil }
+                        }
                     }
                     .padding(.horizontal, Spacing.s4)
                     .padding(.vertical, Spacing.s2)
@@ -142,6 +145,8 @@ struct AuditView: View {
 final class OpAuditModel {
     var action: String?
     var entityType: String?
+    /// Only what one person did: the server's actor_id.
+    var actorId: String?
     let pager = OpPager<AuditEntry>(pageSize: 50)
     /// Every action and entity type seen so far, for the filter menus: the
     /// server has no list of them, and a free-text box invites typos that
@@ -149,7 +154,7 @@ final class OpAuditModel {
     private(set) var seenActions: Set<String> = []
     private(set) var seenEntities: Set<String> = []
 
-    var isFiltered: Bool { action != nil || entityType != nil }
+    var isFiltered: Bool { action != nil || entityType != nil || actorId != nil }
 
     var knownActions: [String] {
         (seenActions.union(Self.commonActions).union(action.map { [$0] } ?? [])).sorted()
@@ -171,6 +176,7 @@ final class OpAuditModel {
         switch parts[0] {
         case "action": action = parts[1]
         case "entity": entityType = parts[1]
+        case "actor": actorId = parts[1]
         default: break
         }
     }
@@ -178,8 +184,11 @@ final class OpAuditModel {
     func reload(_ ops: OpsModel) async {
         let action = action
         let entityType = entityType
+        let actorId = actorId
         await pager.reload { [weak self, ops] limit, offset in
-            let result = await ops.sendWithMeta(AdminAPI.audit(action: action, entityType: entityType, limit: limit, offset: offset))
+            let result = await ops.sendWithMeta(AdminAPI.audit(
+                action: action, entityType: entityType, actorId: actorId, limit: limit, offset: offset
+            ))
             if case .success(let page) = result { self?.note(page.items) }
             return result
         }
@@ -330,6 +339,16 @@ private struct OpAuditDetailView: View {
                 OpField("admin.col.who") { OpAuditActor(entry: entry) }
                 if let id = entry.actorId, entry.actorName != nil {
                     OpField("ops.audit.actor_id") { LTRText(id).opsFont(.caption) }
+                }
+                // Everything this person did: the question an audit is asked
+                // most, once one entry has raised it.
+                if let id = entry.actorId, model.actorId != id {
+                    Button {
+                        model.actorId = id
+                        Task { [model, ops] in await model.reload(ops) }
+                    } label: {
+                        Label(strings["ops.audit.only_this_actor"], systemImage: "person.crop.circle.badge.checkmark")
+                    }
                 }
                 OpField("admin.col.entity") { LTRText(entry.entityType) }
                 OpField("ops.audit.entity_id") { LTRText(entry.entityId).opsFont(.caption) }
