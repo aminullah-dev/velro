@@ -1,0 +1,68 @@
+/* Cover / header banners for social profiles. One brand lockup, centred, kept
+   small enough to survive every platform's crop:
+     - YouTube shows only a central 1546x423 box on phones and desktop (the
+       full 2560x1440 shows on a TV); everything important must live inside it.
+     - Facebook crops the sides on a phone (~78% of the width stays).
+   So the lockup is capped at 1180px wide and ~330px tall and centred: safe on
+   all three. render.sh renders each file at its exact pixel size. */
+@import url("fonts/vazirmatn.css");
+
+:root {
+  --green-900: #06301F;
+  --green-700: #0E6042;
+  --green-500: #189669;
+  --green-50:  #EAF7F1;
+  --mint:      #8FD9BC;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Vazirmatn, "SF Arabic", "Geeza Pro", sans-serif; }
+
+.cover {
+  background: var(--green-700);           /* the same brand green as the avatar */
+  color: #fff; position: relative; overflow: hidden;
+  display: grid; place-items: center;
+}
+.cover.fb      { width: 1640px; height: 624px;  }
+.cover.x       { width: 1500px; height: 500px;  }
+.cover.youtube { width: 2560px; height: 1440px; }
+
+/* Two quiet washes so the field is not a flat block: a green glow low-left,
+   a darker green depth top-right. */
+.cover::before {
+  content: ""; position: absolute; inset: auto auto -35% -18%;
+  width: 66%; height: 130%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(24,150,105,.55), transparent 70%);
+}
+.cover::after {
+  content: ""; position: absolute; inset: -45% -18% auto auto;
+  width: 60%; height: 130%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(6,48,31,.60), transparent 70%);
+}
+
+.lockup {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 24px; max-width: 1180px; padding: 0 40px;
+}
+
+.brand { display: flex; align-items: center; gap: 30px; direction: ltr; }
+.chip {
+  width: 160px; height: 160px; border-radius: 34px;
+  background: var(--green-900); display: grid; place-items: center;
+  box-shadow: 0 12px 34px rgba(0,0,0,.28);
+}
+.chip svg { width: 68%; height: 68%; display: block; }
+
+.words { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; }
+.velro {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 800; font-size: 92px; letter-spacing: 9px;
+}
+.fa { font-weight: 700; font-size: 40px; color: var(--mint); margin-top: 12px; letter-spacing: 2px; }
+
+.tagline { font-weight: 800; font-size: 44px; white-space: nowrap; }
+.corridor {
+  font-weight: 600; font-size: 33px; color: var(--green-50);
+  background: rgba(255,255,255,.10); border-radius: 999px; padding: 12px 34px;
+}

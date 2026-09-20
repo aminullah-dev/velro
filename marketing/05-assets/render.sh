@@ -14,11 +14,11 @@ ROOT="$(dirname "$HERE")"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 GRAY="/System/Library/ColorSync/Profiles/Generic Gray Gamma 2.2 Profile.icc"
 
-shot() { # file, width, height, [bw]
-  local html="$1" w="$2" h="$3" bw="${4:-}"
+shot() { # file, width, height, [bw], [scale=2]
+  local html="$1" w="$2" h="$3" bw="${4:-}" scale="${5:-2}"
   local png="${html%.html}.png"
   "$CHROME" --headless --disable-gpu --hide-scrollbars \
-    --allow-file-access-from-files --force-device-scale-factor=2 \
+    --allow-file-access-from-files --force-device-scale-factor="$scale" \
     --virtual-time-budget=4000 --window-size="$w,$h" \
     --screenshot="$png" "file://$html" 2>/dev/null
   echo "  $(basename "$png")  $(sips -g pixelWidth -g pixelHeight "$png" | awk '/pixel/{printf "%s ", $2}')"
@@ -41,4 +41,12 @@ for f in "$ROOT"/03-social/*-square.html; do [ -e "$f" ] && shot "$f" 1080 1080;
 # and Telegram; they each downscale it to their own size.
 echo "profiles (avatars, cropped to a circle):"
 for f in "$ROOT"/03-social/profile-*.html; do [ -e "$f" ] && shot "$f" 1024 1024; done
+
+# Cover / header banners. Each platform wants an exact size and crops
+# differently, so these render at their true pixel size (scale 1), not doubled.
+# The brand lockup is kept inside every platform's safe area (see cover.css).
+echo "covers (each at its exact pixel size):"
+[ -e "$ROOT/03-social/cover-fb.html" ]      && shot "$ROOT/03-social/cover-fb.html"      1640 624  "" 1
+[ -e "$ROOT/03-social/cover-x.html" ]       && shot "$ROOT/03-social/cover-x.html"       1500 500  "" 1
+[ -e "$ROOT/03-social/cover-youtube.html" ] && shot "$ROOT/03-social/cover-youtube.html" 2560 1440 "" 1
 echo "done"
