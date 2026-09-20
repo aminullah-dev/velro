@@ -11,6 +11,11 @@ import {GhorbandDrive, ghorbandDriveSchema} from './compositions/GhorbandDrive';
 import {AcceptRide, acceptRideSchema} from './compositions/AcceptRide';
 import {RequestRide, requestRideSchema} from './compositions/RequestRide';
 import {StoryFilm, storyFilmSchema, storyFilmDuration} from './compositions/StoryFilm';
+import {RouteMap, routeMapSchema} from './compositions/RouteMap';
+import {SeatFill, seatFillSchema} from './compositions/SeatFill';
+import {LogoReveal, logoRevealSchema} from './compositions/LogoReveal';
+import {StatsCounter, statsCounterSchema} from './compositions/StatsCounter';
+import {DayToNight, dayToNightSchema} from './compositions/DayToNight';
 
 // Every graphic is registered here. To add one: build a component in
 // src/compositions/, then add a <Composition> below with a unique id, its
@@ -248,6 +253,154 @@ export const RemotionRoot: FC = () => {
         height={1920}
         schema={storyFilmSchema}
         defaultProps={{lang: 'ps' as const}}
+      />
+
+      {/* Animated route map of the corridor. Dari + Pashto. */}
+      <Composition
+        id="RouteMap"
+        component={RouteMap}
+        durationInFrames={seconds(6)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={routeMapSchema}
+        defaultProps={{
+          title: 'مسیر ویلرو',
+          kabul: 'کابل',
+          charikar: 'چاریکار',
+          ghorband: 'غوربند',
+          tagline: 'به‌زودی',
+        }}
+      />
+      <Composition
+        id="RouteMap-Pashto"
+        component={RouteMap}
+        durationInFrames={seconds(6)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={routeMapSchema}
+        defaultProps={{
+          title: 'د ویلرو لاره',
+          kabul: 'کابل',
+          charikar: 'چاریکار',
+          ghorband: 'غوربند',
+          tagline: 'ډېر ژر',
+        }}
+      />
+
+      {/* Seats filling — the shared-taxi model. */}
+      <Composition
+        id="SeatFill"
+        component={SeatFill}
+        durationInFrames={seconds(6)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={seatFillSchema}
+        defaultProps={{
+          title: 'چوکی‌ها پُر می‌شوند',
+          fullLabel: 'موتر پُر شد',
+          fare: '۲۵۰ افغانی',
+          tagline: 'کرایه و چوکی، پیش از حرکت معلوم',
+        }}
+      />
+      <Composition
+        id="SeatFill-Pashto"
+        component={SeatFill}
+        durationInFrames={seconds(6)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={seatFillSchema}
+        defaultProps={{
+          title: 'څوکۍ ډکېږي',
+          fullLabel: 'موټر ډک شو',
+          fare: '۲۵۰ افغانۍ',
+          tagline: 'کرایه او څوکۍ، تر حرکته مخکې معلومې',
+        }}
+      />
+
+      {/* Logo sting — the road draws into the mark. */}
+      <Composition
+        id="LogoReveal"
+        component={LogoReveal}
+        durationInFrames={seconds(4)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={logoRevealSchema}
+        defaultProps={{tagline: 'به‌زودی'}}
+      />
+      <Composition
+        id="LogoReveal-Pashto"
+        component={LogoReveal}
+        durationInFrames={seconds(4)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={logoRevealSchema}
+        defaultProps={{tagline: 'ډېر ژر'}}
+      />
+
+      {/* Counting value props. */}
+      <Composition
+        id="StatsCounter"
+        component={StatsCounter}
+        durationInFrames={seconds(5)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={statsCounterSchema}
+        defaultProps={{
+          title: 'چرا ویلرو؟',
+          stats: [
+            {value: 3, label: 'محور'},
+            {value: 1, label: 'اپ'},
+            {value: 0, label: 'دلال'},
+          ],
+          tagline: 'ساده، مستقیم، بی‌واسطه',
+        }}
+      />
+      <Composition
+        id="StatsCounter-Pashto"
+        component={StatsCounter}
+        durationInFrames={seconds(5)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={statsCounterSchema}
+        defaultProps={{
+          title: 'ولې ویلرو؟',
+          stats: [
+            {value: 3, label: 'لارې'},
+            {value: 1, label: 'اپ'},
+            {value: 0, label: 'منځګړی'},
+          ],
+          tagline: 'ساده، مستقیم، بې منځګړي',
+        }}
+      />
+
+      {/* The corridor from day to night. */}
+      <Composition
+        id="DayToNight"
+        component={DayToNight}
+        durationInFrames={seconds(7)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={dayToNightSchema}
+        defaultProps={{headline: 'هر روز، هر ساعت', tagline: 'کابل — چاریکار — غوربند'}}
+      />
+      <Composition
+        id="DayToNight-Pashto"
+        component={DayToNight}
+        durationInFrames={seconds(7)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={dayToNightSchema}
+        defaultProps={{headline: 'هره ورځ، هر وخت', tagline: 'کابل — چاریکار — غوربند'}}
       />
     </>
   );

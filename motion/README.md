@@ -82,6 +82,12 @@ so proportions hold when you change resolution.
 | `RequestRide-Pashto` | same flow, Pashto preset (`موټر وغواړئ` / `ډرایور پیدا شو`) | route, fare, seats, labels |
 | `StoryFilm` | the full story: request → accept → drive → به‌زودی (crossfaded, ~13.5s) | `lang: 'fa'` |
 | `StoryFilm-Pashto` | same film, Pashto (`lang: 'ps'`) | `lang: 'ps'` |
+| `RouteMap` | animated corridor map: pins pop, a car drives Kabul→Charikar→Ghorband | town names, title, tagline |
+| `RouteMap-Pashto` | same map, Pashto preset | town names, title, tagline |
+| `SeatFill` / `-Pashto` | shared-taxi seats fill one by one, then "full" | title, fare, labels |
+| `LogoReveal` / `-Pashto` | brand sting: the road draws into the mark (intro/outro) | tagline |
+| `StatsCounter` / `-Pashto` | value props counting up (۳ محور • ۱ اپ • ۰ دلال) | title, stats[], tagline |
+| `DayToNight` / `-Pashto` | the corridor from day to night, headlights come on | headline, tagline |
 
 `StoryFilm` shows how to assemble scenes into one film: it reuses the three
 scene components as segments of a `<TransitionSeries>` (`@remotion/transitions`),
