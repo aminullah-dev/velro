@@ -32,8 +32,9 @@ echo "posters (A4, 300dpi):"
 for f in "$ROOT"/02-posters/*.html; do shot "$f" 1240 1754 bw; done
 
 echo "social:"
-for f in "$ROOT"/03-social/*-wide.html;   do [ -e "$f" ] && shot "$f" 1200 630; done
+for f in "$ROOT"/03-social/*-wide.html;   do [ -e "$f" ] && shot "$f" 1200 630;  done
 for f in "$ROOT"/03-social/*-square.html; do [ -e "$f" ] && shot "$f" 1080 1080; done
+for f in "$ROOT"/03-social/*-story.html;  do [ -e "$f" ] && shot "$f" 1080 1920; done
 
 # Profile pictures. Square art (each comes out 2048x2048); every platform crops
 # it to a circle, and the mark sits well inside that circle. One file per

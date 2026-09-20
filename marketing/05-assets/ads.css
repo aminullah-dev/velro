@@ -1,0 +1,79 @@
+/* "Coming soon" teaser ads. Three shapes an ad set actually uses:
+     -square.html  1080x1080  feed (Facebook / Instagram)
+     -story.html   1080x1920  story / reel, full screen
+     -wide.html    1200x628   landscape / link ad
+   render.sh knows the sizes from the file name. The story keeps its content
+   in the middle band, clear of the app's own UI at the very top and bottom.
+   Same green field and mark as the profile and cover art, so a teaser, an
+   avatar and a cover all read as one brand. */
+@import url("fonts/vazirmatn.css");
+
+:root {
+  --green-900: #06301F;
+  --green-700: #0E6042;
+  --green-500: #189669;
+  --green-50:  #EAF7F1;
+  --mint:      #8FD9BC;
+  --amber:     #F59E0B;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Vazirmatn, "SF Arabic", "Geeza Pro", sans-serif; }
+
+.ad {
+  background: var(--green-700); color: #fff;
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: var(--gap, 34px);
+}
+.ad.square { width: 1080px; height: 1080px; padding: 96px 90px;  --gap: 36px; }
+.ad.wide   { width: 1200px; height: 630px;  padding: 56px 80px;  --gap: 20px; }
+.ad.story  { width: 1080px; height: 1920px; padding: 300px 90px; --gap: 52px; }
+
+/* Depth: a green glow top-left, a darker green depth bottom-right. */
+.ad::before {
+  content: ""; position: absolute; inset: -28% auto auto -26%;
+  width: 82%; height: 60%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(24,150,105,.50), transparent 70%);
+}
+.ad::after {
+  content: ""; position: absolute; inset: auto -26% -28% auto;
+  width: 82%; height: 60%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(6,48,31,.60), transparent 70%);
+}
+
+.brand { position: relative; z-index: 1; display: flex; align-items: center; gap: 22px; direction: ltr; }
+.chip { background: var(--green-900); border-radius: 28px; display: grid; place-items: center;
+        box-shadow: 0 10px 28px rgba(0,0,0,.28); }
+.chip svg { display: block; width: 68%; height: 68%; }
+.words { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; }
+.velro { font-family: "Helvetica Neue", Arial, sans-serif; font-weight: 800; letter-spacing: 6px; }
+.fa    { font-weight: 700; color: var(--mint); margin-top: 8px; }
+
+.kicker { position: relative; z-index: 1; font-family: "Helvetica Neue", Arial, sans-serif;
+          font-weight: 700; letter-spacing: 8px; color: var(--mint); }
+.hero   { position: relative; z-index: 1; font-weight: 900; line-height: 1; }
+.spark  { position: relative; z-index: 1; height: 8px; width: 120px; border-radius: 999px; background: var(--amber); }
+.corridor { position: relative; z-index: 1; color: var(--green-50);
+            background: rgba(255,255,255,.10); border-radius: 999px; }
+.tagline  { position: relative; z-index: 1; color: var(--green-50); font-weight: 600; }
+
+/* ---- feed square ---- */
+.square .chip { width: 116px; height: 116px; }
+.square .velro { font-size: 58px; } .square .fa { font-size: 29px; }
+.square .kicker { font-size: 32px; } .square .hero { font-size: 148px; }
+.square .corridor { font-size: 34px; padding: 14px 36px; } .square .tagline { font-size: 34px; }
+
+/* ---- story / reel ---- */
+.story .chip { width: 150px; height: 150px; border-radius: 34px; }
+.story .velro { font-size: 78px; } .story .fa { font-size: 38px; }
+.story .kicker { font-size: 40px; } .story .hero { font-size: 210px; }
+.story .spark { width: 150px; height: 10px; }
+.story .corridor { font-size: 42px; padding: 18px 44px; } .story .tagline { font-size: 40px; }
+
+/* ---- landscape / link ---- */
+.wide .chip { width: 88px; height: 88px; border-radius: 22px; }
+.wide .velro { font-size: 46px; letter-spacing: 4px; } .wide .fa { font-size: 24px; }
+.wide .kicker { font-size: 24px; letter-spacing: 6px; } .wide .hero { font-size: 100px; }
+.wide .spark { width: 92px; height: 6px; }
+.wide .corridor { font-size: 27px; padding: 11px 28px; } .wide .tagline { font-size: 27px; }
