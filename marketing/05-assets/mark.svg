@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The VELRO mark on its own, as vector: a road narrowing to a point, which
+     also reads as a V. This is the green-on-transparent treatment, for light
+     surfaces (a white avatar, a letterhead, a website header). On the brand's
+     dark grounds use the app icon / profile-velro art instead, where the road
+     is white. Geometry is identical to the Android launcher icon. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108"
+     width="512" height="512" role="img" aria-label="VELRO">
+  <path d="M54 78 L36 30 L45 30 L54 58 L63 30 L72 30 Z" fill="#0E6042"/>
+  <path d="M53 70 h2 v-6 h-2 Z" fill="#189669"/>
+  <path d="M53 60 h2 v-5 h-2 Z" fill="#189669"/>
+  <path d="M53 51 h2 v-4 h-2 Z" fill="#189669"/>
+</svg>

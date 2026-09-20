@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VELRO — profile avatar (driver, dark)</title>
+<!-- The same mark on the driver's dark ground, for a driver-facing account or
+     channel (the driver funnel runs first). Identical geometry to the green
+     avatar; only the colours change, exactly as the two app icons do: on the
+     dark tile white would glare, so the road takes the brand green at its
+     lightest step and the dashes take it at its darkest. -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  .tile {
+    width: 1024px; height: 1024px;
+    background: #101828;            /* driver night */
+    display: grid; place-items: center;
+  }
+  .tile svg { width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+  <div class="tile">
+    <svg viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="VELRO Driver">
+      <path d="M54 78 L36 30 L45 30 L54 58 L63 30 L72 30 Z" fill="#8FD9BC"/>
+      <path d="M53 70 h2 v-6 h-2 Z" fill="#0E6042"/>
+      <path d="M53 60 h2 v-5 h-2 Z" fill="#0E6042"/>
+      <path d="M53 51 h2 v-4 h-2 Z" fill="#0E6042"/>
+    </svg>
+  </div>
+</body>
+</html>

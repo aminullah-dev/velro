@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VELRO — profile avatar (green)</title>
+<!-- The social profile picture for VELRO's main accounts (Facebook, Instagram,
+     WhatsApp, X, YouTube, Telegram). It is the app icon itself: the same road
+     narrowing to a V, on the brand green. So the picture people follow is the
+     one already on their home screen. Full-bleed square; every platform crops
+     it to a circle, and the mark sits well inside that circle. -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  .tile {
+    width: 1024px; height: 1024px;
+    background: #0E6042;            /* brand green */
+    display: grid; place-items: center;
+  }
+  .tile svg { width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+  <div class="tile">
+    <svg viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="VELRO">
+      <!-- The road, widening towards the viewer. -->
+      <path d="M54 78 L36 30 L45 30 L54 58 L63 30 L72 30 Z" fill="#FFFFFF"/>
+      <!-- Centre line: three dashes, shortening with distance. -->
+      <path d="M53 70 h2 v-6 h-2 Z" fill="#8FD9BC"/>
+      <path d="M53 60 h2 v-5 h-2 Z" fill="#8FD9BC"/>
+      <path d="M53 51 h2 v-4 h-2 Z" fill="#8FD9BC"/>
+    </svg>
+  </div>
+</body>
+</html>

@@ -34,4 +34,11 @@ for f in "$ROOT"/02-posters/*.html; do shot "$f" 1240 1754 bw; done
 echo "social:"
 for f in "$ROOT"/03-social/*-wide.html;   do [ -e "$f" ] && shot "$f" 1200 630; done
 for f in "$ROOT"/03-social/*-square.html; do [ -e "$f" ] && shot "$f" 1080 1080; done
+
+# Profile pictures. Square art (each comes out 2048x2048); every platform crops
+# it to a circle, and the mark sits well inside that circle. One file per
+# account -- upload the same PNG to Facebook, Instagram, WhatsApp, X, YouTube
+# and Telegram; they each downscale it to their own size.
+echo "profiles (avatars, cropped to a circle):"
+for f in "$ROOT"/03-social/profile-*.html; do [ -e "$f" ] && shot "$f" 1024 1024; done
 echo "done"
