@@ -76,6 +76,17 @@ so proportions hold when you change resolution.
 | `VelroStory` | branded, **vertical 1080×1920** example (road-V mark, RTL Vazirmatn) | `headline`, `corridor` |
 | `GhorbandDrive` | animated scene: a car driving beside the Ghorband river, vertical | `headline`, `corridor` |
 | `GhorbandDrive-Pashto` | same scene, Pashto preset (`ډېر ژر`) | `headline`, `corridor` |
+| `AcceptRide` | driver accepting a ride: request → tap → confirmed (app UI, sound) | route, fare, seats, labels |
+| `AcceptRide-Pashto` | same flow, Pashto preset (`منل` / `ومنل شوه`) | route, fare, seats, labels |
+| `RequestRide` | passenger requesting: trip → searching → driver found (light app, sound) | route, fare, seats, labels |
+| `RequestRide-Pashto` | same flow, Pashto preset (`موټر وغواړئ` / `ډرایور پیدا شو`) | route, fare, seats, labels |
+| `StoryFilm` | the full story: request → accept → drive → به‌زودی (crossfaded, ~13.5s) | `lang: 'fa'` |
+| `StoryFilm-Pashto` | same film, Pashto (`lang: 'ps'`) | `lang: 'ps'` |
+
+`StoryFilm` shows how to assemble scenes into one film: it reuses the three
+scene components as segments of a `<TransitionSeries>` (`@remotion/transitions`),
+crossfaded together. Its total length is computed from the segment lengths in
+`StoryFilm.tsx` and passed to the composition in `Root.tsx`.
 
 `GhorbandDrive` is a full animated scene built from an SVG projection driven by
 `useCurrentFrame` — the car, road dashes, river and bend all move as a function

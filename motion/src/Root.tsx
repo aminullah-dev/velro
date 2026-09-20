@@ -8,6 +8,9 @@ import {KineticText, kineticTextSchema} from './compositions/KineticText';
 import {TransparentOverlay, transparentOverlaySchema} from './compositions/TransparentOverlay';
 import {VelroStory, velroStorySchema} from './compositions/VelroStory';
 import {GhorbandDrive, ghorbandDriveSchema} from './compositions/GhorbandDrive';
+import {AcceptRide, acceptRideSchema} from './compositions/AcceptRide';
+import {RequestRide, requestRideSchema} from './compositions/RequestRide';
+import {StoryFilm, storyFilmSchema, storyFilmDuration} from './compositions/StoryFilm';
 
 // Every graphic is registered here. To add one: build a component in
 // src/compositions/, then add a <Composition> below with a unique id, its
@@ -125,6 +128,126 @@ export const RemotionRoot: FC = () => {
           headline: 'ډېر ژر',
           corridor: 'کابل — چاریکار — غوربند',
         }}
+      />
+
+      {/*
+        Driver accepting a ride — app-style UI animation. Same component, two
+        language presets (Dari + Pashto).
+      */}
+      <Composition
+        id="AcceptRide"
+        component={AcceptRide}
+        durationInFrames={seconds(6)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={acceptRideSchema}
+        defaultProps={{
+          driverLabel: 'ویلرو راننده',
+          onlineLabel: 'آنلاین',
+          requestLabel: 'درخواست سواری جدید',
+          from: 'کابل',
+          to: 'چاریکار',
+          fare: '۲۵۰ افغانی',
+          seats: '۲ چوکی',
+          acceptLabel: 'قبول',
+          acceptedLabel: 'پذیرفته شد',
+        }}
+      />
+      <Composition
+        id="AcceptRide-Pashto"
+        component={AcceptRide}
+        durationInFrames={seconds(6)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={acceptRideSchema}
+        defaultProps={{
+          driverLabel: 'ویلرو ډرایور',
+          onlineLabel: 'آنلاین',
+          requestLabel: 'نوې سواري غوښتنه',
+          from: 'کابل',
+          to: 'چاریکار',
+          fare: '۲۵۰ افغانۍ',
+          seats: '۲ څوکۍ',
+          acceptLabel: 'منل',
+          acceptedLabel: 'ومنل شوه',
+        }}
+      />
+
+      {/*
+        Passenger requesting a ride — the other side of AcceptRide, in the
+        passenger app's light theme. Request → searching → driver found.
+        Dari + Pashto presets.
+      */}
+      <Composition
+        id="RequestRide"
+        component={RequestRide}
+        durationInFrames={seconds(6)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={requestRideSchema}
+        defaultProps={{
+          appLabel: 'ویلرو',
+          tripLabel: 'سفر شما',
+          from: 'کابل',
+          to: 'چاریکار',
+          fare: '۲۵۰ افغانی',
+          seats: '۲ چوکی',
+          requestLabel: 'درخواست موتر',
+          searchingLabel: 'در حال یافتن راننده',
+          foundLabel: 'راننده پیدا شد',
+          driverName: 'احمد',
+          eta: '۳ دقیقه تا رسیدن',
+        }}
+      />
+      <Composition
+        id="RequestRide-Pashto"
+        component={RequestRide}
+        durationInFrames={seconds(6)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={requestRideSchema}
+        defaultProps={{
+          appLabel: 'ویلرو',
+          tripLabel: 'ستاسو سفر',
+          from: 'کابل',
+          to: 'چاریکار',
+          fare: '۲۵۰ افغانۍ',
+          seats: '۲ څوکۍ',
+          requestLabel: 'موټر وغواړئ',
+          searchingLabel: 'د ډرایور په لټه کې',
+          foundLabel: 'ډرایور پیدا شو',
+          driverName: 'احمد',
+          eta: '۳ دقیقې پاتې',
+        }}
+      />
+
+      {/*
+        The whole story in one film: request → accept → drive → به‌زودی.
+        Reuses the three scenes as crossfaded segments. Dari + Pashto.
+      */}
+      <Composition
+        id="StoryFilm"
+        component={StoryFilm}
+        durationInFrames={storyFilmDuration}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={storyFilmSchema}
+        defaultProps={{lang: 'fa' as const}}
+      />
+      <Composition
+        id="StoryFilm-Pashto"
+        component={StoryFilm}
+        durationInFrames={storyFilmDuration}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={storyFilmSchema}
+        defaultProps={{lang: 'ps' as const}}
       />
     </>
   );
