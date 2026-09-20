@@ -1,0 +1,74 @@
+/* Facebook and WhatsApp images. Two shapes: -wide.html is 1200x630 (a link
+   card, a page post) and -square.html is 1080x1080 (a feed post, a status).
+   render.sh knows the sizes from the file name. */
+@import url("fonts/vazirmatn.css");
+
+:root {
+  --green-900: #06301F;
+  --green-700: #0E6042;
+  --green-500: #189669;
+  --green-50:  #EAF7F1;
+  --amber-500: #D97706;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body { font-family: Vazirmatn, "SF Arabic", "Geeza Pro", sans-serif; }
+
+.card {
+  background: var(--green-900);
+  color: #fff;
+  display: flex; flex-direction: column; justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.card.wide   { width: 1200px; height: 630px;  padding: 70px 80px; }
+.card.square { width: 1080px; height: 1080px; padding: 96px 80px; }
+
+/* A quiet green wash in the corner, so the card is not a flat block. */
+.card::after {
+  content: ""; position: absolute; inset: auto -180px -220px auto;
+  width: 640px; height: 640px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(24,150,105,.55), transparent 70%);
+}
+
+.brand { display: flex; align-items: center; gap: 20px; position: relative; z-index: 1; }
+.brand .mark {
+  width: 76px; height: 76px; border-radius: 20px; background: var(--green-500);
+  display: grid; place-items: center;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700; font-size: 44px; color: #fff;
+}
+.brand .name {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700; font-size: 40px; letter-spacing: 5px;
+}
+
+h1 { position: relative; z-index: 1; font-weight: 900; line-height: 1.3; margin-top: 40px; }
+.wide h1 { font-size: 62px; }
+.square h1 { font-size: 78px; }
+h1 em, p.sub em { font-style: normal; color: #FCCF7A; }
+
+p.sub { position: relative; z-index: 1; color: var(--green-50); line-height: 1.6; margin-top: 26px; }
+.wide p.sub { font-size: 32px; }
+.square p.sub { font-size: 40px; }
+
+.cta {
+  position: relative; z-index: 1;
+  margin-top: auto; display: flex; align-items: center; gap: 24px;
+  flex-wrap: wrap;
+}
+/* The square is not wide enough for a pill and a URL side by side: the URL
+   ran off the edge. Stacked, both fit. */
+.square .cta { flex-direction: column; align-items: flex-start; gap: 20px; }
+.cta .pill {
+  background: var(--amber-500); color: #fff; font-weight: 700;
+  border-radius: 999px; padding: 18px 38px; white-space: nowrap;
+}
+.wide .cta .pill { font-size: 30px; }
+.square .cta .pill { font-size: 38px; }
+.cta .where {
+  color: var(--green-50); font-size: 26px; direction: ltr; text-align: left;
+  font-family: "SF Mono", Menlo, monospace; word-break: break-all; max-width: 100%;
+}
+.square .cta .where { font-size: 30px; }

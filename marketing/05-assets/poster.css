@@ -1,0 +1,127 @@
+/* The poster's look, shared by all three. A4 at 300dpi: the page below is
+   1240x1754 CSS pixels and render.sh screenshots it at scale 2, which is
+   exactly 2480x3508 -- what a print shop asks for. */
+@import url("fonts/vazirmatn.css");
+
+:root {
+  --green-900: #06301F;
+  --green-700: #0E6042;
+  --green-500: #189669;
+  --green-50:  #EAF7F1;
+  --amber-500: #D97706;
+  --ink:       #101828;
+  --muted:     #667085;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: Vazirmatn, "SF Arabic", "Geeza Pro", sans-serif;
+  background: #fff;
+  color: var(--ink);
+}
+
+.page {
+  width: 1240px;
+  height: 1754px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* The head: the mark, the name, the corridor this poster is for. */
+.head {
+  background: var(--green-900);
+  color: #fff;
+  padding: 52px 80px 46px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.mark {
+  width: 104px; height: 104px;
+  border-radius: 26px;
+  background: var(--green-500);
+  display: grid; place-items: center;
+  /* A Latin V, never a Persian letter: beside Eastern digits the wrong glyph
+     reads as a zero. */
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700; font-size: 62px; color: #fff;
+  flex: none;
+}
+.wordmark {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700; font-size: 58px; letter-spacing: 6px;
+}
+.head .tagline { font-size: 30px; color: var(--green-50); margin-top: 6px; }
+
+.body { padding: 58px 80px 0; flex: 1; display: flex; flex-direction: column; }
+
+h1 {
+  font-size: 86px; font-weight: 900; line-height: 1.26;
+  color: var(--green-900);
+}
+h1 em { font-style: normal; color: var(--amber-500); }
+
+.lead {
+  font-size: 39px; line-height: 1.65; color: var(--muted);
+  margin-top: 28px;
+}
+
+.points { margin-top: 52px; display: flex; flex-direction: column; gap: 40px; }
+.point { display: flex; align-items: flex-start; gap: 26px; }
+.point .n {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--green-50); color: var(--green-700);
+  display: grid; place-items: center;
+  font-size: 34px; font-weight: 700; flex: none;
+}
+.point p { font-size: 37px; line-height: 1.55; padding-top: 8px; }
+.point b { font-weight: 700; color: var(--green-900); }
+
+/* The offer line. Delete this block from the HTML if the offer changes. */
+.offer {
+  margin-top: 48px;
+  border: 3px dashed var(--amber-500);
+  border-radius: 22px;
+  padding: 26px 34px;
+  font-size: 37px; font-weight: 700; color: var(--amber-500);
+  text-align: center;
+}
+
+/* Where the app comes from. */
+.get {
+  margin: auto -80px 0;
+  background: var(--green-50);
+  padding: 40px 80px;
+  display: flex; align-items: center; gap: 44px;
+}
+.get img { width: 250px; height: 250px; flex: none; background: #fff; border-radius: 18px; padding: 10px; }
+.get .how h2 { font-size: 46px; font-weight: 800; color: var(--green-900); }
+.get .how p { font-size: 32px; color: var(--muted); margin-top: 16px; line-height: 1.5; }
+.get .how .url {
+  direction: ltr; text-align: right;
+  font-family: "SF Mono", Menlo, monospace;
+  font-size: 25px; color: var(--green-700); margin-top: 18px; word-break: break-all;
+}
+
+.foot {
+  background: var(--green-700); color: #fff;
+  padding: 34px 80px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 34px;
+}
+.foot .phone { font-weight: 700; }
+.foot .by { color: var(--green-50); font-size: 28px; }
+
+/* The corridors, for the passenger poster: the three routes that run today. */
+.routes { margin-top: 52px; display: flex; gap: 20px; }
+.route {
+  flex: 1;
+  background: var(--green-50);
+  border-radius: 20px;
+  padding: 28px 20px;
+  text-align: center;
+}
+.route .pair { font-size: 33px; font-weight: 700; color: var(--green-900); line-height: 1.4; }
+.route .when { font-size: 26px; color: var(--muted); margin-top: 10px; }

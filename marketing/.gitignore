@@ -1,0 +1,8 @@
+# render.sh's output. Every PNG here is made from the HTML beside it, so the
+# HTML is what is worth keeping -- a poster re-renders in two seconds.
+*.png
+
+# The store listings this folder copies for reference. Their originals are
+# mobile/PlayStore and ios/AppStore, in this same repository.
+04-store-listings/google-play/
+04-store-listings/app-store/
