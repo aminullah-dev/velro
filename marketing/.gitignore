@@ -2,6 +2,12 @@
 # HTML is what is worth keeping -- a poster re-renders in two seconds.
 *.png
 
+# render-video.sh's output and its scratch frames. The MP4 is rebuilt from
+# teaser-ghorband.html; the frames folder is deleted after each encode.
+*.mp4
+*.webm
+06-video/frames/
+
 # The store listings this folder copies for reference. Their originals are
 # mobile/PlayStore and ios/AppStore, in this same repository.
 04-store-listings/google-play/
