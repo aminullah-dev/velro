@@ -17,6 +17,17 @@
       "runtimeExecutable": "backend/scripts/dev-api.sh",
       "runtimeArgs": [],
       "port": 8000
+    },
+    {
+      "name": "motion-studio",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "studio",
+        "--prefix",
+        "motion"
+      ],
+      "port": 3000
     }
   ]
 }

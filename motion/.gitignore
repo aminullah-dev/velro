@@ -1,0 +1,6 @@
+node_modules/
+.remotion/
+
+# Renders are output, not source — keep the folder, ignore its contents.
+out/*
+!out/.gitkeep
