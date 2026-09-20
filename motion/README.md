@@ -73,6 +73,19 @@ so proportions hold when you change resolution.
 | `LowerThird` | name/role plate, slides in from the left | `name`, `role`, `accentColor` |
 | `KineticText` | words snap in one by one | `words` (array) |
 | `TransparentOverlay` | a badge on a **transparent** background | `label`, `accentColor` |
+| `VelroStory` | branded, **vertical 1080×1920** example (road-V mark, RTL Vazirmatn) | `headline`, `corridor` |
+| `GhorbandDrive` | animated scene: a car driving beside the Ghorband river, vertical | `headline`, `corridor` |
+| `GhorbandDrive-Pashto` | same scene, Pashto preset (`ډېر ژر`) | `headline`, `corridor` |
+
+`GhorbandDrive` is a full animated scene built from an SVG projection driven by
+`useCurrentFrame` — the car, road dashes, river and bend all move as a function
+of the frame, so it scrubs on the timeline. The two language versions are the
+same component with different props (swap `headline` to translate it).
+
+`VelroStory` also shows two extra patterns: a composition with **its own size**
+(portrait, overriding the shared 16:9 canvas — see its `width`/`height` in
+`Root.tsx`), and brand tokens + a Persian Google font pulled from
+[`src/brand.ts`](src/brand.ts). Copy that file's approach for any branded graphic.
 
 Each one has a **full enter *and* exit** (nothing pops on or cuts off), driven
 by `useCurrentFrame`, `interpolate`, `spring` and `Easing`. Each also has a zod
@@ -175,8 +188,10 @@ font instead, drop it in `public/fonts/` and load it with `@remotion/fonts`.
 
 ## Sound effects
 
-Put the file in `public/audio/`, then play it with `<Audio>` inside a
-`<Sequence>` so it starts on a chosen frame:
+A ready example is already wired up: `GhorbandDrive` plays a synthesized driving
+bed from `public/audio/drive-ambience.mp3` via `<Audio>`. To add your own, put
+the file in `public/audio/`, then play it with `<Audio>` — inside a `<Sequence>`
+if it should start on a chosen frame:
 
 ```tsx
 import {AbsoluteFill, Audio, Sequence, staticFile} from 'remotion';
