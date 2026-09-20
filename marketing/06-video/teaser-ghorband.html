@@ -2,7 +2,7 @@
 <html lang="fa-AF" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>ویلرو — تیزر لب دریای غوربند</title>
+<title>ویلرو — تیزر لب دریای غوربند (مینیمال)</title>
 <link rel="stylesheet" href="../05-assets/fonts/vazirmatn.css">
 <style>
   html, body { margin: 0; padding: 0; background: #000; }
@@ -12,121 +12,82 @@
 <body>
 <canvas id="c" width="1080" height="1920"></canvas>
 <script>
-// A seamless driving loop along the Ghorband river. Every visible thing is a
-// pure function of `phase` in [0,1): the road dashes, the roadside poles, the
-// river shimmer and the road's bend all scroll by one whole period over the
-// loop, so frame N-1 hands back to frame 0 with no jump. render-video.sh draws
-// one frame per Chrome screenshot by passing #f=<frame>&N=<total> in the URL.
+// A minimal, flat driving loop along the Ghorband river: a car on a clean road
+// beside the water, a couple of soft mountain silhouettes, lots of quiet space.
+// Every visible thing is a pure function of `phase` in [0,1) so the loop is
+// seamless. render-video.sh draws one frame per screenshot via #f=..&N=.. .
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const W = 1080, H = 1920;
 
-// ---- which frame ----
 const hash = new URLSearchParams(location.hash.slice(1));
 const F = parseInt(hash.get('f') || '0', 10);
 const N = parseInt(hash.get('N') || '144', 10);
-const phase = ((F % N) + N) % N / N;      // 0..1
+const phase = ((F % N) + N) % N / N;
 
-// ---- scene constants ----
-const HZ = Math.round(H * 0.40);          // horizon
-const VPX = W * 0.52;                      // vanishing point x
+// ---- scene ----
+const HZ = Math.round(H * 0.46);          // horizon (a touch of extra ground)
+const VPX = W * 0.5;
 const Znear = 4, Zfar = 64, rangeZ = Zfar - Znear;
-const XK = 118;                            // world->screen scale at Znear
-const RW = 2.5;                            // road half width (world)
-const LOOP = 32;                           // world units travelled per loop
+const XK = 116;
+const RW = 2.4;
+const LOOP = 32;
 const travel = phase * LOOP;
-const dashGap = 2, dashLen = 1.1, dashHalf = 0.16;
-const poleGap = 8, flowGap = 4;
-const riverW = 4.4, riverGap = 0.7;
-const bendAmp = 2.2, bendFreq = 2 * Math.PI / LOOP;   // one bend-period per loop
-const carZ = 7, carW = 2.3;
+const dashGap = 2.4, dashLen = 1.15, dashHalf = 0.15;
+const riverW = 3.6, riverGap = 0.7;
+const bendAmp = 1.7, bendFreq = 2 * Math.PI / LOOP;   // one gentle bend per loop
+const carZ = 7, carW = 2.2;
 
 const projY = z => HZ + (H - HZ) * (Znear / z);
 const projS = z => Znear / z;
 const sx = (x, z) => VPX + x * projS(z) * XK;
-// The road centre weaves; the pattern scrolls toward the camera with `travel`.
 const roadC = z => bendAmp * Math.sin((z + travel) * bendFreq);
 const riverC = z => roadC(z) - (RW + riverGap + riverW / 2);
 const wrap = (v, m) => ((v % m) + m) % m;
 
-function lerp(a, b, t) { return a + (b - a) * t; }
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
-// ---------- sky & mountains ----------
+// ---- flat sky, a soft sun, two calm ridges ----
 function sky() {
-  const g = ctx.createLinearGradient(0, 0, 0, HZ + 60);
-  g.addColorStop(0, '#A7D2E6'); g.addColorStop(0.55, '#CFE6EC'); g.addColorStop(1, '#F2E4C4');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, HZ + 60);
-  // a soft sun haze low on the horizon
-  const s = ctx.createRadialGradient(W * 0.7, HZ, 10, W * 0.7, HZ, 360);
-  s.addColorStop(0, 'rgba(255,246,214,.85)'); s.addColorStop(1, 'rgba(255,246,214,0)');
-  ctx.fillStyle = s; ctx.fillRect(0, 0, W, HZ + 60);
+  ctx.fillStyle = '#E7F0EA'; ctx.fillRect(0, 0, W, HZ + 2);
+  ctx.fillStyle = '#F3EAD6';                       // low warm band at the horizon
+  ctx.fillRect(0, HZ - 130, W, 132);
+  ctx.fillStyle = '#FBF3DE';                       // simple flat sun
+  ctx.beginPath(); ctx.arc(W * 0.5, HZ - 150, 96, 0, 7); ctx.fill();
 }
-function ridge(yBase, amp, color, f1, f2, f3, ph, alpha) {
-  ctx.globalAlpha = alpha; ctx.fillStyle = color;
-  ctx.beginPath(); ctx.moveTo(0, HZ + 40);
-  for (let x = 0; x <= W; x += 16) {
-    const y = yBase - amp * (0.55 * Math.sin(x * f1 + ph) + 0.3 * Math.sin(x * f2 + 2.1) + 0.15 * Math.sin(x * f3 + 5.3));
-    ctx.lineTo(x, y);
-  }
-  ctx.lineTo(W, HZ + 40); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+function ridge(yBase, amp, color, f1, ph) {
+  ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(0, HZ + 2);
+  for (let x = 0; x <= W; x += 14) ctx.lineTo(x, yBase - amp * (0.6 * Math.sin(x * f1 + ph) + 0.4 * Math.sin(x * f1 * 2.7 + 1.3)));
+  ctx.lineTo(W, HZ + 2); ctx.closePath(); ctx.fill();
 }
 function mountains() {
-  const sway = 14 * Math.sin(2 * Math.PI * phase);        // one gentle sway per loop
-  ridge(HZ - 150, 150, '#7C93A0', 0.0033, 0.010, 0.021, 1.2 + sway * 0.002, 1);
-  ridge(HZ - 70, 120, '#5F7E88', 0.0041, 0.013, 0.026, 3.0 - sway * 0.002, 1);
-  ridge(HZ - 6, 74, '#46705A', 0.0052, 0.017, 0.033, 5.5 + sway * 0.003, 1);
+  const sway = 10 * Math.sin(2 * Math.PI * phase);
+  ridge(HZ - 40, 118, '#AEC4BA', 0.0034, 1.1 + sway * 0.002);
+  ridge(HZ + 6, 78, '#8AAA9A', 0.0046, 3.4 - sway * 0.002);
 }
 
-// ---------- ground plane helpers ----------
-// Build a screen polygon for a world band [xLeft(z), xRight(z)] over z=Zfar..Znear.
 function bandPath(xL, xR) {
-  ctx.beginPath();
-  let first = true;
-  for (let z = Zfar; z >= Znear; z -= 0.5) { const p = sx(xL(z), z), y = projY(z); if (first) { ctx.moveTo(p, y); first = false; } else ctx.lineTo(p, y); }
-  for (let z = Znear; z <= Zfar; z += 0.5) { ctx.lineTo(sx(xR(z), z), projY(z)); }
+  ctx.beginPath(); let first = true;
+  for (let z = Zfar; z >= Znear; z -= 0.6) { const p = sx(xL(z), z), y = projY(z); first ? (ctx.moveTo(p, y), first = false) : ctx.lineTo(p, y); }
+  for (let z = Znear; z <= Zfar; z += 0.6) ctx.lineTo(sx(xR(z), z), projY(z));
   ctx.closePath();
 }
-
-function ground() {
-  const g = ctx.createLinearGradient(0, HZ, 0, H);
-  g.addColorStop(0, '#3B6B4C'); g.addColorStop(1, '#274F39');
-  ctx.fillStyle = g; ctx.fillRect(0, HZ, W, H - HZ);
-}
+function ground() { ctx.fillStyle = '#316049'; ctx.fillRect(0, HZ, W, H - HZ); }
 
 function river() {
-  // water body
   bandPath(z => riverC(z) - riverW / 2, z => riverC(z) + riverW / 2);
-  const g = ctx.createLinearGradient(0, HZ, 0, H);
-  g.addColorStop(0, '#2C8296'); g.addColorStop(1, '#1C6274');
-  ctx.fillStyle = g; ctx.fill();
-  // a brighter near edge
-  ctx.save(); ctx.clip();
-  // flow highlights scrolling toward camera
-  for (let k = 0; k < rangeZ / flowGap + 2; k++) {
-    const z = Znear + wrap(k * flowGap - travel, rangeZ);
-    const y0 = projY(z), y1 = projY(z + 0.6);
-    const a = 0.10 + 0.10 * projS(z);
-    ctx.fillStyle = 'rgba(224,246,250,' + a.toFixed(3) + ')';
-    ctx.beginPath();
-    ctx.moveTo(sx(riverC(z) - riverW / 2, z), y0); ctx.lineTo(sx(riverC(z) + riverW / 2, z), y0);
-    ctx.lineTo(sx(riverC(z + 0.6) + riverW / 2, z + 0.6), y1); ctx.lineTo(sx(riverC(z + 0.6) - riverW / 2, z + 0.6), y1);
-    ctx.closePath(); ctx.fill();
-  }
-  ctx.restore();
+  ctx.fillStyle = '#4894A1'; ctx.fill();
+  // one quiet highlight line along the near-side bank, no busy shimmer
+  ctx.strokeStyle = 'rgba(226,244,247,.5)'; ctx.lineWidth = 4;
+  ctx.beginPath();
+  for (let z = Zfar; z >= Znear; z -= 0.6) { const x = sx(riverC(z) + riverW / 2, z), y = projY(z); z === Zfar ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  ctx.stroke();
 }
 
 function road() {
   bandPath(z => roadC(z) - RW, z => roadC(z) + RW);
-  const g = ctx.createLinearGradient(0, HZ, 0, H);
-  g.addColorStop(0, '#33383F'); g.addColorStop(1, '#23272D');
-  ctx.fillStyle = g; ctx.fill();
-  // soft shoulders
-  ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(233,233,230,.35)';
-  for (const side of [-1, 1]) {
-    ctx.beginPath();
-    for (let z = Zfar; z >= Znear; z -= 0.5) { const x = sx(roadC(z) + side * (RW - 0.08), z), y = projY(z); z === Zfar ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
-    ctx.stroke();
-  }
-  // scrolling centre dashes
+  ctx.fillStyle = '#262B31'; ctx.fill();
+  ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(240,240,236,.28)';
+  for (const side of [-1, 1]) { ctx.beginPath(); for (let z = Zfar; z >= Znear; z -= 0.6) { const x = sx(roadC(z) + side * (RW - 0.07), z), y = projY(z); z === Zfar ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); }
   ctx.fillStyle = '#F1F1EC';
   for (let k = 0; k < rangeZ / dashGap + 2; k++) {
     const z = Znear + wrap(k * dashGap - travel, rangeZ);
@@ -141,121 +102,57 @@ function road() {
   }
 }
 
-function poles() {
-  const list = [];
-  for (let k = 0; k < rangeZ / poleGap + 2; k++) {
-    const z = Znear + wrap(k * poleGap - travel, rangeZ);
-    list.push(z);
-  }
-  list.sort((a, b) => b - a);                 // far first
-  for (const z of list) {
-    const s = projS(z) * XK;
-    const baseX = sx(roadC(z) + RW + 0.9, z), baseY = projY(z);
-    const h = 2.4 * s, w = Math.max(1, 0.10 * s);
-    ctx.fillStyle = '#C9C9C4'; ctx.fillRect(baseX - w / 2, baseY - h, w, h);
-    ctx.fillStyle = '#F59E0B'; ctx.fillRect(baseX - w * 1.4, baseY - h, w * 2.8, w * 2.8); // reflector
-  }
-}
-
-// ---------- the car, from behind ----------
 function car() {
-  const s = projS(carZ) * XK;
-  const cx = sx(roadC(carZ), carZ);
-  const bob = Math.sin(2 * Math.PI * 2 * phase) * 5;
-  const cy = projY(carZ) + bob;
+  const s = projS(carZ) * XK, cx = sx(roadC(carZ), carZ);
+  const cy = projY(carZ) + Math.sin(2 * Math.PI * 2 * phase) * 4;
   const bw = carW * s, bh = bw * 0.72;
   ctx.save(); ctx.translate(cx, cy);
-  // shadow
-  ctx.fillStyle = 'rgba(0,0,0,.28)';
-  ctx.beginPath(); ctx.ellipse(0, bh * 0.06, bw * 0.62, bh * 0.16, 0, 0, 7); ctx.fill();
-  // wheels
-  ctx.fillStyle = '#15181C';
-  ctx.fillRect(-bw * 0.52, -bh * 0.02, bw * 0.16, bh * 0.30);
-  ctx.fillRect(bw * 0.36, -bh * 0.02, bw * 0.16, bh * 0.30);
-  // body (rear)
-  const bodyTop = -bh * 0.62, bodyBot = bh * 0.10;
-  rr(-bw * 0.5, bodyTop, bw, bodyBot - bodyTop, bw * 0.10); ctx.fillStyle = '#ECE7D8'; ctx.fill();
-  // roof / cabin
-  rr(-bw * 0.34, -bh * 1.02, bw * 0.68, bh * 0.5, bw * 0.10); ctx.fillStyle = '#E4DDCB'; ctx.fill();
-  // rear window
-  rr(-bw * 0.28, -bh * 0.92, bw * 0.56, bh * 0.34, bw * 0.06); ctx.fillStyle = '#18333B'; ctx.fill();
-  // taillights
-  ctx.fillStyle = '#E24A3B';
-  rr(-bw * 0.46, -bh * 0.34, bw * 0.16, bh * 0.16, bw * 0.03); ctx.fill();
-  rr(bw * 0.30, -bh * 0.34, bw * 0.16, bh * 0.16, bw * 0.03); ctx.fill();
-  // bumper
-  ctx.fillStyle = '#C9C3B2'; ctx.fillRect(-bw * 0.5, -bh * 0.06, bw, bh * 0.10);
+  ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(0, bh * 0.06, bw * 0.6, bh * 0.15, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#15181C'; ctx.fillRect(-bw * 0.5, -bh * 0.02, bw * 0.15, bh * 0.28); ctx.fillRect(bw * 0.35, -bh * 0.02, bw * 0.15, bh * 0.28);
+  rr(-bw * 0.5, -bh * 0.62, bw, bh * 0.72, bw * 0.12); ctx.fillStyle = '#ECE7D8'; ctx.fill();
+  rr(-bw * 0.33, -bh * 1.0, bw * 0.66, bh * 0.48, bw * 0.11); ctx.fillStyle = '#E4DDCB'; ctx.fill();
+  rr(-bw * 0.27, -bh * 0.9, bw * 0.54, bh * 0.32, bw * 0.06); ctx.fillStyle = '#1B3A42'; ctx.fill();
+  ctx.fillStyle = '#E24A3B'; rr(-bw * 0.45, -bh * 0.32, bw * 0.15, bh * 0.15, bw * 0.03); ctx.fill(); rr(bw * 0.3, -bh * 0.32, bw * 0.15, bh * 0.15, bw * 0.03); ctx.fill();
   ctx.restore();
 }
-function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
-// ---------- brand overlay ----------
-function markPath(g, ox, oy, sc) {           // the road-V, scaled, white road + mint dashes
+// ---- minimal overlay: small green wordmark up top, small "به‌زودی" below ----
+function markPath(g, ox, oy, sc, road, dash) {
   const P = v => v * sc;
-  g.fillStyle = '#FFFFFF';
-  g.beginPath();
-  const road = [[54,78],[36,30],[45,30],[54,58],[63,30],[72,30]];
-  road.forEach((p, i) => { const x = ox + P(p[0] - 54), y = oy + P(p[1] - 54); i ? g.lineTo(x, y) : g.moveTo(x, y); });
+  g.fillStyle = road; g.beginPath();
+  [[54,78],[36,30],[45,30],[54,58],[63,30],[72,30]].forEach((p, i) => { const x = ox + P(p[0] - 54), y = oy + P(p[1] - 54); i ? g.lineTo(x, y) : g.moveTo(x, y); });
   g.closePath(); g.fill();
-  g.fillStyle = '#8FD9BC';
-  [[53,70,2,6],[53,60,2,5],[53,51,2,4]].forEach(d => { g.fillRect(ox + P(d[0] - 54), oy + P(d[1] - 54 - d[3]), P(d[2]), P(d[3])); });
+  g.fillStyle = dash;
+  [[53,70,2,6],[53,60,2,5],[53,51,2,4]].forEach(d => g.fillRect(ox + P(d[0] - 54), oy + P(d[1] - 54 - d[3]), P(d[2]), P(d[3])));
 }
 function overlay() {
-  // top: small chip + wordmark
-  const chip = 96, cxp = W * 0.5;
+  // top: mark + VELRO, in brand green on the pale sky
   ctx.save();
-  rr(cxp - 150, 70, chip, chip, 24); ctx.fillStyle = '#06301F'; ctx.fill();
-  markPath(ctx, cxp - 150 + chip / 2, 70 + chip / 2, chip * 0.62 / 48);
+  const my = 150;
+  markPath(ctx, W * 0.5 - 118, my, 44 / 48, '#0E6042', '#189669');
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#fff'; ctx.font = '800 62px "Helvetica Neue", Arial, sans-serif';
-  ctx.fillText('VELRO', cxp - 30, 70 + chip * 0.42);
-  ctx.fillStyle = '#8FD9BC'; ctx.font = '700 30px Vazirmatn, sans-serif';
-  ctx.fillText('ویلرو', cxp - 30, 70 + chip * 0.82);
+  ctx.fillStyle = '#0E6042'; ctx.font = '800 46px "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText('VELRO', W * 0.5 - 78, my + 2);
   ctx.restore();
 
-  // bottom: scrim + "به‌زودی" + corridor
-  const g = ctx.createLinearGradient(0, H - 620, 0, H);
-  g.addColorStop(0, 'rgba(6,32,20,0)'); g.addColorStop(0.55, 'rgba(6,32,20,.72)'); g.addColorStop(1, 'rgba(6,32,20,.95)');
-  ctx.fillStyle = g; ctx.fillRect(0, H - 620, W, 620);
-
+  // bottom: a soft scrim, a smaller "به‌زودی", a quiet corridor line, both
+  // lifted clear of the very bottom so a story's own UI never covers them
+  const g = ctx.createLinearGradient(0, H - 470, 0, H);
+  g.addColorStop(0, 'rgba(9,36,24,0)'); g.addColorStop(0.5, 'rgba(9,36,24,.55)'); g.addColorStop(1, 'rgba(9,36,24,.9)');
+  ctx.fillStyle = g; ctx.fillRect(0, H - 470, W, 470);
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#8FD9BC'; ctx.font = '700 34px "Helvetica Neue", Arial, sans-serif';
-  ctx.save(); ctx.translate(0, 0);
-  drawTracked('COMING SOON', W / 2, H - 430, 10);
-  ctx.restore();
-  ctx.fillStyle = '#FFFFFF'; ctx.font = '900 190px Vazirmatn, sans-serif';
-  ctx.fillText('به‌زودی', W / 2, H - 150);
-  // amber spark
-  ctx.fillStyle = '#F59E0B'; rr(W / 2 - 70, H - 196, 140, 9, 5); ctx.fill();
-  // corridor
-  ctx.fillStyle = 'rgba(255,255,255,.12)'; rr(W / 2 - 300, H - 150, 600, 76, 38); ctx.fill();
-  ctx.fillStyle = '#EAF7F1'; ctx.font = '600 40px Vazirmatn, sans-serif';
-  ctx.fillText('کابل — چاریکار — غوربند', W / 2, H - 100);
-}
-function drawTracked(txt, cx, y, tracking) {
-  ctx.textAlign = 'left';
-  const widths = [...txt].map(ch => ctx.measureText(ch).width + tracking);
-  let total = widths.reduce((a, b) => a + b, 0) - tracking;
-  let x = cx - total / 2;
-  [...txt].forEach((ch, i) => { ctx.fillText(ch, x, y); x += widths[i]; });
-  ctx.textAlign = 'center';
-}
-
-// ---------- vignette ----------
-function vignette() {
-  const g = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.35, W / 2, H * 0.5, H * 0.75);
-  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.28)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#FFFFFF'; ctx.font = '900 96px Vazirmatn, sans-serif';
+  ctx.fillText('به‌زودی', W / 2, H - 240);
+  ctx.fillStyle = 'rgba(233,247,241,.85)'; ctx.font = '500 34px Vazirmatn, sans-serif';
+  ctx.fillText('کابل — چاریکار — غوربند', W / 2, H - 166);
 }
 
 function draw() {
   ctx.clearRect(0, 0, W, H);
-  sky(); mountains(); ground(); river(); road(); poles(); car(); vignette(); overlay();
+  sky(); mountains(); ground(); river(); road(); car(); overlay();
   document.title = 'ready';
 }
-
-// wait for the Persian font, then draw once (no animation loop -> deterministic)
-(async () => { try { await document.fonts.load('900 190px Vazirmatn'); await document.fonts.load('700 40px Vazirmatn'); await document.fonts.ready; } catch (e) {} draw(); })();
+(async () => { try { await document.fonts.load('900 96px Vazirmatn'); await document.fonts.load('500 34px Vazirmatn'); await document.fonts.ready; } catch (e) {} draw(); })();
 </script>
 </body>
 </html>
