@@ -223,6 +223,13 @@ private fun Journey(request: RideRequest) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
+            request.originPlaceName?.let { place ->
+                Text(
+                    strings["ride.journey.from_place", "place" to place],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             Text(
                 strings[
                     "ride.offers.you_asked",

@@ -16,6 +16,7 @@ import { PassengersPage } from "./pages/Passengers";
 import { FinancePage } from "./pages/Finance";
 import { ImportVillagesPage } from "./pages/ImportVillages";
 import { LocationsPage } from "./pages/Locations";
+import { PlacesPage } from "./pages/Places";
 import { RoutesPage } from "./pages/Routes";
 import { SettingsPage } from "./pages/Settings";
 import { SignInPage } from "./pages/SignIn";
@@ -64,6 +65,13 @@ const NAV: NavEntry[] = [
   },
   { to: "/settlements", labelKey: "admin.nav.settlements", element: <SettlementsPage /> },
   { to: "/locations", labelKey: "admin.nav.locations", element: <LocationsPage /> },
+  {
+    // Deciding is operations' work; the server refuses anyone else.
+    to: "/places",
+    labelKey: "admin.nav.places",
+    element: <PlacesPage />,
+    roles: OPERATIONS_ROLES,
+  },
   { to: "/import", labelKey: "admin.nav.import", element: <ImportVillagesPage /> },
   { to: "/routes", labelKey: "admin.nav.routes", element: <RoutesPage /> },
   { to: "/finance", labelKey: "admin.nav.finance", element: <FinancePage /> },

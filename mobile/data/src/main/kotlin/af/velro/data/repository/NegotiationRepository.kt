@@ -47,6 +47,8 @@ class NegotiationRepository @Inject constructor(
         latitude: String? = null,
         longitude: String? = null,
         locationIsMock: Boolean = false,
+        /** The place the passenger named, when asking from where they stand. */
+        originPlaceId: String? = null,
         /** Held by the screen across rotation, so a retry is the same ask. */
         idempotencyKey: String,
     ): ApiResult<RideRequest> =
@@ -65,6 +67,7 @@ class NegotiationRepository @Inject constructor(
                     latitude = latitude,
                     longitude = longitude,
                     location_is_mock = locationIsMock,
+                    origin_place_id = originPlaceId,
                 )
             )
         }.map(::toDomain)
@@ -153,6 +156,8 @@ class NegotiationRepository @Inject constructor(
         status = enumOrNull<RideRequestStatus>(dto.status) ?: RideRequestStatus.OPEN,
         originStationId = dto.origin_station_id,
         originStationName = dto.origin_station_name,
+        originPlaceId = dto.origin_place_id,
+        originPlaceName = dto.origin_place_name,
         destinationId = dto.destination_id,
         destinationName = dto.destination_name,
         passengerCount = dto.passenger_count,

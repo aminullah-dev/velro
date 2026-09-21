@@ -39,6 +39,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -323,11 +328,7 @@ private fun HomeScreen(
                         icon = Icons.Filled.Groups,
                     )
                 } else {
-                    OnBrandAction(
-                        label = strings["home.action.search"],
-                        onClick = onBook,
-                        icon = Icons.Filled.DirectionsCar,
-                    )
+                    WhereToBar(onClick = onBook)
                 }
             }
 
@@ -450,6 +451,61 @@ private fun HomeScreen(
     }
 }
 
+
+/**
+ * "Where to?" -- the bar every ride app a passenger may have used opens on.
+ *
+ * Shaped like a search field because that is what it is to her: tap, and say
+ * where. The line under it says the flow begins where she is standing, so the
+ * first thing she sees after the tap -- her own position already found -- is
+ * what she was told would happen. Still one action, still the header's.
+ */
+@Composable
+private fun WhereToBar(onClick: () -> Unit) {
+    val strings = LocalVelroStrings.current
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        androidx.compose.material3.Surface(
+            onClick = onClick,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            color = VelroColors.OnBrandField,
+            contentColor = VelroColors.BrandField,
+            shadowElevation = 2.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .testTag("home.search"),
+        ) {
+            Row(
+                Modifier.padding(horizontal = Spacing.lg),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.Search, contentDescription = null)
+                Spacer(Modifier.size(Spacing.md))
+                Text(
+                    strings["home.search.where_to"],
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(Icons.Filled.DirectionsCar, contentDescription = null)
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.MyLocation,
+                contentDescription = null,
+                tint = VelroColors.OnBrandField,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.size(Spacing.xs))
+            Text(
+                strings["home.search.from_here"],
+                style = MaterialTheme.typography.labelMedium,
+                color = VelroColors.OnBrandField,
+            )
+        }
+    }
+}
 
 /**
  * Her open ask, with a clock on it.

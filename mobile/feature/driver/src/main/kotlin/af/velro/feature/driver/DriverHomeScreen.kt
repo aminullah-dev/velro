@@ -501,6 +501,13 @@ private fun WaitingRequest(request: RideRequest, onOpen: () -> Unit) {
                 ],
                 style = MaterialTheme.typography.bodyMedium,
             )
+            request.originPlaceName?.let { place ->
+                Text(
+                    strings["ride.journey.from_place", "place" to place],
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             // Same reason as the board: a request is no longer always "now",
             // so the preview on his own home screen has to say when.
             request.requestedFor?.let { departure ->

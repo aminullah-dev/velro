@@ -17,8 +17,10 @@ from domain.enums import (
     DriverApprovalStatus,
     DriverAvailability,
     FareOfferStatus,
+    PlaceStatus,
     RideRequestStatus,
 )
+from domain.geography import approx_distance_m
 from domain.negotiation import FareOffer, assert_offer_allowed, total_fare
 from shared import error_codes
 from shared.clock import Clock
@@ -54,6 +56,11 @@ DEPARTURE_GRACE_MINUTES = 10
 # nothing anybody can act on.
 DEPARTURE_CLOSING_LEAD_MINUTES = 30
 
+# How far the place a passenger named may be from the station they board at.
+# The station is the nearest one to where they stood, and villages sit off the
+# road -- but a name further than this belongs to some other stop.
+ORIGIN_PLACE_REACH_M = 10_000
+
 
 @dataclass(frozen=True, slots=True)
 class RequestRideCommand:
@@ -71,6 +78,8 @@ class RequestRideCommand:
     requested_for: datetime | None = None
     return_for: datetime | None = None
     request_id: str | None = None
+    #: The place the passenger named when asking from their current location.
+    origin_place_id: str | None = None
 
 
 class RequestRide:
@@ -97,7 +106,8 @@ class RequestRide:
                 error_codes.FARE_OFFER_AMOUNT_INVALID,
                 amount_minor=cmd.return_fare_minor,
             )
-        if self._geography.find_station(cmd.origin_station_id) is None:
+        origin = self._geography.find_station(cmd.origin_station_id)
+        if origin is None:
             raise NotFoundError(
                 error_codes.STATION_NOT_FOUND, station_id=cmd.origin_station_id
             )
@@ -105,6 +115,9 @@ class RequestRide:
             raise NotFoundError(
                 error_codes.DESTINATION_NOT_FOUND, destination_id=cmd.destination_id
             )
+        origin_place_id = None
+        if cmd.origin_place_id is not None:
+            origin_place_id = self._origin_place(cmd.origin_place_id, origin)
 
         now = self._clock.now()
 
@@ -206,6 +219,7 @@ class RequestRide:
             return_fare_minor=cmd.return_fare_minor if return_for else None,
             offered_fare_currency=cmd.currency,
             note=cmd.note,
+            origin_place_id=origin_place_id,
         )
         self._audit.write(
             "ride_request.created",
@@ -221,6 +235,29 @@ class RequestRide:
             request_id=cmd.request_id,
         )
         return row
+
+
+    def _origin_place(self, place_id: str, origin) -> str:
+        """The named place, if it is one a driver may be told about.
+
+        It must exist, must not be a name staff rejected, and must be near
+        the station the passenger boards at: "from قلعه نو" under a station
+        in another valley would send the driver looking in the wrong place.
+        """
+        place = self._geography.find_place(place_id)
+        if place is None or place.status == PlaceStatus.REJECTED.value:
+            raise NotFoundError(error_codes.PLACE_NOT_FOUND, place_id=place_id)
+        if origin.latitude is not None and origin.longitude is not None:
+            distance = approx_distance_m(
+                place.latitude, place.longitude, origin.latitude, origin.longitude
+            )
+            if distance > ORIGIN_PLACE_REACH_M:
+                raise ValidationError(
+                    error_codes.VALIDATION_FAILED,
+                    reason="place_far_from_station",
+                    distance_m=distance,
+                )
+        return place.id
 
 
 @dataclass(frozen=True, slots=True)

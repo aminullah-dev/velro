@@ -30,6 +30,7 @@ class AuthRepository @Inject constructor(
     private val tokens: TokenStore,
     private val db: VelroDatabase,
     private val mapper: ResponseMapper,
+    private val recents: af.velro.data.location.RecentOrigins,
 ) {
 
     val isSignedIn: Flow<Boolean> = tokens.isSignedIn
@@ -194,6 +195,9 @@ class AuthRepository @Inject constructor(
     private suspend fun forgetThisHandset() {
         withContext(Dispatchers.IO) {
             db.clearAllTables()
+            // Where she has asked from: the one list on this phone that says
+            // where a person was, so it goes with the journeys.
+            recents.clear()
             tokens.clear()
         }
     }

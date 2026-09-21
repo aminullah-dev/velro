@@ -61,6 +61,30 @@ class ApiContractTest {
             ?: error("$name had no data")
 
     @Test
+    fun `where am I decodes, coordinates as decimal text and all`() {
+        // Captured from /geo/resolve at ایستگاه بابر, after naming the village
+        // there: the known name was approved on the spot (ADR 0015).
+        val here = decode<af.velro.data.api.ResolveDto>("resolve.json")
+        assertTrue(here.inside)
+        assertNotNull(here.district)
+        assertEquals("station", here.district_source)
+        assertTrue("nearest first", here.stations.zipWithNext().all { (a, b) ->
+            (a.distance_m ?: 0) <= (b.distance_m ?: 0)
+        })
+        val place = here.places.first()
+        assertEquals("APPROVED", place.status)
+        assertTrue(place.latitude in 34.0..36.0)
+    }
+
+    @Test
+    fun `a named place decodes`() {
+        val place = decode<af.velro.data.api.PlaceDto>("place.json")
+        assertEquals("بابر", place.name)
+        assertNotNull(place.village_id)
+        assertNotNull(place.nearest_station_id)
+    }
+
+    @Test
     fun `the geography snapshot decodes`() {
         val snapshot = decode<GeoSnapshotDto>("geo_snapshot.json")
 

@@ -151,6 +151,43 @@ fun BookingFlowRoute(
         awaitingPermission?.let(viewModel::onEvent)
         awaitingPermission = null
     }
+    // "Current location" asks for both grades at once. Precise is what lets
+    // the passenger name the spot; Android 12 lets her give only approximate,
+    // and the card then still finds the station and says why naming needs more.
+    val locateLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants ->
+        granted = grants.values.any { it } || hasLocationPermission(context)
+        if (granted) {
+            denials = 0
+            deniedForGood = false
+            viewModel.onEvent(BookingEvent.LocateMe)
+        } else {
+            denials += 1
+            val activity = context.findActivity()
+            val willAskAgain = activity == null ||
+                ActivityCompat.shouldShowRequestPermissionRationale(activity, LOCATION_PERMISSION)
+            deniedForGood = denials >= 2 || !willAskAgain
+        }
+    }
+    val requestLocation: () -> Unit = {
+        if (hasLocationPermission(context) && hasPreciseLocation(context)) {
+            granted = true
+            viewModel.onEvent(BookingEvent.LocateMe)
+        } else {
+            locateLauncher.launch(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, LOCATION_PERMISSION)
+            )
+        }
+    }
+    // Already allowed: find her as the flow opens, with no tap. Also after she
+    // comes back from Settings having switched it on.
+    LaunchedEffect(granted, state.hereStatus) {
+        if (granted && state.hereStatus == HereStatus.IDLE) {
+            viewModel.onEvent(BookingEvent.LocateMe)
+        }
+    }
+
     val onEvent: (BookingEvent) -> Unit = { event ->
         val summons = event is BookingEvent.AskForRide || event is BookingEvent.TripChosen
         if (summons) granted = hasLocationPermission(context)
@@ -174,6 +211,7 @@ fun BookingFlowRoute(
             else -> LocationAccess.ASKABLE
         },
         onOpenLocationSettings = { openAppSettings(context) },
+        onRequestLocation = requestLocation,
     )
 }
 
@@ -203,6 +241,10 @@ private fun hasLocationPermission(context: Context): Boolean = listOf(
     Manifest.permission.ACCESS_COARSE_LOCATION,
     Manifest.permission.ACCESS_FINE_LOCATION,
 ).any { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
+
+private fun hasPreciseLocation(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+        PackageManager.PERMISSION_GRANTED
 
 // Compose hands over whatever context it has -- usually the Activity, sometimes
 // a wrapper around it. shouldShowRequestPermissionRationale needs the Activity
@@ -240,6 +282,7 @@ fun BookingFlowScreen(
     modifier: Modifier = Modifier,
     locationAccess: LocationAccess = LocationAccess.GRANTED,
     onOpenLocationSettings: () -> Unit = {},
+    onRequestLocation: () -> Unit = {},
 ) {
     val strings = LocalVelroStrings.current
     val animate = LocalAnimationsEnabled.current
@@ -259,7 +302,7 @@ fun BookingFlowScreen(
     VelroScreen(
         title = strings[state.step.titleKey()],
         onBack = {
-            if (state.step == BookingFlowUiState.Step.ORIGIN_DISTRICT) onExit()
+            if (state.step == BookingFlowUiState.Step.ORIGIN) onExit()
             else onEvent(BookingEvent.Back)
         },
         // The steps are lazy lists that scroll themselves; the ask step scrolls
@@ -269,7 +312,9 @@ fun BookingFlowScreen(
     ) {
         Column(Modifier.fillMaxSize()) {
             when {
-                state.isLoading -> LoadingState()
+                // The where-from card has its own "finding you" line; the
+                // district list loading underneath it is no reason to cover it.
+                state.isLoading && state.step != BookingFlowUiState.Step.ORIGIN -> LoadingState()
                 // Saved-for-later is its own screen, and it must not resemble
                 // CONFIRMED in any way: no boarding code, no green, and the
                 // sentence that matters spelled out -- she does not have a
@@ -282,7 +327,10 @@ fun BookingFlowScreen(
                         onRetry = { onEvent(BookingEvent.Retry) },
                     )
                 else -> {
-                    if (state.errorCode != null) {
+                    // Nothing on the where-from card can fail into this slot:
+                    // a district list that did not refresh says so when the
+                    // list is opened, not over the card that does not need it.
+                    if (state.errorCode != null && state.step != BookingFlowUiState.Step.ORIGIN) {
                         InlineError(state.errorCode!!, context = state.errorContext)
                         // A refusal for a missing fix comes with its remedy
                         // beside it: the reason VELRO asks, if Android will
@@ -304,13 +352,13 @@ fun BookingFlowScreen(
                     // never reaches its end on the screen that says the booking
                     // succeeded would be the one place it actively misleads.
                     if (state.step != BookingFlowUiState.Step.CONFIRMED) {
-                        val total = BookingFlowUiState.Step.CONFIRMED.ordinal
+                        val (current, total) = state.progress
                         StepProgress(
-                            current = state.step.ordinal,
+                            current = current,
                             total = total,
                             label = strings[
                                 "common.state.step",
-                                "current" to state.step.ordinal + 1,
+                                "current" to current + 1,
                                 "total" to total,
                             ],
                         )
@@ -351,6 +399,9 @@ fun BookingFlowScreen(
                         label = "booking-step",
                     ) { step ->
                     when (step) {
+                        BookingFlowUiState.Step.ORIGIN -> OriginStep(
+                            state, onEvent, locationAccess, onRequestLocation, onOpenLocationSettings,
+                        )
                         BookingFlowUiState.Step.ORIGIN_DISTRICT -> DistrictList(state, onEvent)
                         BookingFlowUiState.Step.ORIGIN_VILLAGE -> VillageList(state, onEvent)
                         BookingFlowUiState.Step.ORIGIN_STATION -> StationList(state, onEvent)
@@ -370,6 +421,7 @@ fun BookingFlowScreen(
 }
 
 private fun BookingFlowUiState.Step.titleKey(): String = when (this) {
+    BookingFlowUiState.Step.ORIGIN -> "origin.title"
     BookingFlowUiState.Step.ORIGIN_DISTRICT -> "location.label.district"
     BookingFlowUiState.Step.ORIGIN_VILLAGE -> "location.label.village"
     BookingFlowUiState.Step.ORIGIN_STATION -> "location.label.station"
@@ -380,6 +432,7 @@ private fun BookingFlowUiState.Step.titleKey(): String = when (this) {
 }
 
 private fun BookingFlowUiState.isEmptyForStep(): Boolean = when (step) {
+    BookingFlowUiState.Step.ORIGIN -> false
     BookingFlowUiState.Step.ORIGIN_DISTRICT -> districts.isEmpty()
     BookingFlowUiState.Step.ORIGIN_VILLAGE -> villages.isEmpty()
     BookingFlowUiState.Step.ORIGIN_STATION -> stations.isEmpty()
@@ -933,6 +986,13 @@ private fun AskFare(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
+                state.originPlace?.let { place ->
+                    Text(
+                        strings["ride.journey.from_place", "place" to place.name],
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 Text(
                     strings["ride.ask.hint"],
                     style = MaterialTheme.typography.bodyMedium,

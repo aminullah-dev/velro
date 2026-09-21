@@ -1,6 +1,7 @@
 package af.velro.feature.booking
 
 import af.velro.data.location.LocationProvider
+import af.velro.data.location.RecentOrigins
 import af.velro.data.sync.SyncQueue
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
@@ -13,9 +14,12 @@ import af.velro.domain.Booking
 import af.velro.domain.Destination
 import af.velro.domain.DestinationGroup
 import af.velro.domain.District
+import af.velro.domain.Place
+import af.velro.domain.PlaceStatus
 import af.velro.domain.Station
 import af.velro.domain.TripOption
 import af.velro.domain.Village
+import af.velro.domain.Whereabouts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,10 +40,13 @@ import kotlinx.coroutines.launch
 /**
  * The passenger's booking flow, section 112.
  *
- * District -> village -> station -> destination -> search -> confirm. One state
- * object for the whole flow rather than one per screen, because the steps share
- * almost all of their data and threading it through five ViewModels would
- * mostly be plumbing.
+ * Where from -> destination -> ask. "Where from" opens on the passenger's own
+ * position (ADR 0015): the nearest station, the district it is in, and a name
+ * for the spot if she gives one. District -> village -> station is still there,
+ * one tap away, for the phone with no fix and the person travelling from
+ * somewhere she is not standing. One state object for the whole flow rather
+ * than one per screen, because the steps share almost all of their data and
+ * threading it through six ViewModels would mostly be plumbing.
  */
 /**
  * Departure hours offered, and the one selected by default.
@@ -54,6 +61,9 @@ private const val DEFAULT_DEPARTURE_HOUR = 6
 // Coming back is an afternoon thing far more often than a dawn one.
 private const val DEFAULT_RETURN_HOUR = 14
 
+/** Longer than any village name; the server refuses past sixty characters. */
+private const val PLACE_NAME_MAX = 60
+
 /**
  * The server's code for an ask or booking that arrived without coordinates.
  *
@@ -65,8 +75,58 @@ private const val DEFAULT_RETURN_HOUR = 14
  */
 internal const val GEOFENCE_LOCATION_REQUIRED = "GEOFENCE_LOCATION_REQUIRED"
 
+/**
+ * The server refuses to name a spot from a fix vaguer than this, and the app
+ * does not offer what the server will refuse. Same number as the server's
+ * MAX_NAMING_ACCURACY_M.
+ */
+internal const val NAMING_ACCURACY_M = 300f
+
+/**
+ * The place this ask comes from, when the passenger named or chose one.
+ *
+ * Only what the ask and the screen need: the id goes to the server, the name
+ * is shown under the station. [pending] is a name nobody at VELRO has read
+ * yet -- the driver of this request sees it, other passengers do not.
+ */
+data class OriginPlace(val id: String, val name: String, val pending: Boolean = false)
+
+/** Where "current location" stands. */
+enum class HereStatus {
+    /** Not asked yet -- usually because the permission is not held. */
+    IDLE,
+    LOCATING,
+    FOUND,
+    /** No fix: permission refused, location off, a tin roof. */
+    UNAVAILABLE,
+}
+
 data class BookingFlowUiState(
-    val step: Step = Step.ORIGIN_DISTRICT,
+    val step: Step = Step.ORIGIN,
+
+    // -- where from: the passenger's own position ------------------------
+    val hereStatus: HereStatus = HereStatus.IDLE,
+    /** The fix the card was built from; kept so naming uses the same point. */
+    val fix: LocationProvider.Coordinates? = null,
+    val whereabouts: Whereabouts? = null,
+    /** The name being typed for this spot. */
+    val placeName: String = "",
+    val isNamingPlace: Boolean = false,
+    /**
+     * Why the server would not keep the name: "personal", "digits",
+     * "generic", "too_long", "rejected", "coarse". Null when nothing was
+     * refused.
+     */
+    val placeRefusal: String? = null,
+    /** The named place this ask will carry to the driver, if any. */
+    val originPlace: OriginPlace? = null,
+    /**
+     * True when the origin came from current location or a recent, false when
+     * it was browsed. Decides where Back from the destination list goes.
+     */
+    val originFromHere: Boolean = false,
+    /** Where she has asked from before, on this phone only. */
+    val recents: List<RecentOrigins.Entry> = emptyList(),
 
     val districts: List<District> = emptyList(),
     val villages: List<Village> = emptyList(),
@@ -142,6 +202,9 @@ data class BookingFlowUiState(
     val askedRequestId: String? = null,
 ) {
     enum class Step {
+        // Where from, opening on the passenger's own position. The three
+        // browse steps after it are the fallback, not the way in.
+        ORIGIN,
         ORIGIN_DISTRICT, ORIGIN_VILLAGE, ORIGIN_STATION,
         // Section 89: after choosing where, the passenger names a price. There
         // is no results step to reach first -- VELRO has no price to show.
@@ -159,6 +222,37 @@ data class BookingFlowUiState(
      * vagueness is deliberate, and a remedy under it would read as a hint.
      */
     val needsLocationAccess: Boolean get() = errorCode == GEOFENCE_LOCATION_REQUIRED
+
+    /**
+     * Whether this fix can name the spot. A coarse fix could be any of three
+     * villages, and the server refuses it; the card says "turn on precise
+     * location" instead of offering a field that will be refused.
+     */
+    val canNamePlace: Boolean
+        get() = hereStatus == HereStatus.FOUND &&
+            whereabouts?.inside == true &&
+            (fix?.accuracyMetres ?: Float.MAX_VALUE) <= NAMING_ACCURACY_M
+
+    /**
+     * Where the bar stands, counted along the path actually taken: from here
+     * it is three steps -- where, where to, how much -- and "step 5 of 6"
+     * after one tap would say she had skipped something. Zero-based.
+     */
+    val progress: Pair<Int, Int>
+        get() = if (originFromHere || step == Step.ORIGIN) {
+            when (step) {
+                Step.DESTINATION -> 1 to 3
+                Step.ASK, Step.RESULTS -> 2 to 3
+                else -> 0 to 3
+            }
+        } else {
+            // RESULTS is the pre-ADR-0004 search, reached from nowhere now;
+            // clamped so it could never read "7 of 6".
+            step.ordinal.coerceAtMost(Step.ASK.ordinal) to Step.RESULTS.ordinal
+        }
+
+    /** The station a passenger here boards at: the nearest one. */
+    val nearestStation: Station? get() = whereabouts?.stations?.firstOrNull()
 
     /** Whole afghani as typed; converted to minor units only when sent. */
     val fareMinor: Long? get() = offeredFare.toLongOrNull()?.takeIf { it > 0 }?.times(100)
@@ -343,10 +437,14 @@ data class BookingFlowUiState(
      * is gone; nothing on DESTINATION reads [canSearch] any more.
      */
     fun steppedBack(): BookingFlowUiState = when (step) {
-        Step.ORIGIN_DISTRICT -> this
+        Step.ORIGIN -> this
+        Step.ORIGIN_DISTRICT -> copy(step = Step.ORIGIN)
         Step.ORIGIN_VILLAGE -> copy(step = Step.ORIGIN_DISTRICT)
         Step.ORIGIN_STATION -> copy(step = Step.ORIGIN_VILLAGE)
-        Step.DESTINATION -> copy(step = Step.ORIGIN_STATION)
+        // Back to wherever the origin was chosen: the card it came from, or
+        // the station list the passenger browsed to.
+        Step.DESTINATION ->
+            if (originFromHere) copy(step = Step.ORIGIN) else copy(step = Step.ORIGIN_STATION)
         Step.ASK -> copy(
             step = Step.DESTINATION,
             offeredFare = "",
@@ -360,6 +458,23 @@ data class BookingFlowUiState(
 }
 
 sealed interface BookingEvent {
+    /** Find where the passenger is. Sent once the permission is held. */
+    data object LocateMe : BookingEvent
+    data class PlaceNameChanged(val text: String) : BookingEvent
+    /** Keep the typed name for this spot, without leaving the card. */
+    data object SavePlaceName : BookingEvent
+    /** Forget the name chosen for this ask -- "change name". */
+    data object ClearPlace : BookingEvent
+    /**
+     * Travel from here, boarding at [station] (the nearest unless another was
+     * chosen). A name typed and not yet saved is saved first.
+     */
+    data class TravelFromHere(val station: Station) : BookingEvent
+    /** A named place nearby, chosen instead of typing. */
+    data class NearbyPlaceChosen(val place: Place) : BookingEvent
+    data class RecentChosen(val entry: RecentOrigins.Entry) : BookingEvent
+    /** "Choose from the list": the district -> village -> station path. */
+    data object Browse : BookingEvent
     data class DistrictChosen(val district: District) : BookingEvent
     data class VillageChosen(val village: Village) : BookingEvent
     data class StationChosen(val station: Station) : BookingEvent
@@ -390,6 +505,7 @@ class BookingFlowViewModel @Inject constructor(
     private val negotiation: NegotiationRepository,
     private val queue: SyncQueue,
     private val location: LocationProvider,
+    private val recentOrigins: RecentOrigins,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BookingFlowUiState())
@@ -400,13 +516,38 @@ class BookingFlowViewModel @Inject constructor(
 
     init {
         loadDistricts()
+        viewModelScope.launch {
+            recentOrigins.entries.collect { rows -> _state.update { it.copy(recents = rows) } }
+        }
     }
 
     fun onEvent(event: BookingEvent) {
         when (event) {
+            BookingEvent.LocateMe -> locate()
+            is BookingEvent.PlaceNameChanged -> _state.update {
+                it.copy(placeName = event.text.take(PLACE_NAME_MAX), placeRefusal = null)
+            }
+            BookingEvent.SavePlaceName -> viewModelScope.launch { savePlaceName() }
+            BookingEvent.ClearPlace -> _state.update {
+                it.copy(originPlace = null, placeName = "", placeRefusal = null)
+            }
+            is BookingEvent.TravelFromHere -> travelFromHere(event.station)
+            is BookingEvent.NearbyPlaceChosen -> chooseNearbyPlace(event.place)
+            is BookingEvent.RecentChosen -> chooseRecent(event.entry)
+            BookingEvent.Browse -> {
+                _state.update { it.copy(step = BookingFlowUiState.Step.ORIGIN_DISTRICT) }
+                // The list may never have loaded -- a first open with no signal.
+                // Opening it is the moment to try again, and to say if it fails.
+                if (_state.value.districts.isEmpty()) loadDistricts()
+            }
             is BookingEvent.DistrictChosen -> chooseDistrict(event.district)
             is BookingEvent.VillageChosen -> chooseVillage(event.village)
-            is BookingEvent.StationChosen -> chooseStation(event.station)
+            // Browsed to: a name given for where she stands does not belong to
+            // a station she picked from a list.
+            is BookingEvent.StationChosen -> {
+                _state.update { it.copy(originFromHere = false, originPlace = null) }
+                chooseStation(event.station)
+            }
             is BookingEvent.GroupToggled -> _state.update {
                 it.copy(expandedGroupId = if (it.expandedGroupId == event.groupId) null else event.groupId)
             }
@@ -503,7 +644,12 @@ class BookingFlowViewModel @Inject constructor(
             // A village with exactly one station should not ask: skip straight
             // to the destination.
             if (stations.size == 1) {
-                _state.update { it.copy(stations = stations, isLoading = false) }
+                _state.update {
+                    it.copy(
+                        stations = stations, isLoading = false,
+                        originFromHere = false, originPlace = null,
+                    )
+                }
                 chooseStation(stations.first())
             } else {
                 _state.update { it.copy(stations = stations, isLoading = false) }
@@ -554,6 +700,7 @@ class BookingFlowViewModel @Inject constructor(
                 latitude = standing?.latitude,
                 longitude = standing?.longitude,
                 locationIsMock = standing?.isMock ?: false,
+                originPlaceId = current.originPlace?.id,
                 // The same attempt id the booking path holds: a retry after a
                 // dropped connection is this ask again, not a second one.
                 idempotencyKey = IdempotencyKeys.forAsk(
@@ -561,8 +708,22 @@ class BookingFlowViewModel @Inject constructor(
                 ),
             )
             when (result) {
-                is ApiResult.Success -> _state.update {
-                    it.copy(isSubmitting = false, askedRequestId = result.value.id)
+                is ApiResult.Success -> {
+                    // Remembered only once it was actually used to ask: a list
+                    // of places she browsed past would be noise.
+                    recentOrigins.remember(
+                        RecentOrigins.Entry(
+                            stationId = station.id,
+                            stationName = station.name,
+                            districtId = station.districtId,
+                            placeId = current.originPlace?.id,
+                            placeName = current.originPlace?.name,
+                            usedAt = System.currentTimeMillis(),
+                        )
+                    )
+                    _state.update {
+                        it.copy(isSubmitting = false, askedRequestId = result.value.id)
+                    }
                 }
                 is ApiResult.Failure -> _state.update {
                     it.copy(isSubmitting = false).failed(result.error)
@@ -682,6 +843,7 @@ class BookingFlowViewModel @Inject constructor(
     private fun retry() {
         val current = _state.value
         when (current.step) {
+            BookingFlowUiState.Step.ORIGIN -> locate()
             BookingFlowUiState.Step.ORIGIN_DISTRICT -> loadDistricts()
             // The two steps that had no retry at all. Both read from the Room
             // cache, so on a phone that has never had signal they are exactly
@@ -698,6 +860,123 @@ class BookingFlowViewModel @Inject constructor(
         }
     }
 
+    // -- where from ----------------------------------------------------------
+
+    private fun locate() {
+        if (_state.value.hereStatus == HereStatus.LOCATING) return
+        _state.update { it.copy(hereStatus = HereStatus.LOCATING) }
+        viewModelScope.launch {
+            val fix = location.precise()
+            if (fix == null) {
+                _state.update { it.copy(hereStatus = HereStatus.UNAVAILABLE) }
+                return@launch
+            }
+            when (val found = geography.resolve(fix.latitude, fix.longitude)) {
+                is ApiResult.Success -> _state.update {
+                    it.copy(hereStatus = HereStatus.FOUND, fix = fix, whereabouts = found.value)
+                }
+                // Offline or refused: the card says it could not find her and
+                // the list is right below it. No error banner over a flow that
+                // still works.
+                is ApiResult.Failure -> _state.update {
+                    it.copy(hereStatus = HereStatus.UNAVAILABLE, fix = fix)
+                }
+            }
+        }
+    }
+
+    /**
+     * Keep the typed name. True when there is now a place for this ask --
+     * either just saved, or nothing was typed and there is nothing to save.
+     */
+    private suspend fun savePlaceName(): Boolean {
+        val current = _state.value
+        val typed = current.placeName.trim()
+        if (typed.isEmpty()) return true
+        if (current.originPlace?.name == typed) return true
+        if (current.isNamingPlace) return false
+        val fix = current.fix ?: return true
+        if (!current.canNamePlace) {
+            _state.update { it.copy(placeRefusal = "coarse") }
+            return false
+        }
+        _state.update { it.copy(isNamingPlace = true, placeRefusal = null) }
+        val result = geography.namePlace(
+            name = typed,
+            latitude = fix.latitude,
+            longitude = fix.longitude,
+            accuracyMetres = fix.accuracyMetres,
+            isMock = fix.isMock,
+        )
+        return when (result) {
+            is ApiResult.Success -> {
+                val place = result.value
+                _state.update {
+                    it.copy(
+                        isNamingPlace = false,
+                        originPlace = OriginPlace(
+                            id = place.id,
+                            name = place.name,
+                            pending = place.status != PlaceStatus.APPROVED,
+                        ),
+                        placeName = place.name,
+                    )
+                }
+                true
+            }
+            is ApiResult.Failure -> {
+                _state.update { it.copy(isNamingPlace = false, placeRefusal = refusalOf(result.error)) }
+                false
+            }
+        }
+    }
+
+    private fun travelFromHere(station: Station) {
+        viewModelScope.launch {
+            // A typed name that the server will not keep stops here, on the
+            // card, with the reason beside the field -- not two screens later.
+            if (!savePlaceName()) return@launch
+            _state.update { it.copy(originFromHere = true) }
+            chooseStation(station)
+        }
+    }
+
+    private fun chooseNearbyPlace(place: Place) {
+        val here = _state.value.whereabouts
+        val station = here?.stations?.firstOrNull { it.id == place.nearestStationId }
+            ?: here?.stations?.firstOrNull()
+            ?: return
+        _state.update {
+            it.copy(
+                originPlace = OriginPlace(place.id, place.name),
+                placeName = place.name,
+                placeRefusal = null,
+                originFromHere = true,
+            )
+        }
+        chooseStation(station)
+    }
+
+    private fun chooseRecent(entry: RecentOrigins.Entry) {
+        viewModelScope.launch {
+            // The cached station when there is one; otherwise enough of it to
+            // ask with -- an id and a name are all the ask sends and shows.
+            val station = geography.station(entry.stationId) ?: Station(
+                id = entry.stationId, code = "", name = entry.stationName,
+                villageId = "", districtId = entry.districtId,
+            )
+            _state.update {
+                it.copy(
+                    originPlace = entry.placeId?.let { id ->
+                        OriginPlace(id, entry.placeName.orEmpty())
+                    },
+                    originFromHere = true,
+                )
+            }
+            chooseStation(station)
+        }
+    }
+
     private fun BookingFlowUiState.failed(error: ApiException) = copy(
         isLoading = false,
         isSubmitting = false,
@@ -710,6 +989,12 @@ class BookingFlowViewModel @Inject constructor(
      * per pair; a failure leaves no card and no complaint -- the preview is
      * a bonus on top of a flow that already works with words alone.
      */
+    private fun refusalOf(error: ApiException): String = when (error.code) {
+        "PLACE_NAME_NOT_ALLOWED" -> (error.context["reason"] as? String) ?: "personal"
+        "PLACE_FIX_TOO_COARSE" -> "coarse"
+        else -> "error:" + error.code
+    }
+
     private fun loadJourneyPreview() {
         val current = _state.value
         val station = current.selectedStation ?: return

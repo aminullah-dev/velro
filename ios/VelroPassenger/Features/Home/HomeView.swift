@@ -106,10 +106,7 @@ struct HomeView: View {
                     }
                     .accessibilityIdentifier("home.offers")
                 } else {
-                    OnBrandButton(label: strings["home.action.search"], systemImage: "car.fill") {
-                        app.router.open(.ask)
-                    }
-                    .accessibilityIdentifier("home.search")
+                    WhereToBar { app.router.open(.ask) }
                 }
             }
             .padding(.top, Spacing.lg)
@@ -177,6 +174,50 @@ private struct OpenRequestCard: View {
                 SecondaryButton(label: strings["home.open_request.open"], action: open)
                     .padding(.top, Spacing.sm)
             }
+        }
+    }
+}
+
+/// "Where to?" -- the bar every ride app she may have used opens on.
+///
+/// Shaped like a search field because that is what it is to her: tap, and say
+/// where. The line under it says the flow begins where she is standing, so the
+/// first thing she sees after the tap -- her own position already found -- is
+/// what she was told would happen. Still one action, still the header's.
+private struct WhereToBar: View {
+    let action: () -> Void
+    @Environment(\.strings) private var strings
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Button(action: action) {
+                HStack(spacing: Spacing.md) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.body.weight(.semibold))
+                        .accessibilityHidden(true)
+                    Text(strings["home.search.where_to"])
+                        .velroFont(.heading, weight: .medium)
+                    Spacer()
+                    Image(systemName: "car.fill")
+                        .accessibilityHidden(true)
+                }
+                .padding(.horizontal, Spacing.lg)
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .foregroundStyle(Palette.brandField)
+                .background(Palette.onBrandField, in: Capsule())
+                .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+                .contentShape(Capsule())
+            }
+            .buttonStyle(PressStyle())
+            .accessibilityIdentifier("home.search")
+
+            Label {
+                Text(strings["home.search.from_here"]).velroFont(.caption)
+            } icon: {
+                Image(systemName: "location.fill").font(.caption)
+            }
+            .foregroundStyle(Palette.onBrandField)
+            .accessibilityHidden(true)
         }
     }
 }

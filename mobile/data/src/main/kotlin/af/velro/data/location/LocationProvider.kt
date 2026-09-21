@@ -20,10 +20,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 /**
  * Where the handset is standing, asked politely and once.
  *
- * This exists for the geofence: an ask or a booking summons real drivers to a
- * real station, so the server wants to know the caller is inside the service
- * area before it rings anyone. Nothing here tracks -- one fix per submission,
- * no listener left running, nothing stored.
+ * This exists for the geofence -- an ask or a booking summons real drivers to
+ * a real station, so the server wants to know the caller is inside the service
+ * area before it rings anyone -- and for "current location", which finds the
+ * nearest station and lets the passenger name the place (ADR 0015). Nothing
+ * here tracks: one fix per question, no listener left running, nothing stored.
  *
  * Plain [LocationManager], no Play Services. The rest of the product runs on
  * handsets that may not have Google's stack, and a network-cell fix is
@@ -50,6 +51,11 @@ class LocationProvider @Inject constructor(
          * exactly one place and that place is not here.
          */
         val isMock: Boolean,
+        /**
+         * The radius, in metres, the phone says the fix is good to. Null when
+         * it did not say. Naming a place needs a small one; the fence does not.
+         */
+        val accuracyMetres: Float? = null,
     )
 
     suspend fun current(): Coordinates? {
@@ -94,6 +100,56 @@ class LocationProvider @Inject constructor(
         }
     }
 
+    /**
+     * A fix good enough to name the spot it was taken on, or null.
+     *
+     * The fence's [current] accepts a ten-minute-old network fix, because a
+     * twenty-kilometre question does not care. "What is this place called"
+     * does: a cell fix three villages wide would store the name against the
+     * wrong one. So this wants fine permission, prefers GPS, accepts a
+     * last-known fix only when it is both recent and tight, and waits longer
+     * for a fresh one -- the passenger is standing still, looking at a card
+     * that says it is finding them.
+     *
+     * Returns whatever it got, coarse or not; the caller reads
+     * [Coordinates.accuracyMetres] and decides whether naming is offered.
+     */
+    suspend fun precise(): Coordinates? {
+        if (!hasPermission()) return null
+        val manager = context.getSystemService(LocationManager::class.java) ?: return null
+
+        manager.allProviders
+            .mapNotNull { runCatching { manager.getLastKnownLocation(it) }.getOrNull() }
+            .filter { System.currentTimeMillis() - it.time < PRECISE_RECENT_MS }
+            .filter { it.hasAccuracy() && it.accuracy <= PRECISE_ENOUGH_M }
+            .minByOrNull { it.accuracy }
+            ?.let { return it.toCoordinates() }
+
+        val provider = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+            .firstOrNull { runCatching { manager.isProviderEnabled(it) }.getOrDefault(false) }
+            ?: return current()
+
+        return withTimeoutOrNull(PRECISE_TIMEOUT_MS) {
+            suspendCancellableCoroutine { continuation ->
+                val signal = CancellationSignal()
+                continuation.invokeOnCancellation { signal.cancel() }
+                runCatching {
+                    LocationManagerCompat.getCurrentLocation(
+                        manager, provider, signal,
+                        ContextCompat.getMainExecutor(context),
+                    ) { location: Location? ->
+                        if (continuation.isActive) continuation.resume(location?.toCoordinates())
+                    }
+                }.onFailure { if (continuation.isActive) continuation.resume(null) }
+            }
+        } ?: current()
+    }
+
+    /** Whether the precise grade is held -- Android 12 lets a person give only approximate. */
+    fun hasPrecisePermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+
     private fun hasPermission(): Boolean = listOf(
         Manifest.permission.ACCESS_COARSE_LOCATION,
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -112,10 +168,14 @@ class LocationProvider @Inject constructor(
             @Suppress("DEPRECATION")
             isFromMockProvider
         },
+        accuracyMetres = if (hasAccuracy()) accuracy else null,
     )
 
     private companion object {
         const val RECENT_ENOUGH_MS = 10L * 60 * 1000
         const val FIX_TIMEOUT_MS = 8_000L
+        const val PRECISE_RECENT_MS = 2L * 60 * 1000
+        const val PRECISE_ENOUGH_M = 100f
+        const val PRECISE_TIMEOUT_MS = 15_000L
     }
 }

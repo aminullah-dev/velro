@@ -24,7 +24,7 @@ from application.use_cases.negotiate_fare import (
     WithdrawOffer,
     WithdrawOfferCommand,
 )
-from domain.enums import RideRequestStatus
+from domain.enums import PlaceStatus, RideRequestStatus
 from shared import error_codes
 from shared.errors import ConflictError, NotFoundError
 from shared.money import Money
@@ -54,6 +54,10 @@ class RequestRideIn(Schema):
     #: True when Android marked the fix as coming from a mock-location app.
     #: An unmodified client reports it honestly; its absence proves nothing.
     location_is_mock: bool = False
+    #: The named place the passenger asked from, when they used their current
+    #: location (POST /geo/places). The station above is still where they
+    #: board; this tells the driver which village they are walking in from.
+    origin_place_id: str | None = Field(default=None, max_length=36)
     # When the passenger wants to travel. Omitted means now, which is what
     # every request meant before this field existed: the column, the command
     # and the trip it becomes were all built for a departure time, and this
@@ -99,6 +103,10 @@ class RideRequestOut(Schema):
     status: str
     origin_station_id: str
     origin_station_name: str | None
+    # "from قلعه نو": the place the passenger named, under the station. Null
+    # when they chose from the list, or when staff have rejected the name.
+    origin_place_id: str | None = None
+    origin_place_name: str | None = None
     destination_id: str
     destination_name: str | None
     passenger_count: int
@@ -175,6 +183,7 @@ def request_ride(
             note=body.note,
             requested_for=body.requested_for,
             return_for=body.return_for,
+            origin_place_id=body.origin_place_id,
         )
     )
     return ok(_request_out(row, [], geo=geo, bookings=bookings).model_dump())
@@ -582,6 +591,13 @@ def _described(vehicle) -> str | None:
 def _request_out(row, offers, *, geo, bookings) -> RideRequestOut:
     station = geo.find_station(row.origin_station_id)
     destination = geo.find_destination(row.destination_id)
+    # A PENDING name is shown here too: it goes only to the drivers deciding
+    # about this one request, which is what the free-text note already does.
+    # What waits for staff is showing it to *other passengers*. A rejected
+    # name is not repeated to anyone.
+    place = geo.find_place(row.origin_place_id) if row.origin_place_id else None
+    if place is not None and place.status == PlaceStatus.REJECTED.value:
+        place = None
     # Matched only: an open request has no trip yet, and looking one up for
     # every row on a board of thirty waiting passengers would be thirty queries
     # for a field that is null on every one of them.
@@ -598,6 +614,8 @@ def _request_out(row, offers, *, geo, bookings) -> RideRequestOut:
         status=row.status,
         origin_station_id=row.origin_station_id,
         origin_station_name=getattr(station, "name", None),
+        origin_place_id=place.id if place is not None else None,
+        origin_place_name=place.name if place is not None else None,
         destination_id=row.destination_id,
         destination_name=getattr(destination, "name", None),
         passenger_count=row.passenger_count,

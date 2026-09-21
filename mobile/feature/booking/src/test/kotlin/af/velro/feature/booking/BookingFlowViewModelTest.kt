@@ -121,9 +121,91 @@ class BookingFlowViewModelTest {
     }
 
     @Test
+    fun `the flow opens on where the passenger is standing`() {
+        assertEquals(BookingFlowUiState.Step.ORIGIN, BookingFlowUiState().step)
+    }
+
+    @Test
     fun `back from the first step goes nowhere`() {
-        val first = BookingFlowUiState(step = BookingFlowUiState.Step.ORIGIN_DISTRICT)
-        assertEquals(BookingFlowUiState.Step.ORIGIN_DISTRICT, first.steppedBack().step)
+        val first = BookingFlowUiState(step = BookingFlowUiState.Step.ORIGIN)
+        assertEquals(BookingFlowUiState.Step.ORIGIN, first.steppedBack().step)
+    }
+
+    @Test
+    fun `back from the district list returns to current location`() {
+        val browsing = BookingFlowUiState(step = BookingFlowUiState.Step.ORIGIN_DISTRICT)
+        assertEquals(BookingFlowUiState.Step.ORIGIN, browsing.steppedBack().step)
+    }
+
+    @Test
+    fun `back from DESTINATION returns to the card when the origin came from here`() {
+        val fromHere = BookingFlowUiState(
+            step = BookingFlowUiState.Step.DESTINATION,
+            selectedStation = station,
+            originFromHere = true,
+            originPlace = OriginPlace("p1", "قلعه نو"),
+        )
+        val back = fromHere.steppedBack()
+        assertEquals(BookingFlowUiState.Step.ORIGIN, back.step)
+        // The name she gave survives going back to look at it again.
+        assertEquals("قلعه نو", back.originPlace?.name)
+    }
+
+    @Test
+    fun `the bar counts the short path when the origin came from here`() {
+        val fromHere = BookingFlowUiState(
+            step = BookingFlowUiState.Step.ASK, originFromHere = true,
+        )
+        assertEquals(2 to 3, fromHere.progress)
+        val browsed = BookingFlowUiState(step = BookingFlowUiState.Step.ASK)
+        assertEquals(BookingFlowUiState.Step.ASK.ordinal to 6, browsed.progress)
+    }
+
+    // -- naming the spot ---------------------------------------------------
+
+    private fun found(accuracy: Float?, inside: Boolean = true) = BookingFlowUiState(
+        hereStatus = HereStatus.FOUND,
+        fix = af.velro.data.location.LocationProvider.Coordinates(
+            latitude = "35.12500", longitude = "68.77000", isMock = false,
+            accuracyMetres = accuracy,
+        ),
+        whereabouts = af.velro.domain.Whereabouts(
+            inside = inside,
+            stations = listOf(station.copy(distanceMetres = 420)),
+        ),
+    )
+
+    @Test
+    fun `a tight fix inside the area may name the spot`() {
+        assertTrue(found(accuracy = 25f).canNamePlace)
+        assertEquals(station.id, found(accuracy = 25f).nearestStation?.id)
+    }
+
+    @Test
+    fun `a coarse fix may not -- the server would refuse it`() {
+        assertEquals(false, found(accuracy = 1_500f).canNamePlace)
+        // No accuracy reported is treated as coarse, not as perfect.
+        assertEquals(false, found(accuracy = null).canNamePlace)
+    }
+
+    @Test
+    fun `outside the area nothing is named`() {
+        assertEquals(false, found(accuracy = 10f, inside = false).canNamePlace)
+    }
+
+    @Test
+    fun `recents put the latest first and keep one row per origin`() {
+        fun entry(station: String, place: String?) =
+            af.velro.data.location.RecentOrigins.Entry(station, station, "d", place, place)
+        var list = emptyList<af.velro.data.location.RecentOrigins.Entry>()
+        list = af.velro.data.location.RecentOrigins.merged(list, entry("s1", null))
+        list = af.velro.data.location.RecentOrigins.merged(list, entry("s2", "p2"))
+        list = af.velro.data.location.RecentOrigins.merged(list, entry("s1", null))
+        assertEquals(listOf("s1", "s2"), list.map { it.stationId })
+        repeat(10) { n ->
+            list = af.velro.data.location.RecentOrigins.merged(list, entry("x$n", null))
+        }
+        assertEquals(af.velro.data.location.RecentOrigins.LIMIT, list.size)
     }
 
     @Test

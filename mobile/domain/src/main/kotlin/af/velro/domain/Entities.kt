@@ -54,6 +54,48 @@ data class Station(
     val distanceMetres: Int? = null,
 )
 
+/**
+ * A name passengers gave to a spot (ADR 0015).
+ *
+ * Never says who gave it -- the server keeps no such column. APPROVED is shown
+ * to anyone standing nearby; PENDING comes back only to the person who just
+ * typed it, and lives on in their own recents on this phone.
+ */
+data class Place(
+    val id: String,
+    val name: String,
+    val districtId: String,
+    val villageId: String? = null,
+    val nearestStationId: String? = null,
+    val latitude: Double,
+    val longitude: Double,
+    val status: PlaceStatus = PlaceStatus.PENDING,
+    val distanceMetres: Int? = null,
+)
+
+enum class PlaceStatus { APPROVED, PENDING, REJECTED }
+
+/**
+ * Where the passenger is standing, as the server reads a GPS fix.
+ *
+ * One answer for the whole "current location" card: whether VELRO goes here,
+ * which district this is, the stations to board at and the named places
+ * around.
+ */
+data class Whereabouts(
+    val inside: Boolean,
+    val district: District? = null,
+    /**
+     * True when only a district's centre point decided the district -- a guess
+     * the screen words as "probably", with a way to change it.
+     */
+    val districtIsGuess: Boolean = false,
+    /** Nearest first, each with its distance. */
+    val stations: List<Station> = emptyList(),
+    /** Approved names within walking distance, nearest first. */
+    val places: List<Place> = emptyList(),
+)
+
 data class Destination(
     val id: String,
     val code: String,

@@ -74,6 +74,61 @@ public struct Station: Decodable, Sendable, Hashable, Identifiable {
     public let isPrimary: Bool?
     public let description: String?
     public let distanceM: Int?
+
+    public init(
+        id: String, code: String, name: String, villageId: String, districtId: String,
+        isPrimary: Bool? = nil, description: String? = nil, distanceM: Int? = nil
+    ) {
+        self.id = id
+        self.code = code
+        self.name = name
+        self.villageId = villageId
+        self.districtId = districtId
+        self.isPrimary = isPrimary
+        self.description = description
+        self.distanceM = distanceM
+    }
+}
+
+/// A name passengers gave to a spot (ADR 0015). Never says who gave it.
+///
+/// APPROVED is offered to anyone standing nearby; PENDING comes back only to
+/// the person who just typed it.
+public struct Place: Decodable, Sendable, Hashable, Identifiable {
+    public let id: String
+    public let name: String
+    public let districtId: String
+    public let villageId: String?
+    public let nearestStationId: String?
+    // No coordinates, like Station and District: the server sends them as
+    // decimal text, and nothing on the phone needs the point -- the distance
+    // is already worked out.
+    public let status: String
+    public let distanceM: Int?
+
+    public var isApproved: Bool { status == "APPROVED" }
+}
+
+/// Where a fix is, as the server reads it: whether VELRO goes there, which
+/// district, the stations to board at and the named places around.
+public struct Whereabouts: Decodable, Sendable, Hashable {
+    public let inside: Bool
+    public let district: District?
+    /// "station" or "centre"; the second is a guess, worded as "probably".
+    public let districtSource: String?
+    public let stations: [Station]
+    public let places: [Place]
+
+    public var districtIsGuess: Bool { districtSource == "centre" }
+
+    public init(inside: Bool, district: District? = nil, districtSource: String? = nil,
+                stations: [Station] = [], places: [Place] = []) {
+        self.inside = inside
+        self.district = district
+        self.districtSource = districtSource
+        self.stations = stations
+        self.places = places
+    }
 }
 
 public struct Destination: Decodable, Sendable, Hashable, Identifiable {
@@ -158,6 +213,9 @@ public struct RideRequest: Decodable, Sendable, Hashable, Identifiable {
     public let status: RideRequestStatus
     public let originStationId: String
     public let originStationName: String?
+    /// "From قلعه نو": the place the passenger named, under the station.
+    public let originPlaceId: String?
+    public let originPlaceName: String?
     public let destinationId: String
     public let destinationName: String?
     public let passengerCount: Int

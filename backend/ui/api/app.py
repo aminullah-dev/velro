@@ -96,7 +96,7 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
     errors.install(app)
 
     for router in (
-        auth.router, geography.router, bookings.router,
+        auth.router, geography.router, geography.admin_router, bookings.router,
         driver.router, dispatch.router, admin.router, imports.router,
         documents.router, vehicles.router, vehicle_documents.router,
         support.router,

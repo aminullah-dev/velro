@@ -1,5 +1,6 @@
 package af.velro.data.repository
 
+import af.velro.data.location.RecentOrigins
 import af.velro.data.api.ApiResult
 import af.velro.data.api.ResponseMapper
 import af.velro.data.api.SessionDto
@@ -89,7 +90,7 @@ class DeleteAccountTest {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(VelroApi::class.java)
-        return AuthRepository(api, tokens, db, ResponseMapper(json))
+        return AuthRepository(api, tokens, db, ResponseMapper(json), RecentOrigins(InstrumentationRegistry.getInstrumentation().targetContext))
     }
 
     @Test

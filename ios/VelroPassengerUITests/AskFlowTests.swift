@@ -1,6 +1,6 @@
 import XCTest
 
-/// Asking for a ride end to end: district, village, station, destination, a
+/// Asking for a ride end to end: where from, district, village, station, destination, a
 /// price for tomorrow morning; a driver answers; she takes his price, gets a
 /// boarding code, and cancels -- which also frees the seeded driver for the
 /// next run.
@@ -13,6 +13,13 @@ final class AskFlowTests: XCTestCase {
     func testAskTakeAPriceAndBoard() async throws {
         let app = launchSignedIn(phone: freshTestPhone())
         app.buttons["home.search"].tap()
+
+        // Where from opens on the current-location card; this run travels
+        // from a village chosen in the list, the way a phone with no fix does.
+        let browse = app.buttons["origin.browse"]
+        XCTAssertTrue(browse.waitForExistence(timeout: 10))
+        snapshot("3b-origin")
+        browse.tap()
 
         tapFirst(app, "ask.district")
         tapFirst(app, "ask.village")

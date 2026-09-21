@@ -8,6 +8,7 @@ layer and never used as API schemas. Three shapes, three purposes: wire
 from infrastructure.db.models.geography import (  # noqa: F401
     DestinationRow,
     DistrictRow,
+    PlaceRow,
     ProvinceRow,
     RegionRow,
     StationRow,

@@ -1,5 +1,6 @@
 package af.velro.data.repository
 
+import af.velro.data.location.RecentOrigins
 import af.velro.data.api.ResponseMapper
 import af.velro.data.api.TokenStore
 import af.velro.data.api.VelroApi
@@ -59,7 +60,7 @@ class SignOutTest {
             .build()
             .create(VelroApi::class.java)
 
-        auth = AuthRepository(api, TokenStore(context), db, ResponseMapper(json))
+        auth = AuthRepository(api, TokenStore(context), db, ResponseMapper(json), RecentOrigins(context))
     }
 
     @After

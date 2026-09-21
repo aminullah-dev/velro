@@ -112,6 +112,43 @@ data class StationDto(
     val distance_m: Int? = null,
 )
 
+/** A name passengers gave to a spot. Carries nobody's identity. */
+@Serializable
+data class PlaceDto(
+    val id: String,
+    val name: String,
+    val district_id: String,
+    val village_id: String? = null,
+    val nearest_station_id: String? = null,
+    val latitude: Double,
+    val longitude: Double,
+    val status: String = "PENDING",
+    val distance_m: Int? = null,
+)
+
+/** GET /geo/resolve: everything the current-location card needs, in one trip. */
+@Serializable
+data class ResolveDto(
+    val inside: Boolean = false,
+    val district: DistrictDto? = null,
+    /** "station" or "centre" -- the second is a guess. */
+    val district_source: String? = null,
+    val stations: List<StationDto> = emptyList(),
+    val places: List<PlaceDto> = emptyList(),
+)
+
+@Serializable
+data class NamePlaceRequest(
+    val name: String,
+    /** Decimal-as-string, like every coordinate this app sends. */
+    val latitude: String,
+    val longitude: String,
+    val accuracy_m: Float? = null,
+    val location_is_mock: Boolean = false,
+    /** Only when the passenger corrected the district the fix suggested. */
+    val district_id: String? = null,
+)
+
 @Serializable
 data class DestinationDto(
     val id: String,
@@ -604,6 +641,8 @@ data class RequestRideRequest(
     val longitude: String? = null,
     /** True when Android branded the fix as mocked. Reported honestly. */
     val location_is_mock: Boolean = false,
+    /** The place the passenger named, when asking from where they stand. */
+    val origin_place_id: String? = null,
 )
 
 @Serializable
@@ -637,6 +676,8 @@ data class RideRequestDto(
     val status: String,
     val origin_station_id: String,
     val origin_station_name: String? = null,
+    val origin_place_id: String? = null,
+    val origin_place_name: String? = null,
     val destination_id: String,
     val destination_name: String? = null,
     val passenger_count: Int,

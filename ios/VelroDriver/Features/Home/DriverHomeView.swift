@@ -343,6 +343,11 @@ struct WaitingRequestCard: View {
                 ]])
                 .velroFont(.body)
                 .foregroundStyle(Palette.onSurface)
+                if let place = request.originPlaceName {
+                    Text(strings["ride.journey.from_place", ["place": place]])
+                        .velroFont(.caption)
+                        .foregroundStyle(Palette.primary)
+                }
                 if let departure = request.departure {
                     Text(Calendars.dateTime(departure, strings.locale))
                         .velroFont(.caption)

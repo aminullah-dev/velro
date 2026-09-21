@@ -28,6 +28,9 @@ error.station_disabled	That station is not in service right now.	این ایست
 error.destination_not_found	That destination was not found.	این مقصد یافت نشد.	دا منزل ونه موندل شو.	
 error.destination_disabled	That destination is not available right now.	این مقصد فعلاً موجود نیست.	دا منزل اوس نشته.	
 error.destination_cycle	That destination cannot contain itself.	یک مقصد نمی‌تواند شامل خودش باشد.	یو منزل خپل ځان نشي رانغاړلی.	
+error.place_name_not_allowed	Write the name of the village or area, not a house, a shop or a person.	نام قریه یا ساحه را بنویسید؛ نام خانه، دکان یا شخص پذیرفته نمی‌شود.	د کلي یا سیمې نوم ولیکئ؛ د کور، دوکان یا کوم کس نوم نه منل کېږي.	
+error.place_not_found	That place was not found.	این مکان پیدا نشد.	دا ځای ونه موندل شو.	
+error.place_fix_too_coarse	Your location is not precise enough to name this place. Wait a moment in the open and try again.	موقعیت شما برای نام‌گذاری این مکان به اندازهٔ کافی دقیق نیست. چند لحظه در فضای باز صبر کنید و دوباره تلاش کنید.	ستاسو موقعیت د دې ځای د نومولو لپاره کافي دقیق نه دی. یوه شېبه په خلاص ځای کې انتظار وکړئ او بیا هڅه وکړئ.	
 error.import_file_unreadable	The file could not be read. Check the format and try again.	فایل خوانده نشد. فارمت را بررسی و دوباره کوشش کنید.	فایل ولوستل نشو. بڼه یې وګورئ او بیا هڅه وکړئ.	
 error.import_column_missing	The column {column} is missing from the file.	ستون {column} در فایل موجود نیست.	په فایل کې د {column} ستون نشته.	
 error.import_row_invalid	Row {row} could not be read.	سطر {row} خوانده نشد.	کرښه {row} ونه لوستل شوه.	
@@ -120,6 +123,38 @@ location.label.destination	Destination	مقصد	منزل
 location.hint.search	Type a village or station name	نام قریه یا ایستگاه را بنویسید	د کلي یا تم ځای نوم ولیکئ	
 location.distance.metres	{distance} m away	{distance} متر فاصله	{distance} متره واټن	
 location.distance.kilometres	{distance} km away	{distance} کیلومتر فاصله	{distance} کیلومتره واټن	
+origin.title	Where are you?	کجا هستید؟	چېرته یاست؟	
+origin.current.title	Current location	موقعیت فعلی	اوسنی ځای	
+origin.current.locating	Finding where you are…	در حال پیدا کردن موقعیت شما…	ستاسو ځای پیدا کوو…	
+origin.current.unavailable	We could not find your location. Choose your village from the list instead.	موقعیت شما پیدا نشد. به جای آن قریهٔ خود را از فهرست انتخاب کنید.	ستاسو ځای ونه موندل شو. پر ځای یې خپل کلی له لړلیک څخه وټاکئ.	
+origin.current.outside	VELRO does not reach where you are yet. Choose a village from the list if you are travelling from one.	ولرو هنوز به جایی که هستید نمی‌رسد. اگر از یکی از قریه‌ها سفر می‌کنید، آن را از فهرست انتخاب کنید.	ولرو لا هغه ځای ته نه رسېږي چې تاسو یاست. که له یوه کلي سفر کوئ، هغه له لړلیک څخه وټاکئ.	
+origin.current.nearest	Nearest station: {station}	نزدیک‌ترین ایستگاه: {station}	تر ټولو نږدې تم ځای: {station}	
+origin.current.district	{district} district	ولسوالی {district}	{district} ولسوالي	
+origin.current.district_guess	Probably {district} district	احتمالاً ولسوالی {district}	ښايي {district} ولسوالي	
+origin.current.use	Travel from here	از همین‌جا سفر می‌کنم	له همدې ځایه سفر کوم	
+origin.current.other_station	Stations nearby	ایستگاه‌های نزدیک	نږدې تم ځایونه	
+origin.place.question	What is this place called?	نام این‌جا چیست؟	د دې ځای نوم څه دی؟	
+origin.place.hint	Village or area name, e.g. Qala-e-Naw	نام قریه یا ساحه، مثلاً قلعه نو	د کلي یا سیمې نوم، لکه قلعه نو	
+origin.place.why	The driver sees this name, and the next passenger here can pick it. Write the village or area, never a house or a person.	راننده این نام را می‌بیند و مسافر بعدی در این‌جا می‌تواند آن را انتخاب کند. نام قریه یا ساحه را بنویسید، هرگز نام خانه یا شخص را.	چلوونکی دا نوم ویني او راتلونکی مسافر یې دلته ټاکلی شي. د کلي یا سیمې نوم ولیکئ، هېڅکله د کور یا کوم کس نوم نه.	
+origin.place.save	Save name	ذخیرهٔ نام	نوم زېرمه کړئ	
+origin.place.saved	From {place}	از {place}	له {place} څخه	
+origin.place.pending	Saved. The driver will see it; others will after we check it.	ذخیره شد. راننده آن را می‌بیند؛ دیگران پس از بررسی ما.	زېرمه شو. چلوونکی یې ویني؛ نور یې زموږ له کتنې وروسته.	
+origin.place.change	Change name	تغییر نام	نوم بدل کړئ	
+origin.place.skip	Skip	بگذر	پرېږدئ	
+origin.place.need_precise	Turn on precise location to name this place.	برای نام‌گذاری این‌جا، موقعیت دقیق را روشن کنید.	د دې ځای د نومولو لپاره دقیق ځای فعال کړئ.	
+origin.place.refused.personal	Write the village or area name, not a house, a shop or a person.	نام قریه یا ساحه را بنویسید، نه خانه، دکان یا شخص.	د کلي یا سیمې نوم ولیکئ، نه د کور، دوکان یا کوم کس.	
+origin.place.refused.digits	Leave out numbers. Write only the name of the place.	عدد ننویسید. فقط نام مکان را بنویسید.	شمېرې مه لیکئ. یوازې د ځای نوم ولیکئ.	
+origin.place.refused.generic	Add the name, e.g. not just 'mosque' but 'Qala-e-Naw mosque'.	نام را هم بنویسید؛ مثلاً نه فقط «مسجد»، بلکه «مسجد قلعه نو».	نوم هم ولیکئ؛ لکه یوازې «جومات» نه، بلکې «د قلعه نو جومات».	
+origin.place.refused.too_long	Keep it short: just the name of the place.	کوتاه بنویسید: فقط نام مکان.	لنډ یې ولیکئ: یوازې د ځای نوم.	
+origin.place.refused.rejected	This name was not accepted for this place. Try the village name.	این نام برای این‌جا پذیرفته نشد. نام قریه را امتحان کنید.	دا نوم د دې ځای لپاره ونه منل شو. د کلي نوم وازمویئ.	
+origin.section.nearby	Named places nearby	مکان‌های نام‌دار نزدیک	نږدې نومول شوي ځایونه	
+origin.section.recent	Recent	اخیر	وروستي	
+origin.action.browse	Choose from the list	انتخاب از فهرست	له لړلیک څخه ټاکل	
+origin.action.retry_location	Try my location again	دوباره موقعیتم را پیدا کن	زما ځای بیا پیدا کړه	
+origin.action.change_district	Change	تغییر	بدلول	
+home.search.where_to	Where to?	کجا می‌روید؟	چېرته ځئ؟	
+home.search.from_here	From your current location	از موقعیت فعلی شما	ستاسو له اوسني ځایه	
+ride.journey.from_place	from {place}	از {place}	له {place} څخه	
 ride.kind.private	Private vehicle	موتر اختصاصی	ځانګړی موټر	
 ride.kind.shared	Shared seat	چوکی مشترک	ګډه چوکۍ	
 ride.kind.scheduled	Booked for later	رزرو برای بعد	د وروسته لپاره ریزرف	
@@ -277,6 +312,21 @@ admin.nav.bookings	Bookings	رزروها	ریزرفونه
 admin.nav.drivers	Drivers	رانندگان	چلوونکي	
 admin.nav.vehicles	Vehicles	موترها	موټرونه	
 admin.nav.locations	Locations	موقعیت‌ها	ځایونه	
+admin.nav.places	Place names	نام‌های مکان	د ځایونو نومونه	
+admin.places.subtitle	Names passengers gave to where they stood. A known village is approved on its own; everything else waits here, unseen by other passengers.	نام‌هایی که مسافران برای محلِ ایستادنِ خود داده‌اند. قریهٔ شناخته‌شده خودکار تأیید می‌شود؛ باقی این‌جا منتظر می‌ماند و به مسافرانِ دیگر نشان داده نمی‌شود.	هغه نومونه چې مسافرو د خپل ولاړ ځای لپاره ورکړي. پېژندل شوی کلی پخپله منل کېږي؛ نور دلته انتظار کوي او نورو مسافرو ته نه ښودل کېږي.	
+admin.places.status.pending	Waiting for review	در انتظار بررسی	د کتنې په تمه	
+admin.places.status.approved	Approved	تأییدشده	منل شوي	
+admin.places.status.rejected	Rejected	ردشده	رد شوي	
+admin.places.none	No place names here.	این‌جا نامِ مکانی نیست.	دلته د ځای نوم نشته.	
+admin.places.matched	Known village	قریهٔ شناخته‌شده	پېژندل شوی کلی	
+admin.places.station	Nearest station	نزدیک‌ترین ایستگاه	تر ټولو نږدې تم ځای	
+admin.places.reports	Times given	دفعاتِ ثبت	د ورکولو شمېر	
+admin.places.last_reported	Last given	آخرین بار	وروستی ځل	
+admin.places.point	Point	نقطه	ټکی	
+admin.places.approve	Approve	تأیید	منل	
+admin.places.reject	Reject	رد	ردول	
+admin.places.rename	Correct and approve	اصلاح و تأیید	سمول او منل	
+admin.places.rename_hint	Write the name the way the village list writes it. Names of houses or people are refused here too.	نام را همان‌طور بنویسید که در فهرستِ قریه‌ها نوشته شده. نامِ خانه یا شخص این‌جا هم رد می‌شود.	نوم هماغسې ولیکئ لکه د کلیو په لړلیک کې. د کور یا کس نوم دلته هم ردېږي.	
 admin.nav.routes	Routes & pricing	مسیرها و قیمت	لارې او بیې	
 admin.nav.finance	Finance	مالی	مالي	
 admin.nav.settings	Settings	تنظیمات	تنظیمات	
@@ -946,7 +996,7 @@ driver.trip.start_unverified_body	{unverified} of {total} passengers not yet ver
 driver.trip.start_unverified_confirm	Start	شروع شود	پیل کړئ	
 driver.trip.start_unverified_back	Go back	برگردید	بېرته لاړ شئ	
 error.geofence_location_required	We need your location to confirm you are in a VELRO area. Please allow location access and try again.	برای تأیید اینکه در ساحهٔ پوشش ولرو هستید، به موقعیت شما نیاز داریم. لطفاً اجازهٔ دسترسی به موقعیت را بدهید و دوباره تلاش کنید.	د دې لپاره چې ډاډ ترلاسه کړو تاسو د ولرو د خدمت په سیمه کې یاست، ستاسو موقعیت ته اړتیا لرو. مهرباني وکړئ د موقعیت اجازه ورکړئ او بیا هڅه وکړئ.	
-location.permission.rationale	VELRO asks for your location only to confirm you are inside the service area.	ولرو موقعیت شما را فقط برای تأیید اینکه در ساحهٔ پوشش هستید می‌پرسد.	ولرو ستاسو موقعیت یوازې د دې لپاره غواړي چې ډاډ ترلاسه کړي تاسو د خدمت په سیمه کې یاست.	
+location.permission.rationale	VELRO uses your location when you ask for a ride, to find the station nearest to you and to confirm you are inside the service area.	ولرو هنگام درخواست سفر از موقعیت شما استفاده می‌کند تا نزدیک‌ترین ایستگاه را پیدا کند و مطمئن شود در ساحهٔ پوشش هستید.	ولرو د سفر د غوښتنې پر مهال ستاسو ځای کاروي، څو تر ټولو نږدې تم ځای پیدا کړي او ډاډ ترلاسه کړي چې تاسو د خدمت په سیمه کې یاست.	
 location.permission.rationale.driver	VELRO Driver uses your location while you are on a trip, to show your car to the passengers you are driving and to warn you about dangerous stretches of road.	ولرو راننده موقعیت شما را فقط هنگام سفر به کار می‌برد، تا موتر شما را به مسافرانی که می‌برید نشان دهد و شما را از جاهای خطرناک سرک آگاه کند.	د ولرو چلوونکی ستاسو ځای یوازې د سفر پر مهال کاروي، څو ستاسو موټر هغو مسافرو ته وښيي چې تاسو يې وړئ او تاسو د سړک له خطرناکو ځایونو خبر کړي.	new — please check the Pashto
 location.permission.denied	Location access is off for VELRO. Turn it on in your phone's settings, then try again.	دسترسی ولرو به موقعیت خاموش است. آن را در تنظیمات تیلفون خود روشن کنید و دوباره تلاش کنید.	د ولرو لپاره د موقعیت لاسرسی بند دی. د خپل تلیفون له تنظیماتو څخه یې فعال کړئ، بیا هڅه وکړئ.	
 location.action.open_settings	Open settings	باز کردن تنظیمات	تنظیمات پرانیزئ	

@@ -89,6 +89,11 @@ struct OffersView: View {
                 ]])
                 .velroFont(.heading, weight: .medium)
                 .foregroundStyle(Palette.onSurface)
+                if let place = request.originPlaceName {
+                    Text(strings["ride.journey.from_place", ["place": place]])
+                        .velroFont(.label)
+                        .foregroundStyle(Palette.primary)
+                }
                 // The whole journey: on a round trip the outbound is half the ask.
                 Text(strings["ride.offers.you_asked", ["amount": MoneyFormatter.format(request.askingTotal, strings: strings)]])
                     .velroFont(.label)

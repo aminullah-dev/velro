@@ -228,6 +228,14 @@ class RideRequestRow(Auditable, Base):
     destination_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("destinations.id", ondelete="RESTRICT"), nullable=False, index=True
     )
+    # The named place the passenger said they were in, when they asked from
+    # their current location. The station is still where they board; this is
+    # the line under it on the driver's board -- "from قلعه نو" -- that tells
+    # him which village the passenger is walking in from. Null for every
+    # request chosen from the list, which is most of them.
+    origin_place_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("places.id", ondelete="RESTRICT"), index=True
+    )
     route_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("routes.id", ondelete="RESTRICT"), index=True
     )

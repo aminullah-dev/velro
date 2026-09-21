@@ -105,6 +105,17 @@ interface VelroApi {
         @Query("limit") limit: Int = 10,
     ): Response<Envelope<List<StationDto>>>
 
+    /** Where am I: district, nearest stations and named places, one round trip. */
+    @GET("geo/resolve")
+    suspend fun resolve(
+        @Query("latitude") latitude: String,
+        @Query("longitude") longitude: String,
+    ): Response<Envelope<ResolveDto>>
+
+    /** Say what the place you are standing in is called (ADR 0015). */
+    @POST("geo/places")
+    suspend fun namePlace(@Body body: NamePlaceRequest): Response<Envelope<PlaceDto>>
+
     @GET("geo/stations/{id}/destinations")
     suspend fun destinationsFrom(
         @Path("id") stationId: String,

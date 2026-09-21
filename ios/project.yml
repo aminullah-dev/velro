@@ -65,7 +65,7 @@ targets:
           NSAllowsLocalNetworking: true
         # The system prompt's own words; translated in Resources/*.lproj from
         # the same sentence the app shows before iOS asks.
-        NSLocationWhenInUseUsageDescription: VELRO asks for your location only to confirm you are inside the service area.
+        NSLocationWhenInUseUsageDescription: VELRO uses your location when you ask for a ride, to find the station nearest to you and to confirm you are inside the service area.
         CFBundleDevelopmentRegion: en
         CFBundleLocalizations: [fa, ps, en]
         UIApplicationSceneManifest:
