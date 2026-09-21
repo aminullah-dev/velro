@@ -9,6 +9,8 @@
   ios/scripts/appstore.py --apply --review --contact-phone "+1 555 ..."
                                                   ...and the App Review details
   ios/scripts/appstore.py --apply --build 2       ...and pick the build to submit
+  ios/scripts/appstore.py --apply --new-version   open listing.json's version
+                                                  first, when the last one is live
 
 It never submits for review: that button stays a person's. It reads the same
 git-ignored scripts/.env as upload.sh (ASC_ISSUER_ID, ASC_KEY_ID, ASC_KEY_PATH)
@@ -117,15 +119,26 @@ def call(method: str, path: str, body: dict | None = None) -> dict:
 
 # -- what is there --------------------------------------------------------
 
-def find_state() -> dict:
+def find_state(open_version: str | None = None) -> dict:
     found = call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"]
     if not found:
         raise SystemExit(f"✗ no App Store Connect record for {BUNDLE_ID} yet: create it (My Apps → +) first")
     app = found[0]
     versions = call("GET", f"/v1/apps/{app['id']}/appStoreVersions?filter[platform]=IOS")["data"]
     editable = [v for v in versions if v["attributes"]["appStoreState"] in EDITABLE]
+    if not editable and open_version:
+        # The live version cannot be edited; an update is a new version, made
+        # here the way App Store Connect's "+ Version" makes it. A draft only:
+        # nothing reaches anyone until a person presses Submit.
+        created = call("POST", "/v1/appStoreVersions", {"data": {
+            "type": "appStoreVersions",
+            "attributes": {"platform": "IOS", "versionString": open_version},
+            "relationships": {"app": {"data": {"type": "apps", "id": app["id"]}}},
+        }})["data"]
+        print(f"  ✓ opened version {open_version}")
+        editable = [created]
     if not editable:
-        raise SystemExit("✗ no App Store version is open for editing")
+        raise SystemExit("✗ no App Store version is open for editing (--new-version opens one)")
     infos = call("GET", f"/v1/apps/{app['id']}/appInfos")["data"]
     info = next(i for i in infos if i["attributes"]["appStoreState"] in EDITABLE | {"PREPARE_FOR_SUBMISSION"})
     return {"app": app, "version": editable[0], "info": info}
@@ -174,6 +187,9 @@ def plan(state: dict, listing: dict) -> list[tuple[str, str, dict]]:
             "promotionalText": text["promotional_text"],
             "supportUrl": text["support_url"], "marketingUrl": text["marketing_url"],
         }
+        # "What's New" exists only on an update; the first version refuses it.
+        if text.get("whats_new"):
+            wanted["whatsNew"] = text["whats_new"]
         delta = {k: v for k, v in wanted.items() if version_loc["attributes"].get(k) != v}
         if delta:
             out.append((f"{locale} description/keywords/urls", f"/v1/appStoreVersionLocalizations/{version_loc['id']}",
@@ -190,7 +206,10 @@ def plan(state: dict, listing: dict) -> list[tuple[str, str, dict]]:
 def check_limits(listing: dict) -> None:
     """App Store Connect's own limits, checked before it refuses them."""
     for locale, text in listing["localizations"].items():
-        for field, limit in (("subtitle", 30), ("keywords", 100), ("promotional_text", 170), ("description", 4000)):
+        for field, limit in (("subtitle", 30), ("keywords", 100), ("promotional_text", 170),
+                             ("description", 4000), ("whats_new", 4000)):
+            if field not in text:
+                continue
             size = len(text[field].encode()) if field == "keywords" else len(text[field])
             if size > limit:
                 raise SystemExit(f"✗ {locale} {field} is {size}, the limit is {limit}")
@@ -348,13 +367,15 @@ def main() -> None:
     parser.add_argument("--attachment", type=Path, help="video for the reviewer (default: listing's name, next to it)")
     parser.add_argument("--build", help="the build number to submit with this version")
     parser.add_argument("--contact-phone", help="App Review's number for you, with + and country code (not stored)")
+    parser.add_argument("--new-version", action="store_true",
+                        help="open listing.json's version when none is editable (needs --apply)")
     args = parser.parse_args()
     global NAME, BUNDLE_ID, LISTING
     NAME, BUNDLE_ID, LISTING = APPS[args.app]
 
     listing = json.loads(LISTING.read_text())
     check_limits(listing)
-    state = find_state()
+    state = find_state(listing["version"] if args.new_version and args.apply else None)
     changes = plan(state, listing)
     print(f"▸ {NAME} {state['version']['attributes']['versionString']} "
           f"({state['version']['attributes']['appStoreState']})")
