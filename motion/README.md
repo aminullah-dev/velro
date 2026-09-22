@@ -16,10 +16,16 @@ transparent ProRes, or a PNG sequence, then drop the result into any editor.
 
 ---
 
+> **Run every command below from this `motion/` folder** (`cd motion` first).
+> It's a self-contained project inside the repo, so `npm`/`npx` only find
+> Remotion here — from the repo root you'll get "could not determine executable
+> to run". Or, from anywhere, prefix with `--prefix`, e.g.
+> `npm --prefix motion run render -- SeatFill out/SeatFill.mp4 --codec=h264 --crf=18`.
+
 ## Preview (live editor)
 
 ```bash
-npm run studio
+cd motion && npm run studio
 ```
 
 Opens **Remotion Studio** at <http://localhost:3000>: pick a composition on the

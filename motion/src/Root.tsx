@@ -16,6 +16,7 @@ import {SeatFill, seatFillSchema} from './compositions/SeatFill';
 import {LogoReveal, logoRevealSchema} from './compositions/LogoReveal';
 import {StatsCounter, statsCounterSchema} from './compositions/StatsCounter';
 import {DayToNight, dayToNightSchema} from './compositions/DayToNight';
+import {NowOnAppStore, nowOnAppStoreSchema} from './compositions/NowOnAppStore';
 
 // Every graphic is registered here. To add one: build a component in
 // src/compositions/, then add a <Composition> below with a unique id, its
@@ -401,6 +402,38 @@ export const RemotionRoot: FC = () => {
         height={1920}
         schema={dayToNightSchema}
         defaultProps={{headline: 'هره ورځ، هر وخت', tagline: 'کابل — چاریکار — غوربند'}}
+      />
+
+      {/* "Now on the App Store" announcement — driver-first. */}
+      <Composition
+        id="NowOnAppStore"
+        component={NowOnAppStore}
+        durationInFrames={seconds(5)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={nowOnAppStoreSchema}
+        defaultProps={{
+          headline: 'اپ راننده حالا روی App Store',
+          appName: 'VELRO Driver',
+          cta: 'در App Store جستجو کنید: VELRO Driver',
+          tagline: 'کابل — چاریکار — غوربند',
+        }}
+      />
+      <Composition
+        id="NowOnAppStore-Pashto"
+        component={NowOnAppStore}
+        durationInFrames={seconds(5)}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        schema={nowOnAppStoreSchema}
+        defaultProps={{
+          headline: 'د ډرایور اپ اوس په App Store کې',
+          appName: 'VELRO Driver',
+          cta: 'په App Store کې ولټوئ: VELRO Driver',
+          tagline: 'کابل — چاریکار — غوربند',
+        }}
       />
     </>
   );
