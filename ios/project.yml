@@ -11,8 +11,8 @@ settings:
   base:
     DEVELOPMENT_TEAM: 27RXPRW77S
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "1.0.1"
-    CURRENT_PROJECT_VERSION: "3"
+    MARKETING_VERSION: "1.1.0"
+    CURRENT_PROJECT_VERSION: "4"
 packages:
   VelroCore:
     path: VelroCore
@@ -158,8 +158,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: af.velro.driver
         # Its own numbers; `scripts/upload.sh --app driver` bumps the marked line.
-        MARKETING_VERSION: "1.0.1" # driver
-        CURRENT_PROJECT_VERSION: "3" # driver
+        MARKETING_VERSION: "1.1.0" # driver
+        CURRENT_PROJECT_VERSION: "4" # driver
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic

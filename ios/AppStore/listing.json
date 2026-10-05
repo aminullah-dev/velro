@@ -1,6 +1,6 @@
 {
   "_comment": "What the App Store shows for VELRO Ride, pushed by ios/scripts/appstore.py. App Store Connect has no Dari or Pashto listing, so en-US is the only one; the app itself opens in Dari. Every sentence must stay true of the build it ships with.",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "copyright": "2026 Linumic",
   "primary_category": "TRAVEL",
   "content_rights": "USES_THIRD_PARTY_CONTENT",
@@ -24,7 +24,7 @@
           "screenshots/iphone69-07-help.jpg"
         ]
       },
-      "whats_new": "What's new in 1.0.1\n\n• Start from where you are. VELRO finds your district and the station nearest to you, and you can travel from there with one tap.\n• Say what the place is called. Your driver sees the village you are walking in from, and the next passenger there can pick the same name. Names of houses and people are never kept.\n• A \"Where to?\" bar on the home screen, the places near you and your recent starting points, so asking for a ride takes fewer steps."
+      "whats_new": "What's new in 1.1.0\n\n• See where your ride is. From the moment you ask to the moment you arrive, your booking shows each step — driver assigned, on the way, aboard — above the map.\n• The route, while drivers reply. Offers now open with your journey drawn on the map, and the lowest fare is marked so you don't have to compare.\n• Name where you are, faster. Start typing a place and VELRO suggests spots already known nearby — pick the name instead of typing it out."
     }
   },
   "age_rating": {

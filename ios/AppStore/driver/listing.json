@@ -1,6 +1,6 @@
 {
  "_comment": "What the App Store shows for VELRO Driver (af.velro.driver), pushed by `ios/scripts/appstore.py --app driver` once the app record exists. en-US only, as for the passenger app. Every sentence must stay true of the iOS build it ships with: unlike Android, iOS keeps no on-duty notification and uses location only while a trip is being carried.",
- "version": "1.0.1",
+ "version": "1.1.0",
  "copyright": "2026 Linumic",
  "primary_category": "TRAVEL",
  "content_rights": "USES_THIRD_PARTY_CONTENT",
@@ -24,7 +24,7 @@
      "screenshots/iphone69-07-documents.jpg"
     ]
    },
-   "whats_new": "What's new in 1.0.1\n\n• Each request now shows which village the passenger is walking in from, under the station, when the passenger gave one."
+   "whats_new": "What's new in 1.1.0\n\n• See at a glance when you're online: a steady green light while you're on duty.\n• On the road, what matters is up front — the fare for this run and where it's going, with your next step in reach."
   }
  },
  "age_rating": {
