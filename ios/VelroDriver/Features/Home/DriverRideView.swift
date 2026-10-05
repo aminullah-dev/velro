@@ -39,16 +39,8 @@ struct DriverRideView: View {
                 }
                 if model.app.duty.access == .denied { LocationOffBanner() }
                 Spacer()
-                RideNames(
-                    driver: model.profile?.fullName,
-                    passenger: model.assignment?.passengers.compactMap(\.passengerName).joined(separator: "، ")
-                )
-                if let next = model.assignment?.trip.status.nextStep {
-                    PrimaryButton(label: strings[next.actionKey], enabled: !model.isBusy, loading: model.isBusy) {
-                        Task { await model.advance() }
-                    }
-                    .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
-                    .accessibilityIdentifier("trip.next")
+                DriverRideBar(assignment: model.assignment, busy: model.isBusy) {
+                    Task { await model.advance() }
                 }
                 if let error = model.error {
                     InlineError(error: error)
@@ -70,5 +62,85 @@ struct DriverRideView: View {
     private var car: VehicleLocation? {
         guard let fix = model.app.duty.position else { return nil }
         return VehicleLocation(latitude: fix.coordinate.latitude, longitude: fix.coordinate.longitude)
+    }
+}
+
+/// The driver's strip at the foot of the ride map.
+///
+/// A driver glances down once between bends, so it says the three things he
+/// decides on -- the fare he is owed for this run, the road he is on, and who
+/// is aboard -- then the one next step, and gets back out of the way of the
+/// map. The old strip showed his own name back to him and nothing he could use;
+/// this one leads with the money, because that is what the run is for.
+private struct DriverRideBar: View {
+    let assignment: CurrentAssignment?
+    let busy: Bool
+    let advance: () -> Void
+    @Environment(\.strings) private var strings
+
+    var body: some View {
+        if let assignment {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack(alignment: .top, spacing: Spacing.md) {
+                    JourneyLine(origin: assignment.trip.originStationName,
+                                destination: assignment.trip.destinationName, role: .label)
+                    Spacer(minLength: Spacing.sm)
+                    if let fare = totalFare(assignment) {
+                        VStack(alignment: .trailing, spacing: Spacing.xxs) {
+                            Text(strings["ride.label.fare"])
+                                .velroFont(.caption)
+                                .foregroundStyle(Palette.onSurfaceVariant)
+                            Text(MoneyFormatter.format(fare, strings: strings))
+                                .velroFont(.title, weight: .bold)
+                                .foregroundStyle(Palette.primary)
+                        }
+                        .fixedSize()
+                    }
+                }
+
+                let names = passengerNames(assignment)
+                if !names.isEmpty {
+                    Label {
+                        Text(seatSuffix(assignment).isEmpty ? names : "\(names)  ·  \(seatSuffix(assignment))")
+                            .velroFont(.label)
+                            .foregroundStyle(Palette.onSurface)
+                            .lineLimit(1)
+                    } icon: {
+                        Image(systemName: "person.2.fill")
+                            .font(.caption)
+                            .foregroundStyle(Palette.onSurfaceVariant)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+
+                if let next = assignment.trip.status.nextStep {
+                    PrimaryButton(label: strings[next.actionKey], enabled: !busy, loading: busy, action: advance)
+                        .accessibilityIdentifier("trip.next")
+                }
+            }
+            .padding(Spacing.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .shadow(color: .black.opacity(0.18), radius: 10, y: 3)
+            .accessibilityIdentifier("ride.names")
+        }
+    }
+
+    /// Every cash fare on the manifest, added up: what the whole run is worth
+    /// to him, in the one line he looks for.
+    private func totalFare(_ assignment: CurrentAssignment) -> Money? {
+        let fares = assignment.passengers.compactMap(\.fare)
+        guard let first = fares.first else { return nil }
+        return fares.dropFirst().reduce(first, +)
+    }
+
+    private func passengerNames(_ assignment: CurrentAssignment) -> String {
+        assignment.passengers.compactMap(\.passengerName).joined(separator: "، ")
+    }
+
+    private func seatSuffix(_ assignment: CurrentAssignment) -> String {
+        let seats = assignment.passengers.reduce(0) { $0 + $1.seatCount }
+        guard seats > 0 else { return "" }
+        return strings["driver.label.passengers"] + " " + Numerals.format(seats, strings.locale)
     }
 }

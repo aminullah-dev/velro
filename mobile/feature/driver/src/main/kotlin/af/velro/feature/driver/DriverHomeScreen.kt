@@ -45,6 +45,22 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.alpha
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.RoundedCornerShape
+import af.velro.core.ui.theme.LocalAnimationsEnabled
+import af.velro.core.ui.theme.Radius
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -82,6 +98,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -675,25 +692,60 @@ private fun PendingApproval(
 @Composable
 private fun OnlineToggle(state: DriverHomeUiState, onEvent: (DriverHomeEvent) -> Unit) {
     val strings = LocalVelroStrings.current
-    VelroCard {
+    val online = state.isOnline
+    val primary = MaterialTheme.colorScheme.primary
+    val border = if (online) Modifier.border(1.5.dp, primary, RoundedCornerShape(Radius.card)) else Modifier
+    VelroCard(modifier = border) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                strings[if (state.isOnline) "driver.status.online" else "driver.status.offline"],
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = if (state.isOnline) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LiveDot(online = online)
+                Spacer(Modifier.width(Spacing.md))
+                Text(
+                    strings[if (online) "driver.status.online" else "driver.status.offline"],
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (online) primary else MaterialTheme.colorScheme.onSurface,
+                )
+            }
             Switch(
-                checked = state.isOnline,
+                checked = online,
                 onCheckedChange = { onEvent(DriverHomeEvent.ToggleOnline) },
                 enabled = !state.isBusy,
             )
         }
+    }
+}
+
+/** On-duty as a driver app says it: a green light that breathes when live. */
+@Composable
+private fun LiveDot(online: Boolean) {
+    val primary = MaterialTheme.colorScheme.primary
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(28.dp)) {
+        if (online && LocalAnimationsEnabled.current) {
+            val transition = rememberInfiniteTransition(label = "online-pulse")
+            val scale by transition.animateFloat(
+                initialValue = 0.85f, targetValue = 1.4f,
+                animationSpec = infiniteRepeatable(tween(1300), RepeatMode.Restart),
+                label = "scale",
+            )
+            val fade by transition.animateFloat(
+                initialValue = 0.9f, targetValue = 0f,
+                animationSpec = infiniteRepeatable(tween(1300), RepeatMode.Restart),
+                label = "fade",
+            )
+            Box(
+                Modifier.size(28.dp).scale(scale).alpha(fade)
+                    .clip(CircleShape).background(primary.copy(alpha = 0.25f))
+            )
+        }
+        Box(
+            Modifier.size(13.dp).clip(CircleShape)
+                .background(if (online) primary else MaterialTheme.colorScheme.outline)
+        )
     }
 }
 
@@ -919,13 +971,23 @@ private fun DriverRide(
 ) {
     val strings = LocalVelroStrings.current
     val assignment = state.assignment ?: return
+    // Everyone still expected in the car -- a cancelled or no-show row is
+    // neither a passenger nor a fare.
+    val riding = assignment.manifest.filter { it.status != "CANCELLED" && it.status != "NO_SHOW" }
+    val fareLabel = riding.mapNotNull { it.fareTotalMinor }.takeIf { it.isNotEmpty() }?.let { minors ->
+        val currency = riding.firstNotNullOfOrNull { it.fareCurrency } ?: "AFN"
+        MoneyFormatter.format(MoneyValue(minors.sum().toLong(), currency), strings)
+    }
     RideMap(
         data = state.tripMap,
         roadAhead = state.roadAhead,
         driverName = state.profile?.fullName,
-        passengerNames = assignment.manifest.mapNotNull { it.passengerName },
+        passengerNames = riding.mapNotNull { it.passengerName },
         onHelp = onHelp,
         chime = true,
+        origin = assignment.trip.originStationName,
+        destination = assignment.trip.destinationName,
+        fare = fareLabel,
         modifier = modifier,
     ) {
         state.nextStep?.let { next ->

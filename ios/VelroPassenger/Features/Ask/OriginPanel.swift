@@ -201,6 +201,17 @@ struct OriginPanel: View {
             ) {
                 Task { await model.savePlaceName() }
             }
+            // The first letters of a spot the valley already knows bring its
+            // whole name back -- tap it and the station and coordinates behind
+            // it come with it, rather than naming the place a second time.
+            if !model.placeSuggestions.isEmpty {
+                ForEach(model.placeSuggestions) { place in
+                    PlaceRow(title: place.name, subtitle: place.distanceM.map(distance), systemImage: "mappin.and.ellipse") {
+                        Task { await model.choose(suggestion: place) }
+                    }
+                    .accessibilityIdentifier("origin.suggestion")
+                }
+            }
             if let reason = model.placeRefusal {
                 Text(strings[Naming.refusalKey(reason)])
                     .velroFont(.caption)

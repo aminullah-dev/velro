@@ -353,6 +353,59 @@ class GeographyRepository:
         measured.sort(key=lambda pair: (pair[1], -pair[0].report_count))
         return measured[:limit]
 
+    def search_places(
+        self,
+        term: str,
+        *,
+        near: tuple[Decimal, Decimal] | None = None,
+        statuses: tuple[PlaceStatus, ...] = (PlaceStatus.APPROVED,),
+        limit: int = 8,
+    ) -> list[tuple[PlaceRow, int | None]]:
+        """Approved places whose name matches what is being typed.
+
+        The type-ahead behind the origin field: a passenger types the first
+        letters of a spot already named in the valley and gets the whole name
+        back -- with the coordinates that complete the map -- instead of typing
+        it out again or minting a second row for a place that is already known.
+
+        Matching is on the normalised key, as villages are, so an Arabic yeh
+        finds a name stored with a Persian one. A name that *starts* with the
+        term is offered before one that merely contains it, and when a fix is
+        given the nearer of two equally good names comes first. Approved only,
+        like `places_near`: a name nobody has read yet is nobody's but its
+        author, and is never offered to a stranger typing nearby.
+        """
+        key = comparison_key(term)
+        if not key:
+            return []
+        rows = self.session.scalars(
+            select(PlaceRow)
+            .where(
+                PlaceRow.deleted_at.is_(None),
+                PlaceRow.status.in_([s.value for s in statuses]),
+                PlaceRow.name_key.like(f"%{key}%"),
+            )
+            .limit(200)
+        ).all()
+        if near is None:
+            measured: list[tuple[PlaceRow, int | None]] = [(row, None) for row in rows]
+            measured.sort(
+                key=lambda pair: (
+                    not pair[0].name_key.startswith(key),
+                    len(pair[0].name_key),
+                    -pair[0].report_count,
+                )
+            )
+            return measured[:limit]
+        lat, lon = near
+        with_distance = [
+            (row, _approx_distance_m(lat, lon, row.latitude, row.longitude)) for row in rows
+        ]
+        with_distance.sort(
+            key=lambda pair: (not pair[0].name_key.startswith(key), pair[1])
+        )
+        return with_distance[:limit]
+
     def same_place(
         self,
         district_id: str,

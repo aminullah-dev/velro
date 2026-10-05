@@ -11,6 +11,11 @@ import VelroCore
 @Observable
 final class OffersModel {
     private(set) var request: RideRequest?
+    /// The road she is asking to travel, drawn once the request is known. A
+    /// picture of the journey while the prices come in, as every ride app shows
+    /// it -- never waited on, and simply absent when the server cannot draw it.
+    private(set) var map: TripMap?
+    private var mapAsked = false
     private(set) var isLoading = true
     private(set) var acceptingOfferId: String?
     private(set) var isCancelling = false
@@ -65,6 +70,7 @@ final class OffersModel {
             if let request, !request.isOpen, let booking = request.bookingId {
                 agreedBookingId = booking
             }
+            loadMap()
             loadPhotos()
         case .failure(let failure):
             isLoading = false
@@ -101,6 +107,20 @@ final class OffersModel {
         switch result {
         case .success: cancelled = true
         case .failure(let failure): if failure != .cancelled { error = failure }
+        }
+    }
+
+    /// Drawn once: the road between two fixed ends does not change while she
+    /// waits, so it is fetched a single time and kept through every poll.
+    private func loadMap() {
+        guard !mapAsked, let request else { return }
+        mapAsked = true
+        Task {
+            if case .success(let drawn) = await app.client.send(
+                API.journeyMap(originStationId: request.originStationId, destinationId: request.destinationId)
+            ) {
+                map = drawn
+            }
         }
     }
 

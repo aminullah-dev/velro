@@ -57,6 +57,12 @@ struct BookingDetailView: View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             StatusChip(key: booking.status.messageKey, tone: booking.status.tone)
 
+            // The ride's lifecycle at a glance, where a ride app puts it: above
+            // the map, so "asked / assigned / on the way / aboard / done" reads
+            // before any name or number does.
+            TripStatusStepper(status: booking.status)
+                .padding(.top, Spacing.xxs)
+
             if let map = model.map {
                 // The small map is a door to the full tracking screen.
                 Button { app.router.open(.track(booking.id)) } label: {

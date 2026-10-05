@@ -190,6 +190,22 @@ def nearby_places(
     return ok([_place_out(row, distance).model_dump() for row, distance in pairs])
 
 
+@router.get("/places/search")
+def search_named_places(
+    geo: Annotated[object, Depends(deps.geography)],
+    q: Annotated[str, Query(min_length=1, max_length=80)],
+    latitude: Annotated[Decimal | None, Query(ge=-90, le=90)] = None,
+    longitude: Annotated[Decimal | None, Query(ge=-180, le=180)] = None,
+    limit: Annotated[int, Query(ge=1, le=20)] = 8,
+) -> dict:
+    """Type-ahead for the origin field: approved places whose name matches what
+    the passenger is typing, nearest first when a fix is given. Never a PENDING
+    name -- those only ever come back to their author, near a fix."""
+    near = (latitude, longitude) if latitude is not None and longitude is not None else None
+    pairs = geo.search_places(q, near=near, limit=limit)
+    return ok([_place_out(row, distance).model_dump() for row, distance in pairs])
+
+
 @router.post("/places", status_code=201)
 def name_place(
     body: PlaceIn,

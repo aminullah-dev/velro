@@ -28,7 +28,9 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,6 +65,8 @@ private const val DEFAULT_RETURN_HOUR = 14
 
 /** Longer than any village name; the server refuses past sixty characters. */
 private const val PLACE_NAME_MAX = 60
+/** A pause after the last keystroke, so a typed name is one request not many. */
+private const val SUGGEST_DEBOUNCE_MS = 250L
 
 /**
  * The server's code for an ask or booking that arrived without coordinates.
@@ -120,6 +124,14 @@ data class BookingFlowUiState(
     val placeRefusal: String? = null,
     /** The named place this ask will carry to the driver, if any. */
     val originPlace: OriginPlace? = null,
+    /**
+     * Places already named here whose name begins with what she is typing.
+     *
+     * A few letters of a spot the valley already knows bring its whole name --
+     * and the station and coordinates behind it -- back, rather than making her
+     * type it out or mint a second row for a place that is already defined.
+     */
+    val placeSuggestions: List<Place> = emptyList(),
     /**
      * True when the origin came from current location or a recent, false when
      * it was browsed. Decides where Back from the destination list goes.
@@ -472,6 +484,8 @@ sealed interface BookingEvent {
     data class TravelFromHere(val station: Station) : BookingEvent
     /** A named place nearby, chosen instead of typing. */
     data class NearbyPlaceChosen(val place: Place) : BookingEvent
+    /** A type-ahead suggestion tapped: a place the valley already knows. */
+    data class SuggestionChosen(val place: Place) : BookingEvent
     data class RecentChosen(val entry: RecentOrigins.Entry) : BookingEvent
     /** "Choose from the list": the district -> village -> station path. */
     data object Browse : BookingEvent
@@ -524,15 +538,22 @@ class BookingFlowViewModel @Inject constructor(
     fun onEvent(event: BookingEvent) {
         when (event) {
             BookingEvent.LocateMe -> locate()
-            is BookingEvent.PlaceNameChanged -> _state.update {
-                it.copy(placeName = event.text.take(PLACE_NAME_MAX), placeRefusal = null)
+            is BookingEvent.PlaceNameChanged -> {
+                _state.update {
+                    it.copy(placeName = event.text.take(PLACE_NAME_MAX), placeRefusal = null)
+                }
+                scheduleSuggestions()
             }
             BookingEvent.SavePlaceName -> viewModelScope.launch { savePlaceName() }
-            BookingEvent.ClearPlace -> _state.update {
-                it.copy(originPlace = null, placeName = "", placeRefusal = null)
+            BookingEvent.ClearPlace -> {
+                suggestJob?.cancel()
+                _state.update {
+                    it.copy(originPlace = null, placeName = "", placeRefusal = null, placeSuggestions = emptyList())
+                }
             }
             is BookingEvent.TravelFromHere -> travelFromHere(event.station)
             is BookingEvent.NearbyPlaceChosen -> chooseNearbyPlace(event.place)
+            is BookingEvent.SuggestionChosen -> chooseSuggestion(event.place)
             is BookingEvent.RecentChosen -> chooseRecent(event.entry)
             BookingEvent.Browse -> {
                 _state.update { it.copy(step = BookingFlowUiState.Step.ORIGIN_DISTRICT) }
@@ -937,6 +958,61 @@ class BookingFlowViewModel @Inject constructor(
             // card, with the reason beside the field -- not two screens later.
             if (!savePlaceName()) return@launch
             _state.update { it.copy(originFromHere = true) }
+            chooseStation(station)
+        }
+    }
+
+    private var suggestJob: Job? = null
+
+    /**
+     * A few letters typed: after a short pause, ask the server which known
+     * places begin with them. The pause makes a four-letter name one request
+     * rather than four, and the job is cancelled the moment she types on or
+     * the field already holds the chosen place.
+     */
+    private fun scheduleSuggestions() {
+        val current = _state.value
+        val typed = current.placeName.trim()
+        suggestJob?.cancel()
+        if (current.originPlace?.name == typed || typed.length < 2) {
+            if (current.placeSuggestions.isNotEmpty()) {
+                _state.update { it.copy(placeSuggestions = emptyList()) }
+            }
+            return
+        }
+        suggestJob = viewModelScope.launch {
+            delay(SUGGEST_DEBOUNCE_MS)
+            val fix = _state.value.fix
+            val result = geography.searchPlaces(
+                typed, latitude = fix?.latitude, longitude = fix?.longitude,
+            )
+            // The field may have moved on while the request was out.
+            if (result is ApiResult.Success && _state.value.placeName.trim() == typed) {
+                _state.update { it.copy(placeSuggestions = result.value) }
+            }
+        }
+    }
+
+    /**
+     * A suggestion tapped: this spot is already a known place, so its name, its
+     * station and its coordinates are reused -- never typed and minted again.
+     */
+    private fun chooseSuggestion(place: Place) {
+        suggestJob?.cancel()
+        viewModelScope.launch {
+            val station = place.nearestStationId?.let { geography.station(it) }
+                ?: _state.value.whereabouts?.stations?.firstOrNull { it.id == place.nearestStationId }
+                ?: _state.value.whereabouts?.stations?.firstOrNull()
+                ?: return@launch
+            _state.update {
+                it.copy(
+                    originPlace = OriginPlace(place.id, place.name),
+                    placeName = place.name,
+                    placeRefusal = null,
+                    originFromHere = true,
+                    placeSuggestions = emptyList(),
+                )
+            }
             chooseStation(station)
         }
     }

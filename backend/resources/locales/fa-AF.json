@@ -809,6 +809,7 @@
   "ride.offers.you_asked": "شما {amount} پیشنهاد کردید",
   "ride.offers.accept": "این موتر را بگیرید",
   "ride.offers.same_as_asked": "قیمت شما را قبول کرد",
+  "ride.offers.best_price": "کمترین کرایه",
   "ride.offers.trips": "{count} سفر",
   "ride.action.cancel": "لغو درخواست",
   "driver.board.title": "مسافران منتظر",

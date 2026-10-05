@@ -291,3 +291,52 @@ class TestTheDriverIsTold:
         assert request["origin_place_id"] is None
         assert request["origin_place_name"] is None
         _cancel(client, rider, request["id"])
+
+
+# -- typing the first letters -------------------------------------------
+
+class TestSearch:
+    """The origin field's type-ahead: a few letters of a known spot bring back
+    its whole name and the coordinates that complete the map."""
+
+    def test_the_first_letters_suggest_a_known_place(
+        self, client: TestClient, rider: dict
+    ):
+        # A known village is approved the moment it is named, so it is the kind
+        # of name a stranger typing nearby is allowed to be offered.
+        _name(client, rider, "قلعه نو", QALA_NAW)
+        found = client.get(
+            "/api/v1/geo/places/search", params={"q": "قلعه", **QALA_NAW}
+        )
+        assert found.status_code == 200, found.text
+        hit = next(
+            (r for r in found.json()["data"] if r["name"] == "قلعه نو"), None
+        )
+        assert hit is not None, "the approved place did not come back for its prefix"
+        # The whole point: the coordinates and the station ride back with it.
+        assert hit["nearest_station_id"]
+        assert hit["latitude"] and hit["longitude"]
+        # A fix was given, so each suggestion carries how far off it is.
+        assert hit["distance_m"] is not None
+
+    def test_a_name_awaiting_staff_is_suggested_to_nobody(
+        self, client: TestClient, rider: dict
+    ):
+        made = _name(client, rider, "ریگ روان", KHISHKI)
+        assert made.status_code == 201, made.text
+        assert made.json()["data"]["status"] == "PENDING"
+        names = [
+            r["name"]
+            for r in client.get(
+                "/api/v1/geo/places/search", params={"q": "ریگ", **KHISHKI}
+            ).json()["data"]
+        ]
+        assert "ریگ روان" not in names
+
+    def test_nonsense_matches_nothing_rather_than_everything(
+        self, client: TestClient
+    ):
+        rows = client.get(
+            "/api/v1/geo/places/search", params={"q": "زققظضثصث"}
+        ).json()["data"]
+        assert rows == []

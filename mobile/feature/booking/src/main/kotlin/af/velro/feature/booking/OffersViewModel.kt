@@ -4,7 +4,9 @@ import af.velro.data.repository.DocumentRepository
 import af.velro.data.api.ApiException
 import af.velro.data.api.ApiResult
 import af.velro.data.api.IdempotencyKeys
+import af.velro.data.repository.GeographyRepository
 import af.velro.data.repository.NegotiationRepository
+import af.velro.data.repository.TripMapData
 import af.velro.domain.RideRequest
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -44,6 +46,15 @@ data class OffersUiState(
      * screen, and should.
      */
     val driverPhotos: Map<String, ByteArray> = emptyMap(),
+    /**
+     * The road she is asking to travel, drawn once the request is known.
+     *
+     * A picture of the journey while the prices come in, the way inDrive and
+     * its kind open -- fetched a single time (the road between two fixed ends
+     * does not change while she waits) and simply absent when the server
+     * cannot draw it.
+     */
+    val journeyMap: TripMapData? = null,
     val errorContext: Map<String, Any?> = emptyMap(),
     /**
      * Held for the whole visit to this screen, so a retry of the same Accept
@@ -68,6 +79,7 @@ private const val POLL_SECONDS = 6L
 class OffersViewModel @Inject constructor(
     private val negotiation: NegotiationRepository,
     private val documents: DocumentRepository,
+    private val geography: GeographyRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(OffersUiState())
@@ -111,6 +123,21 @@ class OffersViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Drawn once: the road between two fixed ends does not change while she
+     * waits, so it is fetched a single time and kept through every poll. Like
+     * the photos, launched and not awaited -- the prices never wait on a map.
+     */
+    private fun loadJourneyMap(request: RideRequest?) {
+        if (request == null || _state.value.journeyMap != null) return
+        viewModelScope.launch {
+            (geography.journeyMap(request.originStationId, request.destinationId)
+                as? ApiResult.Success)?.let { drawn ->
+                _state.update { it.copy(journeyMap = drawn.value) }
+            }
+        }
+    }
+
     private fun poll() {
         viewModelScope.launch {
             while (isActive) {
@@ -133,6 +160,7 @@ class OffersViewModel @Inject constructor(
             when (val result = negotiation.myRequests()) {
                 is ApiResult.Success -> {
                     loadPhotos(result.value.firstOrNull())
+                    loadJourneyMap(result.value.firstOrNull())
                     _state.update {
                     it.copy(
                         // The newest request is the one being waited on.

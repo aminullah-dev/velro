@@ -90,6 +90,38 @@ final class AskFlowTests: XCTestCase {
         snapshot("10-cancelled")
     }
 
+    /// Typing the first letters of a spot the valley already knows brings its
+    /// whole name back, with the station and coordinates behind it -- so she
+    /// taps it rather than naming the place a second time.
+    func testTypingTheOriginSuggestsAKnownPlace() async throws {
+        let app = launchSignedIn(phone: freshTestPhone())
+        app.buttons["home.search"].tap()
+
+        // The current-location card. Allow the fix, so the "what is this place
+        // called" field appears beneath it.
+        let allow = app.buttons["origin.allow"]
+        if allow.waitForExistence(timeout: 10) {
+            allow.tap()
+            allowLocationIfAsked()
+        }
+
+        let field = app.textFields["origin.place_name"]
+        XCTAssertTrue(field.waitForExistence(timeout: 20), "the place field never appeared")
+        field.tap()
+        // بابر is an approved place at the test station; its first letters find it.
+        field.typeText("با")
+
+        let suggestion = app.descendants(matching: .any)
+            .matching(identifier: "origin.suggestion").firstMatch
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 10), "a known place was not suggested")
+        settle()
+        snapshot("3d-suggestions")
+        suggestion.tap()
+
+        // Picking it carries her straight on to the destination list.
+        tapFirst(app, "ask.destination.", timeout: 20)
+    }
+
     /// Lets an animation finish before a screenshot.
     private func settle() { Thread.sleep(forTimeInterval: 0.8) }
 }

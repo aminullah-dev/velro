@@ -238,6 +238,20 @@ class GeographyRepository @Inject constructor(
             )
         }.map { it.toDomain() }
 
+    /**
+     * The origin field's type-ahead: approved places whose name matches the
+     * first letters typed, nearest first when a fix rides along. Straight to
+     * the server, never cached -- the set of known names grows under the app.
+     */
+    suspend fun searchPlaces(
+        query: String,
+        latitude: String? = null,
+        longitude: String? = null,
+        limit: Int = 8,
+    ): ApiResult<List<Place>> =
+        mapper.call { api.searchNamedPlaces(query, latitude, longitude, limit) }
+            .map { list -> list.map { it.toDomain() } }
+
     suspend fun isCached(): Boolean = db.cacheMetadata().get(CacheKeys.GEO_VERSION) != null
 
     /**

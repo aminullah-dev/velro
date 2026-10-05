@@ -64,7 +64,18 @@ final class AskModel {
     private(set) var here: Here = .idle
     private(set) var fix: LocationService.Fix?
     private(set) var whereabouts: Whereabouts?
-    var placeName = "" { didSet { placeRefusal = nil } }
+    var placeName = "" {
+        didSet {
+            placeRefusal = nil
+            scheduleSuggestions()
+        }
+    }
+    /// Places already named here whose name begins with what she is typing:
+    /// the few letters of a known spot bring its whole name -- and the station
+    /// and coordinates behind it -- back, rather than making her type it out or
+    /// mint a second row for a place the valley already knows.
+    private(set) var placeSuggestions: [Place] = []
+    private var suggestTask: Task<Void, Never>?
     private(set) var isNamingPlace = false
     /// The server's reason for not keeping the name, or "coarse".
     private(set) var placeRefusal: String?
@@ -195,6 +206,48 @@ final class AskModel {
     func clearPlace() {
         originPlace = nil
         placeName = ""
+        placeSuggestions = []
+    }
+
+    /// A few letters typed: after a short pause, ask the server which known
+    /// places begin with them. The pause is so a four-letter name is one
+    /// request, not four, and the task is cancelled the moment she types on.
+    private func scheduleSuggestions() {
+        let typed = placeName.trimmingCharacters(in: .whitespacesAndNewlines)
+        suggestTask?.cancel()
+        guard originPlace?.name != typed, typed.count >= 2 else {
+            placeSuggestions = []
+            return
+        }
+        suggestTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard let self, !Task.isCancelled else { return }
+            await self.loadSuggestions(for: typed)
+        }
+    }
+
+    private func loadSuggestions(for typed: String) async {
+        let endpoint = API.searchPlaces(typed, latitude: fix?.latitude, longitude: fix?.longitude)
+        guard case .success(let places) = await app.client.send(endpoint) else { return }
+        // The field may have moved on while the request was out.
+        guard placeName.trimmingCharacters(in: .whitespacesAndNewlines) == typed else { return }
+        placeSuggestions = places
+    }
+
+    /// A suggestion tapped: this spot is already a known place, so its name,
+    /// its station and its coordinates are reused -- never typed and minted a
+    /// second time.
+    func choose(suggestion place: Place) async {
+        suggestTask?.cancel()
+        placeSuggestions = []
+        originPlace = OriginPlace(id: place.id, name: place.name)
+        placeName = place.name
+        originFromHere = true
+        let station = place.nearestStationId.flatMap { app.geography.station($0) }
+            ?? (whereabouts?.stations ?? []).first { $0.id == place.nearestStationId }
+            ?? (whereabouts?.stations ?? []).first
+        guard let station else { return }
+        await choose(station)
     }
 
     /// Travel from here, boarding at `station`. A name typed and not yet

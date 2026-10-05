@@ -332,6 +332,18 @@ private fun PlaceName(
         keyboardActions = KeyboardActions(onDone = { onEvent(BookingEvent.SavePlaceName) }),
         modifier = Modifier.fillMaxWidth().testTag("origin.place_name"),
     )
+    // The first letters of a spot the valley already knows bring its whole
+    // name back -- tap it and the station and coordinates behind it come with
+    // it, rather than naming the place a second time.
+    state.placeSuggestions.forEach { place ->
+        OriginRow(
+            icon = Icons.Filled.Place,
+            title = place.name,
+            subtitle = place.distanceMetres?.let { distanceLabel(strings, it) },
+            onClick = { onEvent(BookingEvent.SuggestionChosen(place)) },
+            modifier = Modifier.testTag("origin.suggestion"),
+        )
+    }
     if (state.placeRefusal == null) Muted(strings["origin.place.why"])
     if (state.placeName.isNotBlank()) {
         SecondaryAction(

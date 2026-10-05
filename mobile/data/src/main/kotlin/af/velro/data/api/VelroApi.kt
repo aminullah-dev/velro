@@ -116,6 +116,19 @@ interface VelroApi {
     @POST("geo/places")
     suspend fun namePlace(@Body body: NamePlaceRequest): Response<Envelope<PlaceDto>>
 
+    /**
+     * Type-ahead for the origin field: approved places whose name matches what
+     * the passenger is typing, nearest first when a fix rides along. A null
+     * latitude/longitude is simply left off the query.
+     */
+    @GET("geo/places/search")
+    suspend fun searchNamedPlaces(
+        @Query("q") query: String,
+        @Query("latitude") latitude: String? = null,
+        @Query("longitude") longitude: String? = null,
+        @Query("limit") limit: Int = 8,
+    ): Response<Envelope<List<PlaceDto>>>
+
     @GET("geo/stations/{id}/destinations")
     suspend fun destinationsFrom(
         @Path("id") stationId: String,

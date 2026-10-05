@@ -809,6 +809,7 @@
   "ride.offers.you_asked": "You asked for {amount}",
   "ride.offers.accept": "Take this ride",
   "ride.offers.same_as_asked": "Agreed your price",
+  "ride.offers.best_price": "Lowest fare",
   "ride.offers.trips": "{count} trips",
   "ride.action.cancel": "Cancel the request",
   "driver.board.title": "Passengers waiting",

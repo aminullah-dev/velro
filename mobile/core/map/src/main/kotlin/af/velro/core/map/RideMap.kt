@@ -1,5 +1,6 @@
 package af.velro.core.map
 
+import af.velro.core.ui.component.JourneyLine
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Radius
 import af.velro.core.ui.theme.Spacing
@@ -59,6 +60,14 @@ fun RideMap(
     vehicle: MapPlace? = null,
     /** The driver's phone chimes as he enters a zone; hers stays quiet. */
     chime: Boolean = false,
+    /**
+     * The driver's strip, when these are given: the run's two ends and the
+     * fare he collects, which is what a driver glances down for. The passenger
+     * passes none of them and keeps the quiet "who is in the car" card.
+     */
+    origin: String? = null,
+    destination: String? = null,
+    fare: String? = null,
     action: @Composable () -> Unit = {},
 ) {
     Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -77,7 +86,11 @@ fun RideMap(
                 HelpDoor(onHelp)
             }
             Spacer(Modifier.weight(1f))
-            RideNames(driverName, passengerNames)
+            if (fare != null) {
+                RideDutyCard(origin, destination, fare, passengerNames)
+            } else {
+                RideNames(driverName, passengerNames)
+            }
             action()
         }
     }
@@ -152,6 +165,51 @@ private fun HelpDoor(onHelp: () -> Unit) {
     ) {
         TextButton(onClick = onHelp, modifier = Modifier.heightIn(min = 52.dp)) {
             Text(strings["safety.title"], color = MaterialTheme.colorScheme.onError, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/**
+ * The driver's strip: the run's two ends, the fare he is owed for it, and who
+ * is aboard. It leads with the money because that is what the run is for -- the
+ * old strip showed him his own name and nothing he could use.
+ */
+@Composable
+private fun RideDutyCard(
+    origin: String?,
+    destination: String?,
+    fare: String,
+    passengerNames: List<String>,
+) {
+    val strings = LocalVelroStrings.current
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(Radius.card),
+        shadowElevation = 6.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Row(verticalAlignment = Alignment.Top) {
+                JourneyLine(origin = origin, destination = destination, modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(Spacing.md))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        strings["ride.label.fare"],
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        fare,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+            val names = passengerNames.filter { it.isNotBlank() }.joinToString("، ")
+            if (names.isNotEmpty()) {
+                Text(names, style = MaterialTheme.typography.bodyMedium)
+            }
         }
     }
 }

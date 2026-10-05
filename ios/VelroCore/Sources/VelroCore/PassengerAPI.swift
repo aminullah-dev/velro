@@ -88,6 +88,18 @@ extension API {
         .post("geo/places", body: naming)
     }
 
+    /// Type-ahead for the origin field: approved places whose name matches the
+    /// first letters typed, nearest first when a fix rides along. Only names
+    /// staff have read come back -- a pending one is its author's alone.
+    public static func searchPlaces(_ query: String, latitude: Double?, longitude: Double?) -> Endpoint<[Place]> {
+        var items = [URLQueryItem(name: "q", value: query)]
+        if let latitude, let longitude {
+            items.append(URLQueryItem(name: "latitude", value: String(format: "%.6f", latitude)))
+            items.append(URLQueryItem(name: "longitude", value: String(format: "%.6f", longitude)))
+        }
+        return .get("geo/places/search", query: items)
+    }
+
     // MARK: Negotiated fares
 
     /// The ask rings every online driver; the key makes a retry the same ask.

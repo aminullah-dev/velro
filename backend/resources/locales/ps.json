@@ -809,6 +809,7 @@
   "ride.offers.you_asked": "تاسو {amount} وړاندیز کړ",
   "ride.offers.accept": "دا سفر واخلئ",
   "ride.offers.same_as_asked": "ستاسو بیه یې ومنله",
+  "ride.offers.best_price": "تر ټولو ارزانه",
   "ride.offers.trips": "{count} سفرونه",
   "ride.action.cancel": "غوښتنه لغوه کړئ",
   "driver.board.title": "منتظر مسافر",
