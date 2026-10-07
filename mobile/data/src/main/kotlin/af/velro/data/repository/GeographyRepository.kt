@@ -1,6 +1,8 @@
 package af.velro.data.repository
 
 import af.velro.data.api.ApiResult
+import af.velro.data.api.NamePlaceRequest
+import af.velro.data.api.PlaceDto
 import af.velro.data.api.ResponseMapper
 import af.velro.data.api.VelroApi
 import af.velro.data.db.CacheKeys
@@ -10,8 +12,11 @@ import af.velro.data.db.VelroDatabase
 import af.velro.domain.Destination
 import af.velro.domain.DestinationGroup
 import af.velro.domain.District
+import af.velro.domain.Place
+import af.velro.domain.PlaceStatus
 import af.velro.domain.Station
 import af.velro.domain.Village
+import af.velro.domain.Whereabouts
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -185,6 +190,68 @@ class GeographyRepository @Inject constructor(
             api.nearbyStations(latitude.toString(), longitude.toString(), radiusMetres)
         }.map { list -> list.map { it.toDomain() } }
 
+    /**
+     * Where a fix is: district, stations to board at, named places around.
+     *
+     * Straight to the server and never cached: the answer is about one spot
+     * at one moment, and nothing about it is worth keeping on the phone.
+     */
+    suspend fun resolve(latitude: String, longitude: String): ApiResult<Whereabouts> =
+        mapper.call { api.resolve(latitude, longitude) }.map { dto ->
+            Whereabouts(
+                inside = dto.inside,
+                district = dto.district?.let {
+                    District(
+                        id = it.id, code = it.code, name = it.name,
+                        alternativeName = it.alternative_name,
+                        latitude = it.latitude, longitude = it.longitude,
+                    )
+                },
+                districtIsGuess = dto.district_source == "centre",
+                stations = dto.stations.map { it.toDomain() },
+                places = dto.places.map { it.toDomain() },
+            )
+        }
+
+    /**
+     * Say what the place is called. The server decides whether it is a place
+     * name at all, and says why not in the error's `reason`.
+     */
+    suspend fun namePlace(
+        name: String,
+        latitude: String,
+        longitude: String,
+        accuracyMetres: Float?,
+        isMock: Boolean,
+        districtId: String? = null,
+    ): ApiResult<Place> =
+        mapper.call {
+            api.namePlace(
+                NamePlaceRequest(
+                    name = name.trim(),
+                    latitude = latitude,
+                    longitude = longitude,
+                    accuracy_m = accuracyMetres,
+                    location_is_mock = isMock,
+                    district_id = districtId,
+                )
+            )
+        }.map { it.toDomain() }
+
+    /**
+     * The origin field's type-ahead: approved places whose name matches the
+     * first letters typed, nearest first when a fix rides along. Straight to
+     * the server, never cached -- the set of known names grows under the app.
+     */
+    suspend fun searchPlaces(
+        query: String,
+        latitude: String? = null,
+        longitude: String? = null,
+        limit: Int = 8,
+    ): ApiResult<List<Place>> =
+        mapper.call { api.searchNamedPlaces(query, latitude, longitude, limit) }
+            .map { list -> list.map { it.toDomain() } }
+
     suspend fun isCached(): Boolean = db.cacheMetadata().get(CacheKeys.GEO_VERSION) != null
 
     /**
@@ -198,6 +265,18 @@ class GeographyRepository @Inject constructor(
         mapper.call { api.journeyMap(originStationId, destinationId) }
             .map { it.toMapData() }
 }
+
+private fun PlaceDto.toDomain() = Place(
+    id = id,
+    name = name,
+    districtId = district_id,
+    villageId = village_id,
+    nearestStationId = nearest_station_id,
+    latitude = latitude,
+    longitude = longitude,
+    status = runCatching { PlaceStatus.valueOf(status) }.getOrDefault(PlaceStatus.PENDING),
+    distanceMetres = distance_m,
+)
 
 sealed interface SearchHit {
     data class OfVillage(val village: Village) : SearchHit

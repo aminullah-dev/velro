@@ -10,11 +10,12 @@ from decimal import Decimal
 
 from sqlalchemy import func, or_, select
 
-from domain.enums import GeoStatus
-from domain.text import comparison_key
+from domain.enums import GeoStatus, PlaceStatus
+from domain.text import comparison_key, normalise
 from infrastructure.db.models.geography import (
     DestinationRow,
     DistrictRow,
+    PlaceRow,
     ProvinceRow,
     StationRow,
     VillageAliasRow,
@@ -240,6 +241,205 @@ class GeographyRepository:
         measured.sort(key=lambda pair: pair[1])
         return measured[:limit]
 
+    # -- where am I -------------------------------------------------------
+
+    def nearest_district(
+        self, latitude: Decimal, longitude: Decimal, *, radius_m: int = 20_000
+    ) -> tuple[DistrictRow, str] | None:
+        """The district a GPS fix is in, and how that was decided.
+
+        There are no district polygons, so this is an inference, and the
+        second element says which kind: "station" when the nearest placed
+        station is within reach -- stations are where people really are, and
+        the operator has walked to many of them -- and "centre" when only a
+        district's centre point is near, which is the seed's guess and is
+        shown to the passenger with a way to change it. None outside both.
+        """
+        stations = self.nearby_stations(latitude, longitude, radius_m=radius_m, limit=1)
+        if stations:
+            district = self.session.get(DistrictRow, stations[0][0].district_id)
+            if district is not None and district.deleted_at is None:
+                return district, "station"
+        best: tuple[DistrictRow, int] | None = None
+        for district in self.list_districts():
+            if district.latitude is None or district.longitude is None:
+                continue
+            distance = _approx_distance_m(
+                latitude, longitude, district.latitude, district.longitude
+            )
+            if distance <= radius_m and (best is None or distance < best[1]):
+                best = (district, distance)
+        return (best[0], "centre") if best else None
+
+    def village_named(self, district_id: str, name: str) -> VillageRow | None:
+        """The known village in this district that a typed name refers to.
+
+        Matches the village's name and every alias, loosely: "ده نو",
+        "ده‌نو" and "دهنو" are one name typed three ways, and a passenger
+        who writes "قریهٔ خیشکی" means خیشکی. Exact on those forms and nothing
+        fuzzier -- this is what approves a name with nobody reading it, so a
+        near miss must wait for a person rather than be guessed at.
+
+        One district's villages and aliases in two queries, compared here: a
+        few hundred short rows, cheaper than teaching SQL the loose forms.
+        """
+        wanted = _match_forms(name)
+        if not wanted:
+            return None
+        villages = self.session.scalars(
+            select(VillageRow).where(
+                VillageRow.district_id == district_id,
+                VillageRow.deleted_at.is_(None),
+                VillageRow.status == GeoStatus.ACTIVE.value,
+            )
+        ).all()
+        by_id = {v.id: v for v in villages}
+        for village in villages:
+            if _match_forms(village.name) & wanted:
+                return village
+        if not by_id:
+            return None
+        aliases = self.session.execute(
+            select(VillageAliasRow.village_id, VillageAliasRow.name).where(
+                VillageAliasRow.village_id.in_(list(by_id)),
+                VillageAliasRow.deleted_at.is_(None),
+            )
+        ).all()
+        for village_id, alias in aliases:
+            if _match_forms(alias) & wanted:
+                return by_id[village_id]
+        return None
+
+    # -- places people named ---------------------------------------------
+
+    def find_place(self, id: str) -> PlaceRow | None:
+        return self.session.scalars(
+            select(PlaceRow).where(PlaceRow.id == id, PlaceRow.deleted_at.is_(None))
+        ).one_or_none()
+
+    def places_near(
+        self,
+        latitude: Decimal,
+        longitude: Decimal,
+        *,
+        radius_m: int = 3_000,
+        statuses: tuple[PlaceStatus, ...] = (PlaceStatus.APPROVED,),
+        limit: int = 10,
+    ) -> list[tuple[PlaceRow, int]]:
+        """Named places near a fix, nearest first, with a distance in metres.
+
+        Approved only unless asked otherwise: this is what a stranger standing
+        nearby is offered, and a name nobody has read yet is not offered to
+        strangers.
+        """
+        d_lat = Decimal(radius_m) / _M_PER_DEG_LAT
+        d_lon = Decimal(radius_m) / _M_PER_DEG_LON
+        rows = self.session.scalars(
+            select(PlaceRow)
+            .where(
+                PlaceRow.deleted_at.is_(None),
+                PlaceRow.status.in_([s.value for s in statuses]),
+                PlaceRow.latitude.between(latitude - d_lat, latitude + d_lat),
+                PlaceRow.longitude.between(longitude - d_lon, longitude + d_lon),
+            )
+            .limit(200)
+        ).all()
+        measured = [
+            (row, _approx_distance_m(latitude, longitude, row.latitude, row.longitude))
+            for row in rows
+        ]
+        measured = [pair for pair in measured if pair[1] <= radius_m]
+        # Nearest first; among places equally near, the one more people named.
+        measured.sort(key=lambda pair: (pair[1], -pair[0].report_count))
+        return measured[:limit]
+
+    def search_places(
+        self,
+        term: str,
+        *,
+        near: tuple[Decimal, Decimal] | None = None,
+        statuses: tuple[PlaceStatus, ...] = (PlaceStatus.APPROVED,),
+        limit: int = 8,
+    ) -> list[tuple[PlaceRow, int | None]]:
+        """Approved places whose name matches what is being typed.
+
+        The type-ahead behind the origin field: a passenger types the first
+        letters of a spot already named in the valley and gets the whole name
+        back -- with the coordinates that complete the map -- instead of typing
+        it out again or minting a second row for a place that is already known.
+
+        Matching is on the normalised key, as villages are, so an Arabic yeh
+        finds a name stored with a Persian one. A name that *starts* with the
+        term is offered before one that merely contains it, and when a fix is
+        given the nearer of two equally good names comes first. Approved only,
+        like `places_near`: a name nobody has read yet is nobody's but its
+        author, and is never offered to a stranger typing nearby.
+        """
+        key = comparison_key(term)
+        if not key:
+            return []
+        rows = self.session.scalars(
+            select(PlaceRow)
+            .where(
+                PlaceRow.deleted_at.is_(None),
+                PlaceRow.status.in_([s.value for s in statuses]),
+                PlaceRow.name_key.like(f"%{key}%"),
+            )
+            .limit(200)
+        ).all()
+        if near is None:
+            measured: list[tuple[PlaceRow, int | None]] = [(row, None) for row in rows]
+            measured.sort(
+                key=lambda pair: (
+                    not pair[0].name_key.startswith(key),
+                    len(pair[0].name_key),
+                    -pair[0].report_count,
+                )
+            )
+            return measured[:limit]
+        lat, lon = near
+        with_distance = [
+            (row, _approx_distance_m(lat, lon, row.latitude, row.longitude)) for row in rows
+        ]
+        with_distance.sort(
+            key=lambda pair: (not pair[0].name_key.startswith(key), pair[1])
+        )
+        return with_distance[:limit]
+
+    def same_place(
+        self,
+        district_id: str,
+        name_key: str,
+        latitude: Decimal,
+        longitude: Decimal,
+        *,
+        within_m: int,
+    ) -> PlaceRow | None:
+        """An earlier report of this name, here -- any status, nearest first.
+
+        Rejected rows are included on purpose: a name staff turned down must
+        not come back as a fresh PENDING row every time somebody types it.
+        """
+        rows = self.session.scalars(
+            select(PlaceRow).where(
+                PlaceRow.district_id == district_id,
+                PlaceRow.name_key == name_key,
+                PlaceRow.deleted_at.is_(None),
+            )
+        ).all()
+        near = [
+            (row, _approx_distance_m(latitude, longitude, row.latitude, row.longitude))
+            for row in rows
+        ]
+        near = [pair for pair in near if pair[1] <= within_m]
+        near.sort(key=lambda pair: pair[1])
+        return near[0][0] if near else None
+
+    def add_place(self, **fields) -> PlaceRow:
+        row = PlaceRow(**fields)
+        self.session.add(row)
+        return row
+
     # -- destinations -----------------------------------------------------
 
     def destinations_reachable_from(self, station_id: str) -> list[DestinationRow]:
@@ -314,6 +514,17 @@ def _approx_distance_m(lat1: Decimal, lon1: Decimal, lat2: Decimal, lon2: Decima
     dlat = float(lat2 - lat1) * float(_M_PER_DEG_LAT)
     dlon = float(lon2 - lon1) * float(_M_PER_DEG_LON)
     return int(math.hypot(dlat, dlon))
+
+
+def _match_forms(name: str) -> set[str]:
+    """The spellings of a name that count as the same name.
+
+    Spaces and joiners dropped, with and without the structural words
+    ("قریه", "ده", "کلی"): ZWNJ, a space and nothing are all how people
+    type the break in "ده‌نو", and none of them makes it a different place.
+    """
+    forms = {normalise(name).replace(" ", ""), comparison_key(name).replace(" ", "")}
+    return {form for form in forms if form}
 
 
 class VillageRepository(SqlRepository[VillageRow]):

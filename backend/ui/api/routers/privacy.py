@@ -21,7 +21,7 @@ from fastapi.responses import HTMLResponse
 page_router = APIRouter(tags=["release"])
 
 CONTACT = "aminhashemi979@gmail.com"
-EFFECTIVE = "۲۰ سنبله ۱۴۰۵ — 11 September 2026"
+EFFECTIVE = "۳۰ سنبله ۱۴۰۵ — 21 September 2026"
 
 _PAGE = """<!doctype html>
 <html lang="fa" dir="rtl">
@@ -52,7 +52,7 @@ _PAGE = """<!doctype html>
 <h2>۱. چه چیزی جمع می‌کنیم</h2>
 <ul>
 <li><strong>شمارهٔ تیلفون و نام.</strong> شماره هویت شما در ولرو است؛ کود ورود به همان شماره (از طریق پیامک یا تلگرام) فرستاده می‌شود. کارمندان لینومیک می‌توانند کود را با ایمیل بگیرند.</li>
-<li><strong>موقعیت.</strong> مسافر: یک بار، در لحظهٔ درخواست یا رزرو، تا مطمئن شویم داخل ساحهٔ خدمات هستید. راننده: به‌طور مداوم تا وقتی آنلاین یا در سفر است، تا مسافر موتر را روی نقشه ببیند و راننده هشدارهای جاده را بگیرد. وقتی آفلاین شوید، فرستادن موقعیت متوقف می‌شود.</li>
+<li><strong>موقعیت.</strong> مسافر: در لحظهٔ درخواست یا رزرو، تا مطمئن شویم داخل ساحهٔ خدمات هستید و نزدیک‌ترین ایستگاه را نشان دهیم. اگر «موقعیت فعلی» را انتخاب کنید و نام محل را بنویسید، آن نام با نقطهٔ همان محل نگه‌داری می‌شود تا به مسافر بعدی که آنجاست پیشنهاد شود — بدون نام، شماره یا هر چیز دیگری که به شما اشاره کند؛ نام خانه یا شخص پذیرفته نمی‌شود. راننده: به‌طور مداوم تا وقتی آنلاین یا در سفر است، تا مسافر موتر را روی نقشه ببیند و راننده هشدارهای جاده را بگیرد. وقتی آفلاین شوید، فرستادن موقعیت متوقف می‌شود.</li>
 <li><strong>مدارک رانندگان.</strong> عکس تذکره، جواز رانندگی و جواز سیر موتر، نمبر پلیت و مشخصات موتر، و عکس پروفایل — برای تأیید اینکه چه کسی پشت فرمان است.</li>
 <li><strong>سفرها.</strong> درخواست‌ها، پیشنهادهای کرایه، رزروها، کرایهٔ توافق‌شده، کود سوارشدن، امتیازها، لغوها و دلیل‌شان، و گزارش‌های امنیتی یا شکایت‌هایی که خودتان ثبت می‌کنید.</li>
 <li><strong>معلومات فنی.</strong> شناسهٔ دستگاه برای اعلان‌ها؛ گزارش کرش (نسخهٔ اپ، مدل دستگاه، متن خطا — بدون نام یا شماره)؛ و لاگ درخواست‌ها (زمان و آی‌پی) برای امنیت.</li>
@@ -100,7 +100,7 @@ _PAGE = """<!doctype html>
 <h2>1. What we collect</h2>
 <ul>
 <li><strong>Phone number and name.</strong> Your number is your identity on VELRO; the sign-in code goes to it by SMS or Telegram. Linumic staff may receive their code by email.</li>
-<li><strong>Location.</strong> Passengers: once, at the moment of asking or booking, to confirm you are inside the service area. Drivers: continuously while online or on a trip, so the passenger can see the car on the map and the driver receives road warnings. Going offline stops it.</li>
+<li><strong>Location.</strong> Passengers: at the moment of asking or booking, to confirm you are inside the service area and to show the nearest station. If you use "current location" and type the name of the place, that name is kept with the place's point so it can be offered to the next passenger there — without your name, number or anything else that points to you; names of houses or people are not accepted. Drivers: continuously while online or on a trip, so the passenger can see the car on the map and the driver receives road warnings. Going offline stops it.</li>
 <li><strong>Driver documents.</strong> Photographs of the tazkira, the driving licence and the vehicle permit, the number plate and vehicle details, and a profile photo — to verify who is behind the wheel.</li>
 <li><strong>Trips.</strong> Requests, fare offers, bookings, the agreed fare, the boarding code, ratings, cancellations and their reasons, and any safety report or complaint you file.</li>
 <li><strong>Technical data.</strong> A device token for notifications; crash reports (app version, device model, error text — no name or number); and request logs (time and IP address) for security.</li>

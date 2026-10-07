@@ -36,6 +36,12 @@ struct OffersView: View {
             LoadingState()
         } else if let request = model.request {
             VStack(alignment: .leading, spacing: Spacing.md) {
+                // The road first, as inDrive and its kind open: the journey she
+                // is pricing, drawn, so the prices below land on a place rather
+                // than on a line of text.
+                if let map = model.map {
+                    JourneyMapView(map: map, height: 170)
+                }
                 journey(request)
                 if let error = model.error { InlineError(error: error) }
 
@@ -89,6 +95,11 @@ struct OffersView: View {
                 ]])
                 .velroFont(.heading, weight: .medium)
                 .foregroundStyle(Palette.onSurface)
+                if let place = request.originPlaceName {
+                    Text(strings["ride.journey.from_place", ["place": place]])
+                        .velroFont(.label)
+                        .foregroundStyle(Palette.primary)
+                }
                 // The whole journey: on a round trip the outbound is half the ask.
                 Text(strings["ride.offers.you_asked", ["amount": MoneyFormatter.format(request.askingTotal, strings: strings)]])
                     .velroFont(.label)
@@ -112,13 +123,18 @@ struct OffersView: View {
     }
 
     private func offers(_ request: RideRequest) -> some View {
-        ScrollView {
+        // Worth pointing at only in a crowd: with one reply there is no
+        // "cheapest", and a badge on the only card is noise. The list is
+        // already cheapest-first, so the best price is its head.
+        let bestId = request.liveOffers.count > 1 ? request.liveOffers.first?.id : nil
+        return ScrollView {
             LazyVStack(spacing: Spacing.sm) {
                 ForEach(request.liveOffers) { offer in
                     OfferCard(
                         offer: offer,
                         photo: model.photos[offer.driverId],
                         asking: request.askingTotal,
+                        best: offer.id == bestId,
                         accepting: model.acceptingOfferId == offer.id,
                         enabled: model.acceptingOfferId == nil
                     ) {
@@ -140,6 +156,7 @@ private struct OfferCard: View {
     let offer: FareOffer
     let photo: UIImage?
     let asking: Money
+    var best = false
     let accepting: Bool
     let enabled: Bool
     let accept: () -> Void
@@ -148,6 +165,21 @@ private struct OfferCard: View {
     var body: some View {
         VelroCard {
             VStack(alignment: .leading, spacing: Spacing.sm) {
+                // The cheapest reply, named. A ride app does not make her
+                // compare numbers on a roadside: it points.
+                if best {
+                    Label {
+                        Text(strings["ride.offers.best_price"]).velroFont(.caption, weight: .medium)
+                    } icon: {
+                        Image(systemName: "arrow.down.circle.fill").font(.caption)
+                    }
+                    .foregroundStyle(Palette.onToneActive)
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, Spacing.xxs)
+                    .background(Palette.toneActive, in: Capsule())
+                    .accessibilityElement(children: .combine)
+                }
+
                 HStack(alignment: .top, spacing: Spacing.md) {
                     // The face before the name and the price: she is the one
                     // about to get into his car on an empty road.
@@ -198,6 +230,12 @@ private struct OfferCard: View {
                     .accessibilityIdentifier("offers.accept")
             }
         }
+        // The best price wears the green edge; the rest sit quiet, so the eye
+        // lands on it first without a word being shouted.
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                .strokeBorder(Palette.primary, lineWidth: best ? 2 : 0)
+        )
     }
 
     private var price: some View {

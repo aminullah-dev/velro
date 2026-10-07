@@ -281,23 +281,55 @@ private struct PendingApproval: View {
     }
 }
 
+/// Going on duty, the way a driver app says it: a live light that breathes
+/// when he is online, the word in the brand green, and the switch itself kept
+/// -- the control the store pictures and the flow tests still tap by name.
 private struct OnlineToggle: View {
     let isOnline: Bool
     let busy: Bool
     let toggle: () -> Void
     @Environment(\.strings) private var strings
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pulse = false
 
     var body: some View {
         VelroCard {
-            Toggle(isOn: Binding(get: { isOnline }, set: { _ in toggle() })) {
+            HStack(spacing: Spacing.md) {
+                ZStack {
+                    if isOnline {
+                        Circle()
+                            .fill(Palette.primary.opacity(0.25))
+                            .frame(width: 28, height: 28)
+                            .scaleEffect(pulse ? 1.35 : 0.85)
+                            .opacity(pulse ? 0 : 1)
+                            .animation(reduceMotion ? nil : .easeOut(duration: 1.3).repeatForever(autoreverses: false), value: pulse)
+                    }
+                    Circle()
+                        .fill(isOnline ? Palette.primary : Palette.outline)
+                        .frame(width: 13, height: 13)
+                }
+                .frame(width: 28, height: 28)
+                .accessibilityHidden(true)
+
                 Text(strings[isOnline ? "driver.status.online" : "driver.status.offline"])
                     .velroFont(.heading, weight: .bold)
-                    .foregroundStyle(isOnline ? Palette.primary : Palette.onSurfaceVariant)
+                    .foregroundStyle(isOnline ? Palette.primary : Palette.onSurface)
+
+                Spacer(minLength: Spacing.sm)
+
+                Toggle(isOn: Binding(get: { isOnline }, set: { _ in toggle() })) { EmptyView() }
+                    .labelsHidden()
+                    .tint(Palette.primary)
+                    .disabled(busy)
+                    .accessibilityIdentifier("home.online")
+                    .accessibilityLabel(strings[isOnline ? "driver.status.online" : "driver.status.offline"])
             }
-            .tint(Palette.primary)
-            .disabled(busy)
-            .accessibilityIdentifier("home.online")
         }
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                .strokeBorder(isOnline ? Palette.primary : Color.clear, lineWidth: isOnline ? 1.5 : 0)
+        )
+        .onAppear { if !reduceMotion { pulse = true } }
     }
 }
 
@@ -333,26 +365,44 @@ struct WaitingRequestCard: View {
 
     var body: some View {
         VelroCard {
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text(MoneyFormatter.format(request.askingTotal, strings: strings))
-                    .velroFont(.title, weight: .bold)
-                    .foregroundStyle(Palette.primary)
-                Text(strings["ride.journey.from_to", [
-                    "origin": request.originStationName ?? strings["common.value.unknown"],
-                    "destination": request.destinationName ?? strings["common.value.unknown"],
-                ]])
-                .velroFont(.body)
-                .foregroundStyle(Palette.onSurface)
-                if let departure = request.departure {
-                    Text(Calendars.dateTime(departure, strings.locale))
-                        .velroFont(.caption)
+            HStack(alignment: .top, spacing: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    JourneyLine(origin: request.originStationName, destination: request.destinationName, role: .label)
+                    if let place = request.originPlaceName {
+                        Text(strings["ride.journey.from_place", ["place": place]])
+                            .velroFont(.caption)
+                            .foregroundStyle(Palette.primary)
+                    }
+                    if let departure = request.departure {
+                        Label {
+                            Text(Calendars.dateTime(departure, strings.locale)).velroFont(.caption)
+                        } icon: {
+                            Image(systemName: "clock").font(.caption)
+                        }
                         .foregroundStyle(Palette.accent)
+                        .accessibilityElement(children: .combine)
+                    }
+                    if request.alreadyOffered == true {
+                        Text(strings["driver.board.already_offered"])
+                            .velroFont(.caption)
+                            .foregroundStyle(Palette.onSurfaceVariant)
+                    }
                 }
-                if request.alreadyOffered == true {
-                    Text(strings["driver.board.already_offered"])
-                        .velroFont(.caption)
-                        .foregroundStyle(Palette.onSurfaceVariant)
+                Spacer(minLength: Spacing.sm)
+                // The money, set apart on its own tile: the one number a driver
+                // decides with, kept where his eye already goes on every card.
+                VStack(spacing: Spacing.xxs) {
+                    Text(MoneyFormatter.format(request.askingTotal, strings: strings))
+                        .velroFont(.title, weight: .bold)
+                        .foregroundStyle(Palette.onPrimaryContainer)
+                    Image(systemName: "person.2.fill")
+                        .font(.caption2)
+                        .foregroundStyle(Palette.onPrimaryContainer.opacity(0.7))
+                        .accessibilityHidden(true)
                 }
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+                .background(Palette.primaryContainer, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
             }
         }
     }

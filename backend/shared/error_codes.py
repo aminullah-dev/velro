@@ -48,6 +48,13 @@ STATION_DISABLED: Final = "STATION_DISABLED"
 DESTINATION_NOT_FOUND: Final = "DESTINATION_NOT_FOUND"
 DESTINATION_DISABLED: Final = "DESTINATION_DISABLED"
 DESTINATION_CYCLE: Final = "DESTINATION_CYCLE"
+# A passenger named the place they are standing in with something that is not
+# a place: a home, a relative, a phone number. Place names are shared with
+# every passenger and shown to drivers, so a name that points at one family's
+# door is refused rather than stored -- the reason travels with the error.
+PLACE_NAME_NOT_ALLOWED: Final = "PLACE_NAME_NOT_ALLOWED"
+PLACE_NOT_FOUND: Final = "PLACE_NOT_FOUND"
+PLACE_FIX_TOO_COARSE: Final = "PLACE_FIX_TOO_COARSE"
 
 # -- import --------------------------------------------------------------
 IMPORT_FILE_UNREADABLE: Final = "IMPORT_FILE_UNREADABLE"

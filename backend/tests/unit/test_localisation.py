@@ -196,8 +196,10 @@ def test_every_key_the_apps_ask_for_exists() -> None:
     used = _literal_keys(
         _REPO / "mobile",
         (
-            r'strings\["([a-z][a-zA-Z0-9._]*)"',
-            r'strings\.get\("([a-z][a-zA-Z0-9._]*)"',
+            # Whole keys only, as in _ADMIN_T_CALL: a key that continues --
+            # strings["booking.status." + code] -- is a prefix, not a key.
+            r'strings\["([a-z][a-zA-Z0-9._]*)"\s*\]',
+            r'strings\.get\("([a-z][a-zA-Z0-9._]*)"\s*[,)]',
         ),
     )
     missing = {k: v for k, v in used.items() if k not in english}

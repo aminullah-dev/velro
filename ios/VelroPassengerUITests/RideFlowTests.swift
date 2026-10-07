@@ -16,6 +16,10 @@ final class RideFlowTests: XCTestCase {
     func testStartingTheTripOpensTheRideMapOnHerPhone() async throws {
         let app = launchSignedIn(phone: freshTestPhone())
         app.buttons["home.search"].tap()
+        // From a village in the list, not from wherever the simulator stands.
+        let browse = app.buttons["origin.browse"]
+        XCTAssertTrue(browse.waitForExistence(timeout: 10))
+        browse.tap()
         tapFirst(app, "ask.district.GRB-SYG", timeout: 15)
         let filter = app.textFields["ask.filter"]
         XCTAssertTrue(filter.waitForExistence(timeout: 10))

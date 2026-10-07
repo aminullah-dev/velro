@@ -15,6 +15,7 @@ import af.velro.core.ui.component.InlineError
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.StatusChip
+import af.velro.core.ui.component.TripStatusStepper
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.messageKey
 import af.velro.core.ui.component.tone
@@ -135,6 +136,13 @@ fun BookingDetailScreen(
         // stays here -- and it keeps the row it needs to sit on its own line
         // rather than crowding the bar.
         StatusChip(booking.status.messageKey(), booking.status.tone())
+
+        // The ride's lifecycle at a glance, where a ride app puts it: above the
+        // map, so "asked / assigned / on the way / aboard / done" reads before
+        // any name or number does.
+        Spacer(Modifier.height(Spacing.md))
+        TripStatusStepper(booking.status)
+
         if (state.queuedOffline) {
             // The action was saved, and the status above deliberately has not
             // moved: the server has not agreed yet, and a screen that shows

@@ -203,6 +203,18 @@ class AccountEraser:
                 .where(RideRequestRow.passenger_id == user_id, RideRequestRow.note.is_not(None))
                 .values(note=None)
             )
+            # The place she named stays in `places` -- it never knew her (ADR
+            # 0015) -- but the thread from her request to it is cut: "she
+            # asked from here" is the one sentence the place table refuses to
+            # hold, and it must not survive her in the table beside it.
+            + self._rowcount(
+                update(RideRequestRow)
+                .where(
+                    RideRequestRow.passenger_id == user_id,
+                    RideRequestRow.origin_place_id.is_not(None),
+                )
+                .values(origin_place_id=None)
+            )
             + self._rowcount(
                 update(CancellationRow)
                 .where(

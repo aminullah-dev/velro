@@ -138,6 +138,13 @@ private struct RequestCard: View {
                 ]])
                 .velroFont(.heading, weight: .medium)
                 .foregroundStyle(Palette.onSurface)
+                // Which village she is walking in from (ADR 0015): the station
+                // is where to stop, this is who to look for.
+                if let place = request.originPlaceName {
+                    Text(strings["ride.journey.from_place", ["place": place]])
+                        .velroFont(.label)
+                        .foregroundStyle(Palette.primary)
+                }
                 if let departure = request.departure {
                     Text(strings["ride.when.departure"] + ": " + Calendars.dateTime(departure, strings.locale))
                         .velroFont(.caption)

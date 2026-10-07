@@ -5,6 +5,7 @@ import af.velro.core.map.JourneyMap
 import af.velro.core.map.RideMap
 import af.velro.core.ui.component.PhotoAvatar
 import af.velro.core.ui.component.SecondaryAction
+import af.velro.core.ui.component.TripStatusStepper
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
@@ -118,6 +119,9 @@ fun TrackRideRoute(
                 .padding(top = Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
+            // Where the ride is in its life, read before the minutes and the
+            // driver: the signature a transport app carries at the top.
+            state.booking?.status?.let { TripStatusStepper(it) }
             GetHelp(state)
             Eta(state)
             state.driver?.let { DriverCard(it, state.driverPhoto) { number ->

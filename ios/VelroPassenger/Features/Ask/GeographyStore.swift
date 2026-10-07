@@ -39,6 +39,10 @@ final class GeographyStore {
         (snapshot?.villages ?? []).filter { $0.districtId == districtId }.sorted { $0.name < $1.name }
     }
 
+    func station(_ id: String) -> Station? {
+        snapshot?.stations.first { $0.id == id }
+    }
+
     /// The village's main station first.
     func stations(in villageId: String) -> [Station] {
         (snapshot?.stations ?? []).filter { $0.villageId == villageId }.sorted { a, b in

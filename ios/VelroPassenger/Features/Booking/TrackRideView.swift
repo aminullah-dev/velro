@@ -172,6 +172,11 @@ struct TrackRideView: View {
     private var waiting: some View {
         VelroScreen(title: strings["track.title"]) {
             VStack(alignment: .leading, spacing: Spacing.sm) {
+                if let status = model.booking?.status {
+                    TripStatusStepper(status: status)
+                        .padding(.bottom, Spacing.xs)
+                }
+
                 if let map = model.map {
                     JourneyMapView(map: map, vehicle: model.vehicle, height: nil)
                 } else {

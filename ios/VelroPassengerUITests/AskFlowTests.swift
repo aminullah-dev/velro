@@ -1,6 +1,6 @@
 import XCTest
 
-/// Asking for a ride end to end: district, village, station, destination, a
+/// Asking for a ride end to end: where from, district, village, station, destination, a
 /// price for tomorrow morning; a driver answers; she takes his price, gets a
 /// boarding code, and cancels -- which also frees the seeded driver for the
 /// next run.
@@ -13,6 +13,13 @@ final class AskFlowTests: XCTestCase {
     func testAskTakeAPriceAndBoard() async throws {
         let app = launchSignedIn(phone: freshTestPhone())
         app.buttons["home.search"].tap()
+
+        // Where from opens on the current-location card; this run travels
+        // from a village chosen in the list, the way a phone with no fix does.
+        let browse = app.buttons["origin.browse"]
+        XCTAssertTrue(browse.waitForExistence(timeout: 10))
+        snapshot("3b-origin")
+        browse.tap()
 
         tapFirst(app, "ask.district")
         tapFirst(app, "ask.village")
@@ -81,6 +88,38 @@ final class AskFlowTests: XCTestCase {
         let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.staticTexts["booking.code"])
         await fulfillment(of: [gone], timeout: 20)
         snapshot("10-cancelled")
+    }
+
+    /// Typing the first letters of a spot the valley already knows brings its
+    /// whole name back, with the station and coordinates behind it -- so she
+    /// taps it rather than naming the place a second time.
+    func testTypingTheOriginSuggestsAKnownPlace() async throws {
+        let app = launchSignedIn(phone: freshTestPhone())
+        app.buttons["home.search"].tap()
+
+        // The current-location card. Allow the fix, so the "what is this place
+        // called" field appears beneath it.
+        let allow = app.buttons["origin.allow"]
+        if allow.waitForExistence(timeout: 10) {
+            allow.tap()
+            allowLocationIfAsked()
+        }
+
+        let field = app.textFields["origin.place_name"]
+        XCTAssertTrue(field.waitForExistence(timeout: 20), "the place field never appeared")
+        field.tap()
+        // بابر is an approved place at the test station; its first letters find it.
+        field.typeText("با")
+
+        let suggestion = app.descendants(matching: .any)
+            .matching(identifier: "origin.suggestion").firstMatch
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 10), "a known place was not suggested")
+        settle()
+        snapshot("3d-suggestions")
+        suggestion.tap()
+
+        // Picking it carries her straight on to the destination list.
+        tapFirst(app, "ask.destination.", timeout: 20)
     }
 
     /// Lets an animation finish before a screenshot.

@@ -37,6 +37,19 @@ class DestinationKind(StrEnum):
     EXTERNAL = "EXTERNAL"
 
 
+class PlaceStatus(StrEnum):
+    """A place name a passenger gave to where they were standing.
+
+    APPROVED is shown to everyone and to drivers. A name that matched a known
+    village in its district is approved on arrival; a brand-new name waits as
+    PENDING until staff read it, because it will be read aloud by strangers.
+    """
+
+    APPROVED = "APPROVED"
+    PENDING = "PENDING"
+    REJECTED = "REJECTED"
+
+
 class RouteType(StrEnum):
     LOCAL = "LOCAL"
     DISTRICT_TO_DISTRICT = "DISTRICT_TO_DISTRICT"

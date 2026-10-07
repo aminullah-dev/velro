@@ -1,8 +1,9 @@
 import SwiftUI
 import VelroCore
 
-/// Asking for a ride: five steps in one frame, each sliding in from the side
-/// it comes from, with back stepping back rather than leaving the whole form.
+/// Asking for a ride: where from, then the list steps if she browses, the
+/// destination and the price -- in one frame, each sliding in from the side it
+/// comes from, with back stepping back rather than leaving the whole form.
 struct AskView: View {
     @Environment(\.strings) private var strings
     @Environment(\.openURL) private var openURL
@@ -19,12 +20,14 @@ struct AskView: View {
     var body: some View {
         VelroScreen(title: strings[model.step.titleKey]) {
             VStack(alignment: .leading, spacing: Spacing.md) {
-                StepProgress(current: model.step.rawValue, total: AskModel.Step.allCases.count)
+                StepProgress(current: model.progress.current, total: model.progress.total)
 
                 if let error = model.error, model.isEmptyForStep, !model.isLoading {
                     ErrorState(error: error) { Task { await model.retry() } }
                 } else {
-                    if let error = model.error {
+                    // Nothing on the where-from card fails into this slot: a
+                    // district list that did not refresh says so when opened.
+                    if let error = model.error, model.step != .origin {
                         InlineError(error: error)
                         if model.needsLocationAccess && location.access != .granted {
                             LocationNote(access: location.access, openSettings: openSettings)
@@ -72,10 +75,13 @@ struct AskView: View {
 
     @ViewBuilder
     private var panel: some View {
-        if model.isLoading {
+        // The where-from card has its own "finding you" line; the district
+        // list loading underneath it is no reason to cover it.
+        if model.isLoading && model.step != .origin {
             LoadingState()
         } else {
             switch model.step {
+            case .origin: OriginPanel(model: model, location: location, openSettings: openSettings)
             case .district: districtList
             case .village: villageList
             case .station: stationList
@@ -230,6 +236,11 @@ struct AskView: View {
                         ]])
                         .velroFont(.heading, weight: .medium)
                         .foregroundStyle(Palette.onSurface)
+                        if let place = model.originPlace {
+                            Text(strings["ride.journey.from_place", ["place": place.name]])
+                                .velroFont(.label)
+                                .foregroundStyle(Palette.primary)
+                        }
                         Text(strings["ride.ask.hint"])
                             .velroFont(.label)
                             .foregroundStyle(Palette.onSurfaceVariant)

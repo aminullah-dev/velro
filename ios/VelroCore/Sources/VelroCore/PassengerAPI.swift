@@ -15,12 +15,15 @@ public struct RideAsk: Encodable, Sendable, Equatable {
     public let latitude: String?
     public let longitude: String?
     public let locationIsMock: Bool
+    /// The place the passenger named, when asking from where she stands.
+    public let originPlaceId: String?
 
     public init(
         originStationId: String, destinationId: String, passengerCount: Int,
         offeredFareMinor: Int64, returnFareMinor: Int64?, note: String?,
         requestedFor: Date?, returnFor: Date?,
-        latitude: Double?, longitude: Double?
+        latitude: Double?, longitude: Double?,
+        originPlaceId: String? = nil
     ) {
         self.originStationId = originStationId
         self.destinationId = destinationId
@@ -36,6 +39,26 @@ public struct RideAsk: Encodable, Sendable, Equatable {
         // iOS does not tell an app whether a fix was simulated the way
         // Android does; nothing is claimed that cannot be known.
         self.locationIsMock = false
+        self.originPlaceId = originPlaceId
+    }
+}
+
+/// Saying what the place you are standing in is called (ADR 0015).
+public struct PlaceNaming: Encodable, Sendable, Equatable {
+    public let name: String
+    public let latitude: String
+    public let longitude: String
+    public let accuracyM: Double?
+    public let locationIsMock: Bool
+    public let districtId: String?
+
+    public init(name: String, latitude: Double, longitude: Double, accuracyM: Double?, districtId: String? = nil) {
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.latitude = String(format: "%.6f", latitude)
+        self.longitude = String(format: "%.6f", longitude)
+        self.accuracyM = accuracyM
+        self.locationIsMock = false
+        self.districtId = districtId
     }
 }
 
@@ -50,6 +73,31 @@ extension API {
 
     public static func destinations(from stationId: String) -> Endpoint<[DestinationGroup]> {
         .get("geo/stations/\(stationId)/destinations")
+    }
+
+    /// Where a fix is: district, nearest stations, named places -- one trip.
+    public static func resolve(latitude: Double, longitude: Double) -> Endpoint<Whereabouts> {
+        .get("geo/resolve", query: [
+            URLQueryItem(name: "latitude", value: String(format: "%.6f", latitude)),
+            URLQueryItem(name: "longitude", value: String(format: "%.6f", longitude)),
+        ])
+    }
+
+    /// The server decides whether it is a place name, and says why not.
+    public static func namePlace(_ naming: PlaceNaming) -> Endpoint<Place> {
+        .post("geo/places", body: naming)
+    }
+
+    /// Type-ahead for the origin field: approved places whose name matches the
+    /// first letters typed, nearest first when a fix rides along. Only names
+    /// staff have read come back -- a pending one is its author's alone.
+    public static func searchPlaces(_ query: String, latitude: Double?, longitude: Double?) -> Endpoint<[Place]> {
+        var items = [URLQueryItem(name: "q", value: query)]
+        if let latitude, let longitude {
+            items.append(URLQueryItem(name: "latitude", value: String(format: "%.6f", latitude)))
+            items.append(URLQueryItem(name: "longitude", value: String(format: "%.6f", longitude)))
+        }
+        return .get("geo/places/search", query: items)
     }
 
     // MARK: Negotiated fares

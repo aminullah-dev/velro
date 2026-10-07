@@ -191,6 +191,15 @@ private fun RequestCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
+            // Which village she is walking in from (ADR 0015). The station
+            // above is where to stop; this is who to look for.
+            request.originPlaceName?.let { place ->
+                Text(
+                    strings["ride.journey.from_place", "place" to place],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             // When he is being asked to drive.
             //
             // Every request used to mean "now", so a board card had nothing to

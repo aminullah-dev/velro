@@ -111,8 +111,19 @@ h1 em { font-style: normal; color: var(--amber-500); }
   display: flex; justify-content: space-between; align-items: center;
   font-size: 34px;
 }
-.foot .phone { font-weight: 700; }
 .foot .by { color: var(--green-50); font-size: 28px; }
+
+/* No contact number on the posters (decided 2026-09-21): the foot keeps
+   only the maker's line. */
+
+/* Dari runs longer than Pashto in the same layout, and two posters came out
+   taller than the page -- the foot was cut in half by the A4 edge. Tighter
+   spacing for those, rather than a smaller page for everyone. */
+.dense .body { padding-top: 44px; }
+.dense h1 { font-size: 80px; }
+.dense .lead { margin-top: 20px; }
+.dense .points { margin-top: 40px; gap: 28px; }
+.dense .offer { margin-top: 34px; }
 
 /* The corridors, for the passenger poster: the three routes that run today. */
 .routes { margin-top: 52px; display: flex; gap: 20px; }

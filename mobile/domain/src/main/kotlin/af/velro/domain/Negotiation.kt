@@ -65,6 +65,13 @@ data class RideRequest(
     val status: RideRequestStatus,
     val originStationId: String,
     val originStationName: String? = null,
+    /**
+     * The place the passenger named when they asked from where they stood --
+     * "from قلعه نو" under the station (ADR 0015). Null when they chose from
+     * the list, which is most requests.
+     */
+    val originPlaceId: String? = null,
+    val originPlaceName: String? = null,
     val destinationId: String,
     val destinationName: String? = null,
     val passengerCount: Int,

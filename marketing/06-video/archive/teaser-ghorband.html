@@ -141,7 +141,7 @@ function overlay() {
   g.addColorStop(0, 'rgba(9,36,24,0)'); g.addColorStop(0.5, 'rgba(9,36,24,.55)'); g.addColorStop(1, 'rgba(9,36,24,.9)');
   ctx.fillStyle = g; ctx.fillRect(0, H - 470, W, 470);
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#FFFFFF'; ctx.font = '900 96px Vazirmatn, sans-serif';
+  ctx.fillStyle = '#FFFFFF'; ctx.font = '900 60px Vazirmatn, sans-serif';
   ctx.fillText('به‌زودی', W / 2, H - 240);
   ctx.fillStyle = 'rgba(233,247,241,.85)'; ctx.font = '500 34px Vazirmatn, sans-serif';
   ctx.fillText('کابل — چاریکار — غوربند', W / 2, H - 166);
@@ -152,7 +152,7 @@ function draw() {
   sky(); mountains(); ground(); river(); road(); car(); overlay();
   document.title = 'ready';
 }
-(async () => { try { await document.fonts.load('900 96px Vazirmatn'); await document.fonts.load('500 34px Vazirmatn'); await document.fonts.ready; } catch (e) {} draw(); })();
+(async () => { try { await document.fonts.load('900 60px Vazirmatn'); await document.fonts.load('500 34px Vazirmatn'); await document.fonts.ready; } catch (e) {} draw(); })();
 </script>
 </body>
 </html>

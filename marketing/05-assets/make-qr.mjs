@@ -10,8 +10,12 @@ new Function("module", "exports", src)(module_, module_.exports);
 const qrcode = module_.exports;
 
 const links = {
+  // Android — closed testing (opt-in links)
   "qr-driver": "https://play.google.com/apps/testing/af.velro.driver",
   "qr-passenger": "https://play.google.com/apps/testing/af.velro.passenger",
+  // iOS — live and public on the App Store
+  "qr-ios-driver": "https://apps.apple.com/us/app/velro-driver/id6811925434",
+  "qr-ios-passenger": "https://apps.apple.com/us/app/velro-ride/id6810899663",
 };
 
 for (const [name, url] of Object.entries(links)) {

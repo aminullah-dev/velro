@@ -152,3 +152,19 @@ def assert_no_cycle(destination_id: str, parent_chain: list[str]) -> None:
             destination_id=destination_id,
             chain=parent_chain,
         )
+
+
+def approx_distance_m(
+    lat1: Decimal, lon1: Decimal, lat2: Decimal, lon2: Decimal
+) -> int:
+    """Metres between two points, equirectangular, at Ghorband's latitude.
+
+    Accurate to a few metres over a few kilometres, which is far finer than
+    the phone fix it is compared with. The repository's bounding-box sort uses
+    the same constants, so "within 6 km" means the same thing on both sides.
+    """
+    import math
+
+    dlat = float(lat2 - lat1) * 111_000
+    dlon = float(lon2 - lon1) * 91_000
+    return int(math.hypot(dlat, dlon))

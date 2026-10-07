@@ -1,5 +1,6 @@
 package af.velro.feature.booking
 
+import af.velro.core.map.JourneyMap
 import af.velro.core.ui.component.PhotoAvatar
 import af.velro.core.i18n.MoneyFormatter
 import af.velro.core.i18n.Numerals
@@ -12,11 +13,14 @@ import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.VelroScreen
 import af.velro.core.ui.theme.LocalVelroStrings
+import af.velro.core.ui.theme.Radius
 import af.velro.core.ui.theme.Sizing
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.FareOffer
 import af.velro.domain.MoneyValue
 import af.velro.domain.RideRequest
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,7 +34,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -43,6 +49,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -116,6 +123,13 @@ fun OffersScreen(
         modifier = modifier,
     ) {
         Spacer(Modifier.height(Spacing.md))
+        // The road first, as inDrive and its kind open: the journey she is
+        // pricing, drawn, so the prices below land on a place rather than on a
+        // line of text. Absent, and silently so, when the server cannot draw it.
+        state.journeyMap?.let { drawn ->
+            JourneyMap(drawn)
+            Spacer(Modifier.height(Spacing.md))
+        }
         Journey(request)
         Spacer(Modifier.height(Spacing.md))
 
@@ -154,6 +168,10 @@ fun OffersScreen(
             // No heading here: the app bar already says "drivers who answered",
             // and the screen's decisive moment should open with the answers
             // rather than with its own title said twice.
+            // Worth pointing at only in a crowd: with one reply there is no
+            // "cheapest", and a badge on the only card is noise. The list is
+            // cheapest-first, so the best price is its head.
+            val bestId = if (offers.size > 1) offers.first().id else null
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 modifier = Modifier.weight(1f),
@@ -174,6 +192,7 @@ fun OffersScreen(
                         // tell an inserted offer from a moved one.
                         modifier = Modifier.animateItem(),
                         offer = offer,
+                        best = offer.id == bestId,
                         photo = state.driverPhotos[offer.driverId],
                         // The whole journey, not the outbound leg: on a
                         // round trip `offeredFare` is half the ask, and
@@ -223,6 +242,13 @@ private fun Journey(request: RideRequest) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
+            request.originPlaceName?.let { place ->
+                Text(
+                    strings["ride.journey.from_place", "place" to place],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             Text(
                 strings[
                     "ride.offers.you_asked",
@@ -267,13 +293,45 @@ private fun OfferCard(
     enabled: Boolean,
     onAccept: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The cheapest reply in a crowd: it wears the green edge and a badge. */
+    best: Boolean = false,
 ) {
     val strings = LocalVelroStrings.current
     val agrees = offer.agreesWith(asking)
     val difference = offer.differenceFrom(asking)
+    val primary = MaterialTheme.colorScheme.primary
 
-    VelroCard(modifier = modifier) {
+    VelroCard(
+        modifier = if (best) {
+            modifier.border(2.dp, primary, RoundedCornerShape(Radius.card))
+        } else modifier,
+    ) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            // The cheapest reply, named. A ride app does not make her compare
+            // numbers on a roadside: it points.
+            if (best) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(Radius.pill))
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(horizontal = Spacing.sm, vertical = Spacing.xxs),
+                ) {
+                    Icon(
+                        Icons.Filled.ArrowDownward,
+                        contentDescription = null,
+                        modifier = Modifier.size(Sizing.iconSm),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    Text(
+                        strings["ride.offers.best_price"],
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
