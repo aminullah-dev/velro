@@ -21,6 +21,7 @@ protocol and touches nothing above this file.
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -168,6 +169,40 @@ class LocalFileStorage:
         target = self._root / _safe_namespace(namespace)
         if target.is_dir():
             shutil.rmtree(target)
+
+
+class DiscardOnRollbackStorage:
+    """A storage whose writes are undone when the transaction is.
+
+    A document is written to disk before its row is, because the row needs
+    the key the write produces. When anything after the write failed -- the
+    audit entry, the flush, the commit -- the row was rolled back and the
+    file stayed: a photograph of somebody's identity card with nothing
+    pointing at it. Every ``put`` here registers its own deletion with
+    ``on_rollback``; a commit forgets it.
+    """
+
+    def __init__(
+        self,
+        inner: LocalFileStorage,
+        on_rollback: Callable[[Callable[[], None]], None],
+    ) -> None:
+        self._inner = inner
+        self._on_rollback = on_rollback
+
+    def put(self, content: bytes, *, content_type: str, namespace: str) -> str:
+        key = self._inner.put(content, content_type=content_type, namespace=namespace)
+        self._on_rollback(lambda: self._inner.delete(key))
+        return key
+
+    def get(self, key: str) -> StoredFileContent:
+        return self._inner.get(key)
+
+    def exists(self, key: str) -> bool:
+        return self._inner.exists(key)
+
+    def delete(self, key: str) -> None:
+        self._inner.delete(key)
 
 
 def _safe_namespace(namespace: str) -> str:

@@ -63,7 +63,11 @@ class RateTrip:
             )
 
         rating_id = self._new_id()
-        self._ratings.create(
+        # The lookup above is the cheap answer; this is the guarantee. Two
+        # taps arrive together, both find no rating, and the unique
+        # constraint refuses the second insert -- heard here as the same
+        # "already rated" the lookup gives, not as a 500.
+        created = self._ratings.create_once(
             id=rating_id,
             trip_id=trip.id,
             booking_id=cmd.booking_id,
@@ -73,6 +77,12 @@ class RateTrip:
             score=cmd.score,
             comment=cmd.comment,
         )
+        if created is None:
+            raise ConflictError(
+                error_codes.RATING_ALREADY_SUBMITTED,
+                trip_id=trip.id,
+                rater_user_id=cmd.rater_user_id,
+            )
 
         # Running averages live as sum and count on the row of whoever was
         # rated, so they can be corrected exactly rather than drifting.

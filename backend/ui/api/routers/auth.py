@@ -87,7 +87,7 @@ def verify_otp(
         new_id=deps.new_id,
         access_ttl_seconds=cfg.jwt_access_ttl_seconds,
         refresh_ttl_seconds=cfg.jwt_refresh_ttl_seconds,
-        record_attempt=deps.otp_attempt_recorder(),
+        reserve_attempt=deps.otp_attempt_reserver(),
     )
     session = use_case.execute(
         VerifyOtpCommand(
@@ -113,6 +113,7 @@ def refresh(
         clock=deps.clock(), new_id=deps.new_id,
         access_ttl_seconds=cfg.jwt_access_ttl_seconds,
         refresh_ttl_seconds=cfg.jwt_refresh_ttl_seconds,
+        revoke_on_reuse=deps.refresh_reuse_revoker(),
     )
     session = use_case.execute(
         RefreshSessionCommand(refresh_token=body.refresh_token, device_id=body.device_id)

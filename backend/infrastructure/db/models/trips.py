@@ -65,6 +65,15 @@ class TripRow(Auditable, Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancellation_reason_code: Mapped[str | None] = mapped_column(String(40))
+    # Wrong boarding codes the driver has typed since the last lockout, and
+    # the lockout itself. On the trip because the code is matched among the
+    # trip's bookings: a wrong one belongs to no booking. Written in a
+    # transaction of their own (deps.boarding_attempt_reserver), because every
+    # wrong code is a refusal and the request's transaction rolls back.
+    boarding_failures: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    boarding_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("number", name="uq_trips_number"),
@@ -208,6 +217,10 @@ class BookingSeatRow(Auditable, Base):
     )
 
 
+#: The partial unique index behind "one open request per passenger".
+OPEN_REQUEST_PER_PASSENGER = "uq_ride_requests_passenger_open"
+
+
 class RideRequestRow(Auditable, Base):
     """A passenger asking to be driven, at a price they proposed.
 
@@ -271,6 +284,19 @@ class RideRequestRow(Auditable, Base):
         Index("ix_ride_requests_status_expires_at", "status", "expires_at"),
         # The driver's board: open requests from a station, soonest first.
         Index("ix_ride_requests_origin_status", "origin_station_id", "status"),
+        # One open request per passenger (ADR 0004), as a constraint rather
+        # than a lookup: two asks arriving together both found none open and
+        # both went on the board. RequestRide closes the passenger's requests
+        # whose deadline has passed before inserting, so a row still marked
+        # OPEN after its deadline -- which every reader already ignores --
+        # does not hold the place.
+        Index(
+            OPEN_REQUEST_PER_PASSENGER,
+            "passenger_id",
+            unique=True,
+            postgresql_where=text("status = 'OPEN' AND deleted_at IS NULL"),
+            sqlite_where=text("status = 'OPEN' AND deleted_at IS NULL"),
+        ),
         CheckConstraint("passenger_count > 0", name="ck_ride_requests_passenger_count_positive"),
         CheckConstraint(
             "offered_fare_minor > 0", name="ck_ride_requests_offer_positive"

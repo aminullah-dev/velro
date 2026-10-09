@@ -11,7 +11,6 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, Header, Request
-from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from application.pricing.fixed import FixedRouteFare
@@ -90,7 +89,7 @@ from infrastructure.services.messaging import ConsolePushChannel, ConsoleSmsSend
 from infrastructure.services.numbers import SqlNumberAllocator
 from infrastructure.services.settings import SqlSettingsProvider
 from infrastructure.services.sms import FallbackSmsSender, TwilioSmsSender
-from infrastructure.services.storage import LocalFileStorage
+from infrastructure.services.storage import DiscardOnRollbackStorage, LocalFileStorage
 from infrastructure.services.tokens import JwtTokenService
 from shared import config, error_codes
 from shared.clock import SystemClock
@@ -98,7 +97,7 @@ from shared.config import ConfigurationError
 from shared.errors import AuthenticationError, PermissionError
 from shared.ids import new_id
 from shared.logging import get_logger
-from ui.api.session_scope import current_session
+from ui.api.session_scope import current_session, on_rollback
 
 log = get_logger(__name__)
 
@@ -185,8 +184,8 @@ def email_sender():
     )
 
 
-def otp_attempt_recorder():
-    """Write an OTP attempt where a refusal cannot undo it.
+def otp_attempt_reserver():
+    """Spend an OTP attempt where a refusal cannot undo it.
 
     The request transaction commits only on a successful response, which is
     right for everything except this: a wrong code returns 401, the rollback
@@ -195,33 +194,92 @@ def otp_attempt_recorder():
     row each answered "4 attempts remaining" and left attempts = 0 in the
     database.
 
-    So the counter travels in its own short transaction, which survives the
-    refusal that follows it. Failing to write it must not turn a wrong code
-    into a 500: the caller still gets its answer, and the operator gets a log
-    line, because a brute-force defence that takes the service down with it
-    is its own denial of service.
+    So the attempt is spent in its own short transaction, committed before
+    the code is even compared. And it is spent with one conditional
+    ``attempts = attempts + 1`` (OtpRepository.reserve_attempt), not by
+    writing back a count read earlier: that was the second hole, where
+    guesses arriving together all read the same count and twelve at once
+    were twelve evaluated guesses against a limit of five.
+
+    No row lock is taken in the request's own session, and that is
+    deliberate: this transaction would then wait on its own request.
+
+    A failure to spend the attempt is not swallowed. Comparing a code whose
+    attempt could not be counted is exactly the unlimited guessing this
+    exists to prevent, so the request fails instead -- and a database that
+    cannot take one UPDATE was not going to sign anybody in anyway.
+    """
+
+    def reserve(challenge_id: str) -> int | None:
+        with _session_factory()() as own:
+            reserved = OtpRepository(own).reserve_attempt(challenge_id)
+            own.commit()
+        return reserved
+
+    return reserve
+
+
+def refresh_reuse_revoker():
+    """End every session of a user where a refusal cannot undo it.
+
+    The same trap as otp_attempt_reserver, on the other half of sign-in. A
+    refresh token presented a second time has been copied, so RefreshSession
+    revokes every session the user has -- and then answers 401, which rolls
+    the request's transaction back and the revocation with it. Verified
+    before fixing: after a replay was refused, the user's other session and
+    the rotated successor both went on refreshing.
+
+    So the revocation travels in its own short transaction, committed before
+    the 401 leaves. Failing to write it must not turn the refusal into a 500:
+    the replay is refused either way, and the operator gets a log line loud
+    enough to act on by hand (POST /auth/logout-all as that user, or the
+    refresh_tokens table).
     """
     from datetime import datetime
 
-    from infrastructure.db.models.identity import OtpChallengeRow
-
-    def record(challenge_id: str, attempts: int, consumed_at: datetime | None) -> None:
+    def revoke(user_id: str, at: datetime) -> None:
         try:
             with _session_factory()() as own:
-                own.execute(
-                    update(OtpChallengeRow)
-                    .where(OtpChallengeRow.id == challenge_id)
-                    .values(attempts=attempts, consumed_at=consumed_at)
-                )
+                revoked = RefreshTokenRepository(own).revoke_all_for_user(user_id, at=at)
                 own.commit()
+            log.warning("auth.refresh_reuse_revoked", user_id=user_id, revoked=revoked)
         except Exception as exc:
             log.error(
-                "otp.attempt_not_recorded",
-                challenge_id=challenge_id,
+                "auth.refresh_reuse_not_revoked",
+                user_id=user_id,
                 error=type(exc).__name__,
             )
 
-    return record
+    return revoke
+
+
+def boarding_attempt_reserver():
+    """Spend a boarding-code attempt where a refusal cannot undo it.
+
+    otp_attempt_reserver's twin, for the code a driver types to board a
+    passenger: every wrong code is a 409, the request's transaction rolls
+    back with it, and a counter kept there would never move. So the attempt
+    is spent -- and the lockout set, when it is the last one -- in a short
+    transaction of its own, committed before the code is compared, with one
+    conditional UPDATE (TripRepository.reserve_boarding_attempt) so that
+    simultaneous attempts cannot read the same count.
+
+    Not swallowed on failure, for the same reason as the OTP one: a code
+    whose attempt could not be counted must not be compared.
+    """
+    from datetime import datetime
+
+    def reserve(
+        trip_id: str, *, at: datetime, max_attempts: int, lockout_seconds: int
+    ) -> tuple[int | None, datetime | None]:
+        with _session_factory()() as own:
+            result = TripRepository(own).reserve_boarding_attempt(
+                trip_id, at=at, max_attempts=max_attempts, lockout_seconds=lockout_seconds
+            )
+            own.commit()
+        return result
+
+    return reserve
 
 
 def refresh_tokens(session: SessionDep) -> RefreshTokenRepository:
@@ -296,6 +354,14 @@ def file_storage() -> LocalFileStorage:
     checks who is asking.
     """
     return LocalFileStorage(settings().storage_root)
+
+
+def document_storage(session: SessionDep) -> DiscardOnRollbackStorage:
+    """file_storage for a request that writes: a file put here is deleted
+    again if the request's transaction rolls back. See on_rollback."""
+    return DiscardOnRollbackStorage(
+        file_storage(), lambda undo: on_rollback(session, undo)
+    )
 
 
 def offers(session: SessionDep) -> DispatchOfferRepository:
@@ -420,7 +486,7 @@ def otp_codes() -> SecretsOtpGenerator:
 
 
 def verification_codes(session: SessionDep) -> SecretsVerificationCodeGenerator:
-    length = SqlSettingsProvider(session).get_int("booking.verification_code_length", 4)
+    length = SqlSettingsProvider(session).get_int("booking.verification_code_length", 6)
     return SecretsVerificationCodeGenerator(length)
 
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, NoReturn
 
 from application.ports.repositories import (
     OtpRepository,
@@ -35,7 +35,7 @@ from domain.identity import (
 )
 from shared import error_codes
 from shared.clock import Clock
-from shared.errors import AuthenticationError, RateLimitError
+from shared.errors import AuthenticationError, ConflictError, RateLimitError
 from shared.ids import IdGenerator
 from shared.logging import get_logger
 
@@ -163,6 +163,10 @@ class RequestOtp:
 
         window = self._settings.get_int("otp.resend_window_seconds", 60)
         max_per_window = self._settings.get_int("otp.max_per_window", 3)
+        # The count and the insert below are one step per number: without the
+        # lock, requests that arrive together all count the same total and
+        # all pass, and every one of them is an SMS somebody pays for.
+        self._otps.lock_phone(phone.value)
         recent = self._otps.count_recent(phone.value, since=now - timedelta(seconds=window))
         if recent >= max_per_window:
             # The error carries the masked number only: an error context is
@@ -331,11 +335,14 @@ class VerifyOtp:
         new_id: IdGenerator,
         access_ttl_seconds: int,
         refresh_ttl_seconds: int,
-        #: Writes the attempt counter in a transaction of its own. A wrong
-        #: code answers 401, and the request's transaction is rolled back
-        #: with it -- which used to take the counter along, leaving a
-        #: five-digit code guessable without limit.
-        record_attempt: Callable[[str, int, datetime | None], None] | None = None,
+        #: Spends one attempt in a transaction of its own and returns its
+        #: number, or None when none is left. Its own transaction because a
+        #: wrong code answers 401 and the request's transaction is rolled
+        #: back with it -- which used to take the counter along, leaving a
+        #: five-digit code guessable without limit. Without one (a caller
+        #: that does not roll back on refusal) the request's own session
+        #: spends it.
+        reserve_attempt: Callable[[str], int | None] | None = None,
     ) -> None:
         self._users = users
         self._otps = otps
@@ -348,8 +355,7 @@ class VerifyOtp:
         self._new_id = new_id
         self._access_ttl = access_ttl_seconds
         self._refresh_ttl = refresh_ttl_seconds
-        self._record_attempt = record_attempt
-
+        self._reserve_attempt = reserve_attempt or otps.reserve_attempt
 
     def execute(self, cmd: VerifyOtpCommand) -> Session:
         phone = PhoneNumber.parse(cmd.phone, default_country_code=_country(self._settings))
@@ -359,38 +365,49 @@ class VerifyOtp:
         if row is None:
             raise AuthenticationError(error_codes.OTP_EXPIRED, phone=phone.masked)
 
+        # The attempt is spent before the code is compared, in one atomic
+        # statement that also enforces the limit. Reading the counter and
+        # writing it back let guesses that arrived together all read the
+        # same count: twelve at once were twelve evaluated guesses against a
+        # limit of five. Now the database hands out attempt numbers, and
+        # there is no sixth.
+        reserved = self._reserve_attempt(row.id)
+        if reserved is None:
+            raise AuthenticationError(
+                error_codes.OTP_ATTEMPTS_EXCEEDED, phone=phone.masked
+            )
+
         challenge = OtpChallenge(
             id=row.id,
             phone=phone,
             code_hash=row.code_hash,
             expires_at=row.expires_at,
             max_attempts=row.max_attempts,
-            attempts=row.attempts,
+            # The domain counts the attempt it is about to make; this one is
+            # already paid for, so it starts one short of the number it got.
+            attempts=reserved - 1,
             consumed_at=row.consumed_at,
         )
-        try:
-            challenge.verify(self._codes.hash(cmd.code, phone), at=now)
-        finally:
-            # The attempt counter must survive a refusal, and the request's
-            # own transaction does not: the middleware commits only on a
-            # response under 400, so every wrong code used to roll its own
-            # counter back. Written twice on purpose -- into this
-            # transaction, so a successful sign-in stays consistent with
-            # everything else it does, and through the recorder, whose
-            # transaction is already committed by the time the 401 leaves.
-            row.attempts = challenge.attempts
-            row.consumed_at = challenge.consumed_at
-            self._otps.save(row)
-            if self._record_attempt is not None:
-                self._record_attempt(row.id, challenge.attempts, challenge.consumed_at)
+        challenge.verify(self._codes.hash(cmd.code, phone), at=now)
+
+        # One code, one session. Two requests that both matched it race to
+        # this conditional update; the loser finds it already consumed.
+        if not self._otps.consume(row.id, at=now):
+            raise ConflictError(error_codes.OTP_ALREADY_CONSUMED, phone=phone.masked)
 
         user_row = self._users.find_by_phone(phone.value)
         is_new = user_row is None
         if user_row is None:
-            user_row = self._users.create(
+            # A second first sign-in for the same new number may be creating
+            # the account in this same instant; whichever inserts second is
+            # handed the account the other made, roles and all, instead of a
+            # 500. Still a new user from this handset's point of view: the
+            # account is seconds old and nobody has named it yet.
+            user_row, created = self._users.create_or_find(
                 id=self._new_id(), phone=phone.value, locale=cmd.locale, full_name=None
             )
-            self._users.grant_role(user_row.id, PASSENGER)
+            if created:
+                self._users.grant_role(user_row.id, PASSENGER)
 
         user = User(
             id=user_row.id,
@@ -473,6 +490,11 @@ class RefreshSession:
         new_id: IdGenerator,
         access_ttl_seconds: int,
         refresh_ttl_seconds: int,
+        #: Ends every session of a user in a transaction of its own. A replay
+        #: answers 401, and the request's transaction is rolled back with it
+        #: -- which used to take the revocation along, leaving the thief's
+        #: copy and every other session refreshing as if nothing happened.
+        revoke_on_reuse: Callable[[str, datetime], None] | None = None,
     ) -> None:
         self._users = users
         self._refresh = refresh_tokens
@@ -481,6 +503,7 @@ class RefreshSession:
         self._new_id = new_id
         self._access_ttl = access_ttl_seconds
         self._refresh_ttl = refresh_ttl_seconds
+        self._revoke_on_reuse = revoke_on_reuse
 
     def execute(self, cmd: RefreshSessionCommand) -> Session:
         now = self._clock.now()
@@ -490,19 +513,41 @@ class RefreshSession:
         if row is None:
             raise AuthenticationError(error_codes.TOKEN_INVALID)
 
+        # The account first, whatever the state of the token. current_actor
+        # refuses a suspended account on every request, and this did not: a
+        # suspended phone went on minting access tokens every fifteen minutes
+        # and got its session back, without signing in, on the day it was
+        # reinstated. suspend_user now revokes the tokens as well; this
+        # covers every account suspended before it did, and anything that
+        # changes a status by another road. The same error current_actor
+        # gives, so the app says "suspended" rather than signing out silently.
+        user_row = self._users.find(row.user_id)
+        if user_row is None:
+            raise AuthenticationError(error_codes.USER_NOT_FOUND, user_id=row.user_id)
+        if user_row.status != UserStatus.ACTIVE.value:
+            raise AuthenticationError(
+                error_codes.USER_SUSPENDED, user_id=user_row.id, status=user_row.status
+            )
+
         if row.revoked_at is not None:
             # A token that was already rotated is being presented again. Assume
             # the worst and end every session for this user.
-            self._refresh.revoke_all_for_user(row.user_id, at=now)
-            raise AuthenticationError(error_codes.REFRESH_TOKEN_REVOKED, user_id=row.user_id)
+            self._end_every_session(row.user_id, now)
         if now >= row.expires_at:
             raise AuthenticationError(error_codes.TOKEN_EXPIRED)
 
-        user_row = self._users.get(row.user_id)
         roles = self._users.roles_of(user_row.id)
 
-        plaintext, token_hash = self._tokens.new_refresh_token()
+        # Retired conditionally, before the successor exists. The read above
+        # took no lock, so a second request presenting the same token in the
+        # same instant also got this far; whichever retires it second finds it
+        # already retired and is a replay like any other. Unconditional, both
+        # succeeded and one token became two live chains.
         replacement_id = self._new_id()
+        if not self._refresh.rotate(row.id, at=now, replaced_by_id=replacement_id):
+            self._end_every_session(row.user_id, now)
+
+        plaintext, token_hash = self._tokens.new_refresh_token()
         self._refresh.create(
             id=replacement_id,
             user_id=user_row.id,
@@ -511,9 +556,6 @@ class RefreshSession:
             user_agent=row.user_agent,
             expires_at=now + timedelta(seconds=self._refresh_ttl),
         )
-        row.revoked_at = now
-        row.replaced_by_id = replacement_id
-        self._refresh.save(row)
 
         access = self._tokens.issue_access_token(
             user_id=user_row.id,
@@ -528,6 +570,21 @@ class RefreshSession:
             is_new_user=False,
             expires_in_seconds=self._access_ttl,
         )
+
+    def _end_every_session(self, user_id: str, now: datetime) -> NoReturn:
+        """A token presented after it was retired: theft. End everything.
+
+        Not in this request's transaction: the refusal below is a 401, the
+        middleware commits only responses under 400, and the revocation used
+        to roll back with the answer that reported it. The revoker commits on
+        its own, before the 401 leaves. Without one (a caller that does not
+        roll back on refusal) the request's own transaction is the right place.
+        """
+        if self._revoke_on_reuse is not None:
+            self._revoke_on_reuse(user_id, now)
+        else:
+            self._refresh.revoke_all_for_user(user_id, at=now)
+        raise AuthenticationError(error_codes.REFRESH_TOKEN_REVOKED, user_id=user_id)
 
 
 def _country(settings) -> str:

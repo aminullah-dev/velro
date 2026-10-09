@@ -77,6 +77,7 @@
   "error.booking_already_cancelled": "دا ریزرف مخکې لغوه شوی دی.",
   "error.booking_not_cancellable": "دا ریزرف نور لغوه کېدای نه شي.",
   "error.booking_verification_failed": "دا کوډ د دې سفر له هېڅ مسافر سره سمون نه خوري.",
+  "error.booking_verification_locked": "د دې سفر لپاره ډېر ناسم کوډونه ولیکل شول. مهرباني وکړئ {retry_after_minutes} دقیقې وروسته بیا هڅه وکړئ.",
   "error.booking_limit_reached": "تاسو لا دمخه {maximum} فعال ریزرفونه لرئ.",
   "error.booking_seat_count_invalid": "تاسو له ۱ څخه تر {maximum} څوکیو پورې ریزرف کولی شئ.",
   "error.booking_stops_out_of_order": "د سپرېدو ځای باید د کښېوتلو له ځای مخکې وي.",

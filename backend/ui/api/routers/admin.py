@@ -1317,10 +1317,10 @@ def suspend_user(
 ) -> dict:
     """The account-level off switch.
 
-    This is what a confirmed troll gets: sign-in refuses him, and every
-    request his surviving tokens make is refused on arrival, because the
-    actor is re-read from this row each time. His next account costs him a
-    new SIM.
+    This is what a confirmed troll gets: sign-in refuses him, every refresh
+    token he holds is revoked, and the access token still in his phone is
+    refused on arrival, because the actor is re-read from this row each
+    time. His next account costs him a new SIM.
 
     Suspending a user who also drives is allowed -- it is the stronger of the
     two levers, for conduct worse than paperwork -- but not while he has
@@ -1345,6 +1345,14 @@ def suspend_user(
     user.suspend()
     row.status = user.status.value
     users_repo.save(row)
+    # Every session ends with the suspension, in the same transaction: a
+    # refused suspension revokes nothing, and a committed one leaves no
+    # refresh token to mint access tokens with. Without this a suspended
+    # phone kept a live session, refused on every request but handed back
+    # whole, without signing in, on the day the account was reinstated.
+    revoked = deps.refresh_tokens(session).revoke_all_for_user(
+        user_id, at=deps.clock().now()
+    )
 
     audit.write(
         "user.suspended",
@@ -1353,7 +1361,7 @@ def suspend_user(
         entity_type="user",
         entity_id=user_id,
         before={"status": before},
-        after={"status": row.status, "reason": body.reason},
+        after={"status": row.status, "reason": body.reason, "sessions_revoked": revoked},
     )
     return ok({"user_id": user_id, "status": row.status})
 
