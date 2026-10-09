@@ -15,6 +15,7 @@ from domain.enums import (
 from domain.lifecycles import BOOKABLE_TRIP_STATUSES
 from domain.text import normalise_digits
 from infrastructure.db.models.trips import (
+    OPEN_REQUEST_PER_PASSENGER,
     BookingRow,
     BookingSeatRow,
     DispatchOfferRow,
@@ -89,6 +90,20 @@ class TripRepository(SqlRepository[TripRow]):
             select(TripRow.boarding_locked_until).where(TripRow.id == trip_id)
         )
         return None, locked_until
+
+    def hold_for_boarding(self, trip_id: str) -> TripRow | None:
+        """The trip, held against a departure until this transaction ends.
+
+        FOR NO KEY UPDATE, not FOR UPDATE: it still makes AdvanceTrip (FOR
+        UPDATE) wait, which is the point, but not the foreign-key check a
+        cancellation's record makes on its trip. A full FOR UPDATE here made
+        a boarding and a cancellation of the same booking deadlock: one held
+        the trip and waited for the booking, the other held the booking and
+        waited, through that foreign key, for the trip.
+        """
+        return self.session.scalars(
+            self._base().where(TripRow.id == trip_id).with_for_update(key_share=True)
+        ).one_or_none()
 
     def refund_boarding_attempt(self, trip_id: str, *, max_attempts: int) -> None:
         """Give back the attempt a correct code spent: only wrong codes count.
@@ -329,6 +344,18 @@ class BookingRepository(SqlRepository[BookingRow]):
             )
         ) or 0
 
+    def lock_passenger(self, passenger_id: str) -> None:
+        """Serialise every booking a passenger makes until this transaction ends.
+
+        The limit on active bookings is a count followed by an insert, and
+        there is no row to hold while the count is true: two bookings that
+        both count four against a limit of five both insert. Every path that
+        creates a booking takes this first -- BookSeats and AcceptOffer -- so
+        the count and the insert are one step per passenger. Nothing else is
+        serialised: another passenger's bookings never wait on it.
+        """
+        self.advisory_lock(f"passenger-bookings:{passenger_id}")
+
     def count_active_for_passenger(self, passenger_id: str) -> int:
         stmt = (
             select(func.count())
@@ -341,11 +368,17 @@ class BookingRepository(SqlRepository[BookingRow]):
         )
         return int(self.session.scalar(stmt) or 0)
 
-    def find_by_verification_code(self, trip_id: str, code: str) -> BookingRow | None:
-        """Used by the driver to find whose booking a presented code belongs to.
+    def lock_by_verification_code(self, trip_id: str, code: str) -> BookingRow | None:
+        """Whose booking a presented code belongs to, held FOR UPDATE.
 
         Scoped to the trip: codes are short, and a code only has to be unique
         among the handful of people in one vehicle.
+
+        Locked because boarding decides on the booking's status. A cancellation
+        holds the same row; a boarding that arrives while it is in flight
+        waits, and PostgreSQL then re-checks the row against this query --
+        a booking cancelled meanwhile is no longer active, matches nothing,
+        and the code is refused exactly as it would be a second later.
         """
         stmt = self._base().where(
             BookingRow.trip_id == trip_id,
@@ -358,7 +391,7 @@ class BookingRepository(SqlRepository[BookingRow]):
             == normalise_digits(code).strip().upper(),
             BookingRow.status.in_(_ACTIVE_BOOKING_STATUSES),
         )
-        return self.session.scalars(stmt).one_or_none()
+        return self.session.scalars(stmt.with_for_update()).one_or_none()
 
     def seats_of(self, booking_id: str) -> list[BookingSeatRow]:
         stmt = (
@@ -380,6 +413,19 @@ class RideRequestRepository(SqlRepository[RideRequestRow]):
         row = RideRequestRow(**fields)
         self.session.add(row)
         self.session.flush()
+        return row
+
+    def create_open(self, **fields) -> RideRequestRow | None:
+        """Put a request on the board; None if the passenger already has one.
+
+        The partial unique index is the guarantee and this is how its refusal
+        is heard: the lookup the use case makes first is true only when it
+        is read, and two asks in the same instant both pass it. The second
+        insert waits for the first to commit and is then refused.
+        """
+        row = RideRequestRow(**fields)
+        if not self.insert_unless(row, constraint=OPEN_REQUEST_PER_PASSENGER):
+            return None
         return row
 
     def find_open_for_passenger(
@@ -526,6 +572,32 @@ class FareOfferRepository(SqlRepository[FareOfferRow]):
                 .order_by(FareOfferRow.created_at.desc())
                 .limit(min(limit, 50))
             ).all()
+        )
+
+    def respond_if_open(self, offer_id: str, *, status: str, at: datetime) -> bool:
+        """Move an offer out of OFFERED, if it is still there. False if not.
+
+        One conditional statement, so accepting and withdrawing cannot both
+        succeed: PostgreSQL's row lock orders them, and the second finds the
+        status the first wrote and matches nothing.
+        """
+        changed = self.session.execute(
+            update(FareOfferRow)
+            .where(
+                FareOfferRow.id == offer_id,
+                FareOfferRow.status == FareOfferStatus.OFFERED.value,
+                FareOfferRow.deleted_at.is_(None),
+            )
+            .values(status=status, responded_at=at, version=FareOfferRow.version + 1)
+            .returning(FareOfferRow.id)
+            .execution_options(synchronize_session="fetch")
+        ).scalar_one_or_none()
+        return changed is not None
+
+    def status_of(self, offer_id: str) -> str | None:
+        """The status as committed now, not as this session first read it."""
+        return self.session.scalar(
+            select(FareOfferRow.status).where(FareOfferRow.id == offer_id)
         )
 
     def decline_others(self, *, request_id: str, except_id: str, at: datetime) -> int:

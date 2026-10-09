@@ -8,6 +8,7 @@ from sqlalchemy import func, select, text, update
 
 from domain.enums import UserStatus
 from infrastructure.db.models.identity import (
+    USERS_PHONE_UNIQUE,
     OtpChallengeRow,
     RefreshTokenRow,
     RoleRow,
@@ -16,6 +17,7 @@ from infrastructure.db.models.identity import (
 )
 from infrastructure.db.repositories.base import SqlRepository
 from shared import error_codes
+from shared.errors import NotFoundError
 from shared.ids import new_id
 
 
@@ -59,6 +61,31 @@ class UserRepository(SqlRepository[UserRow]):
         self.session.add(row)
         self.session.flush()
         return row
+
+    def create_or_find(
+        self, *, id: str, phone: str, locale: str, full_name: str | None = None
+    ) -> tuple[UserRow, bool]:
+        """The account for this number, created if there is none yet.
+
+        Returns (row, created). Two first sign-ins for a new number used to
+        both find nobody and both insert; the unique constraint on the phone
+        kept one account and answered the other sign-in with a 500. The
+        second insert now waits for the first to commit, is refused in a
+        savepoint, and reads back the account the first one made.
+        """
+        row = UserRow(
+            id=id,
+            phone=phone,
+            locale=locale,
+            full_name=full_name,
+            status=UserStatus.ACTIVE.value,
+        )
+        if self.insert_unless(row, constraint=USERS_PHONE_UNIQUE):
+            return row, True
+        existing = self.find_by_phone(phone)
+        if existing is None:  # pragma: no cover - refused by a row nobody can see
+            raise NotFoundError(self.not_found_code, phone=phone)
+        return existing, False
 
     def roles_of(self, user_id: str) -> list[str]:
         stmt = (
@@ -120,13 +147,21 @@ class UserRepository(SqlRepository[UserRow]):
 
         The same shape as DriverRepository.record_rating, and deliberately so:
         two ways of keeping the same kind of average is two places for it to be
-        wrong differently.
+        wrong differently. Added by the UPDATE itself, so two ratings that
+        arrive together both count.
         """
-        row = self.get(user_id)
-        row.rating_sum += score
-        row.rating_count += 1
-        row.version += 1
-        self.session.add(row)
+        changed = self.session.execute(
+            update(UserRow)
+            .where(UserRow.id == user_id, UserRow.deleted_at.is_(None))
+            .values(
+                rating_sum=UserRow.rating_sum + score,
+                rating_count=UserRow.rating_count + 1,
+                version=UserRow.version + 1,
+            )
+            .execution_options(synchronize_session="fetch")
+        ).rowcount
+        if not changed:
+            raise NotFoundError(self.not_found_code, id=user_id)
 
 
 class OtpRepository(SqlRepository[OtpChallengeRow]):

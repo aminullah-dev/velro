@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from domain.enums import (
     DocumentStatus,
@@ -22,6 +22,7 @@ from infrastructure.db.models.supply import (
 )
 from infrastructure.db.repositories.base import SqlRepository
 from shared import error_codes
+from shared.errors import NotFoundError
 
 
 class DriverRepository(SqlRepository[DriverRow]):
@@ -51,11 +52,25 @@ class DriverRepository(SqlRepository[DriverRow]):
         return list(self.session.scalars(stmt).all())
 
     def record_rating(self, driver_id: str, score: int) -> None:
-        row = self.get(driver_id)
-        row.rating_sum += score
-        row.rating_count += 1
-        row.version += 1
-        self.session.add(row)
+        """Add one score to the driver's running total, in the database.
+
+        Read-add-write lost scores: two passengers rating one driver at once
+        both read the same total and both wrote back their own score on top
+        of it, so the driver kept one. The arithmetic is now the UPDATE's,
+        and PostgreSQL's row lock applies them one after the other.
+        """
+        changed = self.session.execute(
+            update(DriverRow)
+            .where(DriverRow.id == driver_id, DriverRow.deleted_at.is_(None))
+            .values(
+                rating_sum=DriverRow.rating_sum + score,
+                rating_count=DriverRow.rating_count + 1,
+                version=DriverRow.version + 1,
+            )
+            .execution_options(synchronize_session="fetch")
+        ).rowcount
+        if not changed:
+            raise NotFoundError(self.not_found_code, id=driver_id)
 
 
 class DriverDocumentRepository(SqlRepository[DriverDocumentRow]):

@@ -115,13 +115,7 @@ class BookSeats:
                 maximum=max_seats,
             )
 
-        max_active = self._settings.get_int(SETTING_MAX_ACTIVE_BOOKINGS, 5)
-        if self._bookings.count_active_for_passenger(cmd.passenger_id) >= max_active:
-            raise ConflictError(
-                error_codes.BOOKING_LIMIT_REACHED,
-                passenger_id=cmd.passenger_id,
-                maximum=max_active,
-            )
+        assert_below_booking_limit(self._bookings, self._settings, cmd.passenger_id)
 
         trip_row = self._trips.get(cmd.trip_id)
         trip = _to_trip(trip_row, self._seats.list_for_trip(cmd.trip_id))
@@ -242,6 +236,29 @@ class BookSeats:
             fare_total=booking.fare_total,
             verification_code=booking.verification_code,
             status=booking.status,
+        )
+
+
+def assert_below_booking_limit(bookings, settings, passenger_id: str) -> None:
+    """Refuse a booking that would take a passenger past the active limit.
+
+    Under the passenger's own lock, held until the booking commits: counted
+    unlocked, two bookings that each found one place left both took it.
+    Every path that creates a booking calls this; the negotiated one used to
+    skip the limit altogether. A path that holds a row lock of its own takes
+    ``lock_passenger`` before that row, so the passenger is always first in
+    the order -- passenger, then request or trip, then driver, then seats --
+    and taking it again here is harmless: the lock is the session's already.
+    """
+    bookings.lock_passenger(passenger_id)
+    max_active = (
+        settings.get_int(SETTING_MAX_ACTIVE_BOOKINGS, 5) if settings is not None else 5
+    )
+    if bookings.count_active_for_passenger(passenger_id) >= max_active:
+        raise ConflictError(
+            error_codes.BOOKING_LIMIT_REACHED,
+            passenger_id=passenger_id,
+            maximum=max_active,
         )
 
 

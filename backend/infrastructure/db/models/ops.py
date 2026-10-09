@@ -118,6 +118,10 @@ class IdempotencyRow(Auditable, Base):
     )
 
 
+#: One rating per person per trip, in each direction.
+RATING_ONCE_PER_TRIP = "uq_ratings_trip_id_rater_user_id_ratee_user_id"
+
+
 class RatingRow(Auditable, Base):
     __tablename__ = "ratings"
 
@@ -141,7 +145,7 @@ class RatingRow(Auditable, Base):
         # One rating per person per trip, in each direction.
         UniqueConstraint(
             "trip_id", "rater_user_id", "ratee_user_id",
-            name="uq_ratings_trip_id_rater_user_id_ratee_user_id",
+            name=RATING_ONCE_PER_TRIP,
         ),
         CheckConstraint("score >= 1 AND score <= 5", name="ck_ratings_score_range"),
         enum_check("rater_role", ActorRole, name="ratings_rater_role"),
