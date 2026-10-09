@@ -473,6 +473,11 @@ class RefreshSession:
         new_id: IdGenerator,
         access_ttl_seconds: int,
         refresh_ttl_seconds: int,
+        #: Ends every session of a user in a transaction of its own. A replay
+        #: answers 401, and the request's transaction is rolled back with it
+        #: -- which used to take the revocation along, leaving the thief's
+        #: copy and every other session refreshing as if nothing happened.
+        revoke_on_reuse: Callable[[str, datetime], None] | None = None,
     ) -> None:
         self._users = users
         self._refresh = refresh_tokens
@@ -481,6 +486,7 @@ class RefreshSession:
         self._new_id = new_id
         self._access_ttl = access_ttl_seconds
         self._refresh_ttl = refresh_ttl_seconds
+        self._revoke_on_reuse = revoke_on_reuse
 
     def execute(self, cmd: RefreshSessionCommand) -> Session:
         now = self._clock.now()
@@ -493,7 +499,17 @@ class RefreshSession:
         if row.revoked_at is not None:
             # A token that was already rotated is being presented again. Assume
             # the worst and end every session for this user.
-            self._refresh.revoke_all_for_user(row.user_id, at=now)
+            #
+            # Not in this request's transaction: the refusal below is a 401,
+            # the middleware commits only responses under 400, and the
+            # revocation used to roll back with the answer that reported it.
+            # The revoker commits on its own, before the 401 leaves. Without
+            # one (a caller that does not roll back on refusal) the request's
+            # own transaction is the right place.
+            if self._revoke_on_reuse is not None:
+                self._revoke_on_reuse(row.user_id, now)
+            else:
+                self._refresh.revoke_all_for_user(row.user_id, at=now)
             raise AuthenticationError(error_codes.REFRESH_TOKEN_REVOKED, user_id=row.user_id)
         if now >= row.expires_at:
             raise AuthenticationError(error_codes.TOKEN_EXPIRED)

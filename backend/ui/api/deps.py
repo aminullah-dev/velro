@@ -224,6 +224,40 @@ def otp_attempt_recorder():
     return record
 
 
+def refresh_reuse_revoker():
+    """End every session of a user where a refusal cannot undo it.
+
+    The same trap as otp_attempt_recorder, on the other half of sign-in. A
+    refresh token presented a second time has been copied, so RefreshSession
+    revokes every session the user has -- and then answers 401, which rolls
+    the request's transaction back and the revocation with it. Verified
+    before fixing: after a replay was refused, the user's other session and
+    the rotated successor both went on refreshing.
+
+    So the revocation travels in its own short transaction, committed before
+    the 401 leaves. Failing to write it must not turn the refusal into a 500:
+    the replay is refused either way, and the operator gets a log line loud
+    enough to act on by hand (POST /auth/logout-all as that user, or the
+    refresh_tokens table).
+    """
+    from datetime import datetime
+
+    def revoke(user_id: str, at: datetime) -> None:
+        try:
+            with _session_factory()() as own:
+                revoked = RefreshTokenRepository(own).revoke_all_for_user(user_id, at=at)
+                own.commit()
+            log.warning("auth.refresh_reuse_revoked", user_id=user_id, revoked=revoked)
+        except Exception as exc:
+            log.error(
+                "auth.refresh_reuse_not_revoked",
+                user_id=user_id,
+                error=type(exc).__name__,
+            )
+
+    return revoke
+
+
 def refresh_tokens(session: SessionDep) -> RefreshTokenRepository:
     return RefreshTokenRepository(session)
 
