@@ -67,6 +67,7 @@ error.booking_invalid_transition	That change is not possible right now.	این �
 error.booking_already_cancelled	This booking was already cancelled.	این رزرو قبلاً لغو شده است.	دا ریزرف مخکې لغوه شوی دی.	
 error.booking_not_cancellable	This booking can no longer be cancelled.	این رزرو دیگر لغو شده نمی‌تواند.	دا ریزرف نور لغوه کېدای نه شي.	
 error.booking_verification_failed	That code does not match any passenger on this trip.	این کود با هیچ مسافر این سفر مطابقت ندارد.	دا کوډ د دې سفر له هېڅ مسافر سره سمون نه خوري.	
+error.booking_verification_locked	Too many wrong codes for this trip. Try again in {retry_after_minutes} minutes.	برای این سفر کودهای نادرست زیادی وارد شد. لطفاً {retry_after_minutes} دقیقه بعد دوباره کوشش کنید.	د دې سفر لپاره ډېر ناسم کوډونه ولیکل شول. مهرباني وکړئ {retry_after_minutes} دقیقې وروسته بیا هڅه وکړئ.	new — please check the Pashto
 error.booking_limit_reached	You already have {maximum} active bookings.	شما {maximum} رزرو فعال دارید.	تاسو لا دمخه {maximum} فعال ریزرفونه لرئ.	
 error.booking_seat_count_invalid	You can book between 1 and {maximum} seats.	از ۱ تا {maximum} چوکی رزرو کرده می‌توانید.	تاسو له ۱ څخه تر {maximum} څوکیو پورې ریزرف کولی شئ.	
 error.booking_stops_out_of_order	The pick-up must come before the drop-off.	محل سوارشدن باید پیش از محل پیاده‌شدن باشد.	د سپرېدو ځای باید د کښېوتلو له ځای مخکې وي.	

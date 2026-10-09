@@ -65,6 +65,15 @@ class TripRow(Auditable, Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancellation_reason_code: Mapped[str | None] = mapped_column(String(40))
+    # Wrong boarding codes the driver has typed since the last lockout, and
+    # the lockout itself. On the trip because the code is matched among the
+    # trip's bookings: a wrong one belongs to no booking. Written in a
+    # transaction of their own (deps.boarding_attempt_reserver), because every
+    # wrong code is a refusal and the request's transaction rolls back.
+    boarding_failures: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    boarding_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("number", name="uq_trips_number"),

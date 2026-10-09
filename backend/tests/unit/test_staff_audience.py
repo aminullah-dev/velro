@@ -37,6 +37,9 @@ SUSPENDED_STAFF = "+93700000804"
 class FakeOtps:
     rows: list[Any] = field(default_factory=list)
 
+    def lock_phone(self, phone: str) -> None:
+        pass  # the real one is a PostgreSQL advisory lock; one thread here
+
     def count_recent(self, phone: str, *, since: datetime) -> int:
         return 0
 

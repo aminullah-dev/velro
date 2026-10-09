@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, case, func, or_, select, update
 
 from domain.enums import (
     BookingStatus,
@@ -49,6 +49,65 @@ class TripRepository(SqlRepository[TripRow]):
         row = TripRow(**fields)
         self.session.add(row)
         return row
+
+    def reserve_boarding_attempt(
+        self, trip_id: str, *, at: datetime, max_attempts: int, lockout_seconds: int
+    ) -> tuple[int | None, datetime | None]:
+        """Spend one boarding-code attempt on a trip, atomically.
+
+        Returns (attempt number, None) when the attempt may be made, or
+        (None, locked until) when the trip is locked. The attempt that
+        reaches ``max_attempts`` sets the lockout in the same statement, and
+        a lockout that has been served starts a fresh count -- so the
+        driver gets ``max_attempts`` codes per lockout period, never more,
+        however many requests arrive at once: PostgreSQL's row lock orders
+        them and each one sees the count the last one left.
+        """
+        served = and_(
+            TripRow.boarding_locked_until.is_not(None),
+            TripRow.boarding_locked_until <= at,
+        )
+        attempt = case((served, 0), else_=TripRow.boarding_failures) + 1
+        granted = self.session.execute(
+            update(TripRow)
+            .where(
+                TripRow.id == trip_id,
+                or_(TripRow.boarding_locked_until.is_(None), served),
+            )
+            .values(
+                boarding_failures=attempt,
+                boarding_locked_until=case(
+                    (attempt >= max_attempts, at + timedelta(seconds=lockout_seconds)),
+                    else_=None,
+                ),
+            )
+            .returning(TripRow.boarding_failures)
+        ).scalar_one_or_none()
+        if granted is not None:
+            return int(granted), None
+        locked_until = self.session.scalar(
+            select(TripRow.boarding_locked_until).where(TripRow.id == trip_id)
+        )
+        return None, locked_until
+
+    def refund_boarding_attempt(self, trip_id: str, *, max_attempts: int) -> None:
+        """Give back the attempt a correct code spent: only wrong codes count.
+
+        In the request's own transaction, so it is undone with everything
+        else if boarding fails after all. If this was the attempt that set the
+        lockout, the lockout goes with it.
+        """
+        self.session.execute(
+            update(TripRow)
+            .where(TripRow.id == trip_id)
+            .values(
+                boarding_failures=func.greatest(TripRow.boarding_failures - 1, 0),
+                boarding_locked_until=case(
+                    (TripRow.boarding_failures - 1 < max_attempts, None),
+                    else_=TripRow.boarding_locked_until,
+                ),
+            )
+        )
 
     def stops_of(self, trip_id: str) -> list[TripStopRow]:
         stmt = (

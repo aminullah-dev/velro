@@ -8,8 +8,10 @@ part worth writing once.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from math import ceil
 
 from domain.booking import Booking
 from domain.enums import (
@@ -23,10 +25,11 @@ from domain.enums import (
 )
 from domain.fare import CommissionSplit
 from domain.lifecycles import TRIP_TO_BOOKING_STATUS
+from domain.text import normalise_digits
 from domain.trip import Trip, TripSeat
 from shared import error_codes
 from shared.clock import Clock
-from shared.errors import ConflictError, NotFoundError, PermissionError
+from shared.errors import ConflictError, NotFoundError, PermissionError, RateLimitError
 from shared.ids import IdGenerator
 from shared.logging import get_logger
 from shared.money import DEFAULT_CURRENCY, Money
@@ -339,7 +342,17 @@ class VerifyPassenger:
     prevents.
     """
 
-    def __init__(self, *, trips, bookings, drivers, seats, users, audit, clock: Clock) -> None:
+    def __init__(
+        self, *, trips, bookings, drivers, seats, users, audit, clock: Clock,
+        settings=None,
+        #: Spends one attempt in a transaction of its own; see
+        #: TripRepository.reserve_boarding_attempt for the contract. Its own
+        #: transaction because a wrong code is a refusal, the request's
+        #: transaction is rolled back with it, and a counter written there
+        #: would never count. Without one (a caller that does not roll back
+        #: on refusal) the request's own session spends it.
+        reserve_attempt: Callable[..., tuple[int | None, datetime | None]] | None = None,
+    ) -> None:
         self._trips = trips
         self._bookings = bookings
         self._drivers = drivers
@@ -347,6 +360,11 @@ class VerifyPassenger:
         self._users = users
         self._audit = audit
         self._clock = clock
+        self._settings = settings
+        self._reserve_attempt = reserve_attempt or trips.reserve_boarding_attempt
+
+    def _setting(self, key: str, fallback: int) -> int:
+        return self._settings.get_int(key, fallback) if self._settings else fallback
 
     def execute(self, cmd: VerifyPassengerCommand) -> VerifyPassengerResult:
         now = self._clock.now()
@@ -358,21 +376,53 @@ class VerifyPassenger:
                 error_codes.PERMISSION_DENIED, trip_id=cmd.trip_id, actor_id=cmd.driver_user_id
             )
 
-        row = self._bookings.find_by_verification_code(cmd.trip_id, cmd.presented_code)
+        # The code is short because it is read aloud at a roadside, and the
+        # driver of the trip used to be able to try codes against it without
+        # limit. Every attempt is now paid for before it is compared, and a
+        # trip that has seen max_attempts wrong codes refuses every code --
+        # the right one included, so a lucky guess teaches nothing -- until
+        # the lockout has been served.
+        max_attempts = self._setting("booking.verification_max_attempts", 10)
+        attempt, locked_until = self._reserve_attempt(
+            trip_row.id,
+            at=now,
+            max_attempts=max_attempts,
+            lockout_seconds=self._setting("booking.verification_lockout_seconds", 600),
+        )
+        if attempt is None:
+            wait = max(1, ceil((locked_until - now).total_seconds())) if locked_until else 1
+            raise RateLimitError(
+                error_codes.BOOKING_VERIFICATION_LOCKED,
+                trip_id=cmd.trip_id,
+                retry_after_seconds=wait,
+                retry_after_minutes=ceil(wait / 60),
+            )
+        remaining = max(0, max_attempts - attempt)
+
+        # Latin digits on both sides of the comparison. The repository folds
+        # before matching; the domain compared the raw text, so a code typed
+        # on a Persian keyboard by a build that does not fold matched its
+        # booking and was then refused by it -- now at the cost of an attempt.
+        presented = normalise_digits(cmd.presented_code)
+        row = self._bookings.find_by_verification_code(cmd.trip_id, presented)
         if row is None:
             # Deliberately the same error whether the code is wrong or belongs
             # to another trip: a driver probing codes learns nothing either way.
             raise ConflictError(
-                error_codes.BOOKING_VERIFICATION_FAILED, trip_id=cmd.trip_id
+                error_codes.BOOKING_VERIFICATION_FAILED,
+                trip_id=cmd.trip_id,
+                attempts_remaining=remaining,
             )
 
         booking = _to_booking(row)
-        booking.verify(cmd.presented_code, at=now)
+        booking.verify(presented, at=now)
 
         row.status = booking.status.value
         row.boarded_at = booking.boarded_at
         self._bookings.save(row)
         self._seats.occupy_for_booking(row.id)
+        # A code that boarded somebody was not a guess.
+        self._trips.refund_boarding_attempt(trip_row.id, max_attempts=max_attempts)
 
         passenger = self._users.find(row.passenger_id)
 

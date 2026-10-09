@@ -37,7 +37,7 @@ class SecretsOtpGenerator:
 class SecretsVerificationCodeGenerator:
     """The short code a driver checks against a passenger's booking."""
 
-    def __init__(self, length: int = 4) -> None:
+    def __init__(self, length: int = 6) -> None:
         self._length = length
 
     def generate(self) -> str:
