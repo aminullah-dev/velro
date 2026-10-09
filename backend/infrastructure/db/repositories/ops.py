@@ -7,6 +7,7 @@ from datetime import datetime
 from sqlalchemy import func, select, update
 
 from infrastructure.db.models.ops import (
+    RATING_ONCE_PER_TRIP,
     CancellationRow,
     DeviceTokenRow,
     IdempotencyRow,
@@ -33,6 +34,20 @@ class RatingRepository(SqlRepository[RatingRow]):
     def create(self, **fields) -> RatingRow:
         row = RatingRow(**fields)
         self.session.add(row)
+        return row
+
+    def create_once(self, **fields) -> RatingRow | None:
+        """Record a rating; None if this rater has already rated this ratee
+        on this trip.
+
+        The lookup the use case makes first is true only when it is read: a
+        double tap sends two requests that both find no rating, and the
+        second insert used to die on the unique constraint as a 500. It is
+        refused in a savepoint now, and the caller says "already rated".
+        """
+        row = RatingRow(**fields)
+        if not self.insert_unless(row, constraint=RATING_ONCE_PER_TRIP):
+            return None
         return row
 
 

@@ -18,6 +18,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 from domain.enums import Locale, UserStatus
 from infrastructure.db.base import Auditable, Base, enum_check
 
+#: The constraint behind "one account per number".
+USERS_PHONE_UNIQUE = "uq_users_phone"
+
 
 class UserRow(Auditable, Base):
     __tablename__ = "users"
@@ -43,7 +46,7 @@ class UserRow(Auditable, Base):
         # Uniqueness that matters to the business is a database constraint, not
         # an application check: two sign-ups a microsecond apart both pass an
         # application check and only one may win.
-        UniqueConstraint("phone", name="uq_users_phone"),
+        UniqueConstraint("phone", name=USERS_PHONE_UNIQUE),
         # Partial: nulls are the common case and must not collide.
         Index(
             "uq_users_email", "email", unique=True,

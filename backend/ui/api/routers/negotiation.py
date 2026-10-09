@@ -236,6 +236,7 @@ def accept_offer(
     audit: Annotated[object, Depends(deps.audit)],
     users: Annotated[object, Depends(deps.users)],
     notifier: Annotated[object, Depends(deps.notifier)],
+    app_settings: Annotated[object, Depends(deps.app_settings)],
     idem: Annotated[object, Depends(deps.idempotency)] = None,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> dict:
@@ -254,7 +255,8 @@ def accept_offer(
         requests=requests, offers=offers, trips=trips, bookings=bookings,
         seats=seats, drivers=drivers, vehicles=vehicles, routes=routes,
         geography=geo, numbers=numbers, codes=codes, audit=audit,
-        users=users, notifier=notifier, clock=deps.clock(), new_id=deps.new_id,
+        users=users, notifier=notifier, settings=app_settings,
+        clock=deps.clock(), new_id=deps.new_id,
     )
     result = use_case.execute(
         AcceptOfferCommand(offer_id=offer_id, passenger_id=actor.user_id)

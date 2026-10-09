@@ -259,10 +259,12 @@ def verify_passenger(
     seats: Annotated[object, Depends(deps.seats)],
     users: Annotated[object, Depends(deps.users)],
     audit: Annotated[object, Depends(deps.audit)],
+    settings: Annotated[object, Depends(deps.app_settings)],
 ) -> dict:
     use_case = VerifyPassenger(
         trips=trips, bookings=bookings, drivers=drivers, seats=seats,
-        users=users, audit=audit, clock=deps.clock(),
+        users=users, audit=audit, clock=deps.clock(), settings=settings,
+        reserve_attempt=deps.boarding_attempt_reserver(),
     )
     result = use_case.execute(
         VerifyPassengerCommand(

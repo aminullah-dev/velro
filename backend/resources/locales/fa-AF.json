@@ -77,6 +77,7 @@
   "error.booking_already_cancelled": "این رزرو قبلاً لغو شده است.",
   "error.booking_not_cancellable": "این رزرو دیگر لغو شده نمی‌تواند.",
   "error.booking_verification_failed": "این کود با هیچ مسافر این سفر مطابقت ندارد.",
+  "error.booking_verification_locked": "برای این سفر کودهای نادرست زیادی وارد شد. لطفاً {retry_after_minutes} دقیقه بعد دوباره کوشش کنید.",
   "error.booking_limit_reached": "شما {maximum} رزرو فعال دارید.",
   "error.booking_seat_count_invalid": "از ۱ تا {maximum} چوکی رزرو کرده می‌توانید.",
   "error.booking_stops_out_of_order": "محل سوارشدن باید پیش از محل پیاده‌شدن باشد.",

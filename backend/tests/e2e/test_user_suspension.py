@@ -93,7 +93,8 @@ class TestTheSwitch:
         )
         assert lifted.status_code == 200, lifted.text
 
-        # The same old token works again: nothing was revoked, only refused.
+        # The same old access token works again: it was refused, not revoked.
+        # (His refresh tokens were revoked; the next sign-in is a real one.)
         allowed = client.get("/api/v1/bookings", headers=troll)
         assert allowed.status_code == 200, allowed.text
 

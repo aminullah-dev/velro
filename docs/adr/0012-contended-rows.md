@@ -64,3 +64,35 @@ different guarantees and both are needed.
 - A future contended writer that forgets the lock will pass every sequential
   test. The integration suite is the only thing that catches it, which is why
   `scripts/check.sh` runs it on every push and why it needs a real PostgreSQL.
+
+## Addendum, 9 October 2026 — the rules that had no row to hold
+
+A second sweep found the same check-then-act shape where the rule is about
+rows that do not exist yet, or about a row two writers change without
+reading it under a lock:
+
+- **Active bookings per passenger.** A count followed by an insert, with
+  nothing to lock while the count is true -- and accepting a fare offer did
+  not count at all. Both booking paths now take a transaction-scoped
+  advisory lock on the passenger (`BookingRepository.lock_passenger`)
+  before anything else and count under it. **The passenger comes first in
+  the lock order: passenger, then request or trip, then driver, then
+  seats.**
+- **One open request per passenger** is a partial unique index
+  (`uq_ride_requests_passenger_open`); the refusal is read back in a
+  savepoint (`SqlRepository.insert_unless`) and answered with
+  `RIDE_REQUEST_ALREADY_OPEN`. The same helper turns a duplicate rating into
+  `RATING_ALREADY_SUBMITTED` and a second first sign-in for one number into
+  the account the first one made, instead of three 500s.
+- **Accepting and withdrawing an offer** move it out of OFFERED with one
+  conditional `UPDATE ... WHERE status = 'OFFERED'`; the loser hears
+  `FARE_OFFER_NOT_OPEN`.
+- **Boarding** holds the booking `FOR UPDATE`, as cancelling already did,
+  after holding the trip `FOR NO KEY UPDATE`. Not `FOR UPDATE`: a
+  cancellation's record checks its foreign key to the trip, and a full lock
+  there deadlocked the two.
+- **Ratings** add to the ratee's running total in the `UPDATE` itself.
+
+`tests/integration/test_booking_races.py` and
+`tests/e2e/test_first_signin_race.py` hold each of these, and each was
+watched failing on the code before the change.

@@ -190,12 +190,13 @@ async def upload_document(
     documents: Annotated[object, Depends(deps.driver_documents)],
     settings: Annotated[object, Depends(deps.app_settings)],
     audit: Annotated[object, Depends(deps.audit)],
+    storage: Annotated[object, Depends(deps.document_storage)],
     file: Annotated[UploadFile, File()],
     document_type_code: Annotated[str, Form()],
     expires_on: Annotated[date | None, Form()] = None,
 ) -> dict:
     use_case = UploadDriverDocument(
-        drivers=drivers, documents=documents, storage=deps.file_storage(),
+        drivers=drivers, documents=documents, storage=storage,
         settings=settings, audit=audit, clock=deps.clock(), new_id=deps.new_id,
     )
     result = use_case.execute(

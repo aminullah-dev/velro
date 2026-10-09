@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, text, update
 
 from domain.enums import UserStatus
 from infrastructure.db.models.identity import (
+    USERS_PHONE_UNIQUE,
     OtpChallengeRow,
     RefreshTokenRow,
     RoleRow,
@@ -16,6 +17,7 @@ from infrastructure.db.models.identity import (
 )
 from infrastructure.db.repositories.base import SqlRepository
 from shared import error_codes
+from shared.errors import NotFoundError
 from shared.ids import new_id
 
 
@@ -59,6 +61,31 @@ class UserRepository(SqlRepository[UserRow]):
         self.session.add(row)
         self.session.flush()
         return row
+
+    def create_or_find(
+        self, *, id: str, phone: str, locale: str, full_name: str | None = None
+    ) -> tuple[UserRow, bool]:
+        """The account for this number, created if there is none yet.
+
+        Returns (row, created). Two first sign-ins for a new number used to
+        both find nobody and both insert; the unique constraint on the phone
+        kept one account and answered the other sign-in with a 500. The
+        second insert now waits for the first to commit, is refused in a
+        savepoint, and reads back the account the first one made.
+        """
+        row = UserRow(
+            id=id,
+            phone=phone,
+            locale=locale,
+            full_name=full_name,
+            status=UserStatus.ACTIVE.value,
+        )
+        if self.insert_unless(row, constraint=USERS_PHONE_UNIQUE):
+            return row, True
+        existing = self.find_by_phone(phone)
+        if existing is None:  # pragma: no cover - refused by a row nobody can see
+            raise NotFoundError(self.not_found_code, phone=phone)
+        return existing, False
 
     def roles_of(self, user_id: str) -> list[str]:
         stmt = (
@@ -120,13 +147,21 @@ class UserRepository(SqlRepository[UserRow]):
 
         The same shape as DriverRepository.record_rating, and deliberately so:
         two ways of keeping the same kind of average is two places for it to be
-        wrong differently.
+        wrong differently. Added by the UPDATE itself, so two ratings that
+        arrive together both count.
         """
-        row = self.get(user_id)
-        row.rating_sum += score
-        row.rating_count += 1
-        row.version += 1
-        self.session.add(row)
+        changed = self.session.execute(
+            update(UserRow)
+            .where(UserRow.id == user_id, UserRow.deleted_at.is_(None))
+            .values(
+                rating_sum=UserRow.rating_sum + score,
+                rating_count=UserRow.rating_count + 1,
+                version=UserRow.version + 1,
+            )
+            .execution_options(synchronize_session="fetch")
+        ).rowcount
+        if not changed:
+            raise NotFoundError(self.not_found_code, id=user_id)
 
 
 class OtpRepository(SqlRepository[OtpChallengeRow]):
@@ -152,9 +187,66 @@ class OtpRepository(SqlRepository[OtpChallengeRow]):
         )
         return self.session.scalars(stmt).one_or_none()
 
-    def count_recent(self, phone: str, *, since: datetime) -> int:
-        from sqlalchemy import func
+    def lock_phone(self, phone: str) -> None:
+        """Serialise every code request for one number until this transaction ends.
 
+        The rate limit is a count followed by an insert, and two requests
+        that both count before either inserts both pass: eight simultaneous
+        requests were eight SMS against a limit of three, each one paid for.
+        A transaction-scoped advisory lock on the number makes the count and
+        the insert one step. Keyed by the number, so it serialises only the
+        requests that compete for the same limit; released by the commit or
+        rollback that ends the request, so it cannot be leaked.
+        """
+        self.session.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext(:key))"),
+            {"key": f"otp-request:{phone}"},
+        )
+
+    def reserve_attempt(self, challenge_id: str) -> int | None:
+        """Spend one attempt on a challenge, atomically; the attempt number, or
+        None when the challenge has none left (or was used meanwhile).
+
+        Read-then-write lost updates: guesses that all read attempts = n all
+        wrote n + 1, so twelve guesses at once were twelve evaluated guesses
+        against a limit of five. The increment and the limit are one
+        statement here, so PostgreSQL's row lock decides who gets the last
+        attempt and nobody gets a sixth.
+        """
+        reserved = self.session.execute(
+            update(OtpChallengeRow)
+            .where(
+                OtpChallengeRow.id == challenge_id,
+                OtpChallengeRow.consumed_at.is_(None),
+                OtpChallengeRow.attempts < OtpChallengeRow.max_attempts,
+            )
+            .values(
+                attempts=OtpChallengeRow.attempts + 1,
+                version=OtpChallengeRow.version + 1,
+            )
+            .returning(OtpChallengeRow.attempts)
+        ).scalar_one_or_none()
+        return None if reserved is None else int(reserved)
+
+    def consume(self, challenge_id: str, *, at: datetime) -> bool:
+        """Mark a challenge used, if nobody else has. False when somebody had.
+
+        Conditional, so one code cannot sign in twice: of two requests that
+        both matched it, the second waits on the first's row lock and then
+        finds consumed_at already set.
+        """
+        claimed = self.session.execute(
+            update(OtpChallengeRow)
+            .where(
+                OtpChallengeRow.id == challenge_id,
+                OtpChallengeRow.consumed_at.is_(None),
+            )
+            .values(consumed_at=at, version=OtpChallengeRow.version + 1)
+            .returning(OtpChallengeRow.id)
+        ).scalar_one_or_none()
+        return claimed is not None
+
+    def count_recent(self, phone: str, *, since: datetime) -> int:
         stmt = (
             select(func.count())
             .select_from(OtpChallengeRow)
@@ -178,6 +270,26 @@ class RefreshTokenRepository(SqlRepository[RefreshTokenRow]):
 
     def find_by_hash(self, token_hash: str) -> RefreshTokenRow | None:
         return self.find_by(token_hash=token_hash)
+
+    def rotate(self, token_id: str, *, at: datetime, replaced_by_id: str) -> bool:
+        """Retire a token in favour of its successor, if it is still live.
+
+        False means somebody else retired it first -- a refresh already
+        happened, or every session was ended -- and the caller must treat the
+        presentation as a replay. Unconditional, two refreshes of one token
+        at the same instant both succeeded and forked it into two live chains.
+        """
+        retired = self.session.execute(
+            update(RefreshTokenRow)
+            .where(RefreshTokenRow.id == token_id, RefreshTokenRow.revoked_at.is_(None))
+            .values(
+                revoked_at=at,
+                replaced_by_id=replaced_by_id,
+                version=RefreshTokenRow.version + 1,
+            )
+            .returning(RefreshTokenRow.id)
+        ).scalar_one_or_none()
+        return retired is not None
 
     def revoke_all_for_user(self, user_id: str, *, at: datetime) -> int:
         """'Log out all devices'. Real because the token is server-side."""

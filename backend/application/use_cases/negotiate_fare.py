@@ -204,7 +204,13 @@ class RequestRide:
         # TTL wins.
         closing_lead = timedelta(minutes=DEPARTURE_CLOSING_LEAD_MINUTES)
         expires_at = max(now + timedelta(minutes=ttl), requested_for - closing_lead)
-        row = self._requests.create(
+        # The lookup above is a check about the past: a second ask arriving
+        # in the same instant passed it too. A partial unique index makes
+        # "one open request" a constraint; a request whose deadline has gone
+        # is closed first, as any reader would close it, so it does not hold
+        # the place the lookup already let go of.
+        self._requests.expire_stale_for_passenger(cmd.passenger_id, at=now)
+        row = self._requests.create_open(
             id=self._new_id(),
             passenger_id=cmd.passenger_id,
             origin_station_id=cmd.origin_station_id,
@@ -221,6 +227,14 @@ class RequestRide:
             note=cmd.note,
             origin_place_id=origin_place_id,
         )
+        if row is None:
+            # The twin's ask won. The same answer the lookup gives a moment
+            # later, with the winner's id, and not the index's 500.
+            winner = self._requests.find_open_for_passenger(cmd.passenger_id, at=now)
+            raise ConflictError(
+                error_codes.RIDE_REQUEST_ALREADY_OPEN,
+                ride_request_id=winner.id if winner is not None else None,
+            )
         self._audit.write(
             "ride_request.created",
             actor_id=cmd.passenger_id,
@@ -414,12 +428,23 @@ class WithdrawOffer:
             # The same answer whether it is someone else's or does not exist.
             raise NotFoundError(error_codes.FARE_OFFER_NOT_FOUND, offer_id=cmd.offer_id)
 
+        now = self._clock.now()
         offer = _to_offer(row)
-        offer.withdraw(at=self._clock.now())
-        row.status = offer.status.value
-        row.responded_at = offer.responded_at
-        row.version += 1
-        self._offers.save(row)
+        offer.withdraw(at=now)
+        # Conditional, like the accept: a passenger may be accepting this
+        # offer in the same instant. Whichever statement reaches the row
+        # second finds it no longer OFFERED and changes nothing; written
+        # unconditionally, a withdraw landed on an accepted offer, or an
+        # accept on a withdrawn one, and both callers were told they won.
+        if not self._offers.respond_if_open(
+            row.id, status=FareOfferStatus.WITHDRAWN.value, at=now
+        ):
+            raise ConflictError(
+                error_codes.FARE_OFFER_NOT_OPEN,
+                offer_id=row.id,
+                current=self._offers.status_of(row.id),
+                requested=FareOfferStatus.WITHDRAWN.value,
+            )
 
         self._audit.write(
             "fare_offer.withdrawn",
@@ -535,7 +560,7 @@ class AcceptOffer:
     def __init__(
         self, *, requests, offers, trips, bookings, seats, drivers, vehicles,
         routes, geography, numbers, codes, audit, users=None, notifier=None,
-        clock: Clock, new_id: IdGenerator,
+        settings=None, clock: Clock, new_id: IdGenerator,
     ) -> None:
         self._requests = requests
         self._offers = offers
@@ -551,10 +576,14 @@ class AcceptOffer:
         self._audit = audit
         self._users = users
         self._notifier = notifier
+        # The limit on active bookings. Optional so a caller that does not
+        # wire settings still gets the default limit, never no limit.
+        self._settings = settings
         self._clock = clock
         self._new_id = new_id
 
     def execute(self, cmd: AcceptOfferCommand) -> AcceptOfferResult:
+        from application.use_cases.book_seats import assert_below_booking_limit
         from domain.booking import Booking
         from domain.enums import BookingStatus, RideKind, SeatStatus, TripStatus
         from domain.fare import FareComponent, FareQuote
@@ -562,6 +591,13 @@ class AcceptOffer:
         offer_row = self._offers.find(cmd.offer_id)
         if offer_row is None:
             raise NotFoundError(error_codes.FARE_OFFER_NOT_FOUND, offer_id=cmd.offer_id)
+        # This creates a booking, so it counts against the passenger's limit
+        # like any other -- it used to be the one path that did not, and it
+        # is how most rides are booked. The passenger's lock comes first,
+        # before the request's: BookSeats takes it before the trip's, and
+        # one order everywhere is what keeps two of these from waiting on
+        # each other.
+        self._bookings.lock_passenger(cmd.passenger_id)
         # Locked, not merely read. The OPEN check below is the only thing
         # standing between one request and two accepted offers, and on an
         # unlocked row two accepts both see OPEN, both build a trip, a booking
@@ -586,8 +622,25 @@ class AcceptOffer:
                 error_codes.RIDE_REQUEST_NOT_OPEN, current=request_row.status
             )
 
+        assert_below_booking_limit(self._bookings, self._settings, cmd.passenger_id)
+
         offer = _to_offer(offer_row)
         offer.accept(at=now)
+        # The read above is a check about the past: the driver may have
+        # withdrawn this offer since, and withdrawing does not hold the
+        # request. Accepted only if it is still on offer, in one statement,
+        # so of an accept and a withdraw arriving together exactly one wins
+        # and the other is told the offer is no longer open -- rather than
+        # the last writer winning and a trip being built on a withdrawn bid.
+        if not self._offers.respond_if_open(
+            offer_row.id, status=FareOfferStatus.ACCEPTED.value, at=now
+        ):
+            raise ConflictError(
+                error_codes.FARE_OFFER_NOT_OPEN,
+                offer_id=offer_row.id,
+                current=self._offers.status_of(offer_row.id),
+                requested=FareOfferStatus.ACCEPTED.value,
+            )
 
         # Locked, not merely found. A driver bids on several requests at
         # once -- that is the board working -- and two passengers can accept
@@ -726,10 +779,6 @@ class AcceptOffer:
         request_row.version += 1
         self._requests.save(request_row)
 
-        offer_row.status = offer.status.value
-        offer_row.responded_at = now
-        offer_row.version += 1
-        self._offers.save(offer_row)
         # Every other driver is told at once rather than left refreshing a
         # request that is already taken.
         # Read who is losing *before* declining them, and keep the ids rather

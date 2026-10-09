@@ -29,7 +29,18 @@ DEFAULTS: dict[str, Any] = {
     # departure time itself, and the floor: whatever this says, a seat is
     # never sold on a vehicle whose scheduled departure has passed.
     "booking.cutoff_minutes": 0,
-    "booking.verification_code_length": 4,
+    # Six of 32 unambiguous characters. It was four, which with no limit on
+    # guesses was a code the trip's own driver could walk. Every driver
+    # build takes 3 to 8 characters in its code field and every passenger
+    # build prints whatever string it is given, so this is a row an operator
+    # can move without an app release.
+    "booking.verification_code_length": 6,
+    # Wrong boarding codes a trip accepts before it refuses every code for
+    # the lockout. Generous, because a driver reading codes off phone screens
+    # at a roadside mistypes; per lockout, so a brute force gets ten guesses
+    # every ten minutes against a space of a billion.
+    "booking.verification_max_attempts": 10,
+    "booking.verification_lockout_seconds": 600,
     "otp.length": 5,
     "otp.ttl_seconds": 300,
     "otp.max_attempts": 5,
