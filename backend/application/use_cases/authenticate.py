@@ -398,10 +398,16 @@ class VerifyOtp:
         user_row = self._users.find_by_phone(phone.value)
         is_new = user_row is None
         if user_row is None:
-            user_row = self._users.create(
+            # A second first sign-in for the same new number may be creating
+            # the account in this same instant; whichever inserts second is
+            # handed the account the other made, roles and all, instead of a
+            # 500. Still a new user from this handset's point of view: the
+            # account is seconds old and nobody has named it yet.
+            user_row, created = self._users.create_or_find(
                 id=self._new_id(), phone=phone.value, locale=cmd.locale, full_name=None
             )
-            self._users.grant_role(user_row.id, PASSENGER)
+            if created:
+                self._users.grant_role(user_row.id, PASSENGER)
 
         user = User(
             id=user_row.id,

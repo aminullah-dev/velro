@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from typing import Any, Generic, TypeVar
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from infrastructure.db.base import Auditable
@@ -127,9 +128,47 @@ class SqlRepository(Generic[R]):
         """
         self.session.flush()
 
+    def insert_unless(self, row: R, *, constraint: str) -> bool:
+        """Insert ``row`` unless ``constraint`` refuses it; False when it does.
+
+        For a rule the database already enforces with a unique constraint or
+        index. Checking first and then inserting is two steps, and two
+        requests can both pass the check; the constraint is the guarantee,
+        and this turns its refusal into an answer instead of a 500. The
+        insert runs in a savepoint, so the refusal leaves the rest of the
+        transaction usable -- the caller can read the row that won and say
+        which one it was. A violation of any other constraint is not this
+        rule's business and is raised as it was.
+        """
+        try:
+            with self.session.begin_nested():
+                self.session.add(row)
+        except IntegrityError as exc:
+            if violated_constraint(exc) != constraint:
+                raise
+            return False
+        return True
+
+    def advisory_lock(self, key: str) -> None:
+        """Serialise every holder of ``key`` until this transaction ends.
+
+        For a rule about rows that do not exist yet -- a count followed by an
+        insert -- where there is no row to hold FOR UPDATE. Released by the
+        commit or rollback that ends the transaction, so it cannot leak.
+        """
+        self.session.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": key}
+        )
+
     def soft_delete(self, row: R, *, at: Any, by: str | None = None) -> None:
         """Hard deletion exists only in a documented purge job."""
         row.deleted_at = at
         row.updated_by = by
         row.version += 1
         self.session.add(row)
+
+
+def violated_constraint(exc: IntegrityError) -> str | None:
+    """The name of the constraint or unique index PostgreSQL refused on."""
+    diag = getattr(getattr(exc, "orig", None), "diag", None)
+    return getattr(diag, "constraint_name", None)

@@ -404,7 +404,23 @@ class VerifyPassenger:
         # on a Persian keyboard by a build that does not fold matched its
         # booking and was then refused by it -- now at the cost of an attempt.
         presented = normalise_digits(cmd.presented_code)
-        row = self._bookings.find_by_verification_code(cmd.trip_id, presented)
+        # Held, not merely read: a passenger may be cancelling this booking in
+        # the same instant. Read unlocked, a cancellation that committed
+        # between the read and the write was overwritten with ONBOARD -- a
+        # cancelled booking boarded, its seat freed and taken again, and a
+        # cancellation record for a journey that happened. CancelBooking
+        # holds the same row, so the two now run one after the other: a
+        # boarded passenger is no longer cancellable, and a cancelled booking
+        # no longer matches the code.
+        #
+        # The trip first, then the booking -- the order AdvanceTrip takes
+        # them in, so a departure and a boarding cannot each hold one and
+        # wait for the other (hold_for_boarding says why it is not a full
+        # FOR UPDATE). After the attempt above, never before: that one is
+        # spent on the trip row in a transaction of its own, which would
+        # wait on this lock for ever.
+        self._trips.hold_for_boarding(trip_row.id)
+        row = self._bookings.lock_by_verification_code(cmd.trip_id, presented)
         if row is None:
             # Deliberately the same error whether the code is wrong or belongs
             # to another trip: a driver probing codes learns nothing either way.

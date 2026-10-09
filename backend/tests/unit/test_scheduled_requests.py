@@ -50,7 +50,10 @@ class FakeRequests:
     def find_open_for_passenger(self, passenger_id: str, *, at: datetime):
         return None
 
-    def create(self, **fields: Any) -> Any:
+    def expire_stale_for_passenger(self, passenger_id: str, *, at: datetime) -> int:
+        return 0
+
+    def create_open(self, **fields: Any) -> Any:
         self.rows.append(fields)
         return type("Row", (), fields)
 
