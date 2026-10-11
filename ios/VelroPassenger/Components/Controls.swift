@@ -15,7 +15,7 @@ struct VelroCard<Content: View>: View {
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                     .strokeBorder(Palette.outlineVariant, lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+            .elevation(.low)
     }
 }
 
@@ -57,33 +57,52 @@ struct VelroField: View {
     var keyboard: UIKeyboardType = .default
     var contentType: UITextContentType?
     var large = false
+    /// A glyph at the start of the field, saying what kind of thing goes in
+    /// before a word of the label is read.
+    var systemImage: String?
+    /// False for words -- a name -- which run in the language's own
+    /// direction; numbers stay left to right.
+    var leftToRight = true
     var identifier = ""
 
     @FocusState private var focused: Bool
+    @Environment(\.layoutDirection) private var direction
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(label)
                 .velroFont(.label)
                 .foregroundStyle(Palette.onSurfaceVariant)
-            TextField(placeholder, text: Binding(get: { text }, set: { text = Numerals.latin($0) }))
-                .keyboardType(keyboard)
-                .textContentType(contentType)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                .font(large ? .system(size: 24, weight: .semibold, design: .rounded) : .system(size: 18, weight: .regular))
-                .multilineTextAlignment(large ? .center : .leading)
-                .focused($focused)
-                .padding(.horizontal, Spacing.lg)
-                .frame(minHeight: Sizing.fieldHeight)
-                .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                        .strokeBorder(focused ? Palette.primary : Palette.outline, lineWidth: focused ? 2 : 1)
-                )
-                .environment(\.layoutDirection, .leftToRight)
-                .accessibilityLabel(label)
-                .accessibilityIdentifier(identifier)
+            HStack(spacing: Spacing.md) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(focused ? Palette.primary : Palette.outline)
+                        .accessibilityHidden(true)
+                }
+                TextField(placeholder, text: Binding(get: { text }, set: { text = Numerals.latin($0) }))
+                    .keyboardType(keyboard)
+                    .textContentType(contentType)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .font(large ? .system(size: 24, weight: .semibold, design: .rounded) : .system(size: 18, weight: .regular))
+                    .multilineTextAlignment(large ? .center : .leading)
+                    .focused($focused)
+                    .accessibilityLabel(label)
+                    .accessibilityIdentifier(identifier)
+            }
+            .padding(.horizontal, Spacing.xl - Spacing.xs)
+            .frame(minHeight: Sizing.fieldHeight)
+            // A pill, like the buttons: one family of shapes for everything
+            // a finger is meant to land on.
+            .background(Palette.surface, in: Capsule())
+            .overlay(
+                Capsule().strokeBorder(focused ? Palette.primary : Palette.outline, lineWidth: focused ? 2 : 1)
+            )
+            .elevation(.low)
+            .environment(\.layoutDirection, leftToRight ? .leftToRight : direction)
+            .contentShape(Capsule())
+            .onTapGesture { focused = true }
         }
     }
 }

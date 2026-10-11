@@ -40,9 +40,28 @@ public enum Calendars {
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ]
 
+    /// A twelve-hour clock with the half of the day spelled out, as people
+    /// here say it: "۶:۳۰ ق.ظ" in Dari, "۶:۳۰ غ.م" in Pashto, "6:30 AM" in
+    /// English (the owner's choice, 2026-10-10; it was 24-hour).
     public static func time(_ date: Date, _ locale: AppLocale) -> String {
         let parts = components(date)
-        return Numerals.localise(String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0), locale)
+        return clock(parts.hour ?? 0, parts.minute ?? 0, locale)
+    }
+
+    /// A whole hour, 0 to 23, on the same clock: the hours of the day picker.
+    public static func hour(_ hour: Int, _ locale: AppLocale) -> String {
+        clock(hour, 0, locale)
+    }
+
+    private static func clock(_ hour: Int, _ minute: Int, _ locale: AppLocale) -> String {
+        let twelve = hour % 12 == 0 ? 12 : hour % 12
+        let morning = hour < 12
+        let half: String = switch locale {
+        case .english: morning ? "AM" : "PM"
+        case .dari: morning ? "ق.ظ" : "ب.ظ"
+        case .pashto: morning ? "غ.م" : "غ.و"
+        }
+        return Numerals.localise(String(format: "%d:%02d", twelve, minute), locale) + " " + half
     }
 
     /// "12 Sep 2026" in English; "۲۱ سنبله ۱۴۰۵" in Dari and Pashto.

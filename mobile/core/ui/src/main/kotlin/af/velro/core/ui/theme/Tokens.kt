@@ -141,12 +141,94 @@ object Radius {
     val pill: Dp = 999.dp
 
     /**
-     * Cards and sheets.
+     * Cards and sheets, as the admin panel still draws them.
      *
-     * Softer than a control's radius on purpose, so a surface and a button
-     * read as different kinds of thing without either being labelled.
+     * The apps moved to [surface] with the soft redesign; this stays at its
+     * value because the panel reads the same set and has not moved yet.
      */
     val card: Dp = 20.dp
+
+    /**
+     * Every card in the apps, after the soft redesign.
+     *
+     * Larger than [card] and well short of a pill, so a surface still reads as
+     * a different kind of thing from a button -- which is now fully round --
+     * without either being labelled. The same value as [xl], named separately
+     * so a card and a corner that merely happens to be 24 can drift apart.
+     */
+    val surface: Dp = 24.dp
+
+    /**
+     * The top corners of a sheet that rides up over a map.
+     *
+     * Rounder than a card because it is a bigger thing: a panel the width of
+     * the display with 24dp corners reads as a card that grew, and the point
+     * is that it is the ground the rest of the screen lies on.
+     */
+    val sheet: Dp = 32.dp
+}
+
+/**
+ * How far a surface sits above the one under it.
+ *
+ * Soft and diffuse rather than a hard edge: the redesign takes the hairline
+ * off a white card on the light page and lets a wide, faint shadow say where
+ * it ends. Only a few steps, so two cards on one screen cannot disagree about
+ * how high they float.
+ *
+ * These are elevations, not darkness. How dark a shadow lands is decided in
+ * `softShadow`, which also tones them down on Android 8 and older, where the
+ * platform ignores a shadow's colour and draws every one at full strength.
+ */
+object Elevation {
+    /** A card lying on the page. */
+    val card: Dp = 10.dp
+
+    /** A control floating over a map: the round buttons, the help pill. */
+    val floating: Dp = 12.dp
+
+    /** The filled primary button, whose shadow is tinted with its own green. */
+    val button: Dp = 12.dp
+
+    /** A sheet over the map, casting upward. */
+    val sheet: Dp = 20.dp
+}
+
+/**
+ * Frosted glass: how much of the surface colour a floating control keeps.
+ *
+ * The owner's direction for the redesign was "soft, glassy, almost minimal".
+ * The controls that float over the map -- the round buttons, the help pill,
+ * the drawer, the sheet -- are the surface colour at
+ * these opacities rather than opaque white slabs, so the map reads through
+ * them faintly. Not a blur: a backdrop blur on Android needs a library or API
+ * 31, and a cheap handset pays for it on every frame the map is on screen.
+ * Translucency, a white hairline and a faint shadow give the same impression
+ * for nothing.
+ *
+ * Opaque enough that text on them keeps its contrast whatever is underneath;
+ * ContrastTest measures the text pairs against the darkest ground the drawn
+ * map can put behind them, composited at these values, not against white.
+ */
+object Glass {
+    /** The round buttons, the help pill and the "Where to?" bar. */
+    const val FLOATING = 0.82f
+
+    /** The sheet: long text sits on it, so it is denser than a button. */
+    const val PANEL = 0.90f
+
+    /**
+     * The drawer, densest of all. It lies over the whole of home -- text,
+     * buttons and all, not only the map -- and at the sheet's opacity the
+     * screen underneath read through as a second, ghostly page.
+     */
+    const val DRAWER = 0.96f
+
+    /** The white rim that catches the light at the edge of the glass. */
+    const val RIM_LIGHT = 0.70f
+
+    /** The same rim after dark, where a bright edge would glare. */
+    const val RIM_DARK = 0.10f
 }
 
 object Sizing {

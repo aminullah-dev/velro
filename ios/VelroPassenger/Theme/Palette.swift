@@ -103,7 +103,40 @@ enum Radius {
     static let xl: CGFloat = 24
     /// Cards: softer than a control, so a surface and a button read as
     /// different kinds of thing without either being labelled.
-    static let card: CGFloat = 20
+    static let card: CGFloat = 24
+    /// The panel that rises over a map: rounder still, so it reads as a sheet
+    /// lying on the map rather than a card in a list.
+    static let sheet: CGFloat = 32
+}
+
+/// Depth by soft shadow rather than hard rules: a surface floats on the page
+/// the way a card lies on a table. Two steps only, so nothing competes.
+enum Elevation {
+    /// Cards and fields on the page.
+    case low
+    /// What floats over a map: buttons, the sheet, the drawer.
+    case high
+
+    var radius: CGFloat { self == .low ? 14 : 22 }
+    var y: CGFloat { self == .low ? 4 : 8 }
+    var opacity: Double { self == .low ? 0.05 : 0.12 }
+}
+
+extension View {
+    func elevation(_ level: Elevation) -> some View {
+        shadow(color: .black.opacity(level.opacity), radius: level.radius, y: level.y)
+    }
+}
+
+/// Widths for a screen wider than a phone held upright: an unfolded iPhone
+/// Duo, or a phone on its side. A form or a list stops growing at a width a
+/// line can still be read across; what is left over goes to the map.
+enum Wide {
+    /// From here on, home and the offers stand their panel beside the map.
+    static let threshold: CGFloat = 700
+    static let panel: CGFloat = 440
+    /// The widest a form or list is laid out.
+    static let readable: CGFloat = 620
 }
 
 enum Sizing {

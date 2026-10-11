@@ -54,7 +54,7 @@ struct OnBrandButton: View {
             }
             .frame(maxWidth: .infinity, minHeight: Sizing.buttonHeight)
             .foregroundStyle(Palette.brandField)
-            .background(Palette.onBrandField, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+            .background(Palette.onBrandField, in: Capsule())
             .contentShape(Rectangle())
         }
         .buttonStyle(PressStyle())

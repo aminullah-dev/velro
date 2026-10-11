@@ -1,14 +1,20 @@
 package af.velro.passenger
 
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import af.velro.core.ui.component.ChoiceChip
 import af.velro.core.ui.component.ConfirmDialog
+import af.velro.core.ui.component.PillField
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.DeleteAccountLink
 import af.velro.core.ui.component.InlineError
+import af.velro.core.ui.component.InlineMessage
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PhotoAvatar
 import af.velro.core.ui.component.PrimaryAction
@@ -17,7 +23,6 @@ import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.VelroScreen
 import af.velro.data.api.PublicPages
 import af.velro.core.ui.theme.LocalVelroStrings
-import af.velro.core.ui.theme.Radius
 import af.velro.core.ui.theme.Sizing
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.Locale
@@ -29,15 +34,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,12 +65,15 @@ fun AccountRoute(
     }
     AccountScreen(
         profile = profile,
-        draftName = state.draftName,
+        draftFirst = state.draftFirst,
+        draftLast = state.draftLast,
+        canSave = state.canSave,
         isSaving = state.isSaving,
         saved = state.saved,
         errorCode = state.errorCode,
         errorContext = state.errorContext,
-        onNameChanged = viewModel::onNameChanged,
+        onFirstNameChanged = viewModel::onFirstNameChanged,
+        onLastNameChanged = viewModel::onLastNameChanged,
         onSaveName = viewModel::saveName,
         onLocaleChanged = viewModel::changeLocale,
         onSignOut = onSignOut,
@@ -95,12 +105,15 @@ fun AccountRoute(
 @Composable
 fun AccountScreen(
     profile: UserProfile,
-    draftName: String,
+    draftFirst: String,
+    draftLast: String,
+    canSave: Boolean,
     isSaving: Boolean,
     saved: Boolean,
     errorCode: String?,
     errorContext: Map<String, Any?>,
-    onNameChanged: (String) -> Unit,
+    onFirstNameChanged: (String) -> Unit,
+    onLastNameChanged: (String) -> Unit,
     onSaveName: () -> Unit,
     onLocaleChanged: (Locale) -> Unit,
     onSignOut: () -> Unit,
@@ -193,27 +206,55 @@ fun AccountScreen(
 
         Spacer(Modifier.height(Spacing.lg))
 
-        // The name, editable. PATCH /auth/me has always accepted it and no
-        // screen in this app ever called it, so a passenger who signed up
-        // without a name -- which is allowed -- could never add one, and the
-        // driver arriving to collect her had nobody's name to ask for.
+        // The name, editable, as the two required parts the name step asks
+        // for. PATCH /auth/me has always accepted it and no screen in this
+        // app ever called it, so a passenger who signed up without a name
+        // could never add one, and the driver arriving to collect her had
+        // nobody's name to ask for. Since 2026-10-10 both parts are required
+        // (owner), so the old "you may leave this empty" hint gave way to the
+        // reason the name is asked for at all.
+        val capitalisation = if (strings.locale == Locale.ENGLISH) KeyboardCapitalization.Words
+        else KeyboardCapitalization.None
         VelroCard {
             Column {
-                OutlinedTextField(
-                    value = draftName,
-                    onValueChange = onNameChanged,
-                    label = { Text(strings["profile.field.name"]) },
-                    supportingText = { Text(strings["profile.hint.name_optional"]) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                Text(
+                    strings["profile.name.body"],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(Spacing.lg))
+                PillField(
+                    value = draftFirst,
+                    onValueChange = onFirstNameChanged,
+                    label = strings["profile.field.first_name"],
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = capitalisation,
+                        imeAction = ImeAction.Next,
+                    ),
                 )
                 Spacer(Modifier.height(Spacing.md))
+                PillField(
+                    value = draftLast,
+                    onValueChange = onLastNameChanged,
+                    label = strings["profile.field.last_name"],
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = capitalisation,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { if (canSave) onSaveName() }),
+                )
+                if (!PersonName.isValid(draftFirst, draftLast)) {
+                    // Said, not only implied by a grey button: an account
+                    // that predates the rule may hold one word, and its
+                    // owner should know why Save will not light.
+                    InlineMessage("profile.error.name_required")
+                }
+                Spacer(Modifier.height(Spacing.lg))
                 PrimaryAction(
                     label = strings["common.action.save"],
                     onClick = onSaveName,
-                    enabled = draftName != profile.fullName.orEmpty(),
+                    enabled = canSave,
                     loading = isSaving,
-                    radius = Radius.pill,
                 )
                 if (saved) {
                     Spacer(Modifier.height(Spacing.sm))
@@ -233,6 +274,7 @@ fun AccountScreen(
                 Text(
                     strings["passenger.profile.language"],
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     strings["passenger.profile.language_hint"],
@@ -242,10 +284,10 @@ fun AccountScreen(
                 Spacer(Modifier.height(Spacing.md))
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     for (option in listOf(Locale.DARI, Locale.PASHTO, Locale.ENGLISH)) {
-                        FilterChip(
+                        ChoiceChip(
                             selected = option == profile.locale,
                             onClick = { onLocaleChanged(option) },
-                            label = { Text(option.displayName()) },
+                            label = option.displayName(),
                         )
                     }
                 }
@@ -262,7 +304,11 @@ fun AccountScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(Spacing.xxs))
-                Text(profile.phone, style = MaterialTheme.typography.bodyLarge)
+                // A number to dial, read left to right whatever the language:
+                // in a right-to-left line the "+" otherwise drifts to the end.
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(profile.phone, style = MaterialTheme.typography.bodyLarge)
+                }
                 Spacer(Modifier.height(Spacing.xs))
                 Text(
                     strings["passenger.profile.phone_hint"],

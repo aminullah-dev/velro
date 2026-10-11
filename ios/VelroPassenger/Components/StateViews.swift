@@ -9,7 +9,7 @@ struct LoadingState: View {
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
-            ProgressView()
+            ProgressView().controlSize(.large).tint(Palette.primary)
             Text(strings["common.state.loading"])
                 .velroFont(.label)
                 .foregroundStyle(Palette.onSurfaceVariant)
@@ -77,10 +77,25 @@ struct VelroScreen<Content: View>: View {
 
     var body: some View {
         content
+            // On an unfolded phone the form stays a column, centred.
+            .frame(maxWidth: Wide.readable, maxHeight: .infinity, alignment: .top)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(Palette.background)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Palette.surface, for: .navigationBar)
+            // No bar of its own: the title sits on the page it names, and the
+            // back button floats, as on a sheet.
+            .toolbarBackground(Palette.background, for: .navigationBar)
+            .toolbar {
+                // The bar's own title is the system face; the product's
+                // letters -- Vazirmatn in Dari and Pashto -- are drawn here.
+                ToolbarItem(placement: .principal) {
+                    Text(title)
+                        .velroFont(.heading, weight: .bold)
+                        .foregroundStyle(Palette.onSurface)
+                        .lineLimit(1)
+                        .accessibilityAddTraits(.isHeader)
+                }
+            }
     }
 }

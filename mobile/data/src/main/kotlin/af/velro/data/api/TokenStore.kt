@@ -1,6 +1,7 @@
 package af.velro.data.api
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -42,6 +43,8 @@ class TokenStore(private val context: Context) : SessionTokens {
         val roles = stringPreferencesKey("roles")
         val locale = stringPreferencesKey("locale")
         val deviceId = stringPreferencesKey("device_id")
+        val named = booleanPreferencesKey("has_name")
+        val nameNeeded = booleanPreferencesKey("name_needed")
     }
 
     val accessToken: Flow<String?> =
@@ -58,6 +61,33 @@ class TokenStore(private val context: Context) : SessionTokens {
 
     val locale: Flow<String> =
         context.tokenDataStore.data.map { it[Keys.locale] ?: "fa-AF" }
+
+    /**
+     * This session's account is known to have a name.
+     *
+     * Part of the session, so it goes when the session goes: the next person
+     * to sign in on a shared handset is asked for theirs, and an offline launch
+     * by somebody who already gave one is never stopped to ask again.
+     */
+    val hasName: Flow<Boolean> =
+        context.tokenDataStore.data.map { it[Keys.named] == true }
+
+    /**
+     * The account was created by this sign-in and has given no name yet.
+     *
+     * Written in the same edit as the tokens, so the moment the app sees the
+     * session it also sees that a brand-new account must be asked -- with no
+     * network round trip, and no frame of home first.
+     */
+    val nameNeeded: Flow<Boolean> =
+        context.tokenDataStore.data.map { it[Keys.nameNeeded] == true }
+
+    suspend fun markNamed() {
+        context.tokenDataStore.edit {
+            it[Keys.named] = true
+            it.remove(Keys.nameNeeded)
+        }
+    }
 
     override suspend fun currentAccessToken(): String? =
         context.tokenDataStore.data.first()[Keys.access]
@@ -79,6 +109,10 @@ class TokenStore(private val context: Context) : SessionTokens {
             it[Keys.refresh] = session.refresh_token
             it[Keys.userId] = session.user_id
             it[Keys.roles] = session.roles.joinToString(",")
+            // Only ever set here, never unset: a token refresh answers
+            // is_new_user=false, and must not cancel a question the account
+            // has not answered yet. markNamed and clear take it away.
+            if (session.is_new_user) it[Keys.nameNeeded] = true
         }
     }
 
@@ -86,13 +120,18 @@ class TokenStore(private val context: Context) : SessionTokens {
         context.tokenDataStore.edit { it[Keys.locale] = tag }
     }
 
-    /** Clears the session but keeps the device id and the chosen language. */
+    /**
+     * Clears the session -- and whether its account had a name -- but keeps
+     * the device id and the chosen language.
+     */
     override suspend fun clear() {
         context.tokenDataStore.edit {
             it.remove(Keys.access)
             it.remove(Keys.refresh)
             it.remove(Keys.userId)
             it.remove(Keys.roles)
+            it.remove(Keys.named)
+            it.remove(Keys.nameNeeded)
         }
     }
 }

@@ -184,7 +184,7 @@ private fun RideDutyCard(
     val strings = LocalVelroStrings.current
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(Radius.card),
+        shape = RoundedCornerShape(Radius.surface),
         shadowElevation = 6.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -221,7 +221,7 @@ private fun RideNames(driverName: String?, passengerNames: List<String>) {
     val noName = strings["common.value.no_name"]
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(Radius.card),
+        shape = RoundedCornerShape(Radius.surface),
         shadowElevation = 6.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {

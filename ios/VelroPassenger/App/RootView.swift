@@ -14,6 +14,9 @@ struct RootView: View {
         Group {
             if app.isSignedIn {
                 SignedInView(app: app)
+            } else if !app.hasSeenIntro {
+                OnboardingView { app.finishIntro() }
+                    .transition(.opacity)
             } else {
                 SignInView(app: app)
             }
@@ -24,6 +27,7 @@ struct RootView: View {
         .environment(\.strings, app.strings)
         .tint(Palette.primary)
         .animation(.default, value: app.isSignedIn)
+        .animation(.default, value: app.hasSeenIntro)
         // The numbers to dial are fetched whenever there is a connection, so
         // they are already on the phone when they are needed.
         .task { await app.safety.refresh(using: app.client) }
@@ -40,12 +44,23 @@ private struct SignedInView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $router.path) {
-            HomeView(app: app)
-                .navigationDestination(for: Route.self) { route in
-                    destination(route)
+        Group {
+            // No home without a name: the one screen before it, which cannot
+            // be skipped -- only left by signing out.
+            if app.nameState == .missing {
+                NameView(app: app)
+                    .transition(.opacity)
+            } else {
+                NavigationStack(path: $router.path) {
+                    HomeView(app: app)
+                        .navigationDestination(for: Route.self) { route in
+                            destination(route)
+                        }
                 }
+            }
         }
+        .animation(.default, value: app.nameState)
+        .task { await app.checkName() }
     }
 
     @ViewBuilder

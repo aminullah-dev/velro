@@ -55,7 +55,9 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
-        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # Upright on a phone; on its side too where the screen is big enough
+        # (an unfolded iPhone Duo) -- AppDelegate narrows it per screen.
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         ITSAppUsesNonExemptEncryption: false
         # Set per configuration below, so a Debug build cannot reach production.
         VelroAPIBaseURL: $(VELRO_API_BASE_URL)

@@ -1,5 +1,6 @@
 package af.velro.feature.trip
 
+import af.velro.core.ui.component.ChoiceChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import af.velro.core.i18n.Calendars
@@ -20,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,10 +64,12 @@ fun HistoryScreen(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             HistoryScope.entries.forEach { scope ->
-                FilterChip(
+                // The shared pill chip, so "ahead" and "past" are chosen the
+                // same way as a day or a language everywhere else.
+                ChoiceChip(
                     selected = state.scope == scope,
                     onClick = { onEvent(HistoryEvent.ScopeChanged(scope)) },
-                    label = { Text(strings["history.scope.${scope.name.lowercase()}"]) },
+                    label = strings["history.scope.${scope.name.lowercase()}"],
                 )
             }
         }

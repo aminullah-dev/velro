@@ -1,6 +1,8 @@
 package af.velro.feature.booking
 
-import af.velro.core.ui.component.ChevronForward
+import af.velro.core.ui.component.ChoiceChip
+import af.velro.core.ui.component.IconRow
+import af.velro.core.ui.component.PillField
 import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
@@ -32,11 +34,9 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -76,6 +76,7 @@ internal fun OriginStep(
     LazyColumn(
         modifier = Modifier.imePadding(),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = Spacing.xs),
     ) {
         item(key = "here") {
             HereCard(state, onEvent, locationAccess, onRequestLocation, onOpenLocationSettings)
@@ -252,10 +253,10 @@ private fun Found(
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             stations.take(3).forEach { station ->
-                FilterChip(
+                ChoiceChip(
                     selected = station.id == boarding?.id,
                     onClick = { chosenId = station.id },
-                    label = { Text(station.name, maxLines = 1) },
+                    label = station.name,
                 )
             }
         }
@@ -318,19 +319,16 @@ private fun PlaceName(
         return
     }
 
-    Text(strings["origin.place.question"], style = MaterialTheme.typography.bodyMedium)
-    OutlinedTextField(
+    PillField(
         value = state.placeName,
         onValueChange = { onEvent(BookingEvent.PlaceNameChanged(it)) },
-        placeholder = { Text(strings["origin.place.hint"]) },
-        singleLine = true,
+        label = strings["origin.place.question"],
+        placeholder = strings["origin.place.hint"],
         isError = state.placeRefusal != null,
-        supportingText = state.placeRefusal?.let { reason ->
-            { Text(refusalText(strings, reason)) }
-        },
+        supportingText = state.placeRefusal?.let { reason -> refusalText(strings, reason) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onEvent(BookingEvent.SavePlaceName) }),
-        modifier = Modifier.fillMaxWidth().testTag("origin.place_name"),
+        fieldModifier = Modifier.testTag("origin.place_name"),
     )
     // The first letters of a spot the valley already knows bring its whole
     // name back -- tap it and the station and coordinates behind it come with
@@ -401,21 +399,12 @@ private fun OriginRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    VelroCard(onClick = onClick, modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.size(Spacing.md))
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge)
-                if (subtitle != null) {
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            ChevronForward()
-        }
-    }
+    // The soft list row every list in the flow now uses.
+    IconRow(
+        title = title,
+        subtitle = subtitle,
+        icon = icon,
+        onClick = onClick,
+        modifier = modifier,
+    )
 }

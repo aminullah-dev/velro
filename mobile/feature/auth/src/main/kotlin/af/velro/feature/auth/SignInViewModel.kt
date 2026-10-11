@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -118,7 +119,22 @@ class SignInViewModel @Inject constructor(
                 _state.update { it.copy(accountDeleted = deleted) }
             }
         }
+        // Start on the language already chosen, not on Dari regardless.
+        //
+        // The screen is drawn in the stored language (MainActivity follows
+        // it), but the chips and the code request started on Dari -- so
+        // somebody who picked English on the onboarding pages, or before a
+        // sign-out, read an English form with the Dari chip lit, and the code
+        // request then sent Dari and turned the whole app back to Dari the
+        // moment they signed in. Read once; a chip tapped first wins.
+        viewModelScope.launch {
+            val stored = auth.locale.first()
+            if (!localeChosenHere) _state.update { it.copy(locale = stored) }
+        }
     }
+
+    /** Set once a language chip is tapped on this screen. */
+    private var localeChosenHere = false
 
     fun onEvent(event: SignInEvent) {
         when (event) {
@@ -132,6 +148,7 @@ class SignInViewModel @Inject constructor(
                 _state.update { it.copy(code = event.value.take(8), errorCode = null) }
 
             is SignInEvent.LocaleChanged -> {
+                localeChosenHere = true
                 _state.update { it.copy(locale = event.locale) }
                 viewModelScope.launch { auth.setLocale(event.locale) }
             }

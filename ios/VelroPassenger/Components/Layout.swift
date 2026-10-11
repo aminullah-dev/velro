@@ -54,7 +54,7 @@ struct StepProgress: View {
                         .frame(width: geometry.size.width * CGFloat(current + 1) / CGFloat(total))
                 }
             }
-            .frame(height: 4)
+            .frame(height: 6)
             Text(strings["common.state.step", ["current": current + 1, "total": total]])
                 .velroFont(.caption)
                 .foregroundStyle(Palette.onSurfaceVariant)
@@ -78,8 +78,13 @@ struct PlaceRow: View {
             VelroCard {
                 HStack(spacing: Spacing.md) {
                     if let systemImage {
+                        // The glyph in a soft disc, so a column of rows reads
+                        // as a column of places at a glance.
                         Image(systemName: systemImage)
+                            .font(.body.weight(.semibold))
                             .foregroundStyle(Palette.primary)
+                            .frame(width: 40, height: 40)
+                            .background(Palette.primaryContainer, in: Circle())
                             .accessibilityHidden(true)
                     }
                     VStack(alignment: .leading, spacing: Spacing.xxs) {
