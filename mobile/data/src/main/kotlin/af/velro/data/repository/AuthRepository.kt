@@ -44,10 +44,35 @@ class AuthRepository @Inject constructor(
      * Change the name the driver will see.
      *
      * The phone is not editable here: it is the account, not a field on it.
+     * A name that lands is remembered with the session (see [hasName]).
      */
-    suspend fun updateName(fullName: String?): ApiResult<UserProfile> =
-        mapper.call { api.updateProfile(UpdateProfileRequest(full_name = fullName)) }
+    suspend fun updateName(fullName: String?): ApiResult<UserProfile> {
+        val result = mapper.call { api.updateProfile(UpdateProfileRequest(full_name = fullName)) }
             .map(::toDomain)
+        if (result is ApiResult.Success && !result.value.fullName.isNullOrBlank()) {
+            tokens.markNamed()
+        }
+        return result
+    }
+
+    /**
+     * Whether this session's account is already known to have a name.
+     *
+     * The passenger app asks for a first and last name before home, and checks
+     * the profile to know whether to. Once an answer has shown a name, the
+     * check is not made again for this session -- so a launch with no signal
+     * goes straight to the passenger's bookings rather than waiting on a
+     * question the server already answered. Cleared with the session.
+     */
+    val hasName: Flow<Boolean> = tokens.hasName
+
+    /** This sign-in created the account, and no name has been given since. */
+    val nameNeeded: Flow<Boolean> = tokens.nameNeeded
+
+    /** The profile came back with a name: do not ask again this session. */
+    suspend fun rememberNamed() {
+        tokens.markNamed()
+    }
 
     /**
      * Change the language, after sign-in.

@@ -11,6 +11,7 @@ import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.Numerals
 import af.velro.core.ui.component.DeleteAccountLink
 import af.velro.core.ui.component.InlineError
+import af.velro.core.ui.component.InlineMessage
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PhotoAvatar
 import af.velro.core.ui.component.PrimaryAction
@@ -30,6 +31,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +40,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,12 +62,15 @@ fun AccountRoute(
     }
     AccountScreen(
         profile = profile,
-        draftName = state.draftName,
+        draftFirst = state.draftFirst,
+        draftLast = state.draftLast,
+        canSave = state.canSave,
         isSaving = state.isSaving,
         saved = state.saved,
         errorCode = state.errorCode,
         errorContext = state.errorContext,
-        onNameChanged = viewModel::onNameChanged,
+        onFirstNameChanged = viewModel::onFirstNameChanged,
+        onLastNameChanged = viewModel::onLastNameChanged,
         onSaveName = viewModel::saveName,
         onLocaleChanged = viewModel::changeLocale,
         onSignOut = onSignOut,
@@ -94,12 +102,15 @@ fun AccountRoute(
 @Composable
 fun AccountScreen(
     profile: UserProfile,
-    draftName: String,
+    draftFirst: String,
+    draftLast: String,
+    canSave: Boolean,
     isSaving: Boolean,
     saved: Boolean,
     errorCode: String?,
     errorContext: Map<String, Any?>,
-    onNameChanged: (String) -> Unit,
+    onFirstNameChanged: (String) -> Unit,
+    onLastNameChanged: (String) -> Unit,
     onSaveName: () -> Unit,
     onLocaleChanged: (Locale) -> Unit,
     onSignOut: () -> Unit,
@@ -192,23 +203,54 @@ fun AccountScreen(
 
         Spacer(Modifier.height(Spacing.lg))
 
-        // The name, editable. PATCH /auth/me has always accepted it and no
-        // screen in this app ever called it, so a passenger who signed up
-        // without a name -- which is allowed -- could never add one, and the
-        // driver arriving to collect her had nobody's name to ask for.
+        // The name, editable, as the two required parts the name step asks
+        // for. PATCH /auth/me has always accepted it and no screen in this
+        // app ever called it, so a passenger who signed up without a name
+        // could never add one, and the driver arriving to collect her had
+        // nobody's name to ask for. Since 2026-10-10 both parts are required
+        // (owner), so the old "you may leave this empty" hint gave way to the
+        // reason the name is asked for at all.
+        val capitalisation = if (strings.locale == Locale.ENGLISH) KeyboardCapitalization.Words
+        else KeyboardCapitalization.None
         VelroCard {
             Column {
-                PillField(
-                    value = draftName,
-                    onValueChange = onNameChanged,
-                    label = strings["profile.field.name"],
-                    supportingText = strings["profile.hint.name_optional"],
+                Text(
+                    strings["profile.name.body"],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(Modifier.height(Spacing.lg))
+                PillField(
+                    value = draftFirst,
+                    onValueChange = onFirstNameChanged,
+                    label = strings["profile.field.first_name"],
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = capitalisation,
+                        imeAction = ImeAction.Next,
+                    ),
+                )
+                Spacer(Modifier.height(Spacing.md))
+                PillField(
+                    value = draftLast,
+                    onValueChange = onLastNameChanged,
+                    label = strings["profile.field.last_name"],
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = capitalisation,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { if (canSave) onSaveName() }),
+                )
+                if (!PersonName.isValid(draftFirst, draftLast)) {
+                    // Said, not only implied by a grey button: an account
+                    // that predates the rule may hold one word, and its
+                    // owner should know why Save will not light.
+                    InlineMessage("profile.error.name_required")
+                }
                 Spacer(Modifier.height(Spacing.lg))
                 PrimaryAction(
                     label = strings["common.action.save"],
                     onClick = onSaveName,
-                    enabled = draftName != profile.fullName.orEmpty(),
+                    enabled = canSave,
                     loading = isSaving,
                 )
                 if (saved) {

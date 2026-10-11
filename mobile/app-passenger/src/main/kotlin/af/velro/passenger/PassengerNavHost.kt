@@ -11,8 +11,10 @@ import af.velro.feature.safety.ReportsRoute
 import af.velro.feature.trip.BookingDetailRoute
 import af.velro.feature.trip.HistoryRoute
 import af.velro.feature.trip.TrackRideRoute
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,6 +22,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -82,40 +86,30 @@ fun PassengerNavHost(
         }
 
         composable(Routes.HOME) {
-            // Get help, on the screen a passenger is on when they are not
-            // mid-journey.
+            // A first and a last name before home (owner, 2026-10-10).
             //
-            // It used to exist only inside `if (booking.isActive)` on booking
-            // detail, so it vanished the moment a ride was cancelled or
-            // completed -- and an expired session offline is still "signed in"
-            // (TokenStore reads DataStore; nothing produces a 401 without a
-            // server), so the sign-in copy was unreachable too. A woman
-            // harassed during a ride had no way to tell VELRO once she was out
-            // of the car.
-            var helpOpen by remember { mutableStateOf(false) }
-            Box(Modifier.fillMaxSize()) {
-                HomeScreen(
-                    onBook = { navController.navigate(Routes.BOOK) },
-                    onOpenBooking = { navController.navigate(Routes.bookingDetail(it)) },
-                    onOpenHistory = { navController.navigate(Routes.HISTORY) },
-                    onGetHelp = { helpOpen = true },
-                    onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
-                    onOpenOffers = { navController.navigate(Routes.OFFERS) },
-                    // The drawer's door to her reports: the same screen the
-                    // help sheet's "your reports" opens.
-                    onOpenReports = { navController.navigate(Routes.REPORTS) },
+            // Decided here, inside the home destination, rather than as a
+            // route of its own: the graph is rebuilt -- back stack and all --
+            // when the session flips to signed in, so a navigation fired from
+            // sign-in can be wiped by that rebuild a frame later, and a new
+            // passenger would land on home anyway. Whatever the rebuild does,
+            // home is where she arrives, and home asks.
+            val gate: NameGateViewModel = hiltViewModel()
+            val needsName by gate.needsName.collectAsStateWithLifecycle()
+            when (needsName) {
+                // The session store being read: a few milliseconds, drawn as
+                // the page's own ground rather than a frame of home that is
+                // about to be replaced.
+                null -> Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                )
+                true -> NameRoute(
+                    onDone = gate::nameGiven,
                     onSignOut = onSignOut,
                 )
-                if (helpOpen) {
-                    HelpSheet(
-                        ride = null,
-                        onOpenReports = {
-                            helpOpen = false
-                            navController.navigate(Routes.REPORTS)
-                        },
-                        onDismiss = { helpOpen = false },
-                    )
-                }
+                false -> PassengerHome(navController, onSignOut)
             }
         }
 
@@ -186,6 +180,47 @@ fun PassengerNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenBooking = { navController.navigate(Routes.bookingDetail(it)) },
                 onBook = { navController.navigate(Routes.BOOK) },
+            )
+        }
+    }
+}
+
+/**
+ * Home, with the help sheet it can open.
+ *
+ * Get help, on the screen a passenger is on when they are not mid-journey.
+ *
+ * It used to exist only inside `if (booking.isActive)` on booking detail, so
+ * it vanished the moment a ride was cancelled or completed -- and an expired
+ * session offline is still "signed in" (TokenStore reads DataStore; nothing
+ * produces a 401 without a server), so the sign-in copy was unreachable too. A
+ * woman harassed during a ride had no way to tell VELRO once she was out of
+ * the car.
+ */
+@Composable
+private fun PassengerHome(navController: NavHostController, onSignOut: () -> Unit) {
+    var helpOpen by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize()) {
+        HomeScreen(
+            onBook = { navController.navigate(Routes.BOOK) },
+            onOpenBooking = { navController.navigate(Routes.bookingDetail(it)) },
+            onOpenHistory = { navController.navigate(Routes.HISTORY) },
+            onGetHelp = { helpOpen = true },
+            onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
+            onOpenOffers = { navController.navigate(Routes.OFFERS) },
+            // The drawer's door to her reports: the same screen the
+            // help sheet's "your reports" opens.
+            onOpenReports = { navController.navigate(Routes.REPORTS) },
+            onSignOut = onSignOut,
+        )
+        if (helpOpen) {
+            HelpSheet(
+                ride = null,
+                onOpenReports = {
+                    helpOpen = false
+                    navController.navigate(Routes.REPORTS)
+                },
+                onDismiss = { helpOpen = false },
             )
         }
     }

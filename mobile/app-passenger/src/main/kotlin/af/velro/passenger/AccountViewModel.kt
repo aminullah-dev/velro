@@ -16,13 +16,30 @@ import kotlinx.coroutines.launch
 
 data class AccountUiState(
     val profile: UserProfile? = null,
-    /** What is in the field, which is not what is saved until it is. */
-    val draftName: String = "",
+    /**
+     * What is in the two fields, which is not what is saved until it is.
+     *
+     * Two since the owner made both parts required (2026-10-10). The server
+     * still keeps one full_name; these are split from it on load and joined
+     * back on save -- see PersonName.
+     */
+    val draftFirst: String = "",
+    val draftLast: String = "",
     val isSaving: Boolean = false,
     val saved: Boolean = false,
     val errorCode: String? = null,
     val errorContext: Map<String, Any?> = emptyMap(),
-)
+) {
+    /**
+     * Save is offered only for a change that would be accepted: both parts
+     * long enough, and different from what is stored. A name cannot be
+     * cleared any more -- it is required -- so there is no blank to save.
+     */
+    val canSave: Boolean
+        get() = !isSaving &&
+            PersonName.isValid(draftFirst, draftLast) &&
+            PersonName.join(draftFirst, draftLast) != profile?.fullName?.trim()
+}
 
 @HiltViewModel
 class AccountViewModel @Inject constructor(
@@ -43,10 +60,15 @@ class AccountViewModel @Inject constructor(
                         // Only seeded from the server while the field is
                         // untouched, so a reload cannot overwrite what somebody
                         // is halfway through typing.
-                        draftName = if (it.profile == null) {
-                            result.value.fullName.orEmpty()
+                        draftFirst = if (it.profile == null) {
+                            PersonName.split(result.value.fullName).first
                         } else {
-                            it.draftName
+                            it.draftFirst
+                        },
+                        draftLast = if (it.profile == null) {
+                            PersonName.split(result.value.fullName).second
+                        } else {
+                            it.draftLast
                         },
                     )
                 }
@@ -57,18 +79,22 @@ class AccountViewModel @Inject constructor(
         }
     }
 
-    fun onNameChanged(value: String) {
-        _state.update { it.copy(draftName = value, saved = false, errorCode = null) }
+    fun onFirstNameChanged(value: String) {
+        _state.update { it.copy(draftFirst = value, saved = false, errorCode = null) }
+    }
+
+    fun onLastNameChanged(value: String) {
+        _state.update { it.copy(draftLast = value, saved = false, errorCode = null) }
     }
 
     fun saveName() {
-        val name = _state.value.draftName.trim()
+        val current = _state.value
+        // The button is disabled for this already; the guard is here too,
+        // because a disabled button is a drawing and this is the call.
+        if (!current.canSave) return
         _state.update { it.copy(isSaving = true, errorCode = null) }
         viewModelScope.launch {
-            // Blank clears the name rather than storing an empty string --
-            // the server already treats it that way, and a name that is a
-            // space is neither a name nor an absence.
-            when (val result = auth.updateName(name.ifBlank { null })) {
+            when (val result = auth.updateName(PersonName.join(current.draftFirst, current.draftLast))) {
                 is ApiResult.Success -> _state.update {
                     it.copy(profile = result.value, isSaving = false, saved = true)
                 }
