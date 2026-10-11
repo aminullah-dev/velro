@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -136,39 +137,78 @@ fun StationRow(
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalVelroStrings.current
-    VelroCard(modifier = modifier, onClick = onClick) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                Icons.Filled.LocationOn,
-                contentDescription = null,
-                modifier = Modifier.size(Sizing.iconMd),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.size(Spacing.md))
-            Column(Modifier.weight(1f)) {
-                Text(station.name, style = MaterialTheme.typography.bodyLarge)
-                val subtitle = station.description
-                    ?: station.distanceMetres?.let { distance ->
-                        if (distance >= 1000) {
-                            strings[
-                                "location.distance.kilometres",
-                                "distance" to (distance / 1000),
-                            ]
-                        } else {
-                            strings["location.distance.metres", "distance" to distance]
-                        }
-                    }
-                if (subtitle != null) {
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+    val subtitle = station.description
+        ?: station.distanceMetres?.let { distance ->
+            if (distance >= 1000) {
+                strings[
+                    "location.distance.kilometres",
+                    "distance" to (distance / 1000),
+                ]
+            } else {
+                strings["location.distance.metres", "distance" to distance]
             }
-            ChevronForward()
         }
+    // A row in the soft list shape rather than a card of its own, so the
+    // station list reads like every other list in the flow.
+    IconRow(
+        title = station.name,
+        subtitle = subtitle,
+        icon = Icons.Filled.LocationOn,
+        onClick = onClick,
+        modifier = modifier,
+    )
+}
+
+/**
+ * A booking as one row: the journey, its state and its date, the fare.
+ *
+ * For home, where the recent trips sit in the sheet under "Where to?" and a
+ * full card each -- reference number, rail, seat line -- made the sheet a
+ * stack of receipts. The journey leads, because it is how somebody
+ * recognises her own trip in a list of four; the status is a word, never a
+ * colour alone; the boarding code stays on the booking itself, one tap away.
+ * History keeps [BookingCard], where the detail is the point.
+ */
+@Composable
+fun BookingRow(
+    booking: Booking,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    contained: Boolean = false,
+) {
+    val strings = LocalVelroStrings.current
+    val origin = booking.pickupStationName?.takeIf { it.isNotBlank() }
+    val destination = booking.dropoffDestinationName?.takeIf { it.isNotBlank() }
+    val title = if (origin != null || destination != null) {
+        strings[
+            "ride.journey.from_to",
+            "origin" to (origin ?: strings["location.label.origin"]),
+            "destination" to (destination ?: strings["location.label.destination"]),
+        ]
+    } else {
+        // A booking made before the names were sent: its number is the only
+        // name it has. Latin, like a plate, for the same reason.
+        booking.number
     }
+    val subtitle = listOfNotNull(
+        strings[booking.status.messageKey()],
+        booking.createdAt?.let { Calendars.date(it, strings.locale) },
+    ).joinToString(" · ")
+    IconRow(
+        title = title,
+        subtitle = subtitle,
+        icon = Icons.Filled.DirectionsCar,
+        onClick = onClick,
+        modifier = modifier,
+        contained = contained,
+        trailing = {
+            Text(
+                MoneyFormatter.format(booking.fareTotal, strings),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+        },
+    )
 }
 
 /**

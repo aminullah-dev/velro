@@ -1,7 +1,10 @@
 package af.velro.core.ui
 
+import af.velro.core.ui.component.mapInk
+import af.velro.core.ui.theme.Glass
 import af.velro.core.ui.theme.VelroColors
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -261,6 +264,61 @@ class ContrastTest {
         assertContrast(
             "scarce seats, dark", VelroColors.Amber500, VelroColors.DarkSurface, TEXT
         )
+    }
+
+    @Test
+    fun `text on frosted glass is readable over anything the drawn map puts under it`() {
+        // The soft redesign's floating controls and sheets are the surface
+        // colour at Glass opacities, not opaque white, so the map shows
+        // through them. A pair measured against white alone would pass while
+        // the real background is white with a park or a street mixed into it.
+        // This composites the glass over every ground the map draws and
+        // measures each text colour against the worst of them: the darkest
+        // ink by day, the lightest after dark.
+        val levels = listOf(
+            "floating" to Glass.FLOATING,
+            "panel" to Glass.PANEL,
+            "drawer" to Glass.DRAWER,
+        )
+        val light = mapInk(dark = false)
+        val dark = mapInk(dark = true)
+        val lightGrounds = listOf(light.ground, light.park, light.street, light.avenue)
+        val darkGrounds = listOf(dark.ground, dark.park, dark.street, dark.avenue)
+        val lightText = listOf(
+            "heading" to VelroColors.Neutral900,
+            "muted" to VelroColors.Neutral700,
+            "primary green" to VelroColors.Green700,
+        )
+        val darkText = listOf(
+            "heading" to VelroColors.DarkOnSurface,
+            "muted" to VelroColors.Neutral300,
+            "primary" to VelroColors.Green200,
+        )
+        for ((level, alpha) in levels) {
+            for ((name, fg) in lightText) {
+                for (ground in lightGrounds) {
+                    val glass = VelroColors.White.copy(alpha = alpha).compositeOver(ground)
+                    assertContrast("light $name on $level glass", fg, glass, TEXT)
+                }
+            }
+            for ((name, fg) in darkText) {
+                for (ground in darkGrounds) {
+                    val glass = VelroColors.DarkSurface.copy(alpha = alpha).compositeOver(ground)
+                    assertContrast("dark $name on $level glass", fg, glass, TEXT)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a field's always-visible hint is muted but still legible`() {
+        // The label moved above the pill field, so the placeholder shows even
+        // when nobody is typing. It is drawn quieter than a typed value so
+        // "0700 123 456" does not read as already filled in -- and still at
+        // 4.5:1 on the field's own fill, because it is the only example of
+        // the format somebody is about to type.
+        assertContrast("hint, light", VelroColors.Neutral500, VelroColors.White, TEXT)
+        assertContrast("hint, dark", VelroColors.Neutral350, VelroColors.DarkSurface, TEXT)
     }
 
     @Test

@@ -1,9 +1,33 @@
 package af.velro.feature.booking
 
+import af.velro.core.ui.component.ChoiceChip
+import af.velro.core.ui.component.IconRow
+import af.velro.core.ui.component.PillField
+import af.velro.core.ui.component.WheelPicker
+import af.velro.core.ui.component.softShadow
+import af.velro.core.ui.theme.Radius
+import af.velro.core.ui.theme.Sizing
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Surface
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import af.velro.core.map.JourneyMap
 import androidx.compose.ui.text.style.TextAlign
 import af.velro.core.ui.component.SecondaryAction
-import af.velro.core.ui.component.ChevronForward
 import af.velro.core.ui.component.StepProgress
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.togetherWith
@@ -44,7 +68,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,7 +87,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -444,23 +466,20 @@ private fun BookingFlowUiState.isEmptyForStep(): Boolean = when (step) {
 
 @Composable
 private fun DistrictList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        contentPadding = PaddingValues(top = Spacing.xs, bottom = Spacing.xl),
+    ) {
         items(state.districts, key = { it.id }) { district ->
-            VelroCard(onClick = { onEvent(BookingEvent.DistrictChosen(district)) }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(district.name, style = MaterialTheme.typography.bodyLarge)
-                        if (district.alternativeName != null) {
-                            Text(
-                                district.alternativeName!!,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    ChevronForward()
-                }
-            }
+            // A row, not a card per district: the soft list shape the whole
+            // flow uses, with the pale map pin saying what kind of thing this
+            // is before the name is read.
+            IconRow(
+                title = district.name,
+                subtitle = district.alternativeName,
+                icon = Icons.Filled.Map,
+                onClick = { onEvent(BookingEvent.DistrictChosen(district)) },
+            )
         }
     }
 }
@@ -484,12 +503,13 @@ private fun VillageList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Un
         // typed -- an Arabic yeh, a missing ZWNJ -- because the passenger did
         // not choose the spelling in the list.
         if (state.villages.size > FILTER_THRESHOLD) {
-            OutlinedTextField(
+            PillField(
                 value = filter,
                 onValueChange = { filter = it },
-                label = { Text(strings["geo.action.filter_villages"]) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm),
+                label = null,
+                placeholder = strings["geo.action.filter_villages"],
+                leadingIcon = Icons.Filled.Search,
+                modifier = Modifier.padding(top = Spacing.xs, bottom = Spacing.md),
             )
         }
 
@@ -498,18 +518,16 @@ private fun VillageList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Un
             return@Column
         }
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            contentPadding = PaddingValues(top = Spacing.xs, bottom = Spacing.xl),
+        ) {
             items(shown, key = { it.id }) { village ->
-                VelroCard(onClick = { onEvent(BookingEvent.VillageChosen(village)) }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            village.name,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f),
-                        )
-                        ChevronForward()
-                    }
-                }
+                IconRow(
+                    title = village.name,
+                    icon = Icons.Filled.Home,
+                    onClick = { onEvent(BookingEvent.VillageChosen(village)) },
+                )
             }
         }
     }
@@ -536,7 +554,10 @@ private fun StationList(state: BookingFlowUiState, onEvent: (BookingEvent) -> Un
         )
         return
     }
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        contentPadding = PaddingValues(top = Spacing.xs, bottom = Spacing.xl),
+    ) {
         items(state.stations, key = { it.id }) { station ->
             StationRow(station = station, onClick = { onEvent(BookingEvent.StationChosen(station)) })
         }
@@ -556,7 +577,10 @@ private fun DestinationList(state: BookingFlowUiState, onEvent: (BookingEvent) -
         return
     }
 
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        contentPadding = PaddingValues(top = Spacing.xs),
+    ) {
         items(state.destinationGroups, key = { it.id }) { group ->
             DestinationGroupRow(
                 group = group,
@@ -602,40 +626,40 @@ private fun DestinationGroupRow(
     onGroupClick: () -> Unit,
     onChildClick: (Destination) -> Unit,
 ) {
-    Column {
-        VelroCard(onClick = onGroupClick) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    group.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (selectedId == group.id) FontWeight.SemiBold
-                    else FontWeight.Normal,
-                )
-                if (group.children.isNotEmpty()) {
-                    Text(
-                        if (expanded) "−" else "+",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        val opens = group.children.isNotEmpty()
+        IconRow(
+            title = group.name,
+            icon = Icons.Filled.Place,
+            onClick = onGroupClick,
+            emphasised = selectedId == group.id,
+            // A group that opens in place says so with an expand mark rather
+            // than the chevron, which would promise a new screen.
+            chevron = !opens,
+            trailing = if (opens) {
+                {
+                    Icon(
+                        if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        // Decorative, as the "+" it replaces was meant to
+                        // be: the children appearing under the row are what
+                        // a screen reader reaches next.
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
-            }
-        }
+            } else null,
+        )
         if (expanded) {
-            Column(Modifier.padding(start = Spacing.xl, top = Spacing.xs)) {
+            Column(
+                Modifier.padding(start = Spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
                 for (child in group.children) {
-                    VelroCard(onClick = { onChildClick(child) }) {
-                        Text(
-                            child.name,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (selectedId == child.id) FontWeight.SemiBold
-                            else FontWeight.Normal,
-                        )
-                    }
-                    Spacer(Modifier.height(Spacing.xs))
+                    IconRow(
+                        title = child.name,
+                        onClick = { onChildClick(child) },
+                        emphasised = selectedId == child.id,
+                    )
                 }
             }
         }
@@ -652,92 +676,129 @@ private fun DestinationGroupRow(
  * (Ghorband to Charikar, Ghorband to Kabul) are arranged the evening before,
  * because the car leaves at six and nobody negotiates a fare at six.
  *
- * Days and hours as chips, not a date picker. A Hijri Shamsi calendar inside
- * an RTL dialog is the wrong instrument for "tomorrow morning", and this is
- * chosen at a roadside by somebody who may not read well: four taps, no
- * keyboard, nothing to type.
+ * "Now" as one pill, and the day and hour as two wheels, not a date picker. A
+ * Hijri Shamsi calendar inside an RTL dialog is the wrong instrument for
+ * "tomorrow morning", and this is chosen at a roadside by somebody who may not
+ * read well: nothing to type, and the choice is always the big green word in
+ * the middle of each wheel. The wheels replaced a day row and a sideways row
+ * of sixteen hour chips that scrolled the chosen hour off the screen.
+ *
+ * Turning either wheel, or tapping a row on it, means "not now": the ask is
+ * scheduled for what the wheels show. Tapping "Now" takes it back, and the
+ * wheels go quiet while it is chosen.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DeparturePicker(state: BookingFlowUiState, onEvent: (BookingEvent) -> Unit) {
     val strings = LocalVelroStrings.current
+    val scheduled = state.departureDay != null
 
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Text(
             strings["ride.ask.when"],
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            val days = listOf(
-                null to "ride.when.now",
-                0 to "ride.when.today",
-                1 to "ride.when.tomorrow",
-                2 to "ride.when.day_after",
-            )
-            for ((day, key) in days) {
-                FilterChip(
-                    selected = state.departureDay == day,
-                    onClick = { onEvent(BookingEvent.DepartureChanged(day, state.departureHour)) },
-                    label = { Text(strings[key]) },
+        NowPill(
+            selected = !scheduled,
+            onClick = { onEvent(BookingEvent.DepartureChanged(null, state.departureHour)) },
+        )
+
+        Spacer(Modifier.height(Spacing.xs))
+        Text(
+            strings["ride.when.set_time"],
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        // While "Now" is chosen the wheels show today, quietly, so the first
+        // turn starts from somewhere sensible rather than from nothing.
+        val shownDay = state.departureDay ?: 0
+        val hours = if (scheduled) state.departureHours
+        else state.copy(departureDay = 0).departureHours
+        val days = listOf(0, 1, 2)
+
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                WheelLabel(strings["ride.when.day"])
+                WheelPicker(
+                    items = days,
+                    selectedIndex = shownDay,
+                    onSelect = { index ->
+                        // The hour is carried through and pulled into the new
+                        // day's range by the state itself (withDeparture), so
+                        // an evening "today" cannot keep a morning hour.
+                        onEvent(BookingEvent.DepartureChanged(days[index], state.departureHour))
+                    },
+                    label = { day ->
+                        // A literal key per day, for the localisation guard.
+                        when (day) {
+                            0 -> strings["ride.when.today"]
+                            1 -> strings["ride.when.tomorrow"]
+                            else -> strings["ride.when.day_after"]
+                        }
+                    },
+                    active = scheduled,
                 )
+            }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                WheelLabel(strings["ride.when.hour"])
+                if (hours.isEmpty()) {
+                    // Today is spent. Say so rather than showing an empty wheel.
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(Sizing.touchTarget * 5),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            strings["ride.when.tomorrow"],
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                } else {
+                    // Opened at the held hour rather than at the start of the
+                    // list: a picker that hides your own choice reads as a
+                    // picker you have not used yet.
+                    WheelPicker(
+                        items = hours,
+                        selectedIndex = hours.indexOf(state.departureHour).coerceAtLeast(0),
+                        onSelect = { index ->
+                            onEvent(BookingEvent.DepartureChanged(shownDay, hours[index]))
+                        },
+                        label = { hour -> Numerals.localise("%02d:00".format(hour), strings.locale) },
+                        active = scheduled,
+                    )
+                }
             }
         }
 
-        // Only once a day is chosen. "Now" has no hour, and showing a row of
-        // hours beside it would suggest otherwise.
-        if (state.departureDay != null) {
-            val hours = state.departureHours
-            if (hours.isEmpty()) {
-                // Today is spent. Say so rather than showing an empty row.
-                Text(
-                    strings["ride.when.tomorrow"],
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                // Opened at the chosen hour rather than at the start of the
-                // list. The return defaults to two in the afternoon, which is
-                // ten chips along: the row showed 04:00 onwards with nothing
-                // apparently selected, and a picker that hides your own choice
-                // reads as a picker you have not used yet.
-                LazyRow(
-                    state = rememberLazyListState(
-                        initialFirstVisibleItemIndex =
-                            hours.indexOf(state.departureHour).coerceAtLeast(0)
-                    ),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
-                    items(hours, key = { it }) { hour ->
-                        FilterChip(
-                            selected = state.departureHour == hour,
-                            onClick = {
-                                onEvent(BookingEvent.DepartureChanged(state.departureDay, hour))
-                            },
-                            label = {
-                                Text(
-                                    Numerals.localise(
-                                        "%02d:00".format(hour), strings.locale
-                                    )
-                                )
-                            },
-                        )
-                    }
-                }
-            }
-
-            // The way back, offered only once there is a day to count it from.
-            //
-            // Ghorband returns are usually not the same day: a car to Kabul
-            // goes today and comes back tomorrow or later. That is why the
-            // return belongs in this ask rather than in a second negotiation
-            // afterwards -- one car, one driver, one price argued once. A
-            // passenger who agrees only the outbound has to find a car again
-            // from a town that is not theirs.
-            Spacer(Modifier.height(Spacing.xs))
+        // The way back, offered only once there is a day to count it from.
+        //
+        // Ghorband returns are usually not the same day: a car to Kabul
+        // goes today and comes back tomorrow or later. That is why the
+        // return belongs in this ask rather than in a second negotiation
+        // afterwards -- one car, one driver, one price argued once. A
+        // passenger who agrees only the outbound has to find a car again
+        // from a town that is not theirs.
+        if (scheduled) {
+            Spacer(Modifier.height(Spacing.sm))
             Text(
                 strings["ride.ask.return"],
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            // Wraps: five Dari labels do not fit one row on a small phone, and
+            // a row that runs off the edge hides the longest returns.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
                 val backs = listOf(
                     null to strings["ride.return.none"],
                     0 to strings["ride.return.same_day"],
@@ -746,12 +807,12 @@ private fun DeparturePicker(state: BookingFlowUiState, onEvent: (BookingEvent) -
                     3 to strings["ride.return.in_days", "days" to 3],
                 )
                 for ((after, label) in backs) {
-                    FilterChip(
+                    ChoiceChip(
                         selected = state.returnAfterDays == after,
                         onClick = {
                             onEvent(BookingEvent.ReturnChanged(after, state.returnHour))
                         },
-                        label = { Text(label) },
+                        label = label,
                     )
                 }
             }
@@ -765,18 +826,14 @@ private fun DeparturePicker(state: BookingFlowUiState, onEvent: (BookingEvent) -
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     items(state.returnHours, key = { it }) { hour ->
-                        FilterChip(
+                        ChoiceChip(
                             selected = state.returnHour == hour,
                             onClick = {
                                 onEvent(
                                     BookingEvent.ReturnChanged(state.returnAfterDays, hour)
                                 )
                             },
-                            label = {
-                                Text(
-                                    Numerals.localise("%02d:00".format(hour), strings.locale)
-                                )
-                            },
+                            label = Numerals.localise("%02d:00".format(hour), strings.locale),
                         )
                     }
                 }
@@ -784,15 +841,13 @@ private fun DeparturePicker(state: BookingFlowUiState, onEvent: (BookingEvent) -
                 // roadside -- so much to Kabul, so much back -- so the app
                 // asks for two, and adds them up itself rather than leaving
                 // the passenger to.
-                OutlinedTextField(
+                PillField(
                     value = state.returnFare,
                     onValueChange = { onEvent(BookingEvent.ReturnFareChanged(it)) },
-                    label = { Text(strings["ride.ask.fare_back"]) },
-                    suffix = { Text(strings["common.label.currency_afn"]) },
-                    singleLine = true,
+                    label = strings["ride.ask.fare_back"],
+                    suffix = strings["common.label.currency_afn"],
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     textStyle = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.fillMaxWidth(),
                 )
                 state.totalFareMinor?.let { total ->
                     Text(
@@ -817,22 +872,80 @@ private fun DeparturePicker(state: BookingFlowUiState, onEvent: (BookingEvent) -
 }
 
 @Composable
+private fun WheelLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = Spacing.xs),
+    )
+}
+
+/**
+ * "Now": a white pill that, chosen, carries a green edge and a check.
+ *
+ * The check as well as the edge, so the state does not rest on colour; and a
+ * radio button to a screen reader, because it is one of two answers to "when"
+ * -- the other being whatever the wheels say.
+ */
+@Composable
+private fun NowPill(selected: Boolean, onClick: () -> Unit) {
+    val strings = LocalVelroStrings.current
+    val shape = RoundedCornerShape(Radius.pill)
+    val colours = MaterialTheme.colorScheme
+    Surface(
+        selected = selected,
+        onClick = onClick,
+        shape = shape,
+        color = colours.surface,
+        contentColor = if (selected) colours.primary else colours.onSurface,
+        border = BorderStroke(
+            if (selected) 2.dp else 1.dp,
+            if (selected) colours.primary else colours.outlineVariant,
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .softShadow(shape)
+            .height(Sizing.buttonHeight)
+            .semantics { role = Role.RadioButton },
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (selected) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(Sizing.iconSm + 2.dp),
+                )
+                Spacer(Modifier.size(Spacing.sm))
+            }
+            Text(
+                strings["ride.when.now"],
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            )
+        }
+    }
+}
+
+@Composable
 private fun SeatCountPicker(selected: Int, onSelect: (Int) -> Unit) {
     val strings = LocalVelroStrings.current
     Column {
         Text(
             strings["home.question.passengers"],
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(Spacing.sm))
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             for (count in 1..4) {
-                FilterChip(
+                ChoiceChip(
                     selected = count == selected,
                     onClick = { onSelect(count) },
-                    label = {
-                        Text(Numerals.localise(count.toString(), strings.locale))
-                    },
+                    label = Numerals.localise(count.toString(), strings.locale),
                 )
             }
         }
@@ -1006,23 +1119,17 @@ private fun AskFare(
         // what the journey looks like.
         state.journeyMap?.let { JourneyMap(it) }
 
-        OutlinedTextField(
+        PillField(
             value = state.offeredFare,
             onValueChange = { onEvent(BookingEvent.FareChanged(it)) },
             // Named "fare there" once there is a way back to distinguish it
             // from, and "how much will you pay?" when there is not.
-            label = {
-                Text(
-                    if (state.returnAfterDays != null) strings["ride.ask.fare_out"]
-                    else strings["ride.ask.title"]
-                )
-            },
-            suffix = { Text(strings["common.label.currency_afn"]) },
-            singleLine = true,
+            label = if (state.returnAfterDays != null) strings["ride.ask.fare_out"]
+            else strings["ride.ask.title"],
+            suffix = strings["common.label.currency_afn"],
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             // The one number on the screen, so it is the one large control.
             textStyle = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.fillMaxWidth(),
         )
 
         // Passenger count sits with the price because it is what the price is
@@ -1037,22 +1144,22 @@ private fun AskFare(
                 style = MaterialTheme.typography.bodyMedium,
             )
             (1..4).forEach { count ->
-                FilterChip(
+                ChoiceChip(
                     selected = state.seatCount == count,
                     onClick = { onEvent(BookingEvent.SeatCountChanged(count)) },
-                    label = { Text(Numerals.localise(count.toString(), strings.locale)) },
+                    label = Numerals.localise(count.toString(), strings.locale),
                 )
             }
         }
 
+        Spacer(Modifier.height(Spacing.xs))
         DeparturePicker(state, onEvent)
+        Spacer(Modifier.height(Spacing.xs))
 
-        OutlinedTextField(
+        PillField(
             value = state.note,
             onValueChange = { onEvent(BookingEvent.NoteChanged(it)) },
-            label = { Text(strings["ride.ask.note"]) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            label = strings["ride.ask.note"],
         )
 
         // Why the OS is about to ask, said before it asks -- or, once it has
@@ -1069,6 +1176,9 @@ private fun AskFare(
             loading = state.isSubmitting,
             modifier = Modifier.fillMaxWidth(),
         )
+        // Room under the button for its own soft shadow, which the scrolling
+        // column would otherwise cut off flat at its foot.
+        Spacer(Modifier.height(Spacing.lg))
     }
 }
 

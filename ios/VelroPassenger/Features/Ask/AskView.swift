@@ -320,13 +320,13 @@ struct AmountField: View {
                     .velroFont(.body)
                     .foregroundStyle(Palette.onSurfaceVariant)
             }
-            .padding(.horizontal, Spacing.lg)
+            .padding(.horizontal, Spacing.xl)
             .frame(minHeight: Sizing.fieldHeight + 8)
-            .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+            .background(Palette.surface, in: Capsule())
             .overlay(
-                RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                    .strokeBorder(focused ? Palette.primary : Palette.outline, lineWidth: focused ? 2 : 1)
+                Capsule().strokeBorder(focused ? Palette.primary : Palette.outline, lineWidth: focused ? 2 : 1)
             )
+            .elevation(.low)
             .onTapGesture { focused = true }
         }
     }
@@ -342,32 +342,61 @@ private struct DeparturePicker: View {
     @Environment(\.strings) private var strings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
             Text(strings["ride.ask.when"])
-                .velroFont(.label, weight: .medium)
+                .velroFont(.heading, weight: .bold)
                 .foregroundStyle(Palette.onSurface)
-            FlowLayout {
-                ForEach(dayChoices, id: \.key) { choice in
-                    ChoiceChip(label: strings[choice.key], selected: form.departureDay == choice.day) {
-                        form.setDeparture(day: choice.day, hour: form.departureHour)
-                    }
-                    .accessibilityIdentifier("ask.day.\(choice.day ?? -1)")
-                }
+
+            // Leaving now is a single tap, as on every ride app; anything
+            // later is turned on the drums below.
+            NowButton(label: strings["ride.when.now"], selected: form.departureDay == nil) {
+                form.setDeparture(day: nil, hour: form.departureHour)
             }
+            .accessibilityIdentifier("ask.day.-1")
 
-            // "Now" has no hour; a row of hours beside it would suggest otherwise.
-            if form.departureDay != nil {
-                if form.departureHours.isEmpty {
-                    // Today is spent: say so rather than show an empty row.
-                    Text(strings["ride.when.tomorrow"])
-                        .velroFont(.caption)
-                        .foregroundStyle(Palette.onSurfaceVariant)
-                } else {
-                    HourRow(hours: form.departureHours, selected: form.departureHour) {
-                        form.setDeparture(day: form.departureDay, hour: $0)
+            VStack(spacing: Spacing.sm) {
+                Text(strings["ride.when.set_time"])
+                    .velroFont(.label, weight: .medium)
+                    .foregroundStyle(Palette.onSurfaceVariant)
+                    .frame(maxWidth: .infinity)
+                ZStack {
+                    WheelBand()
+                    HStack(spacing: Spacing.sm) {
+                        WheelPicker(
+                            items: dayChoices.map { .init(value: $0.day, label: strings[$0.key], identifier: "ask.day.\($0.day)") },
+                            selection: form.departureDay
+                        ) { day in
+                            form.setDeparture(day: day, hour: form.departureHour)
+                        }
+                        .accessibilityLabel(strings["ride.when.day"])
+
+                        // Today is spent: say so rather than show an empty drum.
+                        if form.departureDay == 0 && form.departureHours.isEmpty {
+                            Text(strings["ride.when.tomorrow"])
+                                .velroFont(.caption)
+                                .foregroundStyle(Palette.onSurfaceVariant)
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            WheelPicker(
+                                items: shownHours.map { .init(value: $0, label: Numerals.localise(String(format: "%02d:00", $0), strings.locale)) },
+                                selection: form.departureDay == nil ? nil : form.departureHour
+                            ) { hour in
+                                form.setDeparture(day: form.departureDay ?? 1, hour: hour)
+                            }
+                            .accessibilityLabel(strings["ride.when.hour"])
+                        }
                     }
+                    .padding(.horizontal, Spacing.sm)
                 }
+                // Quieter while "now" is chosen: there, but not the answer.
+                .opacity(form.departureDay == nil ? 0.55 : 1)
+            }
+            .padding(.vertical, Spacing.md)
+            .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .elevation(.low)
 
+            // "Now" has no hour, and no way back to arrange either.
+            if form.departureDay != nil {
                 // The way back, in the same ask: one car, one driver, one price
                 // argued once. Returns are usually another day.
                 Text(strings["ride.ask.return"])
@@ -383,9 +412,19 @@ private struct DeparturePicker: View {
                 }
 
                 if form.returnAfterDays != nil {
-                    HourRow(hours: form.returnHours, selected: form.returnHour) {
-                        form.setReturn(afterDays: form.returnAfterDays, hour: $0)
+                    ZStack {
+                        WheelBand()
+                        WheelPicker(
+                            items: form.returnHours.map { .init(value: $0, label: Numerals.localise(String(format: "%02d:00", $0), strings.locale)) },
+                            selection: form.returnHour,
+                            choose: { form.setReturn(afterDays: form.returnAfterDays, hour: $0) },
+                            visibleRows: 3
+                        )
+                        .accessibilityLabel(strings["ride.when.hour"])
                     }
+                    .padding(Spacing.sm)
+                    .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .elevation(.low)
                     AmountField(label: strings["ride.ask.fare_back"], text: $form.returnFare, identifier: "ask.fare.back")
                     // Two legs argued as two numbers, added up by the app
                     // rather than by the passenger.
@@ -402,8 +441,14 @@ private struct DeparturePicker: View {
         }
     }
 
-    private var dayChoices: [(day: Int?, key: String)] {
-        [(nil, "ride.when.now"), (0, "ride.when.today"), (1, "ride.when.tomorrow"), (2, "ride.when.day_after")]
+    private var dayChoices: [(day: Int, key: String)] {
+        [(0, "ride.when.today"), (1, "ride.when.tomorrow"), (2, "ride.when.day_after")]
+    }
+
+    /// The hours of the chosen day; while "now" is chosen, a full day's, so
+    /// the drum is never empty.
+    private var shownHours: [Int] {
+        form.departureDay == nil ? Array(AskForm.earliestHour...AskForm.latestHour) : form.departureHours
     }
 
     private var returnChoices: [(after: Int?, label: String)] {
@@ -417,29 +462,29 @@ private struct DeparturePicker: View {
     }
 }
 
-/// A row of hours that opens at the chosen one: a picker that hides your own
-/// choice reads as one you have not used yet.
-private struct HourRow: View {
-    let hours: [Int]
-    let selected: Int
-    let choose: (Int) -> Void
-    @Environment(\.strings) private var strings
+/// "Now", as a white pill: one tap for the commonest answer. Chosen, it
+/// says so with a tick and the green edge, not with colour alone.
+private struct NowButton: View {
+    let label: String
+    let selected: Bool
+    let action: () -> Void
 
     var body: some View {
-        ScrollViewReader { reader in
-            ScrollView(.horizontal) {
-                HStack(spacing: Spacing.sm) {
-                    ForEach(hours, id: \.self) { hour in
-                        ChoiceChip(label: Numerals.localise(String(format: "%02d:00", hour), strings.locale), selected: hour == selected) {
-                            choose(hour)
-                        }
-                        .id(hour)
-                    }
-                }
+        Button(action: action) {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: selected ? "checkmark.circle.fill" : "bolt.fill")
+                    .accessibilityHidden(true)
+                Text(label).velroFont(.label, weight: .bold)
             }
-            .scrollIndicators(.hidden)
-            .onAppear { reader.scrollTo(selected, anchor: .center) }
+            .foregroundStyle(Palette.primary)
+            .frame(maxWidth: .infinity, minHeight: Sizing.buttonHeight)
+            .background(selected ? Palette.primaryContainer : Palette.surface, in: Capsule())
+            .overlay(Capsule().strokeBorder(selected ? Palette.primary : Palette.outlineVariant, lineWidth: selected ? 2 : 1))
+            .elevation(.low)
+            .contentShape(Capsule())
         }
+        .buttonStyle(PressStyle())
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 

@@ -8,8 +8,11 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 /**
- * Light status-bar icons while a green brand field (BrandHeader, BrandHero)
- * is on screen, and the theme's own icons once the last one has gone.
+ * Light status-bar icons while a green brand field (BrandHeader) is on
+ * screen, and the theme's own icons once the last one has gone.
+ *
+ * Sign-in had a second field, BrandHero, until the soft redesign gave its top
+ * to a drawn map on the light page; the driver's home header is the one left.
  *
  * Counted, not saved-and-restored: each field used to remember the value it
  * found and put it back, and during a navigation transition two fields are on

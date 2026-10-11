@@ -14,11 +14,19 @@ struct OffersView: View {
     }
 
     var body: some View {
-        VelroScreen(title: strings["ride.offers.title"]) {
-            content
-                .padding(.horizontal, Spacing.gutter)
-                .padding(.top, Spacing.md)
+        GeometryReader { geometry in
+            if geometry.size.width >= Wide.threshold {
+                wide(geometry)
+            } else {
+                compact(geometry)
+            }
         }
+        .background(Palette.background)
+        .navigationTitle(strings["ride.offers.title"])
+        .navigationBarTitleDisplayMode(.inline)
+        // The title is on the sheet; the bar is only its floating back button.
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar { ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) } }
         .task { await model.poll() }
         // The moment a price is agreed the journey exists, so she is taken to
         // it, with home underneath -- not left on prices that no longer matter.
@@ -30,18 +38,67 @@ struct OffersView: View {
         }
     }
 
-    @ViewBuilder
-    private var content: some View {
-        if model.isLoading && model.request == nil {
-            LoadingState()
-        } else if let request = model.request {
-            VStack(alignment: .leading, spacing: Spacing.md) {
+    /// Unfolded: the road across the whole screen, the answers on a panel
+    /// standing at its side.
+    private func wide(_ geometry: GeometryProxy) -> some View {
+        ZStack(alignment: .topLeading) {
+            if let map = model.map {
+                JourneyMapView(map: map, height: nil, fullBleed: true)
+                    .ignoresSafeArea()
+            }
+            ScrollView {
+                content(grabber: false)
+                    .padding(.horizontal, Spacing.gutter)
+                    .padding(.vertical, Spacing.lg)
+            }
+            .scrollIndicators(.hidden)
+            .frame(width: Wide.panel)
+            .floatingPanel()
+            .padding(.leading, Spacing.gutter)
+            .padding(.bottom, Spacing.lg)
+        }
+    }
+
+    private func compact(_ geometry: GeometryProxy) -> some View {
+        let mapHeight = geometry.size.height * 0.42 + geometry.safeAreaInsets.top
+        return ZStack(alignment: .top) {
                 // The road first, as inDrive and its kind open: the journey she
                 // is pricing, drawn, so the prices below land on a place rather
-                // than on a line of text.
+                // than on a line of text. Behind everything, edge to edge.
                 if let map = model.map {
-                    JourneyMapView(map: map, height: 170)
+                    JourneyMapView(map: map, height: mapHeight, fullBleed: true)
+                        .ignoresSafeArea(edges: .top)
                 }
+                ScrollView {
+                    VStack(spacing: 0) {
+                        Color.clear
+                            .frame(height: model.map == nil ? Spacing.sm : max(mapHeight - geometry.safeAreaInsets.top - Radius.sheet, 0))
+                            .accessibilityHidden(true)
+                        content
+                            .padding(.horizontal, Spacing.gutter)
+                            .padding(.bottom, Spacing.xl)
+                            .frame(minHeight: geometry.size.height * 0.62, alignment: .top)
+                            .sheetPanel()
+                    }
+                }
+                .scrollIndicators(.hidden)
+            }
+    }
+
+    private var content: some View { content(grabber: true) }
+
+    @ViewBuilder
+    private func content(grabber: Bool) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            if grabber { SheetGrabber() }
+            Text(strings["ride.offers.title"])
+                .velroFont(.headline)
+                .foregroundStyle(Palette.onSurface)
+                .accessibilityAddTraits(.isHeader)
+
+            if model.isLoading && model.request == nil {
+                LoadingState()
+            } else if let request = model.request {
                 journey(request)
                 if let error = model.error { InlineError(error: error) }
 
@@ -50,16 +107,13 @@ struct OffersView: View {
                 // screen branching on the list alone spins over "waiting" for
                 // ever.
                 if !request.isOpen && request.bookingId == nil {
-                    Spacer()
                     RequestClosed(status: request.status) { app.router.replaceAll(with: .ask) }
-                    Spacer()
+                        .padding(.vertical, Spacing.xl)
                 } else if !request.isOpen {
                     // Matched: already on the way to the booking.
                     LoadingState()
                 } else if request.liveOffers.isEmpty {
-                    Spacer()
                     waiting
-                    Spacer()
                 } else {
                     offers(request)
                 }
@@ -74,51 +128,54 @@ struct OffersView: View {
                         Task { await model.cancel() }
                     }
                     .accessibilityIdentifier("offers.cancel")
+                    .padding(.top, Spacing.sm)
                 }
-            }
-            .padding(.bottom, Spacing.lg)
-        } else if let error = model.error {
-            ErrorState(error: error) { Task { await model.reload() } }
-        } else {
-            ErrorState(error: APIError(code: "RIDE_REQUEST_NOT_FOUND", httpStatus: 404)) {
-                Task { await model.reload() }
+            } else if let error = model.error {
+                ErrorState(error: error) { Task { await model.reload() } }
+            } else {
+                ErrorState(error: APIError(code: "RIDE_REQUEST_NOT_FOUND", httpStatus: 404)) {
+                    Task { await model.reload() }
+                }
             }
         }
     }
 
     private func journey(_ request: RideRequest) -> some View {
-        VelroCard {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(strings["ride.journey.from_to", [
-                    "origin": request.originStationName ?? strings["common.value.unknown"],
-                    "destination": request.destinationName ?? strings["common.value.unknown"],
-                ]])
-                .velroFont(.heading, weight: .medium)
-                .foregroundStyle(Palette.onSurface)
-                if let place = request.originPlaceName {
-                    Text(strings["ride.journey.from_place", ["place": place]])
-                        .velroFont(.label)
-                        .foregroundStyle(Palette.primary)
-                }
-                // The whole journey: on a round trip the outbound is half the ask.
-                Text(strings["ride.offers.you_asked", ["amount": MoneyFormatter.format(request.askingTotal, strings: strings)]])
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            JourneyLine(origin: request.originStationName, destination: request.destinationName, role: .body)
+            if let place = request.originPlaceName {
+                Text(strings["ride.journey.from_place", ["place": place]])
                     .velroFont(.label)
-                    .foregroundStyle(Palette.onSurfaceVariant)
+                    .foregroundStyle(Palette.primary)
             }
+            // The whole journey: on a round trip the outbound is half the ask.
+            Label {
+                Text(strings["ride.offers.you_asked", ["amount": MoneyFormatter.format(request.askingTotal, strings: strings)]])
+                    .velroFont(.label, weight: .medium)
+            } icon: {
+                Image(systemName: "banknote").font(.footnote)
+            }
+            .foregroundStyle(Palette.onSurfaceVariant)
         }
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.surface.opacity(0.7), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
-    /// A spinner, because something really is coming: drivers are being shown
-    /// this request now. An empty state would say the opposite.
+    /// Rings spreading from a car, because something really is coming:
+    /// drivers are being shown this request now. An empty state would say
+    /// the opposite.
     private var waiting: some View {
         VStack(spacing: Spacing.md) {
-            ProgressView().controlSize(.large)
+            RadarPulse()
             Text(strings["ride.offers.waiting"])
                 .velroFont(.body)
                 .foregroundStyle(Palette.onSurfaceVariant)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.lg)
+        .accessibilityElement(children: .combine)
         .accessibilityIdentifier("offers.waiting")
     }
 
@@ -127,31 +184,31 @@ struct OffersView: View {
         // "cheapest", and a badge on the only card is noise. The list is
         // already cheapest-first, so the best price is its head.
         let bestId = request.liveOffers.count > 1 ? request.liveOffers.first?.id : nil
-        return ScrollView {
-            LazyVStack(spacing: Spacing.sm) {
-                ForEach(request.liveOffers) { offer in
-                    OfferCard(
-                        offer: offer,
-                        photo: model.photos[offer.driverId],
-                        asking: request.askingTotal,
-                        best: offer.id == bestId,
-                        accepting: model.acceptingOfferId == offer.id,
-                        enabled: model.acceptingOfferId == nil
-                    ) {
-                        Task { await model.accept(offer) }
-                    }
-                    // This list changes under her finger: a reply can arrive as
-                    // she reaches for Accept. The insert is animated so the
-                    // shift is something the eye can follow -- otherwise she
-                    // agrees a fare with the wrong driver.
-                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+        return LazyVStack(spacing: Spacing.lg) {
+            ForEach(request.liveOffers) { offer in
+                OfferCard(
+                    offer: offer,
+                    photo: model.photos[offer.driverId],
+                    asking: request.askingTotal,
+                    best: offer.id == bestId,
+                    accepting: model.acceptingOfferId == offer.id,
+                    enabled: model.acceptingOfferId == nil
+                ) {
+                    Task { await model.accept(offer) }
                 }
+                // This list changes under her finger: a reply can arrive as
+                // she reaches for Accept. The insert is animated so the
+                // shift is something the eye can follow -- otherwise she
+                // agrees a fare with the wrong driver.
+                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             }
-            .animation(reduceMotion ? nil : .spring(duration: 0.35), value: request.liveOffers.map(\.id))
         }
+        .animation(reduceMotion ? nil : .spring(duration: 0.35), value: request.liveOffers.map(\.id))
     }
 }
 
+/// One driver's answer, laid out as ride apps lay out a car: the price
+/// first and largest, the face beside it, then who he is and what he drives.
 private struct OfferCard: View {
     let offer: FareOffer
     let photo: UIImage?
@@ -163,85 +220,95 @@ private struct OfferCard: View {
     @Environment(\.strings) private var strings
 
     var body: some View {
-        VelroCard {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                // The cheapest reply, named. A ride app does not make her
-                // compare numbers on a roadside: it points.
-                if best {
-                    Label {
-                        Text(strings["ride.offers.best_price"]).velroFont(.caption, weight: .medium)
-                    } icon: {
-                        Image(systemName: "arrow.down.circle.fill").font(.caption)
-                    }
-                    .foregroundStyle(Palette.onToneActive)
-                    .padding(.horizontal, Spacing.sm)
-                    .padding(.vertical, Spacing.xxs)
-                    .background(Palette.toneActive, in: Capsule())
-                    .accessibilityElement(children: .combine)
-                }
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack(alignment: .top, spacing: Spacing.md) {
+                price
+                Spacer(minLength: Spacing.sm)
+                // The face before the name: she is the one about to get into
+                // his car on an empty road.
+                DriverAvatar(photo: photo, size: 64)
+            }
 
-                HStack(alignment: .top, spacing: Spacing.md) {
-                    // The face before the name and the price: she is the one
-                    // about to get into his car on an empty road.
-                    DriverAvatar(photo: photo)
-                    VStack(alignment: .leading, spacing: Spacing.xxs) {
-                        Text(offer.driverName ?? strings["common.value.no_name"])
-                            .velroFont(.heading, weight: .medium)
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(offer.driverName ?? strings["common.value.no_name"])
+                    .velroFont(.heading, weight: .bold)
+                    .foregroundStyle(Palette.onSurface)
+                HStack(spacing: Spacing.sm) {
+                    if let rating = offer.driverRating {
+                        StarRating(rating: rating)
+                        Text(Numerals.localise(String(format: "%.1f", rating), strings.locale))
+                            .velroFont(.caption, weight: .medium)
                             .foregroundStyle(Palette.onSurface)
-                        HStack(spacing: Spacing.xs) {
-                            if let rating = offer.driverRating {
-                                Image(systemName: "star.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(Palette.accent)
-                                    .accessibilityHidden(true)
-                                Text(Numerals.localise(String(format: "%.1f", rating), strings.locale))
-                                    .velroFont(.caption, weight: .medium)
-                            }
-                            Text(strings["ride.offers.trips", ["count": offer.driverTrips ?? 0]])
-                                .velroFont(.caption)
-                                .foregroundStyle(Palette.onSurfaceVariant)
-                        }
                     }
-                    Spacer(minLength: Spacing.sm)
-                    price
-                }
-
-                if let plate = offer.vehiclePlate {
-                    HStack(spacing: Spacing.sm) {
-                        // Read off a car: never mirrored, never in Eastern digits.
-                        PlateText(plate: plate)
-                        if let description = offer.vehicleDescription {
-                            Text(description)
-                                .velroFont(.caption)
-                                .foregroundStyle(Palette.onSurfaceVariant)
-                        }
-                    }
-                }
-
-                if let note = offer.note {
-                    Text(note)
+                    Text(strings["ride.offers.trips", ["count": offer.driverTrips ?? 0]])
                         .velroFont(.caption)
                         .foregroundStyle(Palette.onSurfaceVariant)
                 }
-
-                Divider().padding(.vertical, Spacing.xxs)
-
-                PrimaryButton(label: strings["ride.offers.accept"], enabled: enabled, loading: accepting, action: accept)
-                    .accessibilityIdentifier("offers.accept")
+                .accessibilityElement(children: .combine)
             }
+
+            if let plate = offer.vehiclePlate {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "car.fill")
+                        .font(.footnote)
+                        .foregroundStyle(Palette.primary)
+                        .accessibilityHidden(true)
+                    // Read off a car: never mirrored, never in Eastern digits.
+                    PlateText(plate: plate)
+                    if let description = offer.vehicleDescription {
+                        Text(description)
+                            .velroFont(.caption)
+                            .foregroundStyle(Palette.onSurfaceVariant)
+                            .lineLimit(1)
+                    }
+                }
+            }
+
+            if let note = offer.note {
+                Text(note)
+                    .velroFont(.caption)
+                    .foregroundStyle(Palette.onSurfaceVariant)
+            }
+
+            PrimaryButton(label: strings["ride.offers.accept"], enabled: enabled, loading: accepting, action: accept)
+                .accessibilityIdentifier("offers.accept")
+                .padding(.top, Spacing.xs)
         }
+        .padding(Spacing.lg)
+        .padding(.top, best ? Spacing.sm : 0)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         // The best price wears the green edge; the rest sit quiet, so the eye
         // lands on it first without a word being shouted.
         .overlay(
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .strokeBorder(Palette.primary, lineWidth: best ? 2 : 0)
+                .strokeBorder(best ? Palette.primary : Palette.outlineVariant, lineWidth: best ? 2 : 1)
         )
+        .elevation(.low)
+        // The cheapest reply, named on a tag hung on its edge. A ride app
+        // does not make her compare numbers on a roadside: it points.
+        .overlay(alignment: .topLeading) {
+            if best {
+                Label {
+                    Text(strings["ride.offers.best_price"]).velroFont(.caption, weight: .bold)
+                } icon: {
+                    Image(systemName: "arrow.down.circle.fill").font(.caption)
+                }
+                .foregroundStyle(Palette.onPrimary)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.xs)
+                .background(Palette.primary, in: Capsule())
+                .offset(x: Spacing.lg, y: -Spacing.md)
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(.top, best ? Spacing.md : 0)
     }
 
     private var price: some View {
-        VStack(alignment: .trailing, spacing: Spacing.xxs) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
             Text(MoneyFormatter.format(offer.total, strings: strings))
-                .velroFont(.title, weight: .bold)
+                .velroFont(.headline)
                 .foregroundStyle(Palette.onSurface)
             // The two legs under the total, on a round trip only.
             if let back = offer.returnAmount {
@@ -259,7 +326,7 @@ private struct OfferCard: View {
             Text(difference == 0
                  ? strings["ride.offers.same_as_asked"]
                  : MoneyFormatter.format(minor: difference, currency: asking.currency, strings: strings, showPlus: true))
-                .velroFont(.caption)
+                .velroFont(.label, weight: .medium)
                 .foregroundStyle(difference <= 0 ? Palette.primary : Palette.onSurfaceVariant)
         }
     }

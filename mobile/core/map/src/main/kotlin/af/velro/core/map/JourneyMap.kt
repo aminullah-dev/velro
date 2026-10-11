@@ -72,7 +72,15 @@ fun JourneyMap(
     modifier: Modifier = Modifier,
     /** Edge to edge, for the ride itself, instead of a rounded card. */
     fullBleed: Boolean = false,
+    /**
+     * How much of the map's foot something else lies over -- the offers
+     * sheet's rounded top. The credit line is lifted clear of it: the ODbL
+     * attribution is the price of the data, and it must stay readable, not
+     * merely present under a panel.
+     */
+    bottomInset: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
+    val insetPx = with(androidx.compose.ui.platform.LocalDensity.current) { bottomInset.roundToPx() }
     val context = LocalContext.current
     // Must run before the first MapView is constructed, once per process.
     remember { MapLibre.getInstance(context.applicationContext) }
@@ -114,10 +122,20 @@ fun JourneyMap(
             modifier
                 .fillMaxWidth()
                 .height(220.dp)
-                .clip(RoundedCornerShape(Radius.card))
+                .clip(RoundedCornerShape(Radius.surface))
         },
         update = { view ->
             view.getMapAsync { map ->
+                if (drawn.attributionBase == null) {
+                    // Read once, so a second render cannot add the inset twice.
+                    drawn.attributionBase = map.uiSettings.attributionMarginBottom
+                }
+                map.uiSettings.setAttributionMargins(
+                    map.uiSettings.attributionMarginLeft,
+                    map.uiSettings.attributionMarginTop,
+                    map.uiSettings.attributionMarginRight,
+                    (drawn.attributionBase ?: 0) + insetPx,
+                )
                 if (drawn.data != data) {
                     drawn.data = data
                     map.render(context, view, data, vehicle)
@@ -129,7 +147,11 @@ fun JourneyMap(
     )
 }
 
-private class Drawn { var data: TripMapData? = null }
+private class Drawn {
+    var data: TripMapData? = null
+    /** The attribution's own bottom margin, before any inset was added to it. */
+    var attributionBase: Int? = null
+}
 
 private fun MapLibreMap.render(context: Context, view: MapView, data: TripMapData, vehicle: MapPlace?) {
     // A card, not a navigator: no rotation, no tilt, pinch and pan only.

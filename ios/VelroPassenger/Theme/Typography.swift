@@ -4,10 +4,14 @@ import VelroCore
 
 /// The type scale, as the Android theme sets it.
 enum TextRole {
+    /// The few words a page exists to say -- the intro's headlines -- and
+    /// nothing else.
+    case hero
     case display, headline, title, heading, body, label, caption
 
     var size: CGFloat {
         switch self {
+        case .hero: 40
         case .display: 32
         case .headline: 28
         case .title: 22
@@ -20,7 +24,7 @@ enum TextRole {
 
     var weight: VelroFonts.Weight {
         switch self {
-        case .display, .headline: .bold
+        case .hero, .display, .headline: .bold
         case .title, .heading, .label: .medium
         case .body, .caption: .regular
         }
@@ -29,7 +33,7 @@ enum TextRole {
     /// What the size scales with when somebody turns up the system text size.
     var textStyle: Font.TextStyle {
         switch self {
-        case .display: .largeTitle
+        case .hero, .display: .largeTitle
         case .headline: .title
         case .title: .title2
         case .heading: .headline

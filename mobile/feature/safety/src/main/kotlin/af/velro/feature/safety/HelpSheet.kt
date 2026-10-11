@@ -1,5 +1,6 @@
 package af.velro.feature.safety
 
+import androidx.compose.ui.unit.dp
 import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.ui.component.VelroCard
@@ -100,7 +101,20 @@ fun HelpSheet(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        // The sheet shape every sheet in the soft redesign shares: rounder
+        // than a card, because it is the ground the help lies on. Solid, not
+        // glass -- these are emergency numbers, read under stress, and they
+        // get the plainest ground there is.
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(
+            topStart = af.velro.core.ui.theme.Radius.sheet,
+            topEnd = af.velro.core.ui.theme.Radius.sheet,
+        ),
+        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+    ) {
         val report = state.report
         if (report == null) {
             HelpSheetContent(

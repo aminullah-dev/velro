@@ -1,14 +1,22 @@
+import MapKit
 import SwiftUI
 import VelroCore
 
 /// Home, section 72: one action and what the passenger already has. A home
 /// screen that tries to show everything is how a first-time user closes the app.
+///
+/// The map is the ground she stands on -- the valley, and her own dot when
+/// iOS already lets VELRO see it -- with the screen's one action on a sheet
+/// lying over it. Scroll, and the sheet rises over the map to show her trips.
 struct HomeView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.strings) private var strings
+    @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: HomeModel
     @State private var helpOpen = false
     @State private var reportsAfterHelp = false
+    @State private var menuOpen = false
 
     init(app: AppModel) {
         _model = State(initialValue: HomeModel(app: app))
@@ -16,43 +24,56 @@ struct HomeView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            ScrollView {
-                VStack(spacing: 0) {
-                    header(topInset: geometry.safeAreaInsets.top)
-
-                    VStack(alignment: .leading, spacing: Spacing.md) {
-                        if let open = model.openRequest {
-                            OpenRequestCard(request: open) { app.router.open(.offers) }
-                                .padding(.bottom, Spacing.sm)
+            ZStack(alignment: .top) {
+                if geometry.size.width >= Wide.threshold {
+                    // Unfolded: the whole screen is map, and the sheet stands
+                    // beside it as a panel rather than stretching across.
+                    HomeMap().ignoresSafeArea()
+                    HStack(alignment: .top, spacing: 0) {
+                        ScrollView {
+                            sheetContent.padding(.top, Spacing.lg)
                         }
-
-                        HStack {
-                            Text(strings["home.section.recent_trips"])
-                                .velroFont(.heading)
-                                .foregroundStyle(Palette.onSurface)
-                            Spacer()
-                            // Home shows the few most recent; the rest, and the
-                            // receipts, live behind this.
-                            TextAction(label: strings["history.title"]) { app.router.open(.history) }
-                                .accessibilityIdentifier("home.history")
-                        }
-
-                        // Saved data, honestly labelled.
-                        if model.isStale && !model.bookings.isEmpty {
-                            Text(strings["common.state.offline"])
-                                .velroFont(.caption)
-                                .foregroundStyle(Palette.onSurfaceVariant)
-                        }
-
-                        journeys
+                        .scrollIndicators(.hidden)
+                        .refreshable { await model.refresh() }
+                        .frame(width: Wide.panel)
+                        .floatingPanel()
+                        Spacer(minLength: 0)
                     }
+                    .padding(.leading, Spacing.gutter)
+                    .padding(.top, Sizing.touchTarget + Spacing.lg)
+                    .padding(.bottom, Spacing.lg)
+                } else {
+                    HomeMap()
+                        .frame(height: geometry.size.height * 0.62 + geometry.safeAreaInsets.top)
+                        .ignoresSafeArea(edges: .top)
+
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            // The window onto the map. The sheet starts below it.
+                            Color.clear
+                                .frame(height: geometry.size.height * 0.40)
+                                .accessibilityHidden(true)
+                            VStack(spacing: 0) {
+                                SheetGrabber()
+                                sheetContent
+                            }
+                            .frame(minHeight: geometry.size.height * 0.60, alignment: .top)
+                            .sheetPanel()
+                        }
+                    }
+                    .scrollIndicators(.hidden)
+                    .refreshable { await model.refresh() }
+                }
+
+                topBar
                     .padding(.horizontal, Spacing.gutter)
-                    .padding(.top, Spacing.lg)
-                    .padding(.bottom, Spacing.xl)
+                    .padding(.top, Spacing.xs)
+
+                if menuOpen {
+                    SideMenu(close: closeMenu, open: openFromMenu)
+                        .zIndex(1)
                 }
             }
-            .ignoresSafeArea(edges: .top)
-            .refreshable { await model.refresh() }
         }
         .background(Palette.background)
         .toolbar(.hidden, for: .navigationBar)
@@ -74,43 +95,91 @@ struct HomeView: View {
         app.router.open(.reports)
     }
 
-    private func header(topInset: CGFloat) -> some View {
-        BrandHeader(title: strings["app.name"], topInset: topInset) {
-            // In the header, so it is on screen whatever the list below is doing.
-            Button { helpOpen = true } label: {
-                Text(strings["safety.title"])
-                    .velroFont(.label, weight: .medium)
-                    .frame(minHeight: Sizing.touchTarget)
-                    .contentShape(Rectangle())
+    private func closeMenu() {
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) { menuOpen = false }
+    }
+
+    private func openFromMenu(_ item: SideMenu.Item) {
+        closeMenu()
+        switch item {
+        case .account: app.router.open(.account)
+        case .history: app.router.open(.history)
+        case .help: helpOpen = true
+        case .reports: app.router.open(.reports)
+        case .privacy: openURL(app.privacyURL)
+        }
+    }
+
+    /// Round buttons floating on the map: the menu at the start; help and
+    /// her account at the end, on screen whatever the sheet is doing.
+    private var topBar: some View {
+        HStack(spacing: Spacing.sm) {
+            RoundIconButton(systemImage: "line.3.horizontal", label: strings["common.action.menu"]) {
+                withAnimation(reduceMotion ? nil : .snappy(duration: 0.32)) { menuOpen = true }
             }
+            .accessibilityIdentifier("home.menu")
+            Spacer()
+            Button { helpOpen = true } label: {
+                Label {
+                    Text(strings["safety.title"]).velroFont(.label, weight: .bold)
+                } icon: {
+                    Image(systemName: "shield.lefthalf.filled")
+                }
+                .foregroundStyle(Palette.brandField)
+                .padding(.horizontal, Spacing.lg)
+                .frame(minHeight: Sizing.touchTarget)
+                .glass(in: Capsule())
+                .contentShape(Capsule())
+            }
+            .buttonStyle(PressStyle())
             .accessibilityIdentifier("home.help")
             // Her own account: also the only way to change the language once
             // signed in, so it is an icon that needs no reading.
-            Button {
+            RoundIconButton(systemImage: "person.fill", label: strings["passenger.profile.title"]) {
                 app.router.open(.account)
-            } label: {
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 26))
-                    .frame(minWidth: Sizing.touchTarget, minHeight: Sizing.touchTarget)
-                    .contentShape(Rectangle())
             }
-            .accessibilityLabel(strings["passenger.profile.title"])
             .accessibilityIdentifier("home.account")
-        } content: {
-            // While a request is live the header points at it, not at a new
-            // ask the server would refuse.
-            Group {
-                if model.openRequest != nil {
-                    OnBrandButton(label: strings["home.open_request.open"], systemImage: "person.3.fill") {
-                        app.router.open(.offers)
-                    }
-                    .accessibilityIdentifier("home.offers")
-                } else {
-                    WhereToBar { app.router.open(.ask) }
-                }
-            }
-            .padding(.top, Spacing.lg)
         }
+    }
+
+    private var sheetContent: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            // While a request is live the sheet points at it, not at a new
+            // ask the server would refuse.
+            if let open = model.openRequest {
+                PrimaryButton(label: strings["home.open_request.open"]) { app.router.open(.offers) }
+                    .accessibilityIdentifier("home.offers")
+                    .padding(.top, Spacing.sm)
+                OpenRequestCard(request: open) { app.router.open(.offers) }
+                    .padding(.bottom, Spacing.sm)
+            } else {
+                WhereToBar { app.router.open(.ask) }
+                    .padding(.top, Spacing.sm)
+                    .padding(.bottom, Spacing.sm)
+            }
+
+            HStack {
+                Text(strings["home.section.recent_trips"])
+                    .velroFont(.title, weight: .bold)
+                    .foregroundStyle(Palette.onSurface)
+                Spacer()
+                // Home shows the few most recent; the rest, and the
+                // receipts, live behind this.
+                TextAction(label: strings["history.title"]) { app.router.open(.history) }
+                    .accessibilityIdentifier("home.history")
+            }
+
+            // Saved data, honestly labelled.
+            if model.isStale && !model.bookings.isEmpty {
+                Text(strings["common.state.offline"])
+                    .velroFont(.caption)
+                    .foregroundStyle(Palette.onSurfaceVariant)
+            }
+
+            journeys
+        }
+        .padding(.horizontal, Spacing.gutter)
+        .padding(.bottom, Spacing.xxl)
     }
 
     @ViewBuilder
@@ -123,7 +192,7 @@ struct HomeView: View {
             // No action here: the screen's one button is already above.
             EmptyState(key: "empty.bookings", systemImage: "list.bullet.rectangle")
         } else {
-            LazyVStack(spacing: Spacing.sm) {
+            LazyVStack(spacing: Spacing.md) {
                 ForEach(model.bookings) { booking in
                     Button {
                         app.router.open(.booking(booking.id))
@@ -134,6 +203,162 @@ struct HomeView: View {
                 }
             }
         }
+    }
+}
+
+/// The valley under the sheet: Apple's map, muted, so the sheet and its one
+/// action stay the loudest thing on screen. Her own position only when iOS
+/// already allows it -- home never asks; the ask does, and says why first.
+private struct HomeMap: View {
+    @State private var position: MapCameraPosition = .region(MKCoordinateRegion(
+        // Ghorband, where the service runs.
+        center: CLLocationCoordinate2D(latitude: 34.955, longitude: 68.62),
+        span: MKCoordinateSpan(latitudeDelta: 0.09, longitudeDelta: 0.09)
+    ))
+    @State private var located = false
+
+    var body: some View {
+        Map(position: $position, interactionModes: []) {
+            if located { UserAnnotation() }
+        }
+        .mapStyle(.standard(emphasis: .muted, pointsOfInterest: .excludingAll))
+        // A wash at the top so the status bar and the round buttons read on
+        // any tile.
+        .overlay(alignment: .top) {
+            LinearGradient(colors: [Palette.background.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom)
+                .frame(height: 110)
+                .allowsHitTesting(false)
+        }
+        .accessibilityHidden(true)
+        .onAppear {
+            let status = CLLocationManager().authorizationStatus
+            if status == .authorizedWhenInUse || status == .authorizedAlways {
+                located = true
+                position = .userLocation(fallback: position)
+            }
+        }
+    }
+}
+
+/// The menu behind the round button: where everything that is not the
+/// screen's one action lives. Slides from the start edge, over a dimmed map;
+/// a tap outside, the close button, or the escape gesture puts it away.
+struct SideMenu: View {
+    enum Item: CaseIterable {
+        case account, history, help, reports, privacy
+
+        var labelKey: String {
+            switch self {
+            case .account: "passenger.profile.title"
+            case .history: "history.title"
+            case .help: "safety.title"
+            case .reports: "safety.my_reports"
+            case .privacy: "account.privacy"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .account: "person.crop.circle.fill"
+            case .history: "clock.arrow.circlepath"
+            case .help: "shield.lefthalf.filled"
+            case .reports: "doc.text.fill"
+            case .privacy: "lock.fill"
+            }
+        }
+    }
+
+    let close: () -> Void
+    let open: (Item) -> Void
+    @Environment(\.strings) private var strings
+    @Environment(\.layoutDirection) private var direction
+    @State private var shown = false
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Color.black.opacity(shown ? 0.35 : 0)
+                    .ignoresSafeArea()
+                    .onTapGesture(perform: close)
+                    .accessibilityHidden(true)
+
+                panel
+                    .frame(width: min(geometry.size.width * 0.82, 360))
+                    .frame(maxHeight: .infinity)
+                    .background(
+                        UnevenRoundedRectangle(bottomTrailingRadius: Radius.sheet, topTrailingRadius: Radius.sheet, style: .continuous)
+                            .fill(Palette.surface.opacity(0.86))
+                            .background(.regularMaterial, in: UnevenRoundedRectangle(bottomTrailingRadius: Radius.sheet, topTrailingRadius: Radius.sheet, style: .continuous))
+                            .ignoresSafeArea()
+                            .elevation(.high)
+                    )
+                    // An offset is not mirrored with the layout: in Dari the
+                    // start edge is the right, so the panel comes from there.
+                    .offset(x: shown ? 0 : (direction == .rightToLeft ? geometry.size.width : -geometry.size.width))
+            }
+        }
+        .transition(.opacity)
+        .onAppear { withAnimation(.snappy(duration: 0.32)) { shown = true } }
+        .accessibilityAddTraits(.isModal)
+        .accessibilityAction(.escape, close)
+    }
+
+    private var panel: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button(action: close) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Palette.brandField)
+                    .frame(width: Sizing.touchTarget, height: Sizing.touchTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressStyle())
+            .accessibilityLabel(strings["common.action.close"])
+            .accessibilityIdentifier("menu.close")
+            .padding(.leading, Spacing.sm)
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(strings["app.name"])
+                    .velroFont(.display)
+                    .foregroundStyle(Palette.primary)
+                Text(strings["app.tagline"])
+                    .velroFont(.caption)
+                    .foregroundStyle(Palette.onSurfaceVariant)
+            }
+            .padding(.horizontal, Spacing.gutter)
+            .padding(.top, Spacing.lg)
+            .padding(.bottom, Spacing.xxl)
+            .accessibilityElement(children: .combine)
+
+            ForEach(Item.allCases, id: \.self) { item in
+                Button { open(item) } label: {
+                    HStack(spacing: Spacing.lg) {
+                        Image(systemName: item.systemImage)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Palette.primary)
+                            .frame(width: 40, height: 40)
+                            .background(Palette.primaryContainer, in: Circle())
+                            .accessibilityHidden(true)
+                        Text(strings[item.labelKey])
+                            .velroFont(.body, weight: .medium)
+                            .foregroundStyle(Palette.onSurface)
+                        Spacer(minLength: Spacing.sm)
+                        Image(systemName: "chevron.forward")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Palette.outline)
+                            .accessibilityHidden(true)
+                    }
+                    .padding(.horizontal, Spacing.gutter)
+                    .frame(minHeight: 64)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressStyle())
+                .accessibilityIdentifier("menu.\(item)")
+                Divider().padding(.leading, Spacing.gutter + 40 + Spacing.lg)
+            }
+            Spacer()
+        }
+        .padding(.top, Spacing.sm)
     }
 }
 
@@ -193,19 +418,27 @@ private struct WhereToBar: View {
             Button(action: action) {
                 HStack(spacing: Spacing.md) {
                     Image(systemName: "magnifyingglass")
-                        .font(.body.weight(.semibold))
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(Palette.outline)
                         .accessibilityHidden(true)
                     Text(strings["home.search.where_to"])
-                        .velroFont(.heading, weight: .medium)
+                        .velroFont(.title, weight: .medium)
+                        .foregroundStyle(Palette.onSurface)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     Spacer()
                     Image(systemName: "car.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Palette.onPrimary)
+                        .frame(width: 48, height: 48)
+                        .background(Palette.primary, in: Circle())
                         .accessibilityHidden(true)
                 }
-                .padding(.horizontal, Spacing.lg)
-                .frame(maxWidth: .infinity, minHeight: 56)
-                .foregroundStyle(Palette.brandField)
-                .background(Palette.onBrandField, in: Capsule())
-                .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+                .padding(.leading, Spacing.xl - Spacing.xs)
+                .padding(.trailing, Spacing.sm)
+                .frame(maxWidth: .infinity, minHeight: 64)
+                .background(Palette.surface, in: Capsule())
+                .elevation(.low)
                 .contentShape(Capsule())
             }
             .buttonStyle(PressStyle())
@@ -216,7 +449,8 @@ private struct WhereToBar: View {
             } icon: {
                 Image(systemName: "location.fill").font(.caption)
             }
-            .foregroundStyle(Palette.onBrandField)
+            .foregroundStyle(Palette.onSurfaceVariant)
+            .padding(.leading, Spacing.lg)
             .accessibilityHidden(true)
         }
     }

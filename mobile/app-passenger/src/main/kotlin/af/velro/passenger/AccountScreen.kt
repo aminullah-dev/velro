@@ -3,7 +3,9 @@ package af.velro.passenger
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import af.velro.core.ui.component.ChoiceChip
 import af.velro.core.ui.component.ConfirmDialog
+import af.velro.core.ui.component.PillField
 import af.velro.core.ui.component.SecondaryAction
 import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.Numerals
@@ -17,7 +19,6 @@ import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.VelroScreen
 import af.velro.data.api.PublicPages
 import af.velro.core.ui.theme.LocalVelroStrings
-import af.velro.core.ui.theme.Radius
 import af.velro.core.ui.theme.Sizing
 import af.velro.core.ui.theme.Spacing
 import af.velro.domain.Locale
@@ -29,9 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -199,21 +198,18 @@ fun AccountScreen(
         // driver arriving to collect her had nobody's name to ask for.
         VelroCard {
             Column {
-                OutlinedTextField(
+                PillField(
                     value = draftName,
                     onValueChange = onNameChanged,
-                    label = { Text(strings["profile.field.name"]) },
-                    supportingText = { Text(strings["profile.hint.name_optional"]) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    label = strings["profile.field.name"],
+                    supportingText = strings["profile.hint.name_optional"],
                 )
-                Spacer(Modifier.height(Spacing.md))
+                Spacer(Modifier.height(Spacing.lg))
                 PrimaryAction(
                     label = strings["common.action.save"],
                     onClick = onSaveName,
                     enabled = draftName != profile.fullName.orEmpty(),
                     loading = isSaving,
-                    radius = Radius.pill,
                 )
                 if (saved) {
                     Spacer(Modifier.height(Spacing.sm))
@@ -233,6 +229,7 @@ fun AccountScreen(
                 Text(
                     strings["passenger.profile.language"],
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     strings["passenger.profile.language_hint"],
@@ -242,10 +239,10 @@ fun AccountScreen(
                 Spacer(Modifier.height(Spacing.md))
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     for (option in listOf(Locale.DARI, Locale.PASHTO, Locale.ENGLISH)) {
-                        FilterChip(
+                        ChoiceChip(
                             selected = option == profile.locale,
                             onClick = { onLocaleChanged(option) },
-                            label = { Text(option.displayName()) },
+                            label = option.displayName(),
                         )
                     }
                 }

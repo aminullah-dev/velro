@@ -21,6 +21,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
@@ -84,12 +85,18 @@ fun PhotoAvatar(
     bytes: ByteArray?,
     size: Dp,
     modifier: Modifier = Modifier,
+    /**
+     * Round by default. The offers screen passes a rounded square: there the
+     * face is large and sits in a card's corner, and a square tile shows more
+     * of it than a circle the same width.
+     */
+    shape: Shape = CircleShape,
 ) {
     val bitmap by rememberDecodedPhoto(bytes, maxPx = AVATAR_MAX_PX)
     Box(
         modifier
             .size(size)
-            .clip(CircleShape)
+            .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {

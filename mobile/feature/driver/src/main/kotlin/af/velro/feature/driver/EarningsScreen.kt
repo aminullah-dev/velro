@@ -1,6 +1,6 @@
 package af.velro.feature.driver
 
-import androidx.compose.material3.FilterChip
+import af.velro.core.ui.component.ChoiceChip
 import af.velro.domain.EarningsSummary
 import af.velro.domain.EarningsPeriod
 import af.velro.domain.EarningsBucket
@@ -509,10 +509,10 @@ private fun EarningsTrend(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 for (option in EarningsPeriod.entries) {
-                    FilterChip(
+                    ChoiceChip(
                         selected = option == period,
                         onClick = { onEvent(EarningsEvent.PeriodChanged(option)) },
-                        label = { Text(strings[option.labelKey()]) },
+                        label = strings[option.labelKey()],
                     )
                 }
             }

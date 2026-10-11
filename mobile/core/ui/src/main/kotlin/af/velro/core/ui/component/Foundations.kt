@@ -2,12 +2,23 @@ package af.velro.core.ui.component
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import af.velro.core.ui.theme.Elevation
 import af.velro.core.ui.theme.LocalVelroStrings
 import af.velro.core.ui.theme.Radius
 import af.velro.core.ui.theme.Sizing
 import af.velro.core.ui.theme.LocalVelroDarkTheme
 import af.velro.core.ui.theme.VelroColors
 import af.velro.core.ui.theme.Spacing
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,7 +40,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -63,21 +74,37 @@ fun PrimaryAction(
     /**
      * The corner radius.
      *
-     * Defaults to the shape every screen already uses. Sign-in passes
-     * [Radius.pill], which is the shape the product is moving toward -- when
-     * the rest of the screens follow, this default changes and the argument
-     * goes away. A parameter rather than a straight edit so the two shapes can
-     * be seen side by side before the whole product commits to one.
+     * A pill, now that the whole product has committed to it: sign-in tried
+     * the shape first, side by side with the old 16dp corner, and the soft
+     * redesign made it the default. The parameter stays for the rare control
+     * that has to sit flush with a squarer neighbour.
      */
-    radius: Dp = Radius.lg,
+    radius: Dp = Radius.pill,
 ) {
+    val shape = RoundedCornerShape(radius)
     Button(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(Sizing.buttonHeight),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(Sizing.buttonHeight)
+            // A faint glow in the button's own green, under it. Only while it
+            // can be pressed: a disabled button that still floats reads as
+            // one that is merely slow to respond.
+            .then(
+                if (enabled) Modifier.softShadow(
+                    shape,
+                    Elevation.button,
+                    color = MaterialTheme.colorScheme.primary,
+                    strength = SHADOW_BUTTON,
+                ) else Modifier,
+            ),
         // A button mid-request is disabled, not merely spinning: a double tap
         // on a slow connection is the most common way to send a request twice.
         enabled = enabled && !loading,
-        shape = RoundedCornerShape(radius),
+        shape = shape,
+        // The shadow above is the lift; Material's own would stack a grey
+        // one under the green.
+        elevation = flat(),
         // Disabled, but still there.
         //
         // Material's default is onSurface at 38% over onSurface at 12%: a
@@ -145,7 +172,9 @@ fun DestructiveAction(
                 }
             },
         enabled = enabled && !loading,
-        shape = RoundedCornerShape(Radius.lg),
+        // The same pill as every other button: it is an action, and the error
+        // colour is what says it cannot be taken back.
+        shape = RoundedCornerShape(Radius.pill),
         colors = ButtonDefaults.buttonColors(
             containerColor = colours.error,
             contentColor = colours.onError,
@@ -169,6 +198,19 @@ fun DestructiveAction(
     }
 }
 
+/**
+ * The second choice on a screen: a white pill with a green label.
+ *
+ * It used to be an outlined button. The soft redesign takes the line off in
+ * light mode and lets a faint shadow lift the pill off the page instead --
+ * what identifies it as a button is its label, in the brand green at 7.58:1,
+ * and the line was the hard edge the owner asked to lose. After dark a shadow
+ * shows nothing, so there the edge comes back, at the 3:1 a control boundary
+ * owes.
+ *
+ * Disabled, it keeps a container and a measured label rather than vanishing,
+ * for the same reason the primary does.
+ */
 @Composable
 fun SecondaryAction(
     label: String,
@@ -176,26 +218,44 @@ fun SecondaryAction(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    OutlinedButton(
+    val shape = RoundedCornerShape(Radius.pill)
+    val dark = LocalVelroDarkTheme.current
+    Button(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(Sizing.buttonHeight),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(Sizing.buttonHeight)
+            .then(if (enabled && !dark) Modifier.softShadow(shape) else Modifier),
         enabled = enabled,
-        shape = RoundedCornerShape(Radius.lg),
-        colors = ButtonDefaults.outlinedButtonColors(
+        shape = shape,
+        elevation = flat(),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
             disabledContentColor = disabledLabel(),
         ),
-        // An outlined button disabled by Material loses its border along with
-        // its label, so nothing is left on the screen at all. The edge stays,
-        // at the same weight a text field's does.
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (enabled) MaterialTheme.colorScheme.outline
-            else MaterialTheme.colorScheme.outlineVariant,
-        ),
+        border = if (dark) {
+            androidx.compose.foundation.BorderStroke(
+                1.dp,
+                if (enabled) MaterialTheme.colorScheme.outline
+                else MaterialTheme.colorScheme.outlineVariant,
+            )
+        } else null,
     ) {
-        Text(label, style = MaterialTheme.typography.labelLarge)
+        Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
     }
 }
+
+/** No Material elevation: every lift in the product is a [softShadow]. */
+@Composable
+private fun flat() = ButtonDefaults.buttonElevation(
+    defaultElevation = 0.dp,
+    pressedElevation = 0.dp,
+    focusedElevation = 0.dp,
+    hoveredElevation = 0.dp,
+    disabledElevation = 0.dp,
+)
 
 /**
  * The label colour of a control that is present but cannot be used.
@@ -214,46 +274,50 @@ fun VelroCard(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    val shape = RoundedCornerShape(Radius.card)
+    val shape = RoundedCornerShape(Radius.surface)
     val colors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
     )
-    // One soft shadow, not a stack of them.
+    val dark = LocalVelroDarkTheme.current
+    // One soft shadow, not a stack of them, and no line in light mode.
     //
-    // This used to be a hairline border and nothing else, on the reasoning
-    // that stacked elevation reads as clutter on a small screen. That is true
-    // of stacked elevation; it was not true of the alternative actually
-    // shipped, which was a white card on a white page separated by one pixel
-    // of grey. The card now lies on a slightly darker ground and casts a
-    // shadow you would not name if asked -- which is the point.
+    // This was a hairline border with a 2dp Material shadow under it. The
+    // redesign ("soft, glassy, almost minimal") takes the line away: the card
+    // is white on the Neutral50 page and a wide, faint shadow says where it
+    // ends. What is read on a card is its content, and every control inside
+    // it still carries its own measured edge.
     //
-    // The border stays, faintly. A shadow is invisible in bright sunlight and
-    // invisible again in dark mode, and the edge of a card should not depend
-    // on either.
-    val border = androidx.compose.foundation.BorderStroke(
-        1.dp, MaterialTheme.colorScheme.outlineVariant
+    // After dark the hairline stays. A shadow shows nothing on a black page,
+    // and there the card's own lightness and that one line are all that lift
+    // it off the ground.
+    val border = if (dark) {
+        androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    } else null
+    val lift = if (dark) Modifier else Modifier.softShadow(shape)
+    val none = CardDefaults.cardElevation(
+        defaultElevation = 0.dp,
+        pressedElevation = 0.dp,
     )
-    val elevation = CardDefaults.cardElevation(defaultElevation = CARD_LIFT)
     if (onClick != null) {
         Card(
             onClick = onClick,
-            modifier = modifier.fillMaxWidth().defaultMinSize(minHeight = Sizing.touchTarget),
+            modifier = modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = Sizing.touchTarget)
+                .then(lift),
             shape = shape,
             colors = colors,
             border = border,
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = CARD_LIFT,
-                pressedElevation = CARD_LIFT,
-            ),
+            elevation = none,
         ) { Box(Modifier.padding(Spacing.lg)) { content() } }
     } else {
         Card(
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth().then(lift),
             shape = shape,
             colors = colors,
             border = border,
-            elevation = elevation,
+            elevation = none,
         ) {
             Box(Modifier.padding(Spacing.lg)) { content() }
         }
@@ -282,7 +346,8 @@ fun OnBrandAction(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().height(Sizing.buttonHeight),
         enabled = enabled && !loading,
-        shape = RoundedCornerShape(Radius.lg),
+        shape = RoundedCornerShape(Radius.pill),
+        elevation = flat(),
         // Constant with the field it sits on. Taken from the scheme these
         // became a near-black button carrying mint text on a mint header
         // after dark -- three brand colours in one control, none of them the
@@ -308,8 +373,167 @@ fun OnBrandAction(
     }
 }
 
-/** Barely there, and deliberately so: enough to separate, not enough to notice. */
-private val CARD_LIFT = 2.dp
+/**
+ * A text field: a white pill with its label above it.
+ *
+ * The label moved out of the outline. A floating label notches the border,
+ * and on a fully round field that notch lands on the curve and reads as a
+ * break in it. Above the field it is also simply bigger and always there --
+ * a Material label shrinks into the border the moment somebody starts to
+ * type, which is the moment a person unsure of the form looks for it.
+ *
+ * The edge stays, at `outline`'s 3:1. The redesign took lines off cards and
+ * buttons, whose labels say what they are; a field is an empty box until it is
+ * filled, and somebody who cannot see where the phone field is in Ghorband
+ * sunlight cannot sign in. The soft shadow is added to it, not swapped for it.
+ *
+ * The label is ordinary text directly before the field, so a screen reader
+ * reaches it on the way into the box. It is not also set as the field's
+ * description: on an editable node that replaces the typed value in what
+ * TalkBack reads back, and somebody checking their own number by ear needs
+ * the number.
+ *
+ * @param leftToRight a phone number or a code: a sequence to be dialled or
+ *   compared, laid out left to right in any language. The label above it
+ *   stays where the screen's own direction puts it.
+ */
+@Composable
+fun PillField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String?,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    leadingIcon: ImageVector? = null,
+    suffix: String? = null,
+    supportingText: String? = null,
+    isError: Boolean = false,
+    singleLine: Boolean = true,
+    textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    leftToRight: Boolean = false,
+    fieldModifier: Modifier = Modifier,
+) {
+    // A pill only holds one line. A note that wraps gets a card's corner, so
+    // its second line does not run into the curve.
+    val shape = RoundedCornerShape(if (singleLine) Radius.pill else Radius.surface)
+    val colours = MaterialTheme.colorScheme
+    Column(modifier.fillMaxWidth()) {
+        if (label != null) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                color = colours.onSurfaceVariant,
+                modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.xs),
+            )
+        }
+        val field: @Composable () -> Unit = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = fieldModifier
+                    .fillMaxWidth()
+                    .heightIn(min = Sizing.fieldHeight)
+                    .softShadow(shape),
+                textStyle = textStyle,
+                // Muted, not the label's tone: with the label outside the box
+                // the hint is always showing, and at full strength "0700 123
+                // 456" read as a number already typed in. Neutral500 still
+                // clears 4.5:1 on white -- ContrastTest's "muted on white".
+                placeholder = placeholder?.let {
+                    {
+                        Text(
+                            it,
+                            style = textStyle,
+                            color = if (LocalVelroDarkTheme.current) VelroColors.Neutral350
+                            else VelroColors.Neutral500,
+                        )
+                    }
+                },
+                leadingIcon = leadingIcon?.let {
+                    { Icon(it, contentDescription = null, modifier = Modifier.size(Sizing.iconMd)) }
+                },
+                suffix = suffix?.let { { Text(it) } },
+                isError = isError,
+                keyboardOptions = keyboardOptions,
+                keyboardActions = keyboardActions,
+                singleLine = singleLine,
+                minLines = if (singleLine) 1 else 3,
+                shape = shape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = colours.surface,
+                    unfocusedContainerColor = colours.surface,
+                    errorContainerColor = colours.surface,
+                    focusedBorderColor = colours.primary,
+                    unfocusedBorderColor = colours.outline,
+                    focusedLeadingIconColor = colours.primary,
+                    unfocusedLeadingIconColor = colours.onSurfaceVariant,
+                ),
+            )
+        }
+        if (leftToRight) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) { field() }
+        } else {
+            field()
+        }
+        if (supportingText != null) {
+            Text(
+                supportingText,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isError) colours.error else colours.onSurfaceVariant,
+                modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.xs),
+            )
+        }
+    }
+}
+
+/**
+ * One choice among a few: a day, a seat count, a language.
+ *
+ * A pill like every other control. Selected is filled with the brand colour
+ * rather than Material's secondary container -- which is the amber accent in
+ * this palette, and the tokens allow one accent per screen. Selected and not
+ * also differ in shape, filled against outlined, so the state never rests on
+ * colour alone.
+ */
+@Composable
+fun ChoiceChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val colours = MaterialTheme.colorScheme
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+            )
+        },
+        modifier = modifier,
+        enabled = enabled,
+        shape = RoundedCornerShape(Radius.pill),
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = colours.surface,
+            labelColor = colours.onSurface,
+            selectedContainerColor = colours.primary,
+            selectedLabelColor = colours.onPrimary,
+        ),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = enabled,
+            selected = selected,
+            borderColor = colours.outline,
+            selectedBorderColor = colours.primary,
+        ),
+    )
+}
 
 /**
  * The three states every screen must have.

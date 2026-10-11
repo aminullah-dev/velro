@@ -2,7 +2,24 @@ import SwiftUI
 import UIKit
 
 @main
-final class AppDelegate: UIResponder, UIApplicationDelegate {}
+final class AppDelegate: UIResponder, UIApplicationDelegate {
+    /// Upright on a phone, where the app is used one-handed in a moving car
+    /// and a turn of the wrist must not throw the screen sideways. On a
+    /// screen big enough to be held like a book -- an unfolded iPhone Duo --
+    /// any way up but upside down, where the app's Info.plist allows it (the
+    /// driver's does not).
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        #if DEBUG
+        // The wide layout, checked on a phone turned on its side: there is no
+        // simulator of an unfolded Duo to check it on.
+        if ProcessInfo.processInfo.arguments.contains("--uitest-any-orientation") { return .allButUpsideDown }
+        #endif
+        guard let screen = window?.windowScene?.screen else { return .portrait }
+        let declared = Bundle.main.object(forInfoDictionaryKey: "UISupportedInterfaceOrientations") as? [String] ?? []
+        let bookSized = min(screen.bounds.width, screen.bounds.height) >= 600
+        return bookSized && declared.count > 1 ? .allButUpsideDown : .portrait
+    }
+}
 
 /// The window, hosted by UIKit rather than by a SwiftUI `App`.
 ///

@@ -17,6 +17,9 @@ final class AppModel {
     /// lands on says it happened rather than looking like a crash; cleared by
     /// the next sign-in.
     private(set) var accountDeleted = false
+    /// Whether this phone has been through the three intro pages. Per phone,
+    /// not per account: it is about the app, not about anybody in it.
+    private(set) var hasSeenIntro: Bool
 
     let client: APIClient
     let store: any SessionStore
@@ -31,6 +34,7 @@ final class AppModel {
     let geography: GeographyStore
 
     private static let localeKey = "velro.locale"
+    private static let introKey = "velro.intro.seen"
 
     init(baseURL: URL, store: any SessionStore) {
         let locale = AppLocale(tag: UserDefaults.standard.string(forKey: Self.localeKey) ?? AppLocale.dari.tag)
@@ -38,6 +42,7 @@ final class AppModel {
         self.strings = Strings.load(locale)
         self.store = store
         self.isSignedIn = store.accessToken != nil
+        self.hasSeenIntro = UserDefaults.standard.bool(forKey: Self.introKey)
         let shared = ResponseCache(name: "shared")
         self.shared = shared
         self.safety = SafetyContactsStore(cache: shared)
@@ -64,6 +69,8 @@ final class AppModel {
         if ProcessInfo.processInfo.arguments.contains("--uitest-fresh") {
             store.clear()
             UserDefaults.standard.removeObject(forKey: localeKey)
+            // Straight to sign-in, unless the run is about the intro itself.
+            UserDefaults.standard.set(!ProcessInfo.processInfo.arguments.contains("--uitest-intro"), forKey: introKey)
         }
         #endif
         return AppModel(baseURL: url, store: store)
@@ -79,6 +86,11 @@ final class AppModel {
         strings = Strings.load(locale)
         guard isSignedIn else { return }
         Task { _ = await client.send(API.updateProfile(locale: locale)) }
+    }
+
+    func finishIntro() {
+        UserDefaults.standard.set(true, forKey: Self.introKey)
+        hasSeenIntro = true
     }
 
     func signedIn(_ session: SessionDTO) {

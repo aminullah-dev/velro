@@ -694,7 +694,9 @@ private fun OnlineToggle(state: DriverHomeUiState, onEvent: (DriverHomeEvent) ->
     val strings = LocalVelroStrings.current
     val online = state.isOnline
     val primary = MaterialTheme.colorScheme.primary
-    val border = if (online) Modifier.border(1.5.dp, primary, RoundedCornerShape(Radius.card)) else Modifier
+    // The card's own corner: VelroCard moved to Radius.surface, and an edge
+    // drawn at the old radius would cut across the card's curve.
+    val border = if (online) Modifier.border(1.5.dp, primary, RoundedCornerShape(Radius.surface)) else Modifier
     VelroCard(modifier = border) {
         Row(
             Modifier.fillMaxWidth(),

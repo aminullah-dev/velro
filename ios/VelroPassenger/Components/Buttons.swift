@@ -10,7 +10,8 @@ struct PrimaryButton: View {
     let label: String
     var enabled = true
     var loading = false
-    var pill = false
+    /// A pill unless asked otherwise: the one shape every action shares.
+    var pill = true
     let action: () -> Void
 
     var body: some View {
@@ -19,12 +20,15 @@ struct PrimaryButton: View {
                 if loading {
                     ProgressView().tint(Palette.onPrimary)
                 } else {
-                    Text(label).velroFont(.label)
+                    Text(label).velroFont(.label, weight: .bold)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: Sizing.buttonHeight)
             .foregroundStyle(isLive ? Palette.onPrimary : Palette.disabledLabel)
             .background(isLive ? Palette.primary : Palette.surfaceVariant, in: shape)
+            // A green glow under a live button, none under a dead one: the
+            // difference shows before the label is read.
+            .shadow(color: Palette.primary.opacity(isLive ? 0.28 : 0), radius: 14, y: 8)
             .contentShape(shape)
         }
         .buttonStyle(PressStyle())
@@ -46,14 +50,17 @@ struct SecondaryButton: View {
     var body: some View {
         Button(action: action) {
             Text(label)
-                .velroFont(.label)
+                .velroFont(.label, weight: .bold)
                 .frame(maxWidth: .infinity, minHeight: Sizing.buttonHeight)
                 .foregroundStyle(enabled ? Palette.primary : Palette.disabledLabel)
+                // A white pill lifted off the page: second to the green one,
+                // never mistaken for a field.
+                .background(Palette.surface, in: Capsule())
                 .overlay(
-                    RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
-                        .strokeBorder(enabled ? Palette.outline : Palette.outlineVariant, lineWidth: 1)
+                    Capsule().strokeBorder(enabled ? Palette.outline : Palette.outlineVariant, lineWidth: 1)
                 )
-                .contentShape(Rectangle())
+                .elevation(.low)
+                .contentShape(Capsule())
         }
         .buttonStyle(PressStyle())
         .disabled(!enabled)
@@ -79,8 +86,8 @@ struct DestructiveButton: View {
             }
             .frame(maxWidth: .infinity, minHeight: Sizing.buttonHeight)
             .foregroundStyle(Palette.onError)
-            .background(Palette.error, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
-            .contentShape(Rectangle())
+            .background(Palette.error, in: Capsule())
+            .contentShape(Capsule())
         }
         .buttonStyle(PressStyle())
         .disabled(loading)

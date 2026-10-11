@@ -1,7 +1,6 @@
 package af.velro.core.ui.component
 
 import af.velro.core.ui.theme.LocalVelroStrings
-import af.velro.core.ui.theme.Sizing
 import af.velro.core.ui.theme.Spacing
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
@@ -10,14 +9,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -95,7 +91,9 @@ fun VelroScreen(
                     Text(
                         title,
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        // Bold, in the bundled face: the bar has no fill of
+                        // its own any more, so the title is what marks it.
+                        fontWeight = FontWeight.Bold,
                         // A long Dari title must shrink to one line rather than
                         // pushing the actions off the end of the bar.
                         maxLines = 1,
@@ -104,23 +102,27 @@ fun VelroScreen(
                 },
                 navigationIcon = {
                     if (onBack != null) {
-                        IconButton(
+                        // A round glass button rather than a bare arrow: on a
+                        // bar with no fill a lone glyph floats, and the circle
+                        // is the full 52dp a thumb is aiming at.
+                        GlassIconButton(
+                            // AutoMirrored: the arrow points the other way
+                            // in Dari and Pashto, and a back arrow pointing
+                            // into the text is worse than none.
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = strings["common.action.back"],
                             onClick = onBack,
-                            modifier = Modifier.size(Sizing.touchTarget),
-                        ) {
-                            Icon(
-                                // AutoMirrored: the arrow points the other way
-                                // in Dari and Pashto, and a back arrow pointing
-                                // into the text is worse than none.
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = strings["common.action.back"],
-                            )
-                        }
+                            modifier = Modifier.padding(start = Spacing.md, end = Spacing.xs),
+                        )
                     }
                 },
                 actions = { actions() },
+                // No fill: the bar is the page's own top, in the page's colour,
+                // rather than a white strip laid across it. The soft redesign
+                // has one ground per screen and things lying on it.
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background,
                 ),
             )
             }
