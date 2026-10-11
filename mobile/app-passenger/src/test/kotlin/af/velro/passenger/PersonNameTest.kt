@@ -43,4 +43,13 @@ class PersonNameTest {
         assertFalse("spaces do not count", PersonName.isValid("نجیب", "  ا  "))
         assertFalse("both are required", PersonName.isValid("نجیب", ""))
     }
+
+    @Test
+    fun aStoredNameIsFullOnlyWithTwoWords() {
+        assertTrue(PersonName.isFullName("Ahmad Karimi"))
+        assertTrue(PersonName.isFullName("  محمد علی  احمدی "))
+        assertFalse(PersonName.isFullName("Ahmad"))
+        assertFalse(PersonName.isFullName("   "))
+        assertFalse(PersonName.isFullName(null))
+    }
 }

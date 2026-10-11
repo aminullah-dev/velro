@@ -24,7 +24,8 @@ import kotlinx.coroutines.launch
  * no frame of home first, no network. Then, for anybody else, from the
  * profile, quietly, with home already drawn: a launch with no signal must open
  * on her bookings, not on a spinner waiting for a profile that cannot arrive.
- * Only a profile that actually comes back with no name sends her to the step;
+ * Only a profile that actually comes back without both parts of a name sends
+ * her to the step;
  * a failure leaves her where she is and the question is asked next launch.
  *
  * Once a profile has shown a name the answer is kept with the session (see
@@ -48,7 +49,7 @@ class NameGateViewModel @Inject constructor(
                 else -> {
                     _needsName.value = false
                     val profile = (auth.profile() as? ApiResult.Success)?.value ?: return@launch
-                    if (profile.fullName.isNullOrBlank()) {
+                    if (!PersonName.isFullName(profile.fullName)) {
                         _needsName.value = true
                     } else {
                         auth.rememberNamed()

@@ -23,6 +23,12 @@ object PersonName {
     fun isValid(first: String, last: String): Boolean = isValidPart(first) && isValidPart(last)
 
     /**
+     * Whether a stored name already has both parts: two words at least. An
+     * older account saved as "Ahmad" alone is asked for the rest, as on iOS.
+     */
+    fun isFullName(full: String?): Boolean = split(full).let { (first, last) -> first.isNotEmpty() && last.isNotEmpty() }
+
+    /**
      * What is saved: both parts trimmed, inner runs of spaces collapsed, one
      * space between them.
      */
