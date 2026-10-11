@@ -378,7 +378,7 @@ private struct DeparturePicker: View {
                                 .frame(maxWidth: .infinity)
                         } else {
                             WheelPicker(
-                                items: shownHours.map { .init(value: $0, label: Numerals.localise(String(format: "%02d:00", $0), strings.locale)) },
+                                items: shownHours.map { .init(value: $0, label: Calendars.hour($0, strings.locale)) },
                                 selection: form.departureDay == nil ? nil : form.departureHour
                             ) { hour in
                                 form.setDeparture(day: form.departureDay ?? 1, hour: hour)
@@ -415,7 +415,7 @@ private struct DeparturePicker: View {
                     ZStack {
                         WheelBand()
                         WheelPicker(
-                            items: form.returnHours.map { .init(value: $0, label: Numerals.localise(String(format: "%02d:00", $0), strings.locale)) },
+                            items: form.returnHours.map { .init(value: $0, label: Calendars.hour($0, strings.locale)) },
                             selection: form.returnHour,
                             choose: { form.setReturn(afterDays: form.returnAfterDays, hour: $0) },
                             visibleRows: 3

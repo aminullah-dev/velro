@@ -24,7 +24,6 @@ object Calendars {
     private const val ANCHOR_SHAMSI_YEAR = 1399
     private val ANCHOR_EPOCH_DAY = LocalDate.of(2020, 3, 20).toEpochDay()
 
-    private val TIME = DateTimeFormatter.ofPattern("HH:mm")
     private val GREGORIAN_DATE = DateTimeFormatter.ofPattern("d MMM yyyy")
 
     private val SHAMSI_MONTHS_DARI = arrayOf(
@@ -36,8 +35,30 @@ object Calendars {
         "تله", "لړم", "لیندۍ", "مرغومی", "سلواغه", "کب",
     )
 
-    fun time(instant: Instant, locale: Locale, zone: ZoneId = KABUL): String =
-        Numerals.localise(instant.atZone(zone).format(TIME), locale)
+    /**
+     * A twelve-hour clock with the half of the day spelled out, as people
+     * here say it: "۶:۳۰ ق.ظ" in Dari, "۶:۳۰ غ.م" in Pashto, "6:30 AM" in
+     * English (the owner's choice, 2026-10-10; it was 24-hour).
+     */
+    fun time(instant: Instant, locale: Locale, zone: ZoneId = KABUL): String {
+        val local = instant.atZone(zone)
+        return clock(local.hour, local.minute, locale)
+    }
+
+    /** A whole hour, 0 to 23, on the same clock: the hours of the day picker. */
+    fun hour(hour: Int, locale: Locale): String = clock(hour, 0, locale)
+
+    private fun clock(hour: Int, minute: Int, locale: Locale): String {
+        val twelve = if (hour % 12 == 0) 12 else hour % 12
+        val morning = hour < 12
+        val half = when (locale) {
+            Locale.ENGLISH -> if (morning) "AM" else "PM"
+            Locale.DARI -> if (morning) "ق.ظ" else "ب.ظ"
+            Locale.PASHTO -> if (morning) "غ.م" else "غ.و"
+        }
+        val digits = String.format(java.util.Locale.ROOT, "%d:%02d", twelve, minute)
+        return "${Numerals.localise(digits, locale)} $half"
+    }
 
     fun date(instant: Instant, locale: Locale, zone: ZoneId = KABUL): String {
         val local = instant.atZone(zone).toLocalDate()

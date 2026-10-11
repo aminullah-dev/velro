@@ -38,7 +38,12 @@ import Testing
     @Test func datesAreReadInKabulTime() {
         // 21:00 UTC on 11 September is already 01:30 on the 12th in Kabul.
         let late = ISODate.parse("2026-09-11T21:00:00+00:00")!
-        #expect(Calendars.time(late, .english) == "01:30")
+        #expect(Calendars.time(late, .english) == "1:30 AM")
+        #expect(Calendars.time(late, .dari) == "۱:۳۰ ق.ظ")
+        #expect(Calendars.time(late, .pashto) == "۱:۳۰ غ.م")
+        #expect(Calendars.hour(0, .english) == "12:00 AM")
+        #expect(Calendars.hour(12, .dari) == "۱۲:۰۰ ب.ظ")
+        #expect(Calendars.hour(18, .english) == "6:00 PM")
         #expect(Calendars.date(late, .english) == "12 Sep 2026")
         #expect(Calendars.date(late, .dari) == "۲۱ سنبله ۱۴۰۵")
         #expect(Calendars.date(late, .pashto) == "۲۱ وږی ۱۴۰۵")

@@ -40,6 +40,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedContent
 import af.velro.core.ui.theme.Motion
 import af.velro.core.ui.theme.LocalAnimationsEnabled
+import af.velro.core.i18n.Calendars
 import af.velro.core.i18n.MoneyFormatter
 import af.velro.domain.DEFAULT_CURRENCY
 import af.velro.domain.MoneyValue
@@ -771,7 +772,7 @@ private fun DeparturePicker(state: BookingFlowUiState, onEvent: (BookingEvent) -
                         onSelect = { index ->
                             onEvent(BookingEvent.DepartureChanged(shownDay, hours[index]))
                         },
-                        label = { hour -> Numerals.localise("%02d:00".format(hour), strings.locale) },
+                        label = { hour -> Calendars.hour(hour, strings.locale) },
                         active = scheduled,
                     )
                 }
@@ -833,7 +834,7 @@ private fun DeparturePicker(state: BookingFlowUiState, onEvent: (BookingEvent) -
                                     BookingEvent.ReturnChanged(state.returnAfterDays, hour)
                                 )
                             },
-                            label = Numerals.localise("%02d:00".format(hour), strings.locale),
+                            label = Calendars.hour(hour, strings.locale),
                         )
                     }
                 }

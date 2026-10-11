@@ -1,5 +1,8 @@
 package af.velro.passenger
 
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -301,7 +304,11 @@ fun AccountScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(Spacing.xxs))
-                Text(profile.phone, style = MaterialTheme.typography.bodyLarge)
+                // A number to dial, read left to right whatever the language:
+                // in a right-to-left line the "+" otherwise drifts to the end.
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(profile.phone, style = MaterialTheme.typography.bodyLarge)
+                }
                 Spacer(Modifier.height(Spacing.xs))
                 Text(
                     strings["passenger.profile.phone_hint"],
