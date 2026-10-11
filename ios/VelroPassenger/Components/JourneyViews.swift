@@ -125,6 +125,53 @@ struct BookingCard: View {
     }
 }
 
+/// A booking as one line, for home: where, when, what it cost, how it
+/// stands. The full card, with the number and the seats, is in the trips list.
+struct BookingRow: View {
+    let booking: Booking
+    @Environment(\.strings) private var strings
+
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            Image(systemName: "car.fill")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Palette.primary)
+                .frame(width: 40, height: 40)
+                .background(Palette.primaryContainer, in: Circle())
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(strings["ride.journey.from_to", [
+                    "origin": booking.pickupStationName ?? strings["common.value.unknown"],
+                    "destination": booking.dropoffDestinationName ?? strings["common.value.unknown"],
+                ]])
+                .velroFont(.label, weight: .medium)
+                .foregroundStyle(Palette.onSurface)
+                .lineLimit(1)
+                HStack(spacing: Spacing.sm) {
+                    if let when = booking.departure ?? booking.created {
+                        Text(Calendars.date(when, strings.locale))
+                            .velroFont(.caption)
+                            .foregroundStyle(Palette.onSurfaceVariant)
+                    }
+                    StatusChip(key: booking.status.messageKey, tone: booking.status.tone)
+                        .scaleEffect(0.9, anchor: .leading)
+                }
+            }
+            Spacer(minLength: Spacing.sm)
+            Text(MoneyFormatter.format(booking.fareTotal, strings: strings))
+                .velroFont(.label, weight: .bold)
+                .foregroundStyle(Palette.onSurface)
+            Image(systemName: "chevron.forward")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Palette.outline)
+                .accessibilityHidden(true)
+        }
+        .frame(minHeight: 64)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+}
+
 /// A money line on a receipt.
 struct FareRow: View {
     let label: String

@@ -7,7 +7,8 @@ import VelroCore
 ///
 /// The map is the ground she stands on -- the valley, and her own dot when
 /// iOS already lets VELRO see it -- with the screen's one action on a sheet
-/// lying over it. Scroll, and the sheet rises over the map to show her trips.
+/// lying over it. Nothing on home moves under her thumb: the sheet is fixed,
+/// it holds the three latest trips, and the rest are one tap away.
 struct HomeView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.strings) private var strings
@@ -30,11 +31,9 @@ struct HomeView: View {
                     // beside it as a panel rather than stretching across.
                     HomeMap().ignoresSafeArea()
                     HStack(alignment: .top, spacing: 0) {
-                        ScrollView {
+                        FixedSheet {
                             sheetContent.padding(.top, Spacing.lg)
                         }
-                        .scrollIndicators(.hidden)
-                        .refreshable { await model.refresh() }
                         .frame(width: Wide.panel)
                         .floatingPanel()
                         Spacer(minLength: 0)
@@ -43,26 +42,16 @@ struct HomeView: View {
                     .padding(.top, Sizing.touchTarget + Spacing.lg)
                     .padding(.bottom, Spacing.lg)
                 } else {
-                    HomeMap()
-                        .frame(height: geometry.size.height * 0.62 + geometry.safeAreaInsets.top)
-                        .ignoresSafeArea(edges: .top)
+                    HomeMap().ignoresSafeArea()
 
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            // The window onto the map. The sheet starts below it.
-                            Color.clear
-                                .frame(height: geometry.size.height * 0.40)
-                                .accessibilityHidden(true)
-                            VStack(spacing: 0) {
-                                SheetGrabber()
-                                sheetContent
-                            }
-                            .frame(minHeight: geometry.size.height * 0.60, alignment: .top)
-                            .sheetPanel()
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        FixedSheet {
+                            sheetContent.padding(.top, Spacing.xl)
                         }
+                        .frame(height: geometry.size.height * 0.58)
+                        .sheetPanel()
                     }
-                    .scrollIndicators(.hidden)
-                    .refreshable { await model.refresh() }
                 }
 
                 topBar
@@ -160,7 +149,7 @@ struct HomeView: View {
 
             HStack {
                 Text(strings["home.section.recent_trips"])
-                    .velroFont(.title, weight: .bold)
+                    .velroFont(.heading, weight: .bold)
                     .foregroundStyle(Palette.onSurface)
                 Spacer()
                 // Home shows the few most recent; the rest, and the
@@ -185,24 +174,50 @@ struct HomeView: View {
     @ViewBuilder
     private var journeys: some View {
         if model.isLoading {
-            LoadingState()
+            ProgressView()
+                .tint(Palette.primary)
+                .frame(maxWidth: .infinity, minHeight: 96)
         } else if let error = model.error, model.bookings.isEmpty {
             ErrorState(error: error) { Task { await model.refresh() } }
         } else if model.bookings.isEmpty {
             // No action here: the screen's one button is already above.
-            EmptyState(key: "empty.bookings", systemImage: "list.bullet.rectangle")
+            Label {
+                Text(strings["empty.bookings"]).velroFont(.label)
+            } icon: {
+                Image(systemName: "list.bullet.rectangle")
+            }
+            .foregroundStyle(Palette.onSurfaceVariant)
+            .frame(maxWidth: .infinity, minHeight: 72)
         } else {
-            LazyVStack(spacing: Spacing.md) {
-                ForEach(model.bookings) { booking in
+            VStack(spacing: 0) {
+                // The three latest: as many as fit without the sheet having
+                // to scroll. The rest, and the receipts, are behind "trips".
+                ForEach(Array(model.bookings.prefix(3).enumerated()), id: \.element.id) { index, booking in
+                    if index > 0 { Divider().padding(.leading, 40 + Spacing.md) }
                     Button {
                         app.router.open(.booking(booking.id))
                     } label: {
-                        BookingCard(booking: booking)
+                        BookingRow(booking: booking)
                     }
                     .buttonStyle(PressStyle())
                 }
             }
         }
+    }
+}
+
+/// The sheet's contents, still: it scrolls only when they genuinely do not
+/// fit -- the largest text size on the smallest phone -- and otherwise sits
+/// as fixed as the map under it.
+private struct FixedSheet<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollView {
+            content
+        }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize)
     }
 }
 
