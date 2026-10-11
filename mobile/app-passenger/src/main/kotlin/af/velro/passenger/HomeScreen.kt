@@ -11,7 +11,6 @@ import af.velro.core.ui.component.IconRow
 import af.velro.core.ui.component.LoadingState
 import af.velro.core.ui.component.PrimaryAction
 import af.velro.core.ui.component.SecondaryAction
-import af.velro.core.ui.component.SheetHandle
 import af.velro.core.ui.component.VelroCard
 import af.velro.core.ui.component.glassFill
 import af.velro.core.ui.component.glassRim
@@ -34,24 +33,25 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -76,10 +76,8 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -89,7 +87,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -133,6 +130,15 @@ internal fun HomeScreen(
     // layer over home, and a back that left the app from under it would take
     // the screen away along with the menu.
     BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
+
+    // Fresh each time home comes back into view -- from a booking, from the
+    // offers, from another app -- now that there is no pull to refresh. Not on
+    // the first appearance: the view model has just loaded, and asking twice
+    // in the same second is data a metered bundle pays for twice.
+    val firstResume = remember { mutableStateOf(true) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (firstResume.value) firstResume.value = false else viewModel.refresh()
+    }
 
     // The drawer slides away, then the row's door opens: a destination that
     // appeared while the menu was still on screen would arrive under it.
@@ -192,8 +198,25 @@ private const val SCRIM = 0.24f
 /** The sheet's shadow reaches further than a button's: it is a bigger thing. */
 private val SHEET_SPREAD = 20.dp
 
-/** How much of the screen the map keeps before the sheet begins. */
-private const val MAP_SHARE = 0.40f
+/**
+ * How much of the screen the sheet holds, fixed.
+ *
+ * Enough for "Where to?", the recent-trips line and three trips at an ordinary
+ * font size on a small phone, and the map keeps the rest. Fixed rather than
+ * scrolled up over the map: the owner's word on the first build was that home
+ * scrolled and must not -- a home screen is a place to stand, not a page to
+ * move through.
+ */
+private const val SHEET_SHARE = 0.56f
+
+/** At this width and above the panel stands beside the map instead of under it. */
+private val WIDE = 700.dp
+
+/** The side panel's width on a wide screen: a phone's width, not half a tablet. */
+private val PANEL_WIDTH = 420.dp
+
+/** Home shows this many trips; the rest, and the receipts, are behind History. */
+private const val RECENT_LIMIT = 3
 
 @Composable
 private fun HomeBody(
@@ -209,19 +232,6 @@ private fun HomeBody(
     onDismissSyncFailure: (String) -> Unit,
 ) {
     val strings = LocalVelroStrings.current
-    val list = rememberLazyListState()
-    val sheetShape = RoundedCornerShape(topStart = Radius.sheet, topEnd = Radius.sheet)
-
-    // Where the sheet's top edge is right now: the bottom of the map window
-    // while it is on screen, the top of the display once it has scrolled
-    // away. Read in layout, so the glass follows the finger without
-    // recomposing anything.
-    val sheetTop by remember {
-        derivedStateOf {
-            val first = list.layoutInfo.visibleItemsInfo.firstOrNull()
-            if (first != null && first.index == 0) first.offset + first.size else 0
-        }
-    }
 
     // A Surface, not a bare Box: it is what hands every Text below the
     // theme's foreground. Without one, text with no colour of its own falls
@@ -231,199 +241,58 @@ private fun HomeBody(
         color = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
-        Box(Modifier.fillMaxSize()) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            // The map never moves: it is the ground, and nothing slides over
+            // it.
             DrawnMap(Modifier.fillMaxSize())
 
-            // The sheet's glass, one piece behind the whole list rather than a
-            // background per row: rows of translucent glass laid edge to edge
-            // show their seams, and a shadow cast by one would read through the
-            // next.
-            Box(
-                Modifier
-                    .offset { IntOffset(0, sheetTop) }
-                    .fillMaxSize()
-                    .glassShadow(Radius.sheet, spread = SHEET_SPREAD)
-                    .background(glassFill(Glass.PANEL), sheetShape)
-                    .border(glassRim(), sheetShape),
-            )
-
-            // Pull to refresh.
-            //
-            // `refresh()` existed and was reachable from exactly one place: the
-            // retry button on the error state. So a passenger looking at the
-            // "showing saved data" line -- the offline case this app is built
-            // around -- could read that her list was old and do nothing about it
-            // but leave the screen and come back.
-            PullToRefreshBox(
-                isRefreshing = state.isRefreshing,
-                onRefresh = onRefresh,
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                LazyColumn(
-                    state = list,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
-                            Spacing.xl,
-                    ),
-                ) {
-                    // The window onto the map. Scrolling the sheet up over it is
-                    // what reveals more trips.
-                    item(key = "map-window") {
-                        Spacer(Modifier.fillParentMaxHeight(MAP_SHARE))
-                    }
-
-                    item(key = "sheet-top") {
-                        Column(Modifier.padding(horizontal = Spacing.gutter)) {
-                            SheetHandle()
-                            Spacer(Modifier.height(Spacing.sm))
-                            // While a request is live the sheet points at it, not
-                            // at a new search.
-                            //
-                            // The server allows one open request at a time, so the
-                            // "Where to?" bar -- the screen's one action -- was
-                            // aimed at the one thing it would refuse, while the way
-                            // back to her own negotiation sat lower down. She
-                            // would tap it, be told no, and have learnt nothing
-                            // about where her drivers went. Now the card with its
-                            // clock takes the bar's place, and its button is the
-                            // screen's primary action.
-                            val open = state.openRequest
-                            if (open != null) {
-                                OpenRequestCard(request = open, onOpen = onOpenOffers)
-                            } else {
-                                WhereToBar(onClick = onBook)
-                            }
-                            Spacer(Modifier.height(Spacing.lg))
-                        }
-                    }
-
-                    // A newer build on the server. One quiet card, tap to fetch --
-                    // the only update channel a sideloaded app has.
-                    state.updateUrl?.let { url ->
-                        item(key = "update") {
-                            Box(Modifier.padding(horizontal = Spacing.gutter, vertical = Spacing.xs)) {
-                                UpdateCard(url)
-                            }
-                        }
-                    }
-
-                    // The offline queue, made visible. A refused operation is a
-                    // card she must dismiss herself; work still waiting is one
-                    // quiet line.
-                    state.syncFailures.forEach { failure ->
-                        item(key = "sync-" + failure.id) {
-                            Box(Modifier.padding(horizontal = Spacing.gutter, vertical = Spacing.xs)) {
-                                SyncFailureCard(
-                                    failure = failure,
-                                    onDismiss = { onDismissSyncFailure(failure.id) },
-                                )
-                            }
-                        }
-                    }
-                    if (state.pendingSync > 0) {
-                        item(key = "pending") {
-                            Text(
-                                strings["sync.pending.count", "count" to state.pendingSync],
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = Spacing.gutter, vertical = Spacing.xs),
-                            )
-                        }
-                    }
-
-                    item(key = "recent-title") {
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(start = Spacing.gutter, end = Spacing.sm, top = Spacing.sm),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                strings["home.section.recent_trips"],
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            // Home shows the few most recent; everything else, and
-                            // the receipts, live behind this.
-                            TextButton(onClick = onOpenHistory) {
-                                Text(strings["history.title"], fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-
-                    // Cached data, honestly labelled -- the same line every other
-                    // screen that caches uses.
-                    if (state.isStale && state.bookings.isNotEmpty()) {
-                        item(key = "stale") {
-                            Text(
-                                strings["common.state.offline"],
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = Spacing.gutter),
-                            )
-                        }
-                    }
-
-                    when {
-                        state.isLoading -> item(key = "loading") {
-                            LoadingState(Modifier.fillParentMaxHeight(STATE_SHARE))
-                        }
-                        // A failure is not an empty list.
-                        //
-                        // With nothing cached, this branch used to fall through to
-                        // "No bookings yet" -- an assertion about her own journeys
-                        // that the app had never managed to check, with nothing to
-                        // retry and no hint that anything had gone wrong.
-                        state.errorCode != null && state.bookings.isEmpty() -> item(key = "error") {
-                            ErrorState(
-                                errorCode = state.errorCode,
-                                context = state.errorContext,
-                                onRetry = onRefresh,
-                                modifier = Modifier.fillParentMaxHeight(STATE_SHARE),
-                            )
-                        }
-                        // No action here on purpose. "Where to?" is already the
-                        // screen's one action, just above -- repeating it in the
-                        // empty state gives one screen two primary actions and
-                        // makes the second look like a different, unexplained one.
-                        state.bookings.isEmpty() -> item(key = "empty") {
-                            EmptyState(
-                                messageKey = "empty.bookings",
-                                icon = Icons.AutoMirrored.Filled.ReceiptLong,
-                                modifier = Modifier.fillParentMaxHeight(STATE_SHARE),
-                            )
-                        }
-                        else -> itemsIndexed(state.bookings, key = { _, it -> it.id }) { index, booking ->
-                            Column(
-                                // A booking whose status changes while she is
-                                // looking at it -- a driver assigned, a trip
-                                // finished -- moves in the list rather than
-                                // teleporting.
-                                Modifier
-                                    .animateItem()
-                                    .padding(horizontal = Spacing.xs),
-                            ) {
-                                if (index > 0) {
-                                    HorizontalDivider(
-                                        Modifier.padding(start = Spacing.xxxl + Spacing.xl, end = Spacing.lg),
-                                        color = MaterialTheme.colorScheme.outlineVariant,
-                                    )
-                                }
-                                BookingRow(
-                                    booking = booking,
-                                    onClick = { onOpenBooking(booking.id) },
-                                    contained = false,
-                                )
-                            }
-                        }
-                    }
-                }
+            val wide = maxWidth >= WIDE
+            if (wide) {
+                // Beside the map, at the start edge, below the floating
+                // controls: on a tablet a sheet the width of the screen would
+                // be a wall of glass with three rows in it.
+                val shape = RoundedCornerShape(Radius.sheet)
+                HomeSheet(
+                    state = state,
+                    shape = shape,
+                    onBook = onBook,
+                    onOpenBooking = onOpenBooking,
+                    onOpenHistory = onOpenHistory,
+                    onOpenOffers = onOpenOffers,
+                    onRefresh = onRefresh,
+                    onDismissSyncFailure = onDismissSyncFailure,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .padding(
+                            start = Spacing.lg,
+                            end = Spacing.lg,
+                            top = Sizing.touchTarget + Spacing.xl,
+                            bottom = Spacing.lg,
+                        )
+                        .width(minOf(PANEL_WIDTH, maxWidth * 0.45f))
+                        .fillMaxHeight(),
+                )
+            } else {
+                HomeSheet(
+                    state = state,
+                    shape = RoundedCornerShape(topStart = Radius.sheet, topEnd = Radius.sheet),
+                    onBook = onBook,
+                    onOpenBooking = onOpenBooking,
+                    onOpenHistory = onOpenHistory,
+                    onOpenOffers = onOpenOffers,
+                    onRefresh = onRefresh,
+                    onDismissSyncFailure = onDismissSyncFailure,
+                    bottomInset = true,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(maxHeight * SHEET_SHARE),
+                )
             }
 
-            // The controls that float over the map, above everything else so the
-            // sheet slides under them.
+            // The controls that float over the map.
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -467,8 +336,163 @@ private fun HomeBody(
     }
 }
 
-/** The loading, empty and failed states take this much of the list's height. */
-private const val STATE_SHARE = 0.36f
+/**
+ * The glass panel: the one action, and the last few trips.
+ *
+ * Fixed in place, with no grab bar -- a handle promises a drag, and this sheet
+ * does not move. Its content scrolls only when it genuinely cannot fit, at the
+ * largest font sizes or on the smallest screens; at an ordinary size the
+ * scroll has nothing to do and the sheet is still.
+ *
+ * Pull to refresh went with the scrolling: a refresh gesture on a screen that
+ * does not scroll is a gesture nobody finds. Home refreshes itself instead --
+ * when it opens, each time it comes back into view, every ten seconds while an
+ * ask is open, and from the retry on a failure.
+ */
+@Composable
+private fun HomeSheet(
+    state: HomeUiState,
+    shape: RoundedCornerShape,
+    onBook: () -> Unit,
+    onOpenBooking: (String) -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenOffers: () -> Unit,
+    onRefresh: () -> Unit,
+    onDismissSyncFailure: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    /** Pad for the navigation bar: the sheet runs to the bottom of the screen. */
+    bottomInset: Boolean = false,
+) {
+    val strings = LocalVelroStrings.current
+    Column(
+        modifier
+            .glassShadow(Radius.sheet, spread = SHEET_SPREAD)
+            .background(glassFill(Glass.PANEL), shape)
+            .border(glassRim(), shape)
+            .verticalScroll(rememberScrollState())
+            .then(if (bottomInset) Modifier.navigationBarsPadding() else Modifier)
+            .padding(top = Spacing.xl, bottom = Spacing.lg),
+    ) {
+        Column(Modifier.padding(horizontal = Spacing.gutter)) {
+            // While a request is live the sheet points at it, not at a new
+            // search.
+            //
+            // The server allows one open request at a time, so the "Where to?"
+            // bar -- the screen's one action -- was aimed at the one thing it
+            // would refuse, while the way back to her own negotiation sat lower
+            // down. She would tap it, be told no, and have learnt nothing about
+            // where her drivers went. Now the card with its clock takes the
+            // bar's place, and its button is the screen's primary action.
+            val open = state.openRequest
+            if (open != null) {
+                OpenRequestCard(request = open, onOpen = onOpenOffers)
+            } else {
+                WhereToBar(onClick = onBook)
+            }
+
+            // A newer build on the server. One quiet card, tap to fetch --
+            // the only update channel a sideloaded app has.
+            state.updateUrl?.let { url ->
+                Spacer(Modifier.height(Spacing.md))
+                UpdateCard(url)
+            }
+
+            // The offline queue, made visible. A refused operation is a card
+            // she must dismiss herself; work still waiting is one quiet line.
+            for (failure in state.syncFailures) {
+                Spacer(Modifier.height(Spacing.md))
+                SyncFailureCard(
+                    failure = failure,
+                    onDismiss = { onDismissSyncFailure(failure.id) },
+                )
+            }
+            if (state.pendingSync > 0) {
+                Spacer(Modifier.height(Spacing.sm))
+                Text(
+                    strings["sync.pending.count", "count" to state.pendingSync],
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(Spacing.md))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = Spacing.gutter, end = Spacing.sm),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                strings["home.section.recent_trips"],
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            // Home shows the last three; everything else, and the receipts,
+            // live behind this.
+            TextButton(onClick = onOpenHistory) {
+                Text(strings["history.title"], fontWeight = FontWeight.SemiBold)
+            }
+        }
+
+        // Cached data, honestly labelled -- the same line every other screen
+        // that caches uses.
+        if (state.isStale && state.bookings.isNotEmpty()) {
+            Text(
+                strings["common.state.offline"],
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = Spacing.gutter),
+            )
+        }
+
+        // The three states, compact: inside a scroll their full-screen frames
+        // shrink to their content, so each is a few lines tall rather than a
+        // page.
+        when {
+            state.isLoading -> LoadingState()
+            // A failure is not an empty list.
+            //
+            // With nothing cached, this branch used to fall through to "No
+            // bookings yet" -- an assertion about her own journeys that the
+            // app had never managed to check, with nothing to retry and no
+            // hint that anything had gone wrong.
+            state.errorCode != null && state.bookings.isEmpty() -> ErrorState(
+                errorCode = state.errorCode,
+                context = state.errorContext,
+                onRetry = onRefresh,
+            )
+            // No action here on purpose. "Where to?" is already the screen's
+            // one action, just above -- repeating it in the empty state gives
+            // one screen two primary actions and makes the second look like a
+            // different, unexplained one.
+            state.bookings.isEmpty() -> EmptyState(
+                messageKey = "empty.bookings",
+                icon = Icons.AutoMirrored.Filled.ReceiptLong,
+            )
+            else -> Column(Modifier.padding(horizontal = Spacing.xs)) {
+                state.bookings.take(RECENT_LIMIT).forEachIndexed { index, booking ->
+                    // Keyed, so a trip whose status changes while she looks
+                    // keeps its own row rather than borrowing its neighbour's.
+                    key(booking.id) {
+                        if (index > 0) {
+                            HorizontalDivider(
+                                Modifier.padding(start = Spacing.xxxl + Spacing.xl, end = Spacing.lg),
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                            )
+                        }
+                        BookingRow(
+                            booking = booking,
+                            onClick = { onOpenBooking(booking.id) },
+                            contained = false,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 /**
  * "Where to?" -- the bar every ride app a passenger may have used opens on.
