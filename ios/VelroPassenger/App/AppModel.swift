@@ -20,6 +20,16 @@ final class AppModel {
     /// Whether this phone has been through the three intro pages. Per phone,
     /// not per account: it is about the app, not about anybody in it.
     private(set) var hasSeenIntro: Bool
+    /// Whether this account has a first and a last name. Asked straight after
+    /// sign-up, and of any older account that has none, before home: the
+    /// driver must know whom he is picking up.
+    private(set) var nameState: NameState
+
+    enum NameState {
+        /// Not checked yet. Home shows meanwhile: an offline launch is never
+        /// held at a door it cannot open.
+        case unknown, missing, present
+    }
 
     let client: APIClient
     let store: any SessionStore
@@ -35,6 +45,9 @@ final class AppModel {
 
     private static let localeKey = "velro.locale"
     private static let introKey = "velro.intro.seen"
+    /// The account that is known to have a name, so a launch with no
+    /// connection does not ask again.
+    private static let namedKey = "velro.account.named"
 
     init(baseURL: URL, store: any SessionStore) {
         let locale = AppLocale(tag: UserDefaults.standard.string(forKey: Self.localeKey) ?? AppLocale.dari.tag)
@@ -43,6 +56,8 @@ final class AppModel {
         self.store = store
         self.isSignedIn = store.accessToken != nil
         self.hasSeenIntro = UserDefaults.standard.bool(forKey: Self.introKey)
+        let named = store.userId != nil && UserDefaults.standard.string(forKey: Self.namedKey) == store.userId
+        self.nameState = named ? .present : .unknown
         let shared = ResponseCache(name: "shared")
         self.shared = shared
         self.safety = SafetyContactsStore(cache: shared)
@@ -96,7 +111,32 @@ final class AppModel {
     func signedIn(_ session: SessionDTO) {
         store.save(session)
         accountDeleted = false
+        // A new account has no name yet: straight to the name, with no
+        // glimpse of home first.
+        nameState = session.isNewUser ? .missing : .unknown
         isSignedIn = true
+    }
+
+    /// Reads the profile once per session until the name is known.
+    func checkName() async {
+        guard isSignedIn, nameState != .present else { return }
+        guard case .success(let profile) = await client.send(API.profile()) else { return }
+        nameChanged(profile.fullName)
+    }
+
+    /// A first and a last name: two words at least.
+    static func isFullName(_ name: String?) -> Bool {
+        (name ?? "").split(whereSeparator: \.isWhitespace).count >= 2
+    }
+
+    func nameChanged(_ fullName: String?) {
+        if Self.isFullName(fullName) {
+            nameState = .present
+            UserDefaults.standard.set(store.userId, forKey: Self.namedKey)
+        } else {
+            nameState = .missing
+            UserDefaults.standard.removeObject(forKey: Self.namedKey)
+        }
     }
 
     /// The server has already revoked every session, so there is nobody to
@@ -122,6 +162,8 @@ final class AppModel {
 
     private func endSession() {
         personal.clear()
+        UserDefaults.standard.removeObject(forKey: Self.namedKey)
+        nameState = .unknown
         store.clear()
         router.home()
         isSignedIn = false

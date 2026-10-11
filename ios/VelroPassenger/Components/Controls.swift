@@ -60,9 +60,13 @@ struct VelroField: View {
     /// A glyph at the start of the field, saying what kind of thing goes in
     /// before a word of the label is read.
     var systemImage: String?
+    /// False for words -- a name -- which run in the language's own
+    /// direction; numbers stay left to right.
+    var leftToRight = true
     var identifier = ""
 
     @FocusState private var focused: Bool
+    @Environment(\.layoutDirection) private var direction
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -96,7 +100,7 @@ struct VelroField: View {
                 Capsule().strokeBorder(focused ? Palette.primary : Palette.outline, lineWidth: focused ? 2 : 1)
             )
             .elevation(.low)
-            .environment(\.layoutDirection, .leftToRight)
+            .environment(\.layoutDirection, leftToRight ? .leftToRight : direction)
             .contentShape(Capsule())
             .onTapGesture { focused = true }
         }

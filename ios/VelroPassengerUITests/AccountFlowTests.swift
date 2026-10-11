@@ -8,16 +8,23 @@ final class AccountFlowTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    /// A name added, the language changed and changed back, then signing out.
+    /// The name given at sign-up, corrected; the language changed and
+    /// changed back; then signing out.
     func testNameLanguageAndSigningOut() {
         let app = launchSignedIn(phone: freshTestPhone())
         app.buttons["home.account"].tap()
 
-        let name = app.textFields["account.name"]
-        XCTAssertTrue(name.waitForExistence(timeout: 10))
-        name.tap()
-        name.typeText("مریم")
-        app.buttons.matching(identifier: "account.name").firstMatch.exists ? () : ()
+        let first = app.textFields["name.first"]
+        XCTAssertTrue(first.waitForExistence(timeout: 10))
+        XCTAssertEqual(first.value as? String, "مریم", "the sign-up name is not on the account")
+        let last = app.textFields["name.last"]
+        clear(last)
+        last.typeText("کریمی")
+        app.buttons["account.name.save"].tap()
+        // Emptied, it cannot be saved: both parts are required.
+        clear(last)
+        XCTAssertFalse(app.buttons["account.name.save"].isEnabled)
+        last.typeText("کریمی")
         app.swipeUp()
         snapshot("11-account")
 
@@ -45,9 +52,9 @@ final class AccountFlowTests: XCTestCase {
         let app = launchSignedIn(phone: phone)
         app.buttons["home.account"].tap()
 
-        let name = app.textFields["account.name"]
+        let name = app.textFields["name.first"]
         XCTAssertTrue(name.waitForExistence(timeout: 10))
-        name.tap()
+        clear(name)
         name.typeText("زهره")
         app.buttons["account.name.save"].tap()
         Thread.sleep(forTimeInterval: 1)
@@ -77,11 +84,12 @@ final class AccountFlowTests: XCTestCase {
         app.buttons["signin.send"].tap()
         XCTAssertTrue(app.textFields["signin.code"].waitForExistence(timeout: 15))
         app.buttons["signin.submit"].tap()
+        // Somebody new: asked for a name again, with nothing of the old one.
+        let asked = app.textFields["name.first"]
+        XCTAssertTrue(asked.waitForExistence(timeout: 15), "a fresh account was not asked for its name")
+        XCTAssertFalse((asked.value as? String ?? "").contains("زهره"))
+        giveNameIfAsked(app)
         XCTAssertTrue(app.buttons["home.account"].waitForExistence(timeout: 15))
-        app.buttons["home.account"].tap()
-        let again = app.textFields["account.name"]
-        XCTAssertTrue(again.waitForExistence(timeout: 10))
-        XCTAssertFalse((again.value as? String ?? "").contains("زهره"))
     }
 
     /// From home's help door: a report with a reference she keeps, then the

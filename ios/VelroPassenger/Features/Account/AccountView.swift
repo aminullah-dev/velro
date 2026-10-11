@@ -12,7 +12,8 @@ struct AccountView: View {
     @Environment(\.strings) private var strings
     @Environment(\.openURL) private var openURL
     @State private var profile: ProfileDTO?
-    @State private var draftName = ""
+    @State private var draftFirst = ""
+    @State private var draftLast = ""
     @State private var isSaving = false
     @State private var saved = false
     @State private var error: APIError?
@@ -64,12 +65,16 @@ struct AccountView: View {
 
             VelroCard {
                 VStack(alignment: .leading, spacing: Spacing.md) {
-                    VelroField(label: strings["profile.field.name"], text: $draftName, identifier: "account.name")
-                    Text(strings["profile.hint.name_optional"])
+                    // Both parts required, as at sign-up: a name can be
+                    // corrected here, never emptied.
+                    NameFields(first: $draftFirst, last: $draftLast)
+                    Text(strings["profile.name.body"])
                         .velroFont(.caption)
                         .foregroundStyle(Palette.onSurfaceVariant)
                     PrimaryButton(label: strings["common.action.save"],
-                                  enabled: draftName != (profile.fullName ?? ""), loading: isSaving, pill: true) {
+                                  enabled: NameFields.isValid(first: draftFirst, last: draftLast)
+                                      && NameFields.join(first: draftFirst, last: draftLast) != (profile.fullName ?? ""),
+                                  loading: isSaving) {
                         Task { await saveName() }
                     }
                     .accessibilityIdentifier("account.name.save")
@@ -160,20 +165,21 @@ struct AccountView: View {
         switch await app.client.send(API.profile()) {
         case .success(let value):
             profile = value
-            draftName = value.fullName ?? ""
+            (draftFirst, draftLast) = NameFields.split(value.fullName)
         case .failure(let failure):
             if failure != .cancelled { error = failure }
         }
     }
 
     private func saveName() async {
+        guard NameFields.isValid(first: draftFirst, last: draftLast) else { return }
         isSaving = true
         saved = false
-        let name = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
-        switch await app.client.send(API.updateProfile(fullName: name)) {
+        switch await app.client.send(API.updateProfile(fullName: NameFields.join(first: draftFirst, last: draftLast))) {
         case .success(let value):
             profile = value
-            draftName = value.fullName ?? ""
+            (draftFirst, draftLast) = NameFields.split(value.fullName)
+            app.nameChanged(value.fullName)
             saved = true
         case .failure(let failure):
             if failure != .cancelled { error = failure }

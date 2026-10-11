@@ -40,6 +40,9 @@ final class SignInFlowTests: XCTestCase {
         snapshot("2-code")
 
         app.buttons["signin.submit"].tap()
+        // A first and a last name, asked once, before home.
+        if app.textFields["name.first"].waitForExistence(timeout: 6) { snapshot("2b-name") }
+        giveNameIfAsked(app)
 
         XCTAssertTrue(app.buttons["home.search"].waitForExistence(timeout: 15)
                       || app.buttons["home.offers"].waitForExistence(timeout: 5))

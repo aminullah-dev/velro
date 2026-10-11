@@ -44,12 +44,23 @@ private struct SignedInView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $router.path) {
-            HomeView(app: app)
-                .navigationDestination(for: Route.self) { route in
-                    destination(route)
+        Group {
+            // No home without a name: the one screen before it, which cannot
+            // be skipped -- only left by signing out.
+            if app.nameState == .missing {
+                NameView(app: app)
+                    .transition(.opacity)
+            } else {
+                NavigationStack(path: $router.path) {
+                    HomeView(app: app)
+                        .navigationDestination(for: Route.self) { route in
+                            destination(route)
+                        }
                 }
+            }
         }
+        .animation(.default, value: app.nameState)
+        .task { await app.checkName() }
     }
 
     @ViewBuilder

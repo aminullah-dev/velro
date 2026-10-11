@@ -22,8 +22,29 @@ extension XCTestCase {
         app.buttons["signin.send"].tap()
         XCTAssertTrue(app.textFields["signin.code"].waitForExistence(timeout: 15), "is `make api` running?")
         app.buttons["signin.submit"].tap()
+        giveNameIfAsked(app)
         XCTAssertTrue(app.buttons["home.search"].waitForExistence(timeout: 15))
         return app
+    }
+
+    /// A new account is asked for a first and a last name before home; an
+    /// account that already has both goes straight past.
+    func giveNameIfAsked(_ app: XCUIApplication, first: String = "مریم", last: String = "احمدی") {
+        let field = app.textFields["name.first"]
+        guard field.waitForExistence(timeout: 6) else { return }
+        field.tap()
+        field.typeText(first)
+        let lastField = app.textFields["name.last"]
+        lastField.tap()
+        lastField.typeText(last)
+        app.buttons["name.continue"].tap()
+    }
+
+    /// Empties a text field, whatever was in it.
+    func clear(_ field: XCUIElement) {
+        field.tap()
+        let length = (field.value as? String)?.count ?? 0
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: length + 2))
     }
 
     /// The first button whose identifier starts with `prefix`: "ask.district"
